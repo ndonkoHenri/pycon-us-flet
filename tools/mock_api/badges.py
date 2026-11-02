@@ -14,6 +14,7 @@ from pathlib import Path
 
 import segno
 
+from pycon_us.config import YEAR
 from tools.mock_api.state import Attendee, MockState
 
 OUT = Path("build") / "mock-badges.html"
@@ -105,7 +106,7 @@ def main(argv: Sequence[str] | None = None) -> None:
     args = parser.parse_args(argv)
     state = MockState.from_seed()
     args.out.parent.mkdir(parents=True, exist_ok=True)
-    args.out.write_text(sheet(state.year, state.attendees.values()), encoding="utf-8")
+    args.out.write_text(sheet(YEAR, state.attendees.values()), encoding="utf-8")
     print(f"Wrote {args.out}; open it in a browser and print it (A4 or Letter).")
 
 

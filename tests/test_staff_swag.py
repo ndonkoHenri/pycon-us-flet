@@ -36,7 +36,7 @@ from pycon_us.screens.staff_swag import (
 )
 from pycon_us.services import Services
 from pycon_us.services.api import ApiClient
-from pycon_us.services.pref_keys import STAFF_SWAG_CATEGORIES
+from pycon_us.services.pref_keys import staff_swag_categories
 from pycon_us.services.private_api import PrivateApi
 from pycon_us.state import Conference
 from pycon_us.swag import NO_CONNECTION, NOTHING, READY
@@ -273,13 +273,13 @@ async def test_a_choice_is_stored_scans_and_survives_a_relaunch(
     shown = await show()
     await tap(shown, 3)
     await tap(shown, 4)
-    assert stored[STAFF_SWAG_CATEGORIES.key] == ["3", "4"]
+    assert stored[staff_swag_categories(2026).key] == ["3", "4"]
     assert chip(shown, 3).selected and chip(shown, 4).selected
     assert helper(shown) is None
     await enter(shown, "MOCK0004:v4l1d04")
     assert panel(shown).startswith(f"{NOTHING}\nMargaret Test")
     await tap(shown, 4)  # unchosen again
-    assert stored[STAFF_SWAG_CATEGORIES.key] == ["3"]
+    assert stored[staff_swag_categories(2026).key] == ["3"]
     again = await show()
     assert chip(again, 3).selected and not chip(again, 4).selected
     assert helper(again) is None
@@ -289,11 +289,11 @@ async def test_ids_no_longer_in_the_catalog_are_ignored(
     show: Show, stored: dict[str, Any]
 ) -> None:
     """A stored door category or a gone id never counts as a choice: still paused."""
-    stored[STAFF_SWAG_CATEGORIES.key] = ["1", "99", "x"]
+    stored[staff_swag_categories(2026).key] = ["1", "99", "x"]
     shown = await show()
     assert helper(shown) == CHOOSE
     await tap(shown, 4)
-    assert stored[STAFF_SWAG_CATEGORIES.key] == ["1", "4", "99"]
+    assert stored[staff_swag_categories(2026).key] == ["1", "4", "99"]
     assert helper(shown) is None
 
 
@@ -301,7 +301,7 @@ async def test_offline_pauses_with_the_reason_and_resumes(
     show: Show, online: Online, stored: dict[str, Any]
 ) -> None:
     """Offline: "Swag pickup needs a connection", a scan dropped; back on, it scans."""
-    stored[STAFF_SWAG_CATEGORIES.key] = ["3", "4"]
+    stored[staff_swag_categories(2026).key] = ["3", "4"]
     shown = await show()
     await online.flip(shown, False)
     assert helper(shown) == OFFLINE
@@ -319,7 +319,7 @@ async def test_a_lookup_without_an_answer_says_no_connection(
     show: Show, switch: Switch, stored: dict[str, Any]
 ) -> None:
     """The check said online but the call fails: "No connection", until the next scan."""
-    stored[STAFF_SWAG_CATEGORIES.key] = ["3"]
+    stored[staff_swag_categories(2026).key] = ["3"]
     shown = await show()
     switch.offline = True
     await enter(shown, "MOCK0002:v4l1d02")
@@ -431,7 +431,7 @@ async def test_the_chips_wait_for_the_stored_choice(
     show: Show, monkeypatch: pytest.MonkeyPatch, stored: dict[str, Any]
 ) -> None:
     """Until the choice is read, the progress line: a tap can't race the late read."""
-    stored[STAFF_SWAG_CATEGORIES.key] = ["4"]
+    stored[staff_swag_categories(2026).key] = ["4"]
     held = asyncio.Event()
     answer = MemoryPrefs._invoke_method
 
@@ -440,7 +440,9 @@ async def test_the_chips_wait_for_the_stored_choice(
     ) -> Any:
         """Hold the choice's read until ``held`` is set, as a slow first read would."""
         arguments = args[0] if args else kwargs.get("arguments")
-        if method_name == "get" and arguments == {"key": STAFF_SWAG_CATEGORIES.key}:
+        if method_name == "get" and arguments == {
+            "key": staff_swag_categories(2026).key
+        }:
             await held.wait()
         return await answer(self, method_name, *args, **kwargs)
 

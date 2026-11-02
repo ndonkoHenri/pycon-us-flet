@@ -90,7 +90,7 @@ def delete_unsynced(count: int) -> str:
 
 
 UNREADABLE = "Couldn't read the staff records on this device, so they stay."
-"""What a confirmation says when ``outbox.db`` can't be read: no count, no deletion."""
+"""What a confirmation says when the outbox can't be read: no count, no deletion."""
 
 
 def staff_confirmation(

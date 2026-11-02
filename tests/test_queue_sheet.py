@@ -1,7 +1,7 @@
 """The staff queue sheet: what it reads, what it shows and what its buttons do (#694).
 
-The rows are seeded into a real ``outbox.db`` in a temporary directory. How the sheet
-looks is checked on devices (the PR).
+The rows are seeded into a real ``outbox-<year>.db`` in a temporary directory. How the
+sheet looks is checked on devices (the PR).
 """
 
 from collections.abc import Callable, Iterator
@@ -43,7 +43,7 @@ NOW = 1_000_000.0
 @pytest.fixture
 def db(tmp_path: Path) -> Iterator[OutboxDb]:
     """Yield an empty outbox in its own directory, closed afterwards."""
-    database = OutboxDb(tmp_path)
+    database = OutboxDb(tmp_path, 2026)
     yield database
     database.close()
 

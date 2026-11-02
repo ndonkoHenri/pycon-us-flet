@@ -3,7 +3,8 @@
 No path deletes an unsynced row without naming how many, an account switch never shows
 or sends the previous owner's rows as the new account's, and Clear staff data removes
 every staff key of the storage table, a key added later included. The rows are in a
-real ``outbox.db``; the accounts sign in to the in-process mock (``tests/sync_rig.py``).
+real ``outbox-<year>.db``; the accounts sign in to the in-process mock
+(``tests/sync_rig.py``).
 """
 
 import asyncio
@@ -27,8 +28,8 @@ from pycon_us.services.outbox_db import Counts, OutboxDb
 from pycon_us.services.pref_keys import (
     SCANNER_CONSENT,
     STAFF_PREFIX,
-    STAFF_SWAG_CATEGORIES,
     Pref,
+    staff_swag_categories,
 )
 from pycon_us.services.private_api import PrivateApi
 from pycon_us.services.storage import Storage
@@ -57,10 +58,10 @@ db = outbox_db
 A = "a@example.com"
 B = "b@example.com"
 LATER_KEYS = (
-    "pycon.staff_sponsor",
+    "pycon.staff_2026_sponsor",
     SCANNER_CONSENT.key,
-    STAFF_SWAG_CATEGORIES.key,
-    "pycon.staff_door_session",
+    staff_swag_categories(2026).key,
+    "pycon.staff_2026_door_session",
 )
 """Staff keys #39, #40 and #41 add: the sponsor, the scanner consent, the swag
 categories and the session Door check checks in for."""
@@ -161,8 +162,8 @@ async def test_clear_staff_data_deletes_every_account_s_rows_and_zeros_staff(
 async def test_clear_staff_data_never_creates_the_outbox(
     tmp_path: Path, storage: Storage
 ) -> None:
-    """Without ``outbox.db`` there is nothing to count or delete, and none is made."""
-    never = OutboxDb(tmp_path / "never")
+    """Without an outbox file there is nothing to count or delete, and none is made."""
+    never = OutboxDb(tmp_path / "never", 2026)
     (tmp_path / "never").mkdir()
     assert staff_counts(never) == Counts()
     assert await clear_staff_data(never, storage, Staff())

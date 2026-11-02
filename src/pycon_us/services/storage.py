@@ -9,7 +9,8 @@ Two places, one job each:
 * **Files in the durable data directory** (``FLET_APP_STORAGE_DATA``) for the raw feed
   cache, ``feed-<year>.json``, and the change log, ``changes-<year>.json``
   (``changes_file.py``), replaced atomically: readers see the old file or the new
-  (``data_files.py``).
+  (``data_files.py``). Only the active year's are read: Reset app deletes the others
+  (``delete_other_years()``).
 
 Storage failures are expected (D-71): logged and returned, never raised, because the
 data in memory stays correct for the session and the next write tries again (D-120).
@@ -20,6 +21,7 @@ import asyncio
 import copy
 import json
 import logging
+import os
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, cast
@@ -232,6 +234,32 @@ class Storage:
             logger.warning("Could not delete %s", path.name, exc_info=True)
             return False
         return True
+
+    async def delete_other_years(self) -> bool:
+        """Delete other years' feed caches and change logs: Reset app (D-198, D-466).
+
+        Nothing reads them once the active year has moved on, and Reset app promises a
+        fresh install's state, as it does for every year's preferences. Other years'
+        outboxes stay: no confirmation names their rows.
+
+        Returns:
+            Whether they are all gone; a failure is logged (D-120).
+        """
+        try:
+            # Not Path.glob(): it swallows a failed listing, and finding nothing would
+            # report the files gone when they are still there.
+            names = await asyncio.to_thread(os.listdir, self.directory)
+        except OSError:
+            logger.warning("Could not list the data directory", exc_info=True)
+            return False
+        others = [
+            self.directory / name
+            for name in names
+            if name.startswith(("feed-", "changes-"))
+            and name.endswith(".json")
+            and not name.endswith(f"-{self.year}.json")
+        ]
+        return all([await self.delete_file(path, "Reset app") for path in others])
 
     async def clear_prefs(self, prefix: str = PREFIX) -> bool:
         """Remove every key the app keeps in SharedPreferences under ``prefix``.

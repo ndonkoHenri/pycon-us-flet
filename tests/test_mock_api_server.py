@@ -15,6 +15,7 @@ import pytest
 
 from pycon_us.core.signing import auth_headers, canonical_body
 from tests.mock_calls import BASE, NOW, account, state_at
+from tools.mock_api import server
 from tools.mock_api.server import MockServer, banner, parser, state_for
 from tools.mock_api.state import MockState
 
@@ -284,6 +285,12 @@ def test_the_command_line_switches_faults_and_skew_on() -> None:
     assert state.skew == -900
     every = state_for(parser().parse_args(["--fault", "connect", "--every-request"]))
     assert every.faults.on == {"connect": True}
+
+
+def test_the_server_serves_the_app_s_year(monkeypatch: pytest.MonkeyPatch) -> None:
+    """A new ``config.YEAR`` needs no edit here, or the app's every call would be 404."""
+    monkeypatch.setattr(server, "YEAR", 2027)
+    assert state_for(parser().parse_args([])).year == 2027
 
 
 def test_the_command_line_adds_made_up_attendees() -> None:

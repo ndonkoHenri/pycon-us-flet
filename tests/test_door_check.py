@@ -361,7 +361,7 @@ async def test_offline_known_badges_queue_and_sync_once_after_a_relaunch(
     )
     rig.db.close()  # the kill
     rig.state.faults.clear()
-    rig.db = OutboxDb(tmp_path / "outbox")  # the relaunch
+    rig.db = OutboxDb(tmp_path / "outbox", 2026)  # the relaunch
     rig.clock.at += 60
     await rig.worker().drain()
     assert redeemed(rig) == [("MOCK0001", 10, 1), ("MOCK0003", 10, 2)]

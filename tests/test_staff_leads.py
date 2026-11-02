@@ -30,7 +30,7 @@ from pycon_us.screens import staff_leads
 from pycon_us.screens.staff_leads import NO_LEADS, NO_MATCH, NOT_READ, LeadsPage
 from pycon_us.services import Services
 from pycon_us.services.outbox_db import OutboxDb
-from pycon_us.services.pref_keys import STAFF_SPONSOR
+from pycon_us.services.pref_keys import staff_sponsor
 from pycon_us.staff import Staff
 from pycon_us.state import Conference
 from pycon_us.ui import scan_screen
@@ -93,7 +93,7 @@ async def show(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> AsyncIterator
         ) -> Shown:
             """Render the page signed in as ``account``, its rows in ``outbox``."""
             if chosen is not None:
-                stored[STAFF_SPONSOR.key] = json.dumps(to_stored(chosen))
+                stored[staff_sponsor(2026).key] = json.dumps(to_stored(chosen))
             prefs = Prefs(loaded=True)
             prefs.dev = {DEV_MOCK_API_URL: BASE_URL}
             return await stack.enter_async_context(
@@ -393,7 +393,7 @@ async def test_no_leads_yet_and_an_unreadable_outbox_say_so(
     shown = await show(sponsor_account(), db)
     assert NO_LEADS in shown.texts()
     assert not shown.nodes("lead.leads.search")
-    closed = OutboxDb(tmp_path)
+    closed = OutboxDb(tmp_path, 2026)
     closed.close()
     failed = await show(sponsor_account(), closed)
     assert NOT_READ in failed.texts()

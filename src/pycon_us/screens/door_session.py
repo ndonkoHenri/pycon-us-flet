@@ -11,7 +11,7 @@ a second tap clears), then, once one is chosen, a search field (``door.session.s
 "All sessions in this category" (``door.session.all``) and the category's sessions
 under a level-2 heading per day in ``product_sort_key()`` order, the undated ones last
 under "Other sessions" (``door.session.<id>``, one node read "All about decorators,
-Wednesday 9:00 AM, selected"). A tap saves the choice (``STAFF_DOOR_SESSION``) and goes
+Wednesday 9:00 AM, selected"). A tap saves the choice (``staff_door_session()``) and goes
 back; Cancel (a close icon) and Back leave it as it was. The catalog is fetched each time
 the page opens and never kept (``fetch_door_catalog()``): a spinner meanwhile,
 "Couldn't load sessions" with Retry offline or on an error (D-120), "No sessions

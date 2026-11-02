@@ -93,7 +93,7 @@ def svc(tmp_path: Path) -> Iterator[Services]:
         clipboard=MemoryClipboard(),
         share=MemoryShare(),
         paths=MemoryPaths(),
-        outbox=OutboxDb(tmp_path),
+        outbox=OutboxDb(tmp_path, 2026),
     )
     yield services
     services.close()

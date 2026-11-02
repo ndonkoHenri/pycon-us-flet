@@ -2,8 +2,8 @@
 
 The page runs in a real Flet session (``tests/harness.py``) over the seeded mock behind
 ``tools/mock_api/transport.py``, signed in through the real ``Account`` store, with the
-favourites sync's loop running as ``App`` runs it, and a real ``outbox.db`` for the
-staff rows sign-out names (D-414). How it looks, the in-app browser and the screen
+favourites sync's loop running as ``App`` runs it, and a real ``outbox-<year>.db`` for
+the staff rows sign-out names (D-414). How it looks, the in-app browser and the screen
 readers are checked on devices (the PR).
 """
 
@@ -101,7 +101,7 @@ def db(tmp_path: Path) -> Iterator[OutboxDb]:
     """Yield the session's outbox, empty, in its own directory; closed afterwards."""
     directory = tmp_path / "outbox"
     directory.mkdir()
-    database = OutboxDb(directory)
+    database = OutboxDb(directory, 2026)
     yield database
     database.close()
 
