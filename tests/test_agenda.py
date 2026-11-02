@@ -11,9 +11,10 @@ import pytest
 
 from pycon_us.config import load_year
 from pycon_us.core.agenda import Phase, my_schedule, next_for_me, now_next
+from pycon_us.core.feed import process
 from pycon_us.core.timeline import timeline
 from tests.agenda_answers import happening, may, next_id, next_start, shown, up_next
-from tests.feeds import processed
+from tests.feeds import processed, recorded, settings
 
 pytestmark = pytest.mark.usefixtures("machine_tz")
 
@@ -250,8 +251,9 @@ def test_a_new_feed_version_gives_answers_of_its_own() -> None:
     may have moved, never equals the old feed's (D-153, D-185).
     """
     now, saved = may(2026, 15, 10, 15), frozenset({"2", "19", "153"})
-    assert now_next(processed(2026), now) != now_next(processed(2026), now)
-    assert my_schedule(processed(2026), saved) != my_schedule(processed(2026), saved)
+    old, new = processed(2026), process(recorded(2026), settings(2026))
+    assert now_next(old, now) != now_next(new, now)
+    assert my_schedule(old, saved) != my_schedule(new, saved)
 
 
 def test_the_next_session_is_a_saved_one_starting_within_three_hours() -> None:

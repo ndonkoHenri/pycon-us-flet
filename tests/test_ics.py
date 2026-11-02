@@ -13,6 +13,7 @@ import pytest
 from ical.calendar_stream import IcsCalendarStream
 
 from pycon_us import APP_NAME
+from pycon_us.core.feed import process
 from pycon_us.core.ics import (
     ALARM,
     FILE_SLUG_CHARS,
@@ -22,7 +23,7 @@ from pycon_us.core.ics import (
 )
 from pycon_us.core.models import ConferenceData, Session
 from pycon_us.core.timeline import schedule_order
-from tests.feeds import YEARS, processed
+from tests.feeds import YEARS, processed, recorded, settings
 
 pytestmark = pytest.mark.usefixtures("machine_tz")
 
@@ -169,7 +170,8 @@ def test_uids_are_the_same_across_two_loads_and_unique(year: int) -> None:
     sessions = processed(year).sessions
     first = calendar_file(sessions.values(), year=year, now=NOW)
     later = NOW + timedelta(days=3)
-    second = calendar_file(processed(year).sessions.values(), year=year, now=later)
+    reloaded = process(recorded(year), settings(year))
+    second = calendar_file(reloaded.sessions.values(), year=year, now=later)
     uids = values(first, "UID")
     assert uids == values(second, "UID")
     assert len(set(uids)) == len(sessions)

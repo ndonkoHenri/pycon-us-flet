@@ -6,6 +6,7 @@ says exactly what differs and never drifts from the recorded feed (D-255).
 """
 
 import json
+import os
 from collections.abc import Callable
 from functools import cache
 from pathlib import Path
@@ -37,9 +38,21 @@ def settings(year: int) -> FeedSettings:
     return load_year(year).feed_settings
 
 
-def processed(year: int) -> ConferenceData:
-    """The recorded feed, processed. Not cached: each machine zone processes it again."""
+@cache
+def _processed_in(year: int, machine_zone: str | None) -> ConferenceData:
+    """Process the recorded feed once per year and machine zone, for ``processed()``."""
     return process(recorded(year), settings(year))
+
+
+def processed(year: int) -> ConferenceData:
+    """The recorded feed, processed once per machine zone, and shared: never change it.
+
+    ``TZ`` is in the key because each zone of ``machine_tz`` must process the feed again
+    to show that the result doesn't lean on the machine's zone. A test that needs what
+    only a new load gives (an object of its own, the logs, a patched converter's calls)
+    calls ``process(recorded(year), settings(year))``.
+    """
+    return _processed_in(year, os.environ.get("TZ"))
 
 
 def recorded_feed(year: int) -> ProcessedFeed:

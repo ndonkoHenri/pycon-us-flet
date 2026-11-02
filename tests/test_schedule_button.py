@@ -17,6 +17,7 @@ import httpx
 import pytest
 
 from pycon_us import clock
+from pycon_us.core.feed import process
 from pycon_us.core.timeline import NOW_KEY
 from pycon_us.memory import ViewMemory
 from pycon_us.services.storage import Storage
@@ -24,7 +25,7 @@ from pycon_us.state import Conference
 from pycon_us.ui import scrolling
 from tests import schedule_view
 from tests.fakes import MemoryPrefs
-from tests.feeds import changed, processed
+from tests.feeds import changed, recorded, settings
 from tests.schedule_view import (
     DAYS,
     FRIDAY,
@@ -107,7 +108,7 @@ async def test_a_refresh_never_jumps(
     """#313: a new feed version re-renders the lists, never moves them."""
     schedule = await shown()
     schedule.scrolls.clear()
-    conference.data = processed(2026)
+    conference.data = process(recorded(2026), settings(2026))
     conference.version += 1
     await settle()
     assert schedule.scrolls == []
@@ -275,7 +276,7 @@ async def test_a_refresh_or_a_filter_change_brings_the_button_back(
     schedule = await shown()
     assert schedule.fab is None
     if change == "refresh":
-        conference.data = processed(2026)
+        conference.data = process(recorded(2026), settings(2026))
         conference.version += 1
     else:
         await schedule.prefs.save(schedule.storage, excluded_tracks=("Charla",))

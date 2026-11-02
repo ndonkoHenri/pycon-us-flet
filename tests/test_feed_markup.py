@@ -8,6 +8,7 @@ outside code); these tests check the wiring, on the recorded 2025 and 2026 feeds
 
 import logging
 import re
+from functools import cache
 from types import SimpleNamespace
 from typing import Any
 
@@ -19,11 +20,12 @@ from pycon_us.core.html_md import to_markdown, to_text
 from pycon_us.core.jobs import is_placeholder
 from pycon_us.core.models import JobListing
 from pycon_us.core.queries import fold
-from tests.feeds import YEARS, changed, document, processed, settings
+from tests.feeds import YEARS, changed, document, processed, recorded, settings
 
 TAG = re.compile(r"</?[a-zA-Z][^>]*>")
 
 
+@cache
 def site_url(year: int) -> str:
     """The site URL that ``year``'s relative links resolve against."""
     return settings(year).site_url
@@ -183,7 +185,7 @@ def test_each_distinct_value_converts_once(monkeypatch: pytest.MonkeyPatch) -> N
         return to_markdown(value, site_url)
 
     monkeypatch.setattr(html_md, "to_markdown", counting)
-    data = processed(2026)
+    data = process(recorded(2026), settings(2026))
     assert len(converted) == len(set(converted))
     assert (
         data.posters[0].description in converted
@@ -205,7 +207,7 @@ def test_conversion_time_counts_in_the_processing_log(
     )
     monkeypatch.setattr(html_md, "to_markdown", slow)
     with caplog.at_level(logging.INFO, logger="pycon_us.core.feed"):
-        processed(2026)
+        process(recorded(2026), settings(2026))
     milliseconds = int(re.findall(r"Feed processed in (\d+) ms", caplog.text)[0])
     assert milliseconds == round(clock.now * 1000) > 0
 
