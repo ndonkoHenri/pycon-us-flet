@@ -65,6 +65,7 @@ def LeadConsent(*, title: str, on_given: Callable[[], None]) -> ft.Control:
 
     return AppScaffold(
         title=title,
+        source=__name__,
         body=ft.ListView(
             [
                 padded(

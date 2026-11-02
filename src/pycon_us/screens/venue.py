@@ -86,6 +86,7 @@ def Venue() -> ft.View:
     )
     return AppScaffold(
         title=TITLE,
+        source=__name__,
         body=InfoBody(blocks, block="venues-hours", screen=SCREEN, empty=empty),
     )
 

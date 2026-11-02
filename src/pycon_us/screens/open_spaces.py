@@ -113,11 +113,14 @@ def OpenSpaces() -> ft.View:
             expand=True,
             padding=sides(margin),
         )
-        return AppScaffold(title=TITLE, actions=actions, body=body)
+        return AppScaffold(title=TITLE, source=__name__, actions=actions, body=body)
     if not days:
         url = copy.propose_url if copy else None
         return AppScaffold(
-            title=TITLE, actions=actions, body=none_yet(url, svc, margin)
+            title=TITLE,
+            source=__name__,
+            actions=actions,
+            body=none_yet(url, svc, margin),
         )
 
     dates = [day for day, _ in days]
@@ -173,7 +176,7 @@ def OpenSpaces() -> ft.View:
             expand=True,
         ),
     )
-    return AppScaffold(title=TITLE, actions=actions, body=tabs)
+    return AppScaffold(title=TITLE, source=__name__, actions=actions, body=tabs)
 
 
 def opening_day(dates: Sequence[date], current: date) -> date:

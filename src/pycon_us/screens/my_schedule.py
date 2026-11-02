@@ -263,11 +263,15 @@ def MySchedule() -> ft.View:
             ]
     # Export only with something to export (D-289); Reminder settings with E3 (D-401).
     settings = svc.reminders is not None
+    has_menu = exportable or settings
     actions = (
-        [ScheduleMenu(exportable, settings=settings)] if exportable or settings else []
+        [ScheduleMenu(exportable, settings=settings, source=__name__)]
+        if has_menu
+        else []
     )
     return AppScaffold(
         title="My schedule",
+        source=None if has_menu else __name__,  # one overflow on the bar (D-461)
         actions=actions,
         body=ft.ListView(
             [StatusStrip(), *content],

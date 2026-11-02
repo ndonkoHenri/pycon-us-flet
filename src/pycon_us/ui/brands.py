@@ -2,8 +2,9 @@
 
 Material Icons have no brand logos, so the eight marks the info pages need are bundled
 SVGs (D-27, THEME-12, D-264): Simple Icons' one-colour 24 × 24 marks at a pinned
-version, CC0, credited in ``NOTICE``. Each is shown only as a marker beside a link to
-that brand, never as the app's own branding (D-36).
+version, from a set released under CC0, credited in ``NOTICE``, which says how far that
+goes. Each is shown only as a marker beside a link to that brand, never as the app's own
+branding (D-36).
 """
 
 import functools
