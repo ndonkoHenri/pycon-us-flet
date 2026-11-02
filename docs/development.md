@@ -60,7 +60,7 @@
 | JDK (Android builds) | **17**. flet-cli uses `JAVA_HOME`, then `/usr/libexec/java_home`, if either is a JDK 17; otherwise it downloads Temurin **17.0.13+11** into `~/java/17.0.13+11`. Either way it runs `flutter config --jdk-dir=<that JDK>`, a global Flutter setting. A newer system JDK is ignored. | `CLI/utils/jdk.py:15-18, 87-163`; `CLI/commands/flutter_base.py:382-405` |
 | Android SDK | `ANDROID_HOME`, then `ANDROID_SDK_ROOT`, then Android Studio's `~/Library/Android/sdk`, then `~/Android/sdk`; if none exists, flet-cli asks and installs one into `~/Android/sdk`. | `CLI/utils/android_sdk.py:42-103, 269` |
 | Python in the app | CPython **3.14.10** on both platforms since 2026-10-27 (About this app on an iOS 26.5 simulator and an API 36 emulator, #700; again at `22a6dcb16`, #805, where flet-cli pins python-build `20261027` and the template serious_python 6.1.2, so the manifest and the bundle agree); 3.14.8 in #445's builds, 3.14.7 before `08b89cce5` (S5). flet-cli picks only the minor, 3.14, from `requires-python = ">=3.14,<3.15"`; the patch comes from the `serious_python_*` platform packages pub resolves, which float (below). The packaging step builds site-packages and `.pyc` with 3.14.10 too. | Minor: `CLI/utils/python_versions.py:31` (python-build `20261027` at `22a6dcb16`; `20261016` at `08b89cce5`) and `CLI/commands/build_base.py:3355` (`SERIOUS_PYTHON_VERSION` only). Patch: `serious_python_darwin`/`_android` 6.1.0 `python_versions.properties:5, 10` (python-build `20261027`, 3.14.10), read by the podspec (`:49-50`) and `build.gradle.kts:44-45`. Packaging: `serious_python` 6.1.2 `lib/src/python_versions.dart:57`, used by `bin/package_command.dart:762` (`compileall` at `:331, 510`). U229 (#702) |
-| Android SDK levels | **`minSdk` 24, `targetSdk` 36, `compileSdk` 36**: Flutter's defaults. We set neither `min_sdk_version` nor `target_sdk_version` (D-106). 36 meets Play's target-API rule. | `TPL/android/app/build.gradle.kts:78-87`; `aapt2 dump badging` in #125 |
+| Android SDK levels | **`minSdk` 24, `targetSdk` 36, `compileSdk` 36**: Flutter's defaults. We set neither `min_sdk_version` nor `target_sdk_version` (D-106). 36 meets Play's target-API rule. **Run on API 24** (§5.10); the iOS 15 floor is declared, not run (§5.10). | `TPL/android/app/build.gradle.kts:78-87`; `aapt2 dump badging` in #125 |
 | Android ABIs | `arm64-v8a`, `x86_64` and `armeabi-v7a` by default. APKs for our emulators and CI are `--arch arm64-v8a` only; AABs keep all three (D-106). | `PythonRelease.android_abis`; D-106 |
 | Sizes | arm64 APK **59.4 MB** at `08b89cce5` (59,393,961 bytes, #445); 56.2 MB at `15854a0ac` (56,208,812 bytes, #125, with Roboto). Without Roboto (S5): universal APK 142.5 MB, AAB 102.5 MB, an arm64 phone's download from Play 26.6 MB (bundletool). | #125; S5 |
 | Build number | `--build-number <commit count>` becomes Android `versionCode` and iOS `CFBundleVersion`; `[project].version` becomes `versionName` and `CFBundleShortVersionString` (§4). `flet debug` passes neither, so a debug build has `versionCode` 1 and `versionName` 1.0.0. | `CLI/commands/build.py:211-220`; `CLI/commands/debug.py:140-159` |
@@ -706,6 +706,38 @@ write a flow; the strategy is [`testing-and-quality.md`](testing-and-quality.md)
 - The flows need no `uv run` and no Python: Maestro reads the YAML and talks to the device. Debug output
   (screenshots, the view hierarchy, `maestro.log`) goes to `~/.maestro/tests/` unless
   `--debug-output build/maestro/<name>` names a folder.
+
+### 5.10 The OS floors, run (#816)
+
+Checked on 2026-11-02 at `22a6dcb16` (build 405, version 0.1.0), with `flet build apk --arch arm64-v8a` and `flet build ios-simulator`, on an emulator and a simulator (D-102), against a mock of our own on port 8816. The earlier evidence was API 34 (#140, S8), API 36 and iOS 26.5.
+
+| Platform | Lowest run | Image | Result |
+|---|---|---|---|
+| Android | **API 24 (Android 7.0)** | `system-images;android-24;google_apis;arm64-v8a` (downloaded for #816, no account), AVD `Claude816_api24`, 1080x2400, 1.5 GB RAM | `aapt2 dump badging`: `minSdkVersion` 24, `targetSdkVersion` 36. The APK installs, the first cold start reaches Welcome in 5.0 s (`am start -W`), no `AndroidRuntime` error. 10 of the 13 Maestro journeys below pass; the 3 that don't are explained below. |
+| iOS | **iOS 18.6** (iPhone 16, `Claude-816-iPhone-18`) | the runtime already installed | `MinimumOSVersion` 15.0. Cold start reaches Welcome. All 12 journeys run pass, and so do the reminders primer's "deny" and "not now" answers. |
+
+The journeys, run from `maestro/` on each image (`-e MOCK_URL=http://10.0.2.2:8816` on Android, `http://localhost:8816` on iOS):
+
+| Step in #816 | Flow | API 24 | iOS 18.6 |
+|---|---|---|---|
+| Cold start | the first launch of each flow (`launch_fresh`), and a manual launch | pass | pass |
+| Schedule | `search_any_day`, `jump_to_now` | pass | pass |
+| A session | `drill_back` | pass | not run here |
+| Star | `star_undo` | pass | pass |
+| Map | `expo_map_card`, `find_room` | pass | pass |
+| About | `about_app` | pass | pass |
+| Reminders, granted | `reminder_settings` (switch on, lead 15, relaunch) | the switch and the 15 min lead pass; it then fails on the Alarms & reminders card (below) | pass |
+| Reminders, denied | `reminder_primer` with `OS_ANSWER=deny`, and `PRIMER=not_now` | `reminder_primer` fails: there is no OS prompt on API 24 (below); notifications blocked by hand instead (below) | pass, both |
+| Staff tools | `coc_capture`, `lead_capture`, `door_check`, `swag_pickup` | `coc_capture`, `lead_capture` and `door_check` pass; `swag_pickup` fails on its first helper-text assertion (#952) and passes with the two assertions on that text removed (a scratch copy of the flow, not committed) | all four pass |
+
+**API 24 differs from the flows' Android assumption, and the app agrees with it, not the flows.** Notifications are allowed on Android 12 and below (there is no runtime prompt before API 33) and exact alarms need no grant before API 31, so on API 24: `reminder_primer` shows no primer (the OS already allows notifications, so there is nothing to ask) and `reminder_settings` shows no Alarms & reminders card (`exact_allowed()` is true). Both flows fail at those assertions, in the order above, with the app doing what `ui/reminder_primer.py` and `settings_reminders.py` say. With notifications blocked in Android's own settings ("Block all"), Settings › Reminders shows "Reminders show only once you allow notifications."; the first tap on Allow notifications does nothing the user can see (Android answers without a prompt, F259), the second shows "Notifications aren't allowed. If Android shows no prompt, turn them on in system settings." with Open settings, which opens the App info page (Notifications: Blocked); after Block all is switched off the card is gone. A reminder firing on a real phone was not tried (D-102).
+
+**What is not proven.**
+
+- **iOS 15 to 17.** No simulator ran below iOS 18.6. Xcode 27.2's `xcodebuild -downloadPlatform iOS -buildVersion <v>` says "not available for download" for every version from 15.0 to 18.5 that was tried (15.0, 15.5, 16.0, 16.4, 17.0, 17.2, 17.5, 18.0, 18.1, 18.2, 18.3, 18.4, 18.5) and offers 26.0 and later. Apple's public runtime catalog (`devimages-cdn.apple.com/.../index2.dvtdownloadableindex`) still lists iOS 15.0 to 16.4, but marks them `maxXcodeVersion 26.99` (the 15.x ones are also the old installer-package kind), so Xcode 27.2 can't take them. Only Xcode 27.2 is on this Mac. What is proven about iOS 15 is what the build declares: `MinimumOSVersion` 15.0, and the app binary and 60 of its 61 frameworks have `minos` 15.0, the other 13.0 (`vtool -show-build`). It is not proof that the app starts on iOS 15.
+- **Android 8 to 11 (API 26 to 30).** Not run. The AVD `Pixel_7_Pro_API_29_Q_-_has_Flet_App_` that #816 counted on is not usable here: its `.ini` points to an `.avd` folder that doesn't exist, and `~/Library/Android/sdk/system-images` has no `android-29`.
+- **Screen readers on API 24.** TalkBack was not run; see #952.
+- **An outside tester's phone** (#462 criterion 6) and hardware.
 
 ---
 
