@@ -22,3 +22,12 @@ def test_record_action_reserves_space_around_wrapped_labels(
     assert isinstance(padding, ft.Padding)
     assert (padding.left, padding.right, padding.top, padding.bottom) == (24, 24, 8, 8)
     assert button.elevation == 0
+
+
+def test_sending_action_can_wrap_its_ring_and_words() -> None:
+    """The narrow dialog action lets its busy contents use more than one line."""
+    button = record_button(
+        Review("MOCK0002", "Grace Sample", sending=True), lambda: None
+    )
+    assert isinstance(button.content, ft.Row)
+    assert button.content.wrap

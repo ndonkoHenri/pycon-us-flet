@@ -245,7 +245,7 @@ def record_button(review: Review, on_click: Callable[[], object]) -> ft.FilledBu
         on_click: Records.
     """
     return ft.FilledButton(
-        content=busy_label(RECORDING)
+        content=busy_label(RECORDING, wrap=True)
         if review.sending
         else ft.Text(RECORD_ANYWAY if review.maybe_sent else RECORD),
         on_click=on_click,
