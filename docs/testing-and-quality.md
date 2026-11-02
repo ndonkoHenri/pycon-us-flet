@@ -746,6 +746,53 @@ What this says, and doesn't:
 - **Python moved less than what runs around it.** In the reproducer, against S2: star tap 4 ms against 3, Python start → content 596 ms against 394, `START u0` → `py-start` 929 ms against 492.
 - Not measured: a screen recording of the first frame with rows (the content line stays a proxy), and the iPhone (#121).
 
+**Cold-start profile, 2026-11-02 afternoon (#860): Android emulator.** Release arm64 APKs of
+`cf828bdd` and S2 at pin `22a6dcb16`, Flutter 3.47.8, on one boot of the same M4/API 36
+AVD as above, light theme and 100 % text. The app cached the bundled 2026 public-feed
+snapshot through a local HTTP server, then the server was stopped; fake Friday 09:00,
+every track shown. Builds and Maestro finished before measurement. Each start used
+force-stop, a two-second pause, `am start -W`, six seconds without device traffic, then
+one epoch logcat read. The app URI is now `confcompanion://app/schedule`.
+
+| Build | Kept starts | Content proxy median (range), ms | `TotalTime` median (range), ms |
+|---|---|---|---|
+| S2 before | 10 | 1,508 (1,423–1,603) | 740 (717–800) |
+| Unmodified app | 10 | 2,102.5 (1,928–2,223) | 609.5 (577–675) |
+| Check-only instrumented app | 5 | 2,126 (2,019–2,212) | 669 (583–692) |
+| S2 after | 5 | 1,488 (1,470–1,594) | 745 (717–770) |
+
+The first start of each group was discarded in addition to those counts. S2's medians
+agree within 1.4 %, so the window qualifies under D-453. The unmodified app is **1.394×**
+S2 before (1.413× S2 after), still over 1.2×. This is a fresh reading, not evidence that
+the earlier build improved: the previous scene refreshed the live feed.
+
+Only the ignored build copy was instrumented: marks around imports, `Services.create`,
+bootstrap awaits, Schedule/scaffold entry, patch duration and the content-marker RPC;
+session-row bodies were counted. No Flet source was edited. One representative start,
+in milliseconds since the entry point began:
+
+| Boundary or interval | ms |
+|---|---|
+| Flet import complete; all app imports complete | 26; 442 |
+| `main` entry; services ready | 490; 555 (service creation 64) |
+| Preferences load; accessibility read; signed-out account restore | 58; 7; 28 |
+| Local feed load/process; reminder enabled-state read | 71; 3 |
+| Bootstrap ready; Schedule entry; scaffold entry | 740; 742; 750 |
+| First data patch complete, 99 session-row bodies | 874 (patch 133) |
+| Content-marker round trip starts | 915 |
+| Deferred other-day patch, 180 additional session-row bodies | 1,008–1,378 (370) |
+| Content-marker round trip returns | 1,378 |
+
+These are instrumented intervals, not independent medians or on-screen frame timings.
+In particular, the app marker returns **after** the deferred other-day render; S2's
+`after_render()` logs its first acknowledgement **before** requesting those days. That
+ordering explains part of the proxy gap, without proving when the first rows became
+visible. Simply moving the marker would not make the UI faster. The imports and eager
+other-day rendering need a targeted follow-up, including a recording; no lazy-import
+change or new shell-cost allowance was made (D-110, D-453). #860 remains open. No Flet
+defect was isolated, and the iPhone's release target remains unmeasured here. The
+dedicated emulator was shut down after the run.
+
 **P1 exit, 2026-10-14 (#219, #110): Android emulator, not comparable.**
 - **Setup.** Release arm64 APKs of `main` (`flet build apk --arch arm64-v8a` with the worktree's pub cache; each APK's `app.zip` matched `build/python-app`), Flet pin `15854a0ac`. Run A used `ff8d43f`, run B `119858d` (#335, the filter sheet's chips, came in between). AVD `pycon_pixel6a_api36` (Android 16, Google APIs arm64, 1080 × 2400), on an instance of its own (`-read-only -no-snapshot-load`, a cold boot at 13:13). Host: Apple M4 (10 cores), macOS 27.0, with other agents' emulators and builds running. The fake clock was at Friday, May 15, 09:00 PT (Developer), on the cached 2026 feed, with every track shown ("Show all"). The default filter hides open spaces, so this is the full busiest day that S2 measured.
 - **Why it is not comparable.** Before run A, the host's 1-minute load stayed under 6 for three polls in a row (13:29-13:31: 5.1, 5.5, 5.3), then other work pushed it back to 9-16 during the run. Over the ten cold starts, the emulator's `Feed processed in N ms` had a median of 280 ms, against 66 ms in S2. On the host itself, `feed.process` of the 2026 snapshot took a median 134 ms (S2: 42 ms). Every qemu thread showed priority 4 (background) at 13:21 while the host's user was active (18 s idle), so S2's slowdown does not come only from an idle host. Polls from 13:39 to 14:26 and from 18:32 to 19:33 never found three readings under 6 in a row. Run B took the best moment, at load 6.2-6.6: processing had a median of 94 ms (67-176), but `TotalTime`, Flutter's start before any Python runs, read 587-2,819 ms against D-112's 426 ms. At 19:46, Python started 3.1-4.3 s after `START u0` (S2: 0.47 s). No number here can say whether P1 regressed. #339 tried to repeat the run at S2's speed and found that speed out of reach (above).
