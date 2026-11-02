@@ -31,13 +31,12 @@ from pycon_us.core.timefmt import day_heading, on_screen, time_status, zone_note
 from pycon_us.locations import drill_href
 from pycon_us.prefs import use_prefs
 from pycon_us.services import use_services
-from pycon_us.services.errors import report_errors
 from pycon_us.theme import use_tokens
 from pycon_us.ui.fold import FoldTile, expand_style
 from pycon_us.ui.location_card import job_fair_card, room_card
 from pycon_us.ui.rows import LinkTile
 from pycon_us.ui.semantics import named
-from pycon_us.ui.status_strip import TICK_SECONDS, current_minute
+from pycon_us.ui.status_strip import use_minute
 
 
 def room_href(view_path: str, room: Room, session_id: str) -> str:
@@ -228,11 +227,10 @@ def OtherRooms(
 def StatusLine(start: datetime, end: datetime) -> ft.Control:
     """Where a session stands now: "Starts in 25 min", "Happening now" or "Ended".
 
-    It ticks every ``TICK_SECONDS`` while it is mounted and the app is in the
-    foreground (``Services.run_every``, D-40) and re-renders itself only; it reads
-    ``clock.now()``, so the Developer fake clock moves it too (D-43). It shows nothing
-    when ``time_status()`` has nothing to say, and screen readers hear the words
-    ("Starts in 25 minutes").
+    It ticks with ``use_minute()`` while it is mounted and the app is in the foreground
+    (D-40) and re-renders itself only; it reads ``clock.now()``, so the Developer fake
+    clock moves it too (D-43). It shows nothing when ``time_status()`` has nothing to
+    say, and screen readers hear the words ("Starts in 25 minutes").
 
     Args:
         start: When the session starts, as its time tile shows it
@@ -241,18 +239,7 @@ def StatusLine(start: datetime, end: datetime) -> ft.Control:
     """
     svc = use_services()
     tokens = use_tokens()
-    _, set_minute = ft.use_state(current_minute)
-
-    @report_errors
-    def tick() -> None:
-        set_minute(current_minute())  # the same minute renders nothing new
-
-    @report_errors
-    async def keep_up() -> None:
-        await svc.run_every(TICK_SECONDS, tick)
-
-    # Flet cancels the ticks on unmount (F2).
-    ft.use_effect(keep_up, [])
+    use_minute()
     status = time_status(start, end, clock.now(), svc.year.conference.zone)
     if status is None:
         return ft.Text("", visible=False)

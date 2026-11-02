@@ -13,6 +13,7 @@ import pytest
 from pycon_us.memory import ViewMemory
 from pycon_us.screens import plan_tables
 from pycon_us.state import Conference
+from pycon_us.theme import BOOTH_AMBER
 from pycon_us.ui import zoom_geometry
 from tests import plan_view
 from tests.feeds import processed
@@ -66,9 +67,7 @@ async def test_the_query_selects_its_table_with_the_feed_s_sponsors(
     node = areas(plan)["T7"]
     assert node.button and node.label == "Table T7, Chainguard, Red Hat"
     box = cast(ft.Container, node.content)
-    assert box.bgcolor == ft.Colors.with_opacity(
-        plan_tables.FILL_OPACITY, plan_tables.AMBER
-    )
+    assert box.bgcolor == ft.Colors.with_opacity(plan_tables.FILL_OPACITY, BOOTH_AMBER)
     assert card_texts(plan) == ["Table T7", "Chainguard", "Red Hat"]
     assert plan.image.semantics_label == (
         "Job fair & community showcase floor plan, Table T7 selected"

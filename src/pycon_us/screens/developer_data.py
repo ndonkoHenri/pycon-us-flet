@@ -37,7 +37,7 @@ from pycon_us.state import Conference, use_conference
 from pycon_us.theme import use_tokens
 from pycon_us.ui.actions import NO_OUTCOME, Outcome, action_row, outcome_line, refreshed
 from pycon_us.ui.share import report_subtitle, share_console_log
-from pycon_us.ui.status_strip import schedule_line, use_minute
+from pycon_us.ui.status_strip import UPDATING, schedule_line, use_minute
 
 logger = logging.getLogger(__name__)
 
@@ -175,7 +175,7 @@ def DataActions() -> ft.Control:
                 "developer.refresh_now",
                 ft.Icons.REFRESH,
                 "Refresh now",
-                "Updating the schedule…"
+                UPDATING
                 if refreshing
                 else schedule_line(conference.source, conference.fetched_at),
                 refresh_now,

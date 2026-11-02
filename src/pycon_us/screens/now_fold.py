@@ -14,15 +14,12 @@ from collections.abc import Callable
 
 import flet as ft
 
-from pycon_us.core.models import Session
+from pycon_us.core.models import OPEN_SPACE, Session
 from pycon_us.services.errors import report_errors
 from pycon_us.ui.fold import toggle_button
 
 SHOWN = 3
 """The rows a folded section shows after your saved sessions."""
-
-OPEN_SPACE = "open-space"
-"""The feed's kind of an open space, which comes after the other sessions."""
 
 HAPPENING = "happening"
 UP_NEXT = "up_next"

@@ -27,6 +27,7 @@ from pycon_us.core.expo import job_fair_tables
 from pycon_us.core.models import ConferenceData, Sponsor
 from pycon_us.locations import drill_href
 from pycon_us.services.errors import report_errors
+from pycon_us.theme import BOOTH_AMBER
 from pycon_us.ui.zoom_geometry import Size
 from pycon_us.year_map import JOB_FAIR_PLAN, Table
 
@@ -35,10 +36,6 @@ SCREEN = "plan"
 
 TABLE_PARAM = "table"
 """The query option that selects a table: ``…/plan/job-fair?table=T8``."""
-
-AMBER = "#F2C14E"
-"""The selected table's amber, the expo's selected booth's (#402), on the print's purple
-at well over 3:1 in either theme: the plan is the same image in both."""
 
 FILL_OPACITY = 0.45
 """How much amber covers a selected table: its printed logo still shows."""
@@ -132,10 +129,10 @@ def table_area(
             content=ft.Container(
                 # Unselected, the print shows the table; a transparent fill still
                 # takes the taps, as Flet decorates every Container.
-                bgcolor=ft.Colors.with_opacity(FILL_OPACITY, AMBER)
+                bgcolor=ft.Colors.with_opacity(FILL_OPACITY, BOOTH_AMBER)
                 if selected
                 else ft.Colors.TRANSPARENT,
-                border=ft.Border.all(OUTLINE_DP, AMBER) if selected else None,
+                border=ft.Border.all(OUTLINE_DP, BOOTH_AMBER) if selected else None,
                 border_radius=4,
                 on_click=tap,
             ),

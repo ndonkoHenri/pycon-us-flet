@@ -29,10 +29,7 @@ from pycon_us.theme import use_tokens
 from pycon_us.ui.actions import NO_OUTCOME, action_row, outcome_line, refreshed
 from pycon_us.ui.scaffold import SectionHeader
 from pycon_us.ui.semantics import named
-from pycon_us.ui.status_strip import schedule_line, use_minute
-
-UPDATING = "Updating the schedule…"
-"""Refresh now's second line while the refresh it asked for runs, as the strip says it."""
+from pycon_us.ui.status_strip import UPDATING, schedule_line, use_minute
 
 CHANGES_LINE = "What refreshes changed in the schedule"
 """Schedule changes' second line while no unseen change touches a saved session."""
