@@ -38,8 +38,8 @@ async def announce(
     """Say ``words`` through the platform's announcements, waiting at most the cap.
 
     The message is sent at once; only the answer, which iOS may never give, is waited
-    for (D-420, F276). A failure is logged, never raised: what is said is on the screen
-    all the same. A log names the error's class only, since its message can repeat the
+    for (D-420, F276). A service error is logged, never raised: what is said is on the
+    screen all the same. A log names the error's class only, since its message can repeat the
     words and the Code of Conduct tools' must never reach a log (D-72).
 
     Call it only where ``Prefs.announcements`` is true.
