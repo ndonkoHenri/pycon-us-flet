@@ -11,6 +11,7 @@ its session.
 
 from dataclasses import replace
 
+import flet as ft
 import pytest
 
 from pycon_us.core.admission import Attendee, headcount, tags
@@ -18,7 +19,14 @@ from pycon_us.core.badges import Tag
 from pycon_us.core.door_sessions import DoorChoice
 from pycon_us.core.outbox import Kind, Status
 from pycon_us.door_check import ALREADY, CHECKED_IN
-from pycon_us.screens.door_headcount import UNAVAILABLE, headcount_words, read_headcount
+from pycon_us.screens.door_headcount import (
+    UNAVAILABLE,
+    WORDS,
+    WORDS_SIZE,
+    headcount_line,
+    headcount_words,
+    read_headcount,
+)
 from pycon_us.ui import scan_screen
 from tests import door_rig
 from tests.door_rig import ASYNC, VIEW, Show
@@ -86,6 +94,20 @@ def test_a_failed_read_is_never_shown_as_zero() -> None:
     assert read_headcount(None, "staff@example.com", ()) == 0
     assert headcount_words(None) == UNAVAILABLE
     assert headcount_words(1234) == "1,234 checked in"
+
+
+def test_only_the_number_takes_the_display_size() -> None:
+    """The words are smaller, so "checked" isn't split at iOS's largest text (#828)."""
+    node = headcount_line(1234)
+    assert isinstance(node, ft.Semantics)
+    assert node.label == "1,234 checked in for this session"
+    text = node.content
+    assert isinstance(text, ft.Text) and text.spans
+    assert text.value == "1,234"
+    assert text.theme_style == ft.TextThemeStyle.DISPLAY_SMALL
+    (words,) = text.spans
+    assert words.text == WORDS
+    assert words.style and words.style.size == WORDS_SIZE
 
 
 # ------------------------------------------------------------------ the screen
