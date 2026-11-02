@@ -18,7 +18,7 @@ import flet as ft
 from pycon_us.accessibility import read_accessibility
 from pycon_us.prefs import Prefs
 from pycon_us.services import Services
-from pycon_us.services.errors import report_errors
+from pycon_us.services.errors import report_errors, say
 
 NOT_SAVED = "Couldn't save your change"
 """The SnackBar when a change applies for the session but was not written (D-120)."""
@@ -37,16 +37,14 @@ def say_if_unsaved(page: ft.Page, saved: bool) -> None:
     """Show "Couldn't save your change" when a setting was applied but not saved (D-120).
 
     The setting still applies for the session; the SnackBar says it ends on relaunch.
-    Settings' rows and its Reminders section use it.
+    Every setting a failed write can leave unsaved uses it.
 
     Args:
         page: The session's page.
         saved: What ``Prefs.save()`` returned.
     """
     if not saved:
-        page.show_dialog(
-            ft.SnackBar(ft.Text(NOT_SAVED), behavior=ft.SnackBarBehavior.FLOATING)
-        )
+        say(page, NOT_SAVED)
 
 
 def keep_while_screen_reader(bar: ft.SnackBar, svc: Services, prefs: Prefs) -> None:

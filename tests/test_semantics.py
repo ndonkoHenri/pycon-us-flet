@@ -1,6 +1,6 @@
 """Tests for the semantics helpers and two scans of every app module.
 
-The helpers are ``ui/semantics.py``'s (decisions §M, D-200). The scans hold every
+The helpers are ``ui/semantics.py``'s (D-200). The scans hold every
 ``Semantics`` heading to a level (F40, F49, D-211) and every merged identifier to
 ``named()`` (D-214); the scan that keeps a bare identifier off a button, chip, field or
 tile (F50, D-230) is ``test_semantics_bare.py``'s (#623).

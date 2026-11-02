@@ -35,8 +35,9 @@ from pycon_us.screens.schedule_sheet import (
 from pycon_us.services import Services, use_services
 from pycon_us.services.errors import report_errors
 from pycon_us.theme import use_tokens
-from pycon_us.ui.favorite import NOT_SAVED, SNACK_BAR_MS, selection_click
+from pycon_us.ui.favorite import selection_click
 from pycon_us.ui.semantics import named
+from pycon_us.ui.snack_bars import say_if_unsaved
 
 SCREEN = "schedule"
 """The screen's name in the identifiers (decisions §M)."""
@@ -223,25 +224,14 @@ async def _save(
     """
     async with lock:
         excluded = change(prefs.excluded_tracks)
-        if not await prefs.save(svc.storage, excluded_tracks=excluded):
-            _not_saved(ft.context.page)
+        saved = await prefs.save(svc.storage, excluded_tracks=excluded)
+        say_if_unsaved(ft.context.page, saved)
 
 
 def _toggled(excluded: tuple[str, ...], key: str, *, shown: bool) -> tuple[str, ...]:
     """Return ``excluded`` with ``key`` shown (removed) or hidden (added at the end)."""
     kept = tuple(k for k in excluded if k != key)
     return kept if shown else (*kept, key)
-
-
-def _not_saved(page: ft.Page) -> None:
-    """Say that a filter change shows but will be lost on relaunch (D-120)."""
-    page.show_dialog(
-        ft.SnackBar(
-            ft.Text(NOT_SAVED),
-            behavior=ft.SnackBarBehavior.FLOATING,
-            duration=SNACK_BAR_MS,
-        )
-    )
 
 
 def _button(changed: bool, on_click: Callable[[], None]) -> ft.Control:

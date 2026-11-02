@@ -52,9 +52,6 @@ SHARE_TOOLTIP = "Share session"
 ADD_TO_CALENDAR = "Add to calendar"
 """The overflow's calendar item (SESS-04), the same words on both platforms (D-272)."""
 
-OPEN_SPACE = "open-space"
-"""The kind of an open space's session (DATA-05): it has an image and a site entry."""
-
 IMAGE_RATIO = 16 / 9
 """The open-space image's frame: the content's width, and nine sixteenths of it high."""
 

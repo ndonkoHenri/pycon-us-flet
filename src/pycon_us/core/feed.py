@@ -25,6 +25,7 @@ from functools import cache
 
 from pycon_us.core import html_md, jobs, records, rules
 from pycon_us.core.models import (
+    OPEN_SPACE,
     ConferenceData,
     Day,
     JobListing,
@@ -235,7 +236,7 @@ def _converted(data: ConferenceData, site_url: str) -> ConferenceData:
         return html_md.to_markdown(value, site_url)
 
     def marked_up(session: Session) -> Session:
-        if session.kind == "open-space":
+        if session.kind == OPEN_SPACE:
             description_md = session.description
             text = _markdown_text(session.description)
         else:

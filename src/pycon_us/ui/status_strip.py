@@ -63,7 +63,7 @@ def strip_line(
     if status == "fresh":
         return None
     if status == "refreshing":
-        return "Updating the schedule…"
+        return UPDATING
     if status == "stale":
         if fetched_at is None:  # nothing loaded at all (rare, NEW-03)
             return "No schedule yet"
@@ -123,6 +123,9 @@ REFRESH_INDENT = 16
 
 PROGRESS_HEIGHT = 2
 """The height of the strip's refresh bar, in dp (ux.md §3.9)."""
+
+UPDATING = "Updating the schedule…"
+"""What the strip says while a refresh runs, and Refresh now's second line meanwhile."""
 
 TICK_SECONDS = 60
 """How often a shown strip reads the clock again: its age, and fresh turning stale (D-40)."""

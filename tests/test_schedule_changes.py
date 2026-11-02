@@ -9,6 +9,7 @@ exactly; the words themselves are ``tests/test_change_views.py``'s. The seen mar
 from typing import cast
 
 import flet as ft
+import pytest
 
 from pycon_us.core.change_views import (
     AFFECTS_MY_SCHEDULE,
@@ -145,6 +146,28 @@ async def test_a_star_tap_keeps_the_item_in_its_section(show: Show) -> None:
         "h3 Today, 10:12 AM",
         "New: Python for Humans: room changed from Room 104A to Room 103ABC.",
     ]
+
+
+async def test_a_star_tap_re_renders_only_the_items_of_that_session(
+    show: Show, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """A star tap re-renders the session's two items and skips the others (D-153).
+
+    The test fails with ``ft.memo`` taken off ``ChangeItem``.
+    """
+    rendered: list[str] = []
+    line = screen.change_line
+
+    def counted(view: ChangeView) -> ft.Text:
+        rendered.append(view.change.id)  # each item's body builds its line once
+        return line(view)
+
+    monkeypatch.setattr(screen, "change_line", counted)
+    page = await show()
+    rendered.clear()
+    star = page.node("changes.favorite.142.room")
+    await page.click(cast(ft.IconButton, star.content))
+    assert rendered == [SAVED, SAVED]
 
 
 async def test_an_empty_log_says_no_changes_yet_with_a_way_out(show: Show) -> None:

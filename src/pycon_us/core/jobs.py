@@ -29,20 +29,17 @@ from urllib.parse import unquote, urlsplit
 from pycon_us.core import html_md
 from pycon_us.core.links import feed_link
 from pycon_us.core.models import ConferenceData, JobListing, Role, Sponsor
-from pycon_us.core.queries import fold
+from pycon_us.core.queries import fold, matching
 
-_HEADINGS = frozenset({"h1", "h2", "h3", "h4", "h5", "h6"})
 _BLOCKS = frozenset({"p", "li"})  # where a bare URL makes a role
 # Where a browser starts a new line: the text on either side is not one word, nor one URL.
 _BREAKS = frozenset(
     {"br", "hr", "div", "ul", "ol", "dl", "dt", "dd", "blockquote", "pre", "table"}
-    | {"tr", "td", "th", "section", "article", "header", "footer", *_BLOCKS, *_HEADINGS}
+    | {"tr", "td", "th", "section", "article", "header", "footer"}
+    | _BLOCKS
+    | html_md.HEADINGS
 )
 _WEB_SCHEMES = frozenset({"http", "https"})  # a role opens a page; mailto: is no role
-
-# A bare URL as D-114 finds one: sentence punctuation after it is not part of it.
-_URL = re.compile(r"https?://[^\s<>\"]+")
-_URL_TRAILER = re.compile(r"[.,;:!?'\")\]’”]+$")
 
 _SEPARATORS = " |:,;-–—·"
 """Trimmed off the text before a bare URL: ``Research Engineer | https://…``."""
@@ -129,10 +126,7 @@ def filter_listings(
     Returns:
         The listings found, in feed order.
     """
-    words = fold(query).split()
-    if not words:
-        return listings
-    return tuple(j for j in listings if all(word in j.search_text for word in words))
+    return matching(listings, query, lambda listing: listing.search_text)
 
 
 def listings_of(data: ConferenceData, sponsor: Sponsor) -> tuple[JobListing, ...]:
@@ -225,7 +219,7 @@ class _RoleParser(HTMLParser):
             return
         if tag in _BREAKS:
             self.handle_data(" ")  # before a block opens, so it ends the text around it
-        if tag in _HEADINGS:
+        if tag in html_md.HEADINGS:
             self.long_form = True
         elif tag in _BLOCKS:
             self._blocks.append(_Block(tag))
@@ -271,7 +265,7 @@ class _RoleParser(HTMLParser):
         if anchor is None or (url := self._web_link(anchor.href)) is None:
             return
         title = " ".join("".join(anchor.text).split())
-        if not title or _URL.fullmatch(title):
+        if not title or html_md.URL.fullmatch(title):
             title = _url_title(url)
         self._found.append((anchor.start, Role(title, url)))
 
@@ -280,10 +274,10 @@ class _RoleParser(HTMLParser):
         if block.has_anchor:
             return
         text = "".join(piece for _, piece in block.pieces)
-        matches = list(_URL.finditer(text))
+        matches = list(html_md.URL.finditer(text))
         if len(matches) != 1:
             return
-        url = self._web_link(_URL_TRAILER.sub("", matches[0].group()))
+        url = self._web_link(html_md.URL_TRAILER.sub("", matches[0].group()))
         if url is None:
             return
         title = " ".join(text[: matches[0].start()].split()).strip(_SEPARATORS)

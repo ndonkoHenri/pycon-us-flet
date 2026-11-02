@@ -1,4 +1,4 @@
-"""A session's badges (decisions §M): the pills that say its track and its flags.
+"""A session's badges: the pills that say its track and its flags.
 
 A badge is a text pill: a tonal fill per track in light and dark, or an outline for
 "Registration required" and "Changed" (D-25, D-315; ux.md §3.4); in high contrast every badge is outlined,

@@ -30,7 +30,7 @@ from weakref import WeakKeyDictionary
 
 from pycon_us.core.jobs import listings_of
 from pycon_us.core.models import ConferenceData, Session, Sponsor
-from pycon_us.core.queries import fold
+from pycon_us.core.queries import fold, matching
 from pycon_us.core.slugs import room_sort_key
 
 if TYPE_CHECKING:  # the year data's type only: core never imports the loader (D-67)
@@ -219,10 +219,7 @@ def filter_rows(rows: tuple[ExpoRow, ...], query: str) -> tuple[ExpoRow, ...]:
         rows: The List's rows, in the order shown.
         query: What the user typed in the List's filter.
     """
-    words = fold(query).split()
-    if not words:
-        return rows
-    return tuple(row for row in rows if all(word in row.search_text for word in words))
+    return matching(rows, query, lambda row: row.search_text)
 
 
 def filter_sponsors(sponsors: tuple[Sponsor, ...], query: str) -> tuple[Sponsor, ...]:
@@ -232,14 +229,7 @@ def filter_sponsors(sponsors: tuple[Sponsor, ...], query: str) -> tuple[Sponsor,
         sponsors: ``Expo.unplaced``.
         query: What the user typed in the List's filter.
     """
-    words = fold(query).split()
-    if not words:
-        return sponsors
-    return tuple(
-        sponsor
-        for sponsor in sponsors
-        if all(word in fold(f"{sponsor.booth} {sponsor.name}") for word in words)
-    )
+    return matching(sponsors, query, lambda s: fold(f"{s.booth} {s.name}"))
 
 
 def job_fair_tables(data: ConferenceData) -> tuple[JobFairTable, ...]:

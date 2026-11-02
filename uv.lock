@@ -894,6 +894,7 @@ dependencies = [
     { name = "flet-notifications" },
     { name = "flet-permission-handler" },
     { name = "flet-secure-storage" },
+    { name = "httpx" },
     { name = "tzdata" },
 ]
 
@@ -919,6 +920,7 @@ requires-dist = [
     { name = "flet-notifications", editable = ".flet-src/sdk/python/packages/flet-notifications" },
     { name = "flet-permission-handler", editable = ".flet-src/sdk/python/packages/flet-permission-handler" },
     { name = "flet-secure-storage", editable = ".flet-src/sdk/python/packages/flet-secure-storage" },
+    { name = "httpx", specifier = "==0.28.1" },
     { name = "tzdata", specifier = "==2026.5" },
 ]
 

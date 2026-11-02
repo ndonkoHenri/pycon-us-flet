@@ -30,14 +30,14 @@ from pycon_us.locations import WELCOME, start_target
 from pycon_us.prefs import Prefs, use_prefs
 from pycon_us.screens.developer_ui import Asking, confirmation, snapshot_day
 from pycon_us.services import Services, changes_file, use_services
-from pycon_us.services.errors import report_errors, show_details
+from pycon_us.services.errors import report_errors, say, show_details
 from pycon_us.staff import Staff, use_staff
 from pycon_us.staff_data import clear_staff_data, staff_counts
 from pycon_us.state import Conference, use_conference
 from pycon_us.theme import use_tokens
 from pycon_us.ui.actions import NO_OUTCOME, Outcome, action_row, outcome_line, refreshed
 from pycon_us.ui.share import report_subtitle, share_console_log
-from pycon_us.ui.status_strip import schedule_line, use_minute
+from pycon_us.ui.status_strip import UPDATING, schedule_line, use_minute
 
 logger = logging.getLogger(__name__)
 
@@ -149,12 +149,7 @@ def DataActions() -> ft.Control:
                 memory.last_location, memory.search_base, onboarded=prefs.onboarded
             )
         )
-        page.show_dialog(
-            ft.SnackBar(
-                ft.Text("App reset" if complete else RESET_INCOMPLETE),
-                behavior=ft.SnackBarBehavior.FLOATING,
-            )
-        )
+        say(page, "App reset" if complete else RESET_INCOMPLETE)
 
     # Read when Reset app asks, and after each pass while it does (D-414).
     rows = ft.use_memo(
@@ -180,7 +175,7 @@ def DataActions() -> ft.Control:
                 "developer.refresh_now",
                 ft.Icons.REFRESH,
                 "Refresh now",
-                "Updating the schedule…"
+                UPDATING
                 if refreshing
                 else schedule_line(conference.source, conference.fetched_at),
                 refresh_now,

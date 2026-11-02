@@ -13,7 +13,7 @@ import re
 from dataclasses import dataclass
 from typing import Any
 
-from pycon_us.core.queries import fold
+from pycon_us.core.queries import fold, matching
 
 _QUOTES = re.compile(r'^"|"$')
 """Ionic's quote stripping: one ``"`` at each end, no more."""
@@ -115,14 +115,7 @@ def filter_sponsors(
     Returns:
         The sponsors found, in their order; ``sponsors`` itself without a word.
     """
-    words = fold(query).split()
-    if not words:
-        return sponsors
-    return tuple(
-        sponsor
-        for sponsor in sponsors
-        if all(word in fold(f"{sponsor.name} {sponsor.booth or ''}") for word in words)
-    )
+    return matching(sponsors, query, lambda s: fold(f"{s.name} {s.booth or ''}"))
 
 
 def to_stored(sponsor: LeadSponsor) -> dict[str, Any]:

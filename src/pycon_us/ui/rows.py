@@ -1,4 +1,4 @@
-"""The rows lists are made of (decisions §M): ``LinkTile``, ``SpeakerRow``, ``SpeakerTile``.
+"""The rows lists are made of: ``LinkTile``, ``SpeakerRow``, ``SpeakerTile``.
 
 ``LinkTile`` is a row that opens a link, ``SpeakerRow`` a speaker with their first
 session (SPKR-01), ``SpeakerTile`` a speaker in a session's Speakers section (SESS-07).

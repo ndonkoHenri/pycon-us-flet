@@ -18,7 +18,8 @@ from pycon_us import clock
 from pycon_us.core.timeline import NOW_KEY
 from pycon_us.feed_refresh import Problem
 from pycon_us.memory import ViewMemory
-from pycon_us.screens import schedule_days, schedule_now
+from pycon_us.screens import schedule as screen
+from pycon_us.screens import schedule_now
 from pycon_us.state import Conference
 from pycon_us.ui import scrolling
 from tests import schedule_view
@@ -300,13 +301,13 @@ async def test_the_first_data_is_the_first_display_it_renders_today_first_and_ju
 ) -> None:
     """NEW-03, then the first fetch: D-156's two renders and the one jump still hold."""
     lists: list[date] = []
-    spy = schedule_days._DayList
+    spy = screen.DayList
 
     def counted(day: date, *args: Any, **kwargs: Any) -> ft.Control:
         lists.append(day)
         return spy(day, *args, **kwargs)
 
-    monkeypatch.setattr(schedule_days, "_DayList", counted)
+    monkeypatch.setattr(screen, "DayList", counted)
     conference.data, conference.source = None, "none"
     schedule = await shown()
     assert schedule.scrolls == [] and memory.jumped_on is None
