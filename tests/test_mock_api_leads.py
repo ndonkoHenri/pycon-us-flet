@@ -252,6 +252,30 @@ def test_a_repeated_capture_is_two_leads_when_not_idempotent() -> None:
     assert [lead.access_code for lead in state.leads] == ["MOCK0001", "MOCK0001"]
 
 
+@pytest.mark.parametrize("capture", ["idempotent", "non_idempotent"])
+def test_two_sponsors_each_have_their_own_lead_on_an_attendee(capture: Capture) -> None:
+    """Another sponsor's capture is a new lead, never a repeat, in either mode (D-459)."""
+    state = state_at(capture)
+    for sponsor in (1, 2):
+        endpoint = f"lead_retrieval/capture/?{ADA_BADGE}&sponsor_id={sponsor}"
+        assert call(state, "GET", endpoint, "staff")[0] == 200
+    assert [(lead.sponsor_id, lead.access_code) for lead in state.leads] == [
+        (1, "MOCK0001"),
+        (2, "MOCK0001"),
+    ]
+
+
+def test_a_note_needs_the_named_sponsor_s_own_lead() -> None:
+    """Another sponsor's lead on the attendee doesn't let a note in: 404 (D-459)."""
+    state = state_at()
+    call(state, "GET", f"lead_retrieval/capture/?{ADA_BADGE}&sponsor_id=1", "staff")
+    payload = {"accessCode": "MOCK0001", "note": "x", "sponsor_id": "2"}
+    assert (
+        call(state, "POST", "lead_retrieval/MOCK0001/note/", "staff", payload)[0] == 404
+    )
+    assert state.notes == []
+
+
 def test_a_note_is_recorded_for_a_captured_lead() -> None:
     """The note modal's text is kept against the sponsor's lead."""
     state = state_at()

@@ -7,9 +7,12 @@ format the app writes.
 
 import json
 import logging
+import threading
+from collections.abc import Callable
+from concurrent.futures import ThreadPoolExecutor
 from dataclasses import replace
 from datetime import UTC, datetime, timedelta
-from functools import cache
+from functools import cache, partial
 from typing import Any
 from zoneinfo import ZoneInfo
 
@@ -144,9 +147,8 @@ def test_any_detection_time_and_seen_mark_round_trip(seen: bool, hours: int) -> 
         b"\xff\xfe",
         b'{"detected_at": "x"}',
         b"null",
-        b"[" * 100_000 + b"]" * 100_000,
     ],
-    ids=["empty", "truncated", "not UTF-8", "an object", "null", "nested too deep"],
+    ids=["empty", "truncated", "not UTF-8", "an object", "null"],
 )
 def test_a_file_that_is_not_a_json_list_gives_nothing_and_a_log(
     raw: bytes, caplog: pytest.LogCaptureFixture
@@ -155,6 +157,66 @@ def test_a_file_that_is_not_a_json_list_gives_nothing_and_a_log(
     with caplog.at_level(logging.WARNING):
         assert decode_batches(raw, UTC) == []
     assert "The change log is not" in caplog.text
+
+
+def on_a_small_stack[T](call: Callable[[], T]) -> T:
+    """Return ``call()``'s result (or raise its error) from a thread with a small stack.
+
+    Python 3.14 limits recursion in C by the stack that is really there, so whether a depth
+    overflows on the main thread differs between macOS and Linux (#848). This small stack
+    overflows at the same depths on both.
+    """
+    previous = threading.stack_size(512 * 1024)
+    try:
+        with ThreadPoolExecutor(max_workers=1) as pool:
+            return pool.submit(call).result()
+    finally:
+        threading.stack_size(previous)
+
+
+def nested_objects(depth: int) -> bytes:
+    """JSON objects nested ``depth`` deep: printing them takes more stack than parsing."""
+    return b'{"a":' * depth + b"1" + b"}" * depth
+
+
+def with_kind(kind: bytes) -> bytes:
+    """A log of one batch whose one change has ``kind``, as raw JSON, as its kind."""
+    return (
+        b'[{"detected_at": "2026-05-16T17:42:00+00:00", "seen": false, "changes": '
+        b'[{"id": "51", "kind": %b, "old": null, "new": null}]}]' % kind
+    )
+
+
+def test_a_file_too_deep_to_parse_gives_nothing_and_a_log(
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    """Bytes that overflow the stack in the parser read as no batches, with a warning."""
+    raw = b"[" * 100_000 + b"]" * 100_000
+    with caplog.at_level(logging.WARNING):
+        assert on_a_small_stack(partial(decode_batches, raw, UTC)) == []
+    assert "The change log is not JSON" in caplog.text
+
+
+@pytest.mark.parametrize(
+    "shape",
+    [lambda nesting: nesting, with_kind],
+    ids=["the whole file", "a change's kind"],
+)
+def test_no_depth_of_nesting_raises(
+    shape: Callable[[bytes], bytes], caplog: pytest.LogCaptureFixture
+) -> None:
+    """At every depth, one the parser takes or not, there are no batches and a warning.
+
+    Between the depth that printing overflows at and the one parsing does, reading a
+    change's kind used to raise (#848). That window is about a tenth of the depth, its
+    place differs per platform, so the steps of 5% go through it on any of them.
+    """
+    for depth in (int(100 * 1.05**step) for step in range(142)):
+        caplog.clear()
+        raw = shape(nested_objects(depth))
+        with caplog.at_level(logging.WARNING):
+            assert on_a_small_stack(partial(decode_batches, raw, UTC)) == []
+        assert caplog.text
 
 
 def broken(edit: Any) -> list[dict[str, Any]]:
@@ -189,6 +251,7 @@ BREAKS = {
     "seen not a bool": lambda e: e.update(seen="no"),
     "changes not a list": lambda e: e.update(changes={}),
     "an unknown kind": lambda e: removal(e).update(kind="cancelled"),
+    "a kind not a string": lambda e: removal(e).update(kind=["removed"]),
     "an id not a string": lambda e: removal(e).update(id=51),
     "a removal with a new side": lambda e: removal(e).update(new=removal(e)["old"]),
     "an addition with an old side": lambda e: change_of(e, "added").update(

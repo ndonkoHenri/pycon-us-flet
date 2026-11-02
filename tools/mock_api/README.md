@@ -87,7 +87,11 @@ Details a port gets wrong:
   227-229). The Flet app sends only the POST, with `force: true`, from the name search and from a scan alike (D-430);
   the mock still serves the GET, as the contract.
 - **`lead_capture`** adds `sponsor_id` only when a staff member scans on behalf of a sponsor (`storage`
-  `staff-sponsor-id`, 297-301). A sponsor's own account sends none.
+  `staff-sponsor-id`, 297-301). A sponsor's own account sends none. How the real server treats a repeat can't be known
+  from the client: Ionic never sends one, since `storeScan` (410-422) dedupes by access code alone. **Mock:** a lead is
+  one per (sponsor, attendee), so another sponsor's capture of the same attendee is a new lead under either `capture`
+  mode, and the same sponsor's repeat answers the same and records nothing under `idempotent`, a second row under
+  `non_idempotent` (D-57). A note needs the named sponsor's own lead. The app sends one capture per sponsor (D-459).
 - **`lead_note`** puts the access code in the path unencoded (349) and sends the note composed by the note modal,
   e.g. `"Interest: hot\nFollow-up: Send info\nNotes: …"` (`lead-note-modal/lead-note-modal.component.ts` 69-86). The
   app encodes the code (API-11), so the mock decodes that one path segment to find the attendee, and still checks the

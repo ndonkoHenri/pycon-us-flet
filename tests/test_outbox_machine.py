@@ -2,10 +2,10 @@
 
 The machine plays the db and the ``SyncWorker`` with ``core/outbox.py``'s pure rules:
 scans, notes and door admissions, sends that succeed or fail with a ``NetworkError``
-(before the request left, or after: a lost answer) or an ``ApiError`` (one at a time or
-in streaks, to reach the cap), "Retry failed", sponsor and account switches, and time
-passing. It keeps its own record of what each row should
-be, independently of the rows, and checks the invariants after every step.
+(before the request left, or after: a lost answer) or an ``ApiError`` (a refusal or an
+answer we can't read; one at a time or in streaks, to reach the cap), "Retry failed",
+sponsor and account switches, and time passing. It keeps its own record of what each row
+should be, independently of the rows, and checks the invariants after every step.
 """
 
 import math
@@ -20,7 +20,7 @@ from pycon_us.core.outbox import Enqueued, Kind, Outcome, Row, Status
 OWNERS = ("a@example.com", "b@example.com")
 CODES = st.sampled_from(("A", "B", "C"))
 SPONSORS = st.sampled_from((("1", "One"), ("2", "Two"), (None, None)))
-SENDS = st.sampled_from(("ok", "network", "lost", "api"))
+SENDS = st.sampled_from(("ok", "network", "lost", "api", "unreadable"))
 NOTES = st.sampled_from(("", "  ", "Hot", "Cold"))
 PRODUCTS = st.lists(st.sampled_from((1, 2, 3)), min_size=1, max_size=3, unique=True)
 
@@ -88,12 +88,20 @@ class OutboxMachine(RuleBasedStateMachine):
 
     @rule(code=CODES)
     def scan_lead(self, code: str) -> None:
-        """Scan a badge; a lead already synced adds nothing."""
+        """Scan a badge for the sponsor chosen; its lead already synced adds nothing."""
         existing = [
             r
             for r in self.rows.values()
-            if (r.owner, r.kind, r.key) == (self.owner, Kind.LEAD, code)
+            if (r.owner, r.kind, r.key, r.sponsor_id)
+            == (self.owner, Kind.LEAD, code, self.sponsor[0])
         ]
+        others = tuple(
+            r.sponsor_name
+            for r in self.rows.values()
+            if (r.owner, r.kind, r.key) == (self.owner, Kind.LEAD, code)
+            and r.sponsor_id != self.sponsor[0]
+            and r.sponsor_name
+        )
         decision = outbox.scan_lead(
             self.rows.values(),
             owner=self.owner,
@@ -103,28 +111,37 @@ class OutboxMachine(RuleBasedStateMachine):
             sponsor_name=self.sponsor[1],
             now=self.now,
         )
+        assert decision.others == others
         if existing and existing[0].status is Status.SYNCED:
-            assert decision == Enqueued(Outcome.ALREADY, existing[0])
+            assert decision == Enqueued(Outcome.ALREADY, existing[0], others)
+        if not existing:
+            assert decision.outcome is Outcome.QUEUED  # never dropped for another's row
         self.store(
             decision,
             counted_from_zero=bool(existing) and existing[0].status is Status.FAILED,
         )
 
-    @rule(code=CODES, text=NOTES)
-    def save_note(self, code: str, text: str) -> None:
-        """Note a lead this account has scanned (the app offers notes after a scan)."""
-        if not any(
-            (r.owner, r.kind, r.key) == (self.owner, Kind.LEAD, code)
+    @rule(code=CODES, text=NOTES, pick=st.integers(0, 2))
+    def save_note(self, code: str, text: str, pick: int) -> None:
+        """Note one of this account's leads (the app offers notes on a lead's row).
+
+        The sheet takes the sponsor from the lead, whichever is chosen now (D-459).
+        """
+        leads = [
+            r
             for r in self.rows.values()
-        ):
+            if (r.owner, r.kind, r.key) == (self.owner, Kind.LEAD, code)
+        ]
+        if not leads:
             return
+        lead = leads[pick % len(leads)]
         decision = outbox.save_note(
             self.rows.values(),
             owner=self.owner,
             code=code,
             note=text,
-            sponsor_id=self.sponsor[0],
-            sponsor_name=self.sponsor[1],
+            sponsor_id=lead.sponsor_id,
+            sponsor_name=lead.sponsor_name,
             now=self.now,
         )
         assert (decision.outcome is Outcome.IGNORED) == (not text.strip())
@@ -185,8 +202,13 @@ class OutboxMachine(RuleBasedStateMachine):
             if lost:
                 self.lost.add(row.id)
         else:
-            self.rows[row.id] = outbox.after_error(row, "500", self.now)
+            unread = outcome == "unreadable"  # the server may have applied it
+            self.rows[row.id] = outbox.after_error(
+                row, "500", self.now, maybe_sent=unread
+            )
             self.api_errors[row.id] += 1
+            if unread:
+                self.lost.add(row.id)
 
     @rule(count=st.integers(1, outbox.RETRY_CAP))
     def refused_repeatedly(self, count: int) -> None:
@@ -213,10 +235,10 @@ class OutboxMachine(RuleBasedStateMachine):
                 self.api_errors[row.id] = 0
 
     def lead_synced(self, note: Row) -> bool:
-        """Return whether a note's lead row is on the server."""
+        """Return whether a note's lead row, the same sponsor's, is on the server."""
         return any(
-            (r.owner, r.kind, r.key, r.status)
-            == (note.owner, Kind.LEAD, note.key, Status.SYNCED)
+            (r.owner, r.kind, r.key, r.sponsor_id, r.status)
+            == (note.owner, Kind.LEAD, note.key, note.sponsor_id, Status.SYNCED)
             for r in self.rows.values()
         )
 
@@ -251,18 +273,22 @@ class OutboxMachine(RuleBasedStateMachine):
         for row in self.rows.values():
             if row.kind is Kind.NOTE and row.status is not Status.SYNCED:
                 assert any(
-                    (r.owner, r.kind, r.key) == (row.owner, Kind.LEAD, row.key)
+                    (r.owner, r.kind, r.key, r.sponsor_id)
+                    == (row.owner, Kind.LEAD, row.key, row.sponsor_id)
                     for r in self.rows.values()
                 )
 
     @invariant()
     def notes_go_to_their_leads_sponsor(self) -> None:
         """A note keeps its lead's sponsor snapshot, whatever sponsor was chosen since."""
-        leads = {(r.owner, r.key): r for r in self.rows.values() if r.kind is Kind.LEAD}
+        leads = {
+            (r.owner, r.key, r.sponsor_id): r
+            for r in self.rows.values()
+            if r.kind is Kind.LEAD
+        }
         for row in self.rows.values():
-            lead = leads.get((row.owner, row.key))
+            lead = leads.get((row.owner, row.key, row.sponsor_id))
             if row.kind is Kind.NOTE and lead is not None:
-                assert row.sponsor_id == lead.sponsor_id
                 assert row.sponsor_name == lead.sponsor_name
 
     @invariant()
@@ -274,16 +300,16 @@ class OutboxMachine(RuleBasedStateMachine):
 
     @invariant()
     def flagged_exactly_after_a_lost_answer(self) -> None:
-        """A row says "may be recorded twice" from its first lost answer on."""
+        """A row says "may be recorded twice" from its first lost or unread answer on."""
         for row_id, row in self.rows.items():
             assert row.maybe_sent == (row_id in self.lost)
             assert (outbox.MAYBE_TWICE in outbox.status_text(row)) == row.maybe_sent
 
     @invariant()
     def one_row_per_lead_note_and_check_in(self) -> None:
-        """One lead and one note row per (owner, code); one door row per check-in."""
+        """One lead and one note row per (owner, code, sponsor); one door row per key."""
         leads_and_notes = [
-            (r.owner, r.kind, r.key)
+            (r.owner, r.kind, r.key, r.sponsor_id)
             for r in self.rows.values()
             if r.kind is not Kind.DOOR
         ]
@@ -293,3 +319,29 @@ class OutboxMachine(RuleBasedStateMachine):
 
 
 TestOutbox = OutboxMachine.TestCase
+
+
+def test_the_machine_flags_one_sponsor_s_row_from_an_unreadable_answer() -> None:
+    """The rules' path to the combination, played by hand: only that row is flagged.
+
+    Hypothesis may or may not reach it in a given run, so this pins that the machine's
+    record and the rules agree on it: two sponsors' rows for one code, the second's
+    answer unreadable, and the flag kept through its later success (D-410, D-459).
+    """
+    machine = OutboxMachine()
+    machine.scan_lead("A")
+    machine.send("ok")
+    machine.switch_sponsor(("2", "Two"))
+    machine.scan_lead("A")
+    machine.send("unreadable")
+    machine.flagged_exactly_after_a_lost_answer()
+    machine.one_row_per_lead_note_and_check_in()
+    first, second = machine.rows.values()
+    assert (first.sponsor_id, first.maybe_sent) == ("1", False)
+    assert (second.sponsor_id, second.maybe_sent, second.tries) == ("2", True, 1)
+    machine.tick(60.0)
+    machine.send("ok")
+    machine.flagged_exactly_after_a_lost_answer()
+    first, second = machine.rows.values()
+    assert (first.maybe_sent, second.maybe_sent) == (False, True)
+    assert second.status is Status.SYNCED
