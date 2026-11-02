@@ -319,9 +319,10 @@ async def test_the_start_refresh_is_quiet_too(storage: Storage, year: YearData) 
 async def test_a_refresh_the_user_asked_for_says_refreshing_until_it_ends(
     storage: Storage, year: YearData
 ) -> None:
-    """A refresh the user asked for says ``refreshing`` as it starts, then ``fresh``."""
+    """Over stale data, a refresh the user asked for says ``refreshing``, then ``fresh``."""
     conference = await loaded(storage, year)
-    clock.set_test_now(NOW + timedelta(days=3))
+    clock.set_test_now(three_days_after_the_snapshot(year))
+    assert conference.status(year.conference) == "stale"
     log = StatusLog(conference, year)
     feed = HeldFeed()
 
