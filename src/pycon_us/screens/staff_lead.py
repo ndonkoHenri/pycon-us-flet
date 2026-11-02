@@ -17,11 +17,12 @@ for the sponsor chosen when it was scanned (STORE-11).
 Staff who scan for a sponsor (``scans_for_sponsor()``, LEAD-05, LEAD-06) choose it on
 ``lead_sponsor.py``'s picker, pushed at ``…/staff/lead/sponsor``. The choice
 (``STAFF_SPONSOR``) is read with the consent, and again whenever the location changes,
-so it is current when the picker goes back (D-425). With none, the picker opens by
-itself once, and the scan screen is paused ("Choose a sponsor to start scanning")
-with a "Choose sponsor" button; with one, a "For: Example Corp" chip
+so it is current when the picker goes back (D-425); scanning waits for that read
+("Checking the sponsor…"), so no row takes the old one (#873). With none, the picker
+opens by itself once, and the scan screen is paused ("Choose a sponsor to start
+scanning") with a "Choose sponsor" button; with one, a "For: Example Corp" chip
 (``lead.sponsor_chip``) heads the screen and opens the picker. A sponsor's own account
-sees neither.
+sees none of these.
 
 After a capture (or a queued scan) the result has "Add note" (``lead.add_note``), and
 after a duplicate "Open lead" (``lead.open_lead``): both open ``ui/lead_note_sheet.py``'s
@@ -35,7 +36,7 @@ D-428): a page of its own rather than a tab, so this screen stays as the four to
 share it and a HID scanner never types into the list's search.
 """
 
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from functools import partial
 
 import flet as ft
@@ -67,6 +68,9 @@ TITLE = next(tool.title for tool in TOOLS if tool.key is ToolKey.LEAD)
 NO_SPONSOR = "Choose a sponsor to start scanning"
 """Why the scan screen is paused for staff with no sponsor chosen (LEAD-05)."""
 
+CHECKING_SPONSOR = "Checking the sponsor\N{HORIZONTAL ELLIPSIS}"
+"""Why the scan screen is paused while the sponsor is read again (#873, D-425)."""
+
 NOTE_OPEN = "Paused while the note is open"
 """Why the scan screen is paused while the note sheet is open (#742)."""
 
@@ -81,11 +85,14 @@ class Read:
 
     Attributes:
         owner: The account they were read for; another's never stand (D-423).
+        arrival: ``LeadTool``'s token for the location they were read at; another's
+            means a new read is on its way (D-425).
         consent: Whether it agreed to scan only with consent.
         sponsor: The sponsor it scans for, or None (staff only, LEAD-05).
     """
 
     owner: str
+    arrival: object
     consent: bool
     sponsor: LeadSponsor | None
 
@@ -126,6 +133,9 @@ def LeadTool(*, owner: str, for_sponsor: bool) -> ft.Control:
     page = ft.context.page
     view_path = ft.use_view_path()
     location = ft.use_route_location()  # changes as the picker opens and goes back
+    # A new token at each change. Not the location itself: out and back with the reads
+    # held, Flet cancels them, and the last to land was made at this same one (#873).
+    arrival = ft.use_memo(object, [owner, location])
     svc = use_services()
     staff = use_staff()
     read, set_read = ft.use_state(not_read)  # None until the first read
@@ -138,9 +148,11 @@ def LeadTool(*, owner: str, for_sponsor: bool) -> ft.Control:
     async def read_keys() -> None:
         consent = await svc.storage.get(SCANNER_CONSENT)  # a failure reads False
         sponsor = await read_sponsor(svc.storage)
-        set_read(lambda last: Read(owner, consent or given(last, owner), sponsor))
+        set_read(
+            lambda last: Read(owner, arrival, consent or given(last, owner), sponsor)
+        )
 
-    ft.use_effect(read_keys, [owner, location])
+    ft.use_effect(read_keys, [arrival])
     current = read if read is not None and read.owner == owner else None
     needs_sponsor = (
         for_sponsor
@@ -170,6 +182,9 @@ def LeadTool(*, owner: str, for_sponsor: bool) -> ft.Control:
         capture, svc.outbox, staff, svc.kick_sync, owner=owner, sponsor=sponsor
     )
     sheet = use_note_sheet(owner=owner)
+    # Back from the picker, the old sponsor stands until the new read lands; scanning
+    # waits, as a row keeps the sponsor it is scanned for for good (D-56).
+    rereading = current is not None and current.arrival is not arrival
     paused = NOTE_OPEN if sheet.is_open else None
     note_actions = partial(lead_actions, open_note=sheet.open)
     leads = leads_button(count, open_leads)
@@ -178,7 +193,7 @@ def LeadTool(*, owner: str, for_sponsor: bool) -> ft.Control:
         return Reading(title=TITLE, source=__name__)
     if not current.consent:
         return LeadConsent(
-            title=TITLE, on_given=lambda: set_read(Read(owner, True, current.sponsor))
+            title=TITLE, on_given=lambda: set_read(replace(current, consent=True))
         )
     if not for_sponsor:
         return ScanScreen(
@@ -202,7 +217,7 @@ def LeadTool(*, owner: str, for_sponsor: bool) -> ft.Control:
         source=__name__,
         on_badge=on_badge,
         context=sponsor_chip(current.sponsor, open_picker),
-        paused=paused,
+        paused=CHECKING_SPONSOR if rereading else paused,
         result_actions=note_actions,
         actions=[leads],
     )
