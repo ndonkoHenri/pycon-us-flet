@@ -11,7 +11,6 @@ they scan for (LEAD-05, LEAD-06): the picker opens once by itself, the screen wa
 until one is chosen, then heads it with a "For: ..." chip; a sponsor's account sees none.
 """
 
-import json
 from typing import Any, cast
 
 import flet as ft
@@ -21,13 +20,13 @@ from flet.components.component import Component
 from pycon_us import lead_capture
 from pycon_us.account import Account
 from pycon_us.core import outbox
-from pycon_us.core.lead_sponsors import LeadSponsor, to_stored
+from pycon_us.core.lead_sponsors import LeadSponsor
 from pycon_us.lead_capture import ALREADY, SAVED
 from pycon_us.locations import parent_of
 from pycon_us.screens import lead_sponsor
 from pycon_us.screens.staff_lead import NO_SPONSOR, TITLE
 from pycon_us.services.outbox_db import OutboxDb
-from pycon_us.services.pref_keys import SCANNER_CONSENT, STAFF_PREFIX, STAFF_SPONSOR
+from pycon_us.services.pref_keys import SCANNER_CONSENT, STAFF_PREFIX
 from pycon_us.ui import scan_screen
 from pycon_us.ui.scan_screen import NOT_AVAILABLE
 from pycon_us.ui.snack_bars import NOT_SAVED
