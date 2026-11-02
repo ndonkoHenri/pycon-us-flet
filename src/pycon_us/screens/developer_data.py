@@ -18,6 +18,7 @@ are in ``developer_clock.py``.
 """
 
 import logging
+from typing import cast
 
 import flet as ft
 from flet.utils import is_embedded
@@ -27,7 +28,7 @@ from pycon_us.account import Account, use_account
 from pycon_us.favorites import Favorites, use_favorites
 from pycon_us.locations import WELCOME, start_target
 from pycon_us.prefs import Prefs, use_prefs
-from pycon_us.screens.developer_ui import Asking, confirmation, none_open, snapshot_day
+from pycon_us.screens.developer_ui import Asking, confirmation, snapshot_day
 from pycon_us.services import Services, changes_file, use_services
 from pycon_us.services.errors import report_errors, show_details
 from pycon_us.staff import Staff, use_staff
@@ -80,7 +81,7 @@ def DataActions() -> ft.Control:
     tokens = use_tokens()
     use_minute()  # Refresh now's second line says the schedule's age
     info = svc.year.conference
-    asking, set_asking = ft.use_state(none_open)  # the open confirmation
+    asking, set_asking = ft.use_state(cast(Asking, None))  # the open confirmation
     outcome, set_outcome = ft.use_state(NO_OUTCOME)
     sharing, set_sharing = ft.use_state(False)  # the share sheet is up
     packaged = is_embedded()  # where the log is a file here, and Developer can lock
@@ -162,7 +163,7 @@ def DataActions() -> ft.Control:
     )
     ft.use_dialog(
         confirmation(
-            asking,
+            cast(Asking, asking),  # use_state's type drops the Literal
             saved=len(favorites.ids),
             packaged=packaged,
             snapshot_day=snapshot_day(info),
