@@ -206,7 +206,8 @@ that date motivates us but never justifies cutting corners.
   (the API can't; #118): open issues and PRs are auto-added, "Item added" sets Todo, "Pull request linked to
   issue" sets In progress, "Item closed" and "Pull request merged" set Done, "Auto-close issue" closes an issue
   set to Done, and "Item reopened" sets Todo. Still pass `--project "PyCon US Flet"` when you create an issue
-  or PR, so it's on the board at once; adding twice is harmless.
+  or PR, so it's on the board at once. It can fail with "Content already exists in this project" when the auto-add
+  wins the race; the issue or PR is created anyway, so don't retry it: drop the flag or use `gh project item-add`.
 - **Set two statuses yourself**, on the issue and on its PR: In progress when you start, and In review when the
   PR is ready (no workflow sets In review). `gh` needs the `project` scope (`gh auth refresh -s project`). The
   ids below are stable; if the Project is ever rebuilt, look them up again with the first two commands.
