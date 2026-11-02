@@ -538,7 +538,7 @@ run (§5.1), which Maestro does not see. Neither checks screen-reader speech (D-
 | `about_app` | journeys, tablet | About this app's data row, Licences › a licence › Back, Report a problem's share sheet, or with `SHARE_FAILS=true` the line that it couldn't open, which an iPad needed until the pin `08b89cce5` (INFO-03, INFO-04, F115, F263, #461, #462) |
 | `theme_relaunch` | journeys, theme | More › Settings › Dark and High contrast, held after a relaunch with no "Follows your device setting"; then back to System, following the device (THEME-01, STORE-08, D-286, #512). `tests/test_theme_flow.py` pins its identifiers and labels |
 | `deep_links` | journeys, deep_links | Links land on their target with the root below, cold and warm; an unknown id and an unknown path; an open sheet closes (D-291, #518). Its default scheme and host must equal `[tool.flet.deep_linking]`, which `tests/test_deep_link_flow.py` checks |
-| `fling_after_sheet` | regression | A fling 0.8 to 1.0 s after "Show N sessions" ends within three rows of where a control fling ends (its rows, not merely its slot), `TRIALS` times. Maestro's pace: it does not reach #346's row D window (0.33 to 0.6 s), which `tools/fling_after_sheet.py` reaches |
+| `fling_after_sheet` | regression | A fling 0.8 to 1.0 s after "Show N sessions" ends within three rows of where a control fling ends (its rows, not merely its slot), `TRIALS` times. Maestro's pace: it does not reach #346's row D window (0.33 to 0.6 s) |
 
 **The scene.** Each flow starts fresh (`clearState`) and offline: airplane mode on
 Android, then Developer options set as §5.2 does by hand, with the fake clock at Friday
@@ -554,14 +554,10 @@ before its first launch (`maestro/README.md`, "Offline on a fresh iOS install").
   button on iOS only; no flow checks a SnackBar's timeout.
 - About 0.85 s passes between two Maestro commands on the emulator, so the regression
   flow's fling comes 0.8 to 1.0 s after the tap. #346 saw its failures at 0.33 to 0.6 s;
-  at Maestro's pace both `main` and #346's build ran 20 of 20 flings in full. Row D's
-  window is reached by `tools/fling_after_sheet.py` (Android): it sends the tap and the
-  fling in one `adb shell` command, measures the gap from the launcher's touch log, and
-  judges each fling by the flow's rules. It refuses a run that does not start on the now
-  slot, 2:00 PM, and counts a trial whose gap is missing or outside 330 to 600 ms as "off
-  window", a failure that says nothing about row D. Its first runs (`maestro/README.md`),
-  counted before that rule, have not yet told #346's build from `main`: both lost flings
-  only during load spikes, at gaps past the window.
+  at Maestro's pace both `main` and #346's build ran 20 of 20 flings in full. Nothing here
+  reaches that window, and it no longer needs to: D-371, which replaced #346, asks nothing
+  of the list once the sheet has gone. #906 removed the `adb` driver that reached it; git
+  has it if anchoring comes back through U50 (#345).
 - The app bar's back arrow has no identifier: Android flows press the system Back, iOS
   flows tap the button named "Back".
 
