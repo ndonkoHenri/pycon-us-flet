@@ -180,6 +180,7 @@ def RoomDetail(room_slug: str) -> ft.View:
     if data is None or room is None:
         return AppScaffold(
             title="Not found",
+            source=__name__,
             body=ft.ListView(
                 [
                     not_found(
@@ -202,6 +203,7 @@ def RoomDetail(room_slug: str) -> ft.View:
     if not room.session_ids:  # a sprint-only room (MAP-08)
         return AppScaffold(
             title=room.name,
+            source=__name__,
             body=ft.ListView(
                 [*located(), sprint_room_state(page)],
                 expand=True,
@@ -276,6 +278,7 @@ def RoomDetail(room_slug: str) -> ft.View:
     )
     return AppScaffold(
         title=room.name,
+        source=__name__,
         body=tabs,
     )
 

@@ -1,14 +1,20 @@
-"""The app bar's overflow menus: ``overflow_menu()`` and its items, ``menu_item()``.
+"""The app bar's overflow menus: ``overflow_menu()``, ``menu_item()``, View source.
 
 Session detail, the Sprints page and a track's page each have one (D-186, D-202,
 D-209), built here the same way (D-233). An item is never ``PopupMenuItem.icon``
 with a text: Flet lays that icon and the text out in a ``Row`` without ``Expanded``,
 so at 200 % text the label ran off the menu's edge instead of wrapping (F47, #260).
+
+Once ``SOURCE_URL`` is set, every screen's overflow ends in View source, which opens
+the screen's own module on GitHub (``view_source_items()``, NEW-09, D-461).
 """
 
 import flet as ft
 
-from pycon_us.ui.links import OPENS_IN, LinkKind
+from pycon_us import SOURCE_URL, __version__
+from pycon_us.services import Services
+from pycon_us.services.errors import report_errors
+from pycon_us.ui.links import OPENS_IN, LinkKind, open_link
 from pycon_us.ui.semantics import named
 
 MORE_OPTIONS = "More options"
@@ -20,6 +26,9 @@ make 56."""
 
 ICON_GAP = 12
 """Between an item's icon and its label: Material 3's menu gap, not a list's 16."""
+
+VIEW_SOURCE = "View source"
+"""The item that opens a screen's module on GitHub (NEW-09)."""
 
 
 def overflow_menu(identifier: str, items: list[ft.PopupMenuItem]) -> ft.Control:
@@ -93,3 +102,61 @@ def menu_item(
         on_click=on_click,
         disabled=disabled,
     )
+
+
+def source_link(source_url: str, module: str) -> str:
+    """Return the page that shows ``module`` in the source of this build (D-461).
+
+    The version's tag, not ``main``: the link shows the code of the build in the
+    attendee's hand, and a later rename can't break it.
+
+    Args:
+        source_url: ``SOURCE_URL``, once the repository is public.
+        module: The module's ``__name__``, e.g. ``pycon_us.screens.now``.
+    """
+    path = module.replace(".", "/")
+    return f"{source_url.rstrip('/')}/blob/v{__version__}/src/{path}.py"
+
+
+def view_source_items(svc: Services, module: str | None) -> list[ft.PopupMenuItem]:
+    """Return View source for ``module``, or nothing while the repository is private.
+
+    A list, so that a menu takes it with ``*`` and stays as it was while
+    ``SOURCE_URL`` is None (D-88, D-461). A web link like any other (ux.md §4.7), also
+    offline: the in-app browser's own page says there is no connection.
+
+    Args:
+        svc: The session's services, for the launcher.
+        module: The screen's ``__name__``; None gives no item.
+    """
+    if SOURCE_URL is None or module is None:
+        return []
+    url = source_link(SOURCE_URL, module)
+
+    @report_errors
+    async def view_source() -> None:
+        await open_link(svc, url)
+
+    return [
+        menu_item(
+            ft.Icons.CODE,  # About this app's Source code row's
+            VIEW_SOURCE,
+            view_source,
+            identifier="app.view_source",
+            link=True,
+        )
+    ]
+
+
+def source_menu(svc: Services, module: str | None) -> list[ft.Control]:
+    """Return the overflow of a screen with no menu of its own, or nothing while hidden.
+
+    ``AppScaffold``'s, so a screen with no overflow doesn't gain an empty one.
+
+    Args:
+        svc: The session's services, for the launcher.
+        module: The screen's ``__name__``, or None for no menu (``AppScaffold``'s
+            ``source``).
+    """
+    items = view_source_items(svc, module)
+    return [overflow_menu("app.overflow", items)] if items else []

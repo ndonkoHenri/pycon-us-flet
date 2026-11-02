@@ -145,6 +145,7 @@ def LightningTalks() -> ft.View:
         )
     return AppScaffold(
         title=TITLE,
+        source=__name__,
         body=ft.ListView(items, expand=True, padding=sides(margin, bottom=8)),
     )
 

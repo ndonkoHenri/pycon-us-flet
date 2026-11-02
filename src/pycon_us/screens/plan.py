@@ -48,7 +48,7 @@ from pycon_us.services import use_services
 from pycon_us.services.errors import report_errors
 from pycon_us.services.pref_keys import THEME
 from pycon_us.state import use_conference
-from pycon_us.ui.menus import menu_item, overflow_menu
+from pycon_us.ui.menus import menu_item, overflow_menu, view_source_items
 from pycon_us.ui.scaffold import AppScaffold
 from pycon_us.ui.zoom import RESET_VIEW, use_zoom, zoom_buttons, zoom_layer
 from pycon_us.ui.zoom_geometry import Size, centred_on
@@ -248,6 +248,7 @@ def PlanViewer(plan_id: str) -> ft.View:
     if plan is None:
         return AppScaffold(
             title="Not found",
+            source=__name__,
             body=ft.ListView(
                 [
                     not_found(
@@ -323,11 +324,13 @@ def PlanViewer(plan_id: str) -> ft.View:
                 RESET_VIEW,
                 reset_view,
                 identifier=f"{SCREEN}.reset_view",
-            )
+            ),
+            *view_source_items(svc, __name__),
         ],
     )
     return AppScaffold(
         title=plan.title,
+        source=None,  # in its menu
         actions=[menu],
         # The plan never scrolls under the bar; the label card's words do (D-447).
         still_bar=True,
@@ -366,5 +369,7 @@ def ExpoPlan() -> ft.View:
     if plan is None or not year_map.booths:
         return PlanViewer(plan_id=EXPO_PLAN)
     return AppScaffold(
-        title=plan.title, body=ExpoPane(view_path, query.get(BOOTH_PARAM, ""))
+        title=plan.title,
+        source=__name__,
+        body=ExpoPane(view_path, query.get(BOOTH_PARAM, "")),
     )

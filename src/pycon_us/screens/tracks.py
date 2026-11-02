@@ -221,6 +221,7 @@ def Tracks() -> ft.View:
             items.append(sprints_row(info, len(data.sprints), tokens))
     return AppScaffold(
         title="Tracks & session types",
+        source=__name__,
         body=ft.ListView(items, expand=True, padding=sides(margin)),
     )
 
