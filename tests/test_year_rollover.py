@@ -7,7 +7,7 @@ session ids, so a mix-up would show: a 2026 id names a real 2027 session.
 
 import json
 from collections.abc import Iterator
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from pathlib import Path
 from typing import cast
 
@@ -381,10 +381,9 @@ async def test_a_reset_that_cannot_list_the_files_does_not_call_them_gone(
 ) -> None:
     """A failed listing is a failed deletion, logged: Reset app must not report success."""
     await last_year.write_feed(b"{}")
-    directory.chmod(0o000)  # a real failure: os.scandir and os.listdir both refuse
-    try:
-        assert await this_year.delete_other_years() is False
-    finally:
-        directory.chmod(0o700)
+    feed = directory / "feed-2026.json"
+    # A file for a directory: a real failure for any listing, where a mode-000 folder
+    # refuses everyone but root.
+    assert await replace(this_year, directory=feed).delete_other_years() is False
     assert "Could not list the data directory" in caplog.text
-    assert (directory / "feed-2026.json").exists()
+    assert feed.exists()
