@@ -1,4 +1,4 @@
-"""The lines a session row is made of (decisions §M, D-227).
+"""The lines a session row is made of (D-227).
 
 The time-and-place line, supporting text, the overlap warning and the elapsed bar:
 plain builders, with no hooks, which ``ui.session_rows``'s ``SessionRow`` and
