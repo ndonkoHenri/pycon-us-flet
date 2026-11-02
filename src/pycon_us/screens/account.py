@@ -38,7 +38,7 @@ from pycon_us.screens.account_sign_out import (
 from pycon_us.screens.more import account_avatar
 from pycon_us.screens.sign_in import EXPIRED, mock_line
 from pycon_us.services import Services, use_services
-from pycon_us.services.errors import report_errors
+from pycon_us.services.errors import report_errors, say
 from pycon_us.staff import use_staff
 from pycon_us.staff_data import unsynced
 from pycon_us.ui.actions import padded
@@ -142,12 +142,7 @@ def AccountPage() -> ft.View:
     async def sign_out() -> None:
         set_asking(None)
         removed = await account.sign_out(svc.storage, svc.credentials)
-        page.show_dialog(
-            ft.SnackBar(
-                ft.Text(SIGNED_OUT if removed else SIGNED_OUT_PARTLY),
-                behavior=ft.SnackBarBehavior.FLOATING,
-            )
-        )
+        say(page, SIGNED_OUT if removed else SIGNED_OUT_PARTLY)
         if is_top_view(page.route, view_path):  # not if Back left it meanwhile
             page.navigate(parent_of(view_path, svc.memory.search_base))
 

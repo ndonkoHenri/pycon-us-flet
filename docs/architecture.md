@@ -1574,7 +1574,7 @@ def _tell_user(error: Exception) -> None:
     detailed = _details or not is_embedded()   # _details: show_details(), Developer unlocked (D-187)
     text = f"{MESSAGE}: {type(error).__name__}: {error}" if detailed else MESSAGE
     try:
-        ft.context.page.show_dialog(ft.SnackBar(ft.Text(text), behavior=ft.SnackBarBehavior.FLOATING))
+        say(ft.context.page, text)            # the floating SnackBar of every plain message
     except Exception:                         # no page, or a replaced session (F30): log only
         logger.warning("Could not show the error message", exc_info=True)
 ```

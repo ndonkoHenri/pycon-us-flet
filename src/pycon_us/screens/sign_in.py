@@ -22,7 +22,7 @@ from pycon_us.account import SignIn, use_account
 from pycon_us.locations import LEAD_SCANNER, is_top_view, lands_on_lead, parent_of
 from pycon_us.prefs import use_prefs
 from pycon_us.services import use_services
-from pycon_us.services.errors import report_errors
+from pycon_us.services.errors import report_errors, say
 from pycon_us.theme import use_tokens
 from pycon_us.ui.actions import outcome_line, padded
 from pycon_us.ui.buttons import LABEL_PADDING
@@ -92,9 +92,7 @@ def SignInPage() -> ft.View:
     async def leave() -> None:
         if not signed_in:
             return
-        page.show_dialog(
-            ft.SnackBar(ft.Text(signed_in), behavior=ft.SnackBarBehavior.FLOATING)
-        )
+        say(page, signed_in)
         if not is_top_view(page.route, view_path):  # Back left it meanwhile
             return
         if lands_on_lead(prefs, account):  # a sponsor's scanner, over More (D-16)

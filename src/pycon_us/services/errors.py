@@ -5,6 +5,8 @@ architecture §16.1). ``report_errors`` is for the rest: an exception that escap
 event handler ends the session, and one that escapes an async effect is seen by nobody
 (F4, F37). Delete it once Flet makes handler errors non-fatal (U15).
 
+``say()`` is the app's plain message: a floating SnackBar with no action.
+
 ``setup_logging()`` sends stdlib ``logging`` to stderr, which a packaged app tees to
 logcat or the unified log and to ``console.log`` (F14, D-72), the file testers share from
 the Developer screen. Never log secrets, keys, signatures, emails or badge codes; as a
@@ -49,6 +51,19 @@ P3's private-API requests may carry what D-72 forbids in a log."""
 
 _details = False
 """Whether a packaged build shows the exception text too: Developer is unlocked (D-73)."""
+
+
+def say(page: ft.Page, text: str) -> None:
+    """Show ``text`` in a floating SnackBar, for Flet's default 4 s (ux.md §4.5).
+
+    On the View the user is on (D-210). A SnackBar with an action is built where it is
+    used: it has more to decide.
+
+    Args:
+        page: The session's page.
+        text: What the SnackBar says.
+    """
+    page.show_dialog(ft.SnackBar(ft.Text(text), behavior=ft.SnackBarBehavior.FLOATING))
 
 
 def show_details(on: bool) -> None:
@@ -133,9 +148,7 @@ def _tell_user(error: Exception) -> None:
     detailed = _details or not is_embedded()
     text = f"{MESSAGE}: {type(error).__name__}: {error}" if detailed else MESSAGE
     try:
-        ft.context.page.show_dialog(
-            ft.SnackBar(ft.Text(text), behavior=ft.SnackBarBehavior.FLOATING)
-        )
+        say(ft.context.page, text)
     except Exception:
         # No page in this context, or a session already replaced (F30): the log is all
         # that can be done, and the net itself must never raise.
