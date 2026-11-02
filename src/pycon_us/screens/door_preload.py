@@ -14,8 +14,6 @@ unmounts (leaving the tool, a sign-out) and when the session changes, and nothin
 writes it anywhere (D-56).
 """
 
-import asyncio
-import contextlib
 from dataclasses import dataclass
 
 import flet as ft
@@ -27,9 +25,7 @@ from pycon_us.locations import is_top_view
 from pycon_us.prefs import use_prefs
 from pycon_us.services import use_services
 from pycon_us.services.errors import report_errors
-from pycon_us.services.storage import SERVICE_ERRORS
-from pycon_us.ui.scan_feedback import ANNOUNCE_WAIT_S
-from pycon_us.ui.semantics import named
+from pycon_us.ui.semantics import announce, named
 
 LOADING = "Loading attendee list\N{HORIZONTAL ELLIPSIS}"
 """Why scanning is paused while the list loads, before the count (DOOR-03)."""
@@ -134,11 +130,7 @@ def use_preload(owner: str, choice: DoorChoice | None) -> Preloading:
         if not (prefs.announcements and preload.loaded is not None and ids):
             return
         if mounted.current and is_top_view(page.route, view_path):
-            # Sent at once; only the answer, which iOS may never give, is waited for
-            # (F276). A failure leaves the line, which shows it all the same.
-            with contextlib.suppress(*SERVICE_ERRORS):
-                said = svc.semantics.announce_message(spoken(words))
-                await asyncio.wait_for(said, ANNOUNCE_WAIT_S)
+            await announce(svc.semantics, spoken(words))
 
     ft.use_effect(say, [words])
 
