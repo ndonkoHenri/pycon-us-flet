@@ -24,7 +24,8 @@ from pycon_us.services import Services
 from pycon_us.services.pref_keys import REMINDERS
 from pycon_us.services.reminders import Access, Scheduler
 from pycon_us.ui import focus_back
-from pycon_us.ui.reminder_primer import NOT_SAVED, PRIMER, PRIMER_LEAD
+from pycon_us.ui.reminder_primer import PRIMER, PRIMER_LEAD
+from pycon_us.ui.snack_bars import NOT_SAVED
 from tests import harness, now_view, row_sessions
 from tests.fakes import MemoryNotifications, MemoryPermissions
 from tests.filter_sheet import descendants
