@@ -86,14 +86,14 @@ class Read:
 
     Attributes:
         owner: The account they were read for; another's never stand (D-423).
-        location: The route location they were read at; another's means a new read
-            is on its way (D-425).
+        arrival: ``LeadTool``'s token for the location they were read at; another's
+            means a new read is on its way (D-425).
         consent: Whether it agreed to scan only with consent.
         sponsor: The sponsor it scans for, or None (staff only, LEAD-05).
     """
 
     owner: str
-    location: str
+    arrival: object
     consent: bool
     sponsor: LeadSponsor | None
 
@@ -134,6 +134,9 @@ def LeadTool(*, owner: str, for_sponsor: bool) -> ft.Control:
     page = ft.context.page
     view_path = ft.use_view_path()
     location = ft.use_route_location()  # changes as the picker opens and goes back
+    # A new token at each change. Not the location itself: out and back with the reads
+    # held, Flet cancels them, and the last to land was made at this same one (#873).
+    arrival = ft.use_memo(object, [owner, location])
     svc = use_services()
     staff = use_staff()
     read, set_read = ft.use_state(not_read)  # None until the first read
@@ -147,10 +150,10 @@ def LeadTool(*, owner: str, for_sponsor: bool) -> ft.Control:
         consent = await svc.storage.get(SCANNER_CONSENT)  # a failure reads False
         sponsor = await read_sponsor(svc.storage)
         set_read(
-            lambda last: Read(owner, location, consent or given(last, owner), sponsor)
+            lambda last: Read(owner, arrival, consent or given(last, owner), sponsor)
         )
 
-    ft.use_effect(read_keys, [owner, location])
+    ft.use_effect(read_keys, [arrival])
     current = read if read is not None and read.owner == owner else None
     needs_sponsor = (
         for_sponsor
@@ -182,7 +185,7 @@ def LeadTool(*, owner: str, for_sponsor: bool) -> ft.Control:
     sheet = use_note_sheet(owner=owner, sponsor=sponsor)
     # Back from the picker, the old sponsor stands until the new read lands; scanning
     # waits, as a row keeps the sponsor it is scanned for for good (D-56).
-    rereading = current is not None and current.location != location
+    rereading = current is not None and current.arrival is not arrival
     paused = NOTE_OPEN if sheet.is_open else None
     note_actions = partial(lead_actions, open_note=sheet.open)
     leads = leads_button(count, open_leads)

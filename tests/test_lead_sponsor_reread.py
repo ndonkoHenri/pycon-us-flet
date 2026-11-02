@@ -112,6 +112,34 @@ async def test_a_scan_while_the_sponsor_is_read_again_never_takes_the_old_one(
     assert (row.sponsor_id, row.sponsor_name) == (NEW.id, NEW.name)
 
 
+@pytest.mark.usefixtures("quick_capture")
+async def test_a_return_before_any_read_landed_never_counts_the_first_read_as_current(
+    show: Show, stored: dict[str, Any], db: OutboxDb, gate: asyncio.Event, go: Go
+) -> None:
+    """Out and back with the reads held: the read from before the picker isn't current.
+
+    Flet cancels the picker's read as Back lands, so the state still holds that older
+    read, made at the very location the scanner is back at.
+    """
+    account = signed_in(door_check=True)
+    choose(stored, OLD)
+    shown = await show(account, outbox=db)
+    gate.clear()
+    await go(shown, account, PICKER)
+    choose(stored, NEW)  # the picker saves, then goes back
+    await go(shown, account, VIEW)
+    await enter(shown, "MOCK0001:v4l1d01")
+    assert rows(db) == []
+    assert helper(shown) == CHECKING_SPONSOR
+    gate.set()
+    await shown.settle()
+    assert chip_text(shown) == "For: New Corp"
+    assert helper(shown) is None
+    await enter(shown, "MOCK0001:v4l1d01")
+    (row,) = rows(db)
+    assert (row.sponsor_id, row.sponsor_name) == (NEW.id, NEW.name)
+
+
 async def test_the_focus_comes_back_only_when_the_read_lands(
     show: Show,
     stored: dict[str, Any],
