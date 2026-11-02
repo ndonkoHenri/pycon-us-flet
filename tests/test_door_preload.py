@@ -29,7 +29,16 @@ from pycon_us.screens.door_preload import ONLINE, RETRY
 from pycon_us.services.outbox_db import OutboxDb
 from pycon_us.services.pref_keys import staff_door_session
 from tests import door_rig
-from tests.door_rig import ASYNC, VIEW, Show, helper, preload_line, staff
+from tests.door_rig import (
+    ASYNC,
+    SUMMIT,
+    TUTORIALS,
+    VIEW,
+    Show,
+    helper,
+    preload_line,
+    staff,
+)
 from tests.fakes import MemorySemantics
 from tests.harness import Shown
 from tests.picker_rig import Switch
@@ -37,8 +46,6 @@ from tests.scan_rig import enter, panel
 
 stored, switch, show = door_rig.stored, door_rig.switch, door_rig.show
 
-TUTORIALS = DoorChoice(1, (10, 11), "Tutorials \N{MIDDLE DOT} All sessions", True)
-SUMMIT = DoorChoice(2, (20,), "Example Summit \N{MIDDLE DOT} Thu 10:00 AM")
 LOADING = "Loading attendee list\N{HORIZONTAL ELLIPSIS}"
 READY_THREE = "Ready, works offline, 3 attendees"
 """Tutorials' list as read: Ada and Linus bought one, Grace the other."""

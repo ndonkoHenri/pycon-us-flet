@@ -126,7 +126,7 @@ def filter_sponsors(
 
 
 def to_stored(sponsor: LeadSponsor) -> dict[str, Any]:
-    """Return the chosen sponsor as ``pycon.staff_sponsor`` keeps it (STORE-11).
+    """Return the chosen sponsor as ``pycon.staff_<year>_sponsor`` keeps it (STORE-11).
 
     Args:
         sponsor: The sponsor chosen.
@@ -138,7 +138,7 @@ def to_stored(sponsor: LeadSponsor) -> dict[str, Any]:
 
 
 def from_stored(value: dict[str, Any]) -> LeadSponsor | None:
-    """Return the chosen sponsor ``pycon.staff_sponsor`` holds, or None.
+    """Return the chosen sponsor ``pycon.staff_<year>_sponsor`` holds, or None.
 
     Args:
         value: The stored object; ``{}`` when nothing was chosen.

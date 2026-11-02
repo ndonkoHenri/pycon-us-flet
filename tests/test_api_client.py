@@ -10,7 +10,7 @@ from typing import Any
 import httpx
 import pytest
 
-from pycon_us.services.api import ApiError, NetworkError
+from pycon_us.services.api import MAX_NESTING, ApiError, NetworkError
 from pycon_us.services.endpoints import (
     AUTHENTICATE,
     CHECK_FEATURES,
@@ -41,6 +41,7 @@ from tests.api_clients import (
     signed_in,
 )
 from tests.mock_calls import NOW, Clock, state_at
+from tests.small_stack import nested_lists
 from tools.mock_api.transport import mock_transport
 
 type Check = Callable[[Any], bool]
@@ -189,6 +190,7 @@ async def test_an_unknown_attendee_is_an_api_error_that_is_not_auth() -> None:
         (502, b"<html>bad gateway</html>", CHECK_FEATURES, "Bad Gateway"),
         (None, b"<html>ok</html>", CHECK_FEATURES, "The reply is not JSON."),
         (None, b"\xff\xfe", CHECK_FEATURES, "The reply is not JSON."),
+        (None, nested_lists(MAX_NESTING + 1), CHECK_FEATURES, "The reply is not JSON."),
         (None, b'{"code": 200}', COC_ATTENDEES, "The reply has no data."),
         (None, b'{"message": "Saved."}', COC_ATTENDEES, "Saved."),
         (200, b'{"code": 500, "error": "Boom."}', COC_ATTENDEES, "Boom."),
@@ -197,7 +199,7 @@ async def test_an_unknown_attendee_is_an_api_error_that_is_not_auth() -> None:
         (500, b'{"code": 500, "error": "Boom."}', CHECK_FEATURES, "Boom."),
         (302, b"", CHECK_FEATURES, "Found"),
     ],
-    ids=["html-error", "html-ok", "not-utf8", "no-data", "no-envelope", "error-envelope",
+    ids=["html-error", "html-ok", "not-utf8", "too-deep", "no-data", "no-envelope", "error-envelope",
          "error-envelope-bare", "error-envelope-note", "error-status", "redirect-not-followed"],
 )  # fmt: skip
 async def test_an_unusable_reply_is_an_api_error(

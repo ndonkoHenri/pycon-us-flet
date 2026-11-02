@@ -10,7 +10,8 @@ save your change" when the save fails, since the tool reads the choice from stor
 
 On the tool's scan screen, the choice heads the screen as an outlined chip that reopens
 the picker, and with none the screen is paused with a tonal button (both
-``ui/tool_controls.py``'s); ``Reading`` is the empty page while the tool reads its keys.
+``ui/tool_controls.py``'s); ``Reading`` is the empty page while the tool reads its keys,
+and ``use_arrival()`` tells whether the choice was read for this return from the picker.
 """
 
 import logging
@@ -54,6 +55,20 @@ class Loaded[T]:
 
     status: Status
     value: T | None = None
+
+
+def use_arrival(owner: str) -> object:
+    """Return a token for this arrival at the location, new at each change of it.
+
+    A tool stamps its read of the choice with the token and waits while the last read's
+    isn't this one (``is not``). The location itself can't tell: out and back with the
+    reads held, Flet cancels them, and the last to land was made at this same location
+    (#873, #887).
+
+    Args:
+        owner: The signed-in account (``Account.owner``); another's is a new arrival.
+    """
+    return ft.use_memo(object, [owner, ft.use_route_location()])
 
 
 def use_fetch[T](

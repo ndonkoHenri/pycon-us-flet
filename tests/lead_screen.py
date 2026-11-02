@@ -5,9 +5,10 @@ renders ``screens/staff_lead.py``'s ``LeadScanner`` in a real Flet session
 (``tests/harness.py``) signed in as an ``Account``, with a mock URL set or not (D-51),
 and its sessions share one SharedPreferences (``stored``), so a second render is a
 relaunch. A test module takes the fixtures with ``stored, show = lead_screen.stored,
-lead_screen.show``.
+lead_screen.show``. It reads the sponsor's chip and the field's pause too.
 """
 
+import json
 from collections.abc import AsyncIterator, Awaitable, Callable
 from contextlib import AsyncExitStack
 from pathlib import Path
@@ -18,6 +19,7 @@ import pytest
 
 from pycon_us.account import Account
 from pycon_us.config import YearData, load_year
+from pycon_us.core.lead_sponsors import LeadSponsor, to_stored
 from pycon_us.dev_options import DEV_MOCK_API_URL
 from pycon_us.memory import ViewMemory
 from pycon_us.prefs import Prefs
@@ -25,7 +27,7 @@ from pycon_us.screens import lead_consent
 from pycon_us.screens.staff_lead import LeadScanner
 from pycon_us.services import Services
 from pycon_us.services.outbox_db import OutboxDb
-from pycon_us.services.pref_keys import SCANNER_CONSENT
+from pycon_us.services.pref_keys import SCANNER_CONSENT, staff_sponsor
 from pycon_us.state import Conference
 from pycon_us.ui import scan_screen, staff_picker
 from tests import harness
@@ -52,6 +54,29 @@ def signed_in(
         door_check=door_check,
         mask_violation=mask_violation,
     )
+
+
+def choose(stored: dict[str, Any], sponsor: LeadSponsor) -> None:
+    """Store ``sponsor`` as the chosen one, as the picker saves it."""
+    stored[staff_sponsor(2026).key] = json.dumps(to_stored(sponsor))
+
+
+def chip_text(shown: Shown) -> str | None:
+    """What the "For: ..." chip shows, or None without the chip."""
+    nodes = shown.nodes("lead.sponsor_chip")
+    if not nodes:
+        return None
+    (node,) = nodes
+    row = node.content
+    assert isinstance(row, ft.Row)
+    (text,) = [c for c in row.controls if isinstance(c, ft.Text)]
+    return str(text.value)
+
+
+def helper(shown: Shown) -> str | None:
+    """The scan field's helper line: why scanning is paused, or None."""
+    (field,) = shown.find(ft.TextField)
+    return cast(str | None, field.helper)
 
 
 @pytest.fixture

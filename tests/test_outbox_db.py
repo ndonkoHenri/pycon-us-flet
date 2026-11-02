@@ -122,7 +122,7 @@ def test_first_use_creates_the_file_in_wal_mode_at_the_latest_version(
 
 
 def test_an_empty_file_is_migrated(tmp_path: Path) -> None:
-    """A zero-byte ``outbox.db`` (an interrupted first open) is migrated, not refused."""
+    """A zero-byte outbox file (an interrupted first open) is migrated, not refused."""
     (tmp_path / "outbox-2026.db").touch()
     database = OutboxDb(tmp_path, 2026)
     assert queued(scan(database)).key == "A1"

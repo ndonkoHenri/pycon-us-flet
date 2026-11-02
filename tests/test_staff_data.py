@@ -3,7 +3,8 @@
 No path deletes an unsynced row without naming how many, an account switch never shows
 or sends the previous owner's rows as the new account's, and Clear staff data removes
 every staff key of the storage table, a key added later included. The rows are in a
-real ``outbox.db``; the accounts sign in to the in-process mock (``tests/sync_rig.py``).
+real ``outbox-<year>.db``; the accounts sign in to the in-process mock
+(``tests/sync_rig.py``).
 """
 
 import asyncio
@@ -161,7 +162,7 @@ async def test_clear_staff_data_deletes_every_account_s_rows_and_zeros_staff(
 async def test_clear_staff_data_never_creates_the_outbox(
     tmp_path: Path, storage: Storage
 ) -> None:
-    """Without ``outbox.db`` there is nothing to count or delete, and none is made."""
+    """Without an outbox file there is nothing to count or delete, and none is made."""
     never = OutboxDb(tmp_path / "never", 2026)
     (tmp_path / "never").mkdir()
     assert staff_counts(never) == Counts()

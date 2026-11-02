@@ -44,6 +44,10 @@ from tools.mock_api.transport import mock_transport
 VIEW = "/more/staff/door"
 PICKER = f"{VIEW}/session"
 ASYNC = DoorChoice(1, (11,), "Async in depth \N{MIDDLE DOT} Wed 1:30 PM")
+TUTORIALS = DoorChoice(1, (10, 11), "Tutorials \N{MIDDLE DOT} All sessions", True)
+"""Ada and Linus bought one of its two sessions, Grace the other."""
+SUMMIT = DoorChoice(2, (20,), "Example Summit \N{MIDDLE DOT} Thu 10:00 AM")
+"""Only Linus bought it."""
 
 type Show = Callable[..., Awaitable[Shown]]
 

@@ -2,7 +2,8 @@
 
 ``ClearStaffData`` and ``DataActions`` run outside a renderer, their hooks replaced
 (``tests/data_section.py``'s hand renderer); the rows are seeded into a real
-``outbox.db``. How the rows and the confirmations look is checked on devices (the PR).
+``outbox-<year>.db``. How the rows and the confirmations look is checked on devices
+(the PR).
 """
 
 import inspect
@@ -226,7 +227,7 @@ def outcome(control: ft.Control) -> str | None:
 def test_without_a_mock_api_url_the_row_is_not_there(
     clear: Callable[..., ft.Control], db: OutboxDb
 ) -> None:
-    """Staff features hide without the mock (D-51), and outbox.db stays unopened."""
+    """Staff features hide without the mock (D-51), and the outbox stays unopened."""
     assert clear(mock=False).visible is False
     assert not db.path.exists()
 
