@@ -1,11 +1,12 @@
 """A hypothesis state machine over the outbox's rules (D-56, D-77; testing §4.3).
 
-The machine plays the db and the ``SyncWorker`` with ``core/outbox.py``'s pure rules:
-scans, notes and door admissions, sends that succeed or fail with a ``NetworkError``
-(before the request left, or after: a lost answer) or an ``ApiError`` (a refusal or an
-answer we can't read; one at a time or in streaks, to reach the cap), "Retry failed",
-sponsor and account switches, and time passing. It keeps its own record of what each row
-should be, independently of the rows, and checks the invariants after every step.
+The machine plays the db and the ``SyncWorker`` with the pure rules of
+``core/outbox_enqueue.py`` (scans, notes and door admissions) and ``core/outbox.py``
+(sends that succeed or fail with a ``NetworkError``, before the request left or after: a
+lost answer, or an ``ApiError``, a refusal or an answer we can't read, one at a time or
+in streaks, to reach the cap; "Retry failed"), and with sponsor and account switches and
+time passing. It keeps its own record of what each row should be, independently of the
+rows, and checks the invariants after every step.
 """
 
 import math
