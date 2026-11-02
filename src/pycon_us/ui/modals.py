@@ -3,7 +3,7 @@
 A warm deep link is a route change like any other (architecture §5.6), and at the pin
 the dialogs, sheets and menus open over the old screen stay open over the new one
 (F109): the filter sheet open on the Schedule stayed over Now after
-``pyconus://app/now``. Closing them after the new Views are in does not work either:
+``confcompanion://app/now``. Closing them after the new Views are in does not work either:
 Flet draws each one in the top View and keeps the route it opened in that widget's
 state, so a new top View draws it again without the route, and its close then closes
 nothing (F109). So the route change waits: ``use_modals_close_on_route_change()`` puts

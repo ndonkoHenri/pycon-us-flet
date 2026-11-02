@@ -220,7 +220,7 @@ unless every trial moved inside the window and every tap reached the button. Com
 `journeys/deep_links.yaml` opens each link through `subflows/open_link.yaml`, which joins
 `LINK` (the scheme and host) and the route path. With no `LINK` it uses `confcompanion://app`,
 which must equal `[tool.flet.deep_linking]` in `pyproject.toml` (D-269):
-`tests/test_deep_link_flow.py` checks it, so when O-4 (#15) renames the scheme the check
+`tests/test_deep_link_flow.py` checks it, so if the scheme is renamed (D-452) the check
 fails, not the flow. To try a build with other values before that default changes, give
 them: `maestro --device <id> test -e LINK=<scheme>://<host> maestro/journeys/deep_links.yaml`.
 A simulator asks "Open in …?" before the first link it opens (F31); the subflow taps

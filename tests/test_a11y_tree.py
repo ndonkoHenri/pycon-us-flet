@@ -100,7 +100,7 @@ def test_a_run_without_a_tree_says_why(output, message):
 def test_a_route_opens_through_the_app_deep_link():
     """``--route`` becomes the D-269 link ``<scheme>://<host>/<route path>``, with or without a leading slash.
 
-    The scheme and host are placeholders until O-4, so the test reads them from the link.
+    The scheme can still be renamed (D-452), so the test reads the scheme and host from the link.
     """
     scheme, rest = deep_link("/more").split("://")
     host, path = rest.split("/", 1)
