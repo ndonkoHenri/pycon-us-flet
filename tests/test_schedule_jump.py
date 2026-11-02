@@ -22,7 +22,9 @@ from pycon_us.screens import schedule as screen
 from pycon_us.services.pref_keys import THEME
 from pycon_us.services.storage import Storage
 from pycon_us.ui import scrolling
+from pycon_us.ui import semantics as ui_semantics
 from tests import schedule_view
+from tests.fakes import MemorySemantics
 from tests.feeds import processed
 from tests.schedule_view import (
     BEFORE,
@@ -289,6 +291,23 @@ async def test_today_from_another_day_tells_a_screen_reader_once_it_landed(
     assert schedule.announced == []  # not before the switch has slid in
     await schedule.change_day(FRIDAY)
     await schedule.until(lambda: schedule.announced)
+    assert schedule.announced == ["Friday, May 15, 10:30 AM"]
+
+
+async def test_a_landing_announcement_never_answered_ends_at_the_cap(
+    shown: Callable[..., Awaitable[Shown]],
+    monkeypatch: pytest.MonkeyPatch,
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    """F276, D-420: under VoiceOver no answer comes, and the landing stops waiting."""
+    monkeypatch.setattr(ui_semantics, "ANNOUNCE_WAIT_S", 0.01)
+    caplog.set_level(logging.DEBUG, logger=ui_semantics.__name__)
+    schedule = await shown(screen_reader=True, announcements=True)
+    cast(MemorySemantics, schedule.services.semantics).answers = False
+    await schedule.scroll_away()
+    # The outer wait fails this test, were the cap to go, instead of hanging it.
+    await asyncio.wait_for(schedule.press_now(), 5)
+    await schedule.until(lambda: "No answer to an announcement" in caplog.text)
     assert schedule.announced == ["Friday, May 15, 10:30 AM"]
 
 

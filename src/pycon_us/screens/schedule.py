@@ -72,7 +72,6 @@ from pycon_us.screens.schedule_slots import (
 from pycon_us.services import use_services
 from pycon_us.services.errors import report_errors
 from pycon_us.services.pref_keys import THEME
-from pycon_us.services.storage import SERVICE_ERRORS
 from pycon_us.state import use_conference
 from pycon_us.theme import use_tokens
 from pycon_us.ui.day_tabs import TAB_MS, day_tab
@@ -80,6 +79,7 @@ from pycon_us.ui.favorite import use_favorite_toggle
 from pycon_us.ui.navigation import RETAP_SCROLL_MS
 from pycon_us.ui.scaffold import AppScaffold, search_button
 from pycon_us.ui.scrolling import JUMP_MS, jump_to_key
+from pycon_us.ui.semantics import announce
 from pycon_us.ui.session_rows import changes_of, use_recent_changes, use_session_views
 from pycon_us.ui.states import NoDataState
 from pycon_us.ui.status_strip import strip_view, use_minute, use_strip
@@ -188,10 +188,7 @@ def Schedule() -> ft.View:
         if not prefs.announcements:  # Android: Flutter reports none there (F13, D-241)
             set_said(words)
             return
-        try:
-            await svc.semantics.announce_message(words)
-        except SERVICE_ERRORS:  # the list is in place; a lost phrase is no error
-            logger.warning("Could not announce the jump", exc_info=True)
+        await announce(svc.semantics, words)
 
     @report_errors
     async def fade() -> None:
