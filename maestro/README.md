@@ -644,3 +644,21 @@ journeys' pages were walked on Android at `font_scale 2.0` and on iOS at
 clips, but the floor viewer's label card covers the marked room at iOS's largest
 (#793), Search's preset Places chip is off screen (#794), and the location card
 narrows to its content (#795).
+
+## The staff journeys (#825)
+
+`--include-tags=staff`, run twice in a row against one running mock (restarted between
+platforms), on 2026-11-02, `main` at `1826388a` plus these flows, Flet pin `22a6dcb16`: a
+release APK (arm64) and an `ios-simulator` build, each matching `build/python-app`, at
+load averages of 5 to 13. The flows passed the same way on the two earlier merges of
+`main` on the way, without #872, #882 and #889 and then with them.
+
+| Device | Run 1 | Run 2 |
+|---|---|---|
+| `pycon_pixel6a_api36`, Android 16 | 4 of 4 passed, 8 min 2 s | 4 of 4 passed, 8 min 19 s |
+| iPhone 17, iOS 26.5 | 4 of 4 passed, 6 min 29 s | 4 of 4 passed, 6 min 17 s |
+
+The mock's log for each platform's two runs agrees: four `lead_retrieval/capture` GETs,
+four `mask_violations/capture` POSTs, and five `check_in/redeem_products` POSTs, the
+door's two per run and swag's one on the first. A result's check was also run against
+the wrong outcome ("Already picked up" with "Not a badge code" on the panel), and failed.
