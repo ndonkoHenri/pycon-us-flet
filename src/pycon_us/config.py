@@ -49,7 +49,7 @@ from pycon_us.year_pages import (
     check_text,
 )
 from pycon_us.year_schema import YearDataError, build, read_table
-from pycon_us.year_tracks import KEYNOTE_TRACKS, Track, TrackFormat, check_tracks
+from pycon_us.year_tracks import KEYNOTE_TRACKS, Track, check_tracks
 
 YEAR = 2026
 """The conference year the app shows (D-05)."""
@@ -135,7 +135,6 @@ class ConferenceInfo:
             key,
             name,
             name,
-            name,
             icon="MIC_NONE_OUTLINED",
             group="talks",
             slug="",
@@ -153,16 +152,9 @@ class ConferenceInfo:
                 return track
         return None
 
-    def track_name(self, key: str, fmt: TrackFormat = "short") -> str:
-        """Return the display name of track ``key`` in the given format (DATA-28)."""
-        track = self.track(key)
-        match fmt:
-            case "short":
-                return track.short
-            case "plural":
-                return track.plural
-            case "long":
-                return track.long
+    def track_name(self, key: str) -> str:
+        """Return the name on track ``key``'s badges and rows, its short one (DATA-28)."""
+        return self.track(key).short
 
 
 @dataclass(frozen=True)

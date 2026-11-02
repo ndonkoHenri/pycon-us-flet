@@ -99,9 +99,9 @@ def test_a_row_in_another_section_is_reported() -> None:
 
 
 def test_an_escaped_pipe_stays_inside_its_cell() -> None:
-    """DATA-28's approach holds an escaped pipe; its cells do not shift, so its row checks clean."""
-    assert "\\|" in row_of("DATA-28")
-    assert not [problem for problem in check(TEXT, IDS) if "DATA-28" in problem]
+    """STORE-01's row holds an escaped pipe; its cells do not shift, so it checks clean."""
+    assert "\\|" in row_of("STORE-01")
+    assert not [problem for problem in check(TEXT, IDS) if "STORE-01" in problem]
 
 
 def test_breakdown_lists_dispositions_and_sections() -> None:
