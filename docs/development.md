@@ -825,6 +825,74 @@ iOS builds run on the owner's Mac (D-84). Signing material never enters CI (D-86
 - **Android Play uploads** would need the keystore (base64) and the `FLET_ANDROID_SIGNING_*` values as secrets.
 - **Without environments on a private Free repo,** all of these would be plain repository secrets, readable by any workflow on any branch. That is one more reason to keep signing local.
 
+### 7.6 Sweep for secrets and vulnerabilities (#847)
+
+Everything in the repository becomes visible when it goes public, including every PR's `refs/pull/*` head, which no one can delete, and the `pr-assets` images. So this sweep runs twice: once while the repo is private, and again right before the flip (#852 needs the second result clean). The results go on #847. It's local and free, and it changes nothing on GitHub.
+
+**Tools,** once: `brew install gitleaks trufflehog osv-scanner tesseract`. The scratch folder `build/` is git-ignored; delete `build/sweep` when you're done.
+
+**Secrets in history.** A mirror clone is the only checkout that holds all the branches and `refs/pull/*`. The scan reads a dump of it because that also covers commit messages and deleted lines, which `gitleaks git` skips (and an agent's isolated worktree refuses `gitleaks git`). `--redact` keeps values out of the report and `--no-verification` keeps candidates on this machine: **never** let a scanner try one against a live service.
+
+```sh
+mkdir -p build/sweep/api
+git clone --mirror https://github.com/ndonkoHenri/pycon-us-flet.git build/sweep/mirror.git
+git -C build/sweep/mirror.git log --all --full-history -p -U0 --diff-merges=cc --format='commit %H%n%an <%ae>%n%cn <%ce>%n%B' > build/sweep/history.patch
+gitleaks dir build/sweep/history.patch --redact --exit-code 0 --report-format json --report-path build/sweep/gitleaks-history.json
+trufflehog filesystem build/sweep/history.patch --no-verification --no-update --json --results=verified,unknown,unverified > build/sweep/trufflehog-history.jsonl
+```
+
+A hit's `StartLine` is a line of the dump. To find its commit: `awk -v n=<line> 'NR<=n && /^commit /{c=$0} NR==n{print c; exit}' build/sweep/history.patch`.
+
+The first sweep's only hits were 34 `generic-api-key` from gitleaks, all false positives: 28 in `tests/fixtures/ionic/signing.json` (two commits; signatures made with the fixture's own dummy secret) and 6 in `src/pycon_us/screens/track.py` (four commits; the argument name `tokens` beside an identifier). Anything else is new: look at it. Never paste a value. Say where it is, and mark it for the owner to rotate; rewriting history is the owner's call (D-101).
+
+**Secrets in what people wrote** (issues, PRs, comments, reviews):
+
+```sh
+gh api 'repos/ndonkoHenri/pycon-us-flet/issues?state=all&per_page=100' --paginate > build/sweep/api/issues.json
+gh api 'repos/ndonkoHenri/pycon-us-flet/issues/comments?per_page=100' --paginate > build/sweep/api/issue-comments.json
+gh api 'repos/ndonkoHenri/pycon-us-flet/pulls/comments?per_page=100' --paginate > build/sweep/api/review-comments.json
+gh api graphql --paginate -f query='query($endCursor:String){repository(owner:"ndonkoHenri",name:"pycon-us-flet"){pullRequests(first:100,after:$endCursor){pageInfo{hasNextPage endCursor} nodes{number reviews(first:50){nodes{body}}}}}}' > build/sweep/api/pr-reviews.json
+gitleaks dir build/sweep/api --redact --exit-code 0 --report-format json --report-path build/sweep/gitleaks-github.json
+trufflehog filesystem build/sweep/api --no-verification --no-update --json --results=verified,unknown,unverified > build/sweep/trufflehog-github.jsonl
+```
+
+**Personal data in the `pr-assets` images.** Read their text, scan it, and look through what's new since the last sweep (#847 names that commit; `git -C build/sweep/mirror.git diff --name-only <commit> pr-assets`):
+
+```sh
+mkdir -p build/sweep/pr-assets
+git -C build/sweep/mirror.git archive --format=tar pr-assets -o ../pr-assets.tar
+tar -xf build/sweep/pr-assets.tar -C build/sweep/pr-assets
+find build/sweep/pr-assets \( -name '*.png' -o -name '*.jpg' \) -print0 | OMP_THREAD_LIMIT=1 xargs -0 -P 8 -I{} tesseract {} {} --psm 11
+gitleaks dir build/sweep/pr-assets --redact --exit-code 0 --report-format json --report-path build/sweep/gitleaks-images.json
+grep -rhoE --include='*.txt' '[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[a-z]{2,}' build/sweep/pr-assets | sort | uniq -c | sort -rn
+```
+
+Only `example.com` and `example.org` sample accounts, the conference's public addresses and Mastodon handles should show. OCR misses what small text and pictures hold, so looking is still part of it.
+
+**Personal data in the text.** Look at the commit identities (`git -C build/sweep/mirror.git log --all --format='%ae%n%ce' | sort | uniq -c`), and grep the dump and `build/sweep/api` for phone numbers, emails and `/Users/`. A phone number that isn't a `555-01xx` fake or the Code of Conduct hotline needs a look. #847's first result lists what is already known.
+
+**Python dependencies.** The workspace's own Flet packages come from `.flet-src`, so they're left out of the export:
+
+```sh
+uv export --locked --format requirements-txt --no-hashes --no-emit-workspace --no-editable -q -o build/sweep/req-all.txt
+grep -vE '^\./\.flet-src' build/sweep/req-all.txt > build/sweep/req.txt
+uvx pip-audit -r build/sweep/req.txt --no-deps --disable-pip
+osv-scanner -L uv.lock
+```
+
+To see whether a hit ships to phones: `uv tree --locked --invert --package <name>`, then `uv tree --locked --no-default-groups`. Fix one with `uv lock --upgrade-package <name>`, and run `tools/check.sh`.
+
+**Dart dependencies.** The pin's client has a lockfile, and a real build has the set that ships, with the extensions (§5.3):
+
+```sh
+osv-scanner -L .flet-src/client/pubspec.lock
+osv-scanner -L build/flutter/pubspec.lock
+```
+
+The OSV database covers few Dart packages, so "no issues found" there says less than it does for Python. A vulnerable Dart package is a Flet matter: an `upstream` issue here (D-213).
+
+**Not covered:** the Android and iOS native dependencies (Gradle, CocoaPods) of a build; commits that a force-push left unreachable from any ref (GitHub keeps them for a while, and no one can list them); old versions of edited comments; and the logs of past Actions runs, which hold no repository secrets since there are none (D-86).
+
 ---
 
 ## 8. Signing and distribution (D-85, prov. O-5)
@@ -961,6 +1029,7 @@ Nothing here is planned. It is the list we would work through if the owner ever 
 | Privacy | A privacy-policy URL (both stores require one). App Privacy: "Data Not Collected", since there are no analytics, no crash service and favourites stay on the device (D-08, D-72). The Play Data safety form. |
 | Private API | Public builds keep the D-51 guard: the mock-only features are invisible without the Developer screen. A real backend needs the PSF (PLAN appendix). |
 | Content and licences | Settle [the licence and asset review](licence-and-assets-review.md) (#846): `NOTICE`, the reused Ionic assets (floor plans, D-87), sponsor logos and the bundled dependencies' licences. |
+| Secrets and vulnerabilities | Run the sweep in §7.6 again right before the flip (#847, #852). |
 | Signing in CI | Optional at that point: move the keys to CI secrets (§7.5), superseding D-86 by decision. |
 | Store assets | Screenshots, descriptions, the age-rating questionnaires. |
 
