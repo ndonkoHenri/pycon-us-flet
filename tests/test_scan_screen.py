@@ -9,6 +9,7 @@ readers are checked on devices (the PR).
 import asyncio
 from collections.abc import Callable
 from itertools import product
+from typing import cast
 
 import flet as ft
 import pytest
@@ -159,12 +160,13 @@ async def test_a_submit_while_the_handler_runs_is_dropped(show: Show, rig: Rig) 
     await shown.settle()
     assert [b.code for b in rig.badges] == ["MOCK0001"]
     assert entry(shown).value == ""
-    assert entry(shown).helper == SCAN_AGAIN
+    assert isinstance(entry(shown).helper, ft.Text)
+    assert cast(ft.Text, entry(shown).helper).value == SCAN_AGAIN
     assert rig.focused == focused + 1  # iOS's Enter took it out (F274)
     rig.gate.set()
     await first
     assert panel(shown) == "Checked in\nAda Lovelace\nScan 1"
-    assert entry(shown).helper == SCAN_AGAIN  # still there for who looks up later
+    assert cast(ft.Text, entry(shown).helper).value == SCAN_AGAIN
 
 
 async def test_scanning_goes_on_through_a_slow_send(show: Show, rig: Rig) -> None:

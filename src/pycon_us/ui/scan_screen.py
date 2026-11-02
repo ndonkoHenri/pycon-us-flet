@@ -277,7 +277,7 @@ def ScanScreen(
                     # Never off, unlike a SearchField's (D-330): Flutter applies it
                     # a frame after the patch, so the focus asked for on Back would
                     # come first and be dropped (F288, D-438).
-                    helper=why_paused or (SCAN_AGAIN if too_soon else None),
+                    helper=why_paused or (ft.Text(SCAN_AGAIN) if too_soon else None),
                 ),
             )
         ),
