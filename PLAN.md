@@ -347,7 +347,7 @@ The workflow is written down in [`AGENTS.md`](AGENTS.md), the operating manual f
 
 ## 12. Open decisions
 
-The full list, each with a recommendation, is in [`docs/decisions.md` › Open decisions](docs/decisions.md#open-decisions); provisional decisions apply until they are settled under D-101 (owner-only ones by the owner). **O-1** the tabs and start screen (settled by D-454: Now · Schedule · My schedule · Map · More, opening on Now, with no dogfooding behind it); **O-2** per-platform page transitions (yes; settled by D-148 after S4); **O-3** the font (settled by D-455: Roboto); **O-4** app identity, bundle id and icon (no PSF marks on anything that leaves our devices); **O-5** distribution (internal only); **O-6** a CFP proposal (decide around 2026-11-20); **O-7** staff-tool depth (settled by D-456: all four, all built); **O-8** a stage-demo backend (settled by D-457: the LAN mock from the laptop).
+The full list, each with a recommendation, is in [`docs/decisions.md` › Open decisions](docs/decisions.md#open-decisions); provisional decisions apply until they are settled under D-101 (owner-only ones by the owner). **O-1** the tabs and start screen (settled by D-454: Now · Schedule · My schedule · Map · More, opening on Now, with no dogfooding behind it); **O-2** per-platform page transitions (yes; settled by D-148 after S4); **O-3** the font (settled by D-455: Roboto); **O-4** app identity, bundle id and icon (settled by D-452: Conf Companion, with no PSF marks on anything that leaves our devices); **O-5** distribution (internal only); **O-6** a CFP proposal (decide around 2026-11-20); **O-7** staff-tool depth (settled by D-456: all four, all built); **O-8** a stage-demo backend (settled by D-457: the LAN mock from the laptop).
 
 ---
 

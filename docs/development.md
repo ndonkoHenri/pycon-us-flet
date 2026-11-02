@@ -613,15 +613,17 @@ uv run flet test ios -d <udid> --tests-dir tests/ui -v -k "offline or switch_day
 - **Android: the same race, with a shorter window.** The plugin's Gradle tasks write `app.zip`, `stdlib.zip` and `sitepackages.zip` to `serious_python_android-<version>/android/src/main/assets/` and the native libraries to `src/main/jniLibs/<abi>/`, paths relative to the plugin's folder in the pub cache (`build.gradle.kts:151, 423-454`); the APK takes them when Gradle merges assets later in the same run. Two Gradle builds that overlap there can package each other's `app.zip`.
 - `flet debug` and `flet test` run the same pipeline (§5.3, §5.7). The companion client (§5.2) does not embed Python and is not affected.
 
-**The rule.** Every worktree of this repo has a Flet checkout of its own: an APFS clone of the main checkout's `.flet-src`, never a link to it. When another build may run on the Mac (agents in parallel, D-102), every `flet build`, `flet debug` and `flet test` in a worktree also uses a pub cache of its own under `build/`, another APFS clone:
+**The rule.** Every worktree of this repo has a Flet checkout of its own: an APFS clone of the main checkout's `.flet-src`, never a link to it. When another build may run on the Mac (agents in parallel, D-102), every `flet build`, `flet debug` and `flet test` in a worktree also uses a pub cache of its own under `build/`, another APFS clone. Pasting into zsh, run `setopt interactivecomments` first (§5.1):
 
 ```bash
 # Once per worktree, from its root (in the main checkout the Flet lines change nothing).
 # 1. Its own Flet checkout: a clone of the main checkout's .flet-src, without the clone's wheel build folder.
-main=$(dirname "$(git rev-parse --path-format=absolute --git-common-dir)")   # the main checkout
-test -L .flet-src && rm .flet-src                                             # a link to the shared checkout
+# $main is the main checkout; the first test removes a link to the shared checkout; uv sync moves the editable
+# installs to the clone.
+main=$(dirname "$(git rev-parse --path-format=absolute --git-common-dir)")
+test -L .flet-src && rm .flet-src
 test -e .flet-src || { cp -cR "$main/.flet-src" .flet-src && rm -rf .flet-src/sdk/python/packages/flet/build; }
-uv sync --locked                                                              # moves the editable installs to the clone
+uv sync --locked
 
 # 2. Its own pub cache, and again whenever build/pub-cache is gone: a clone of the shared cache.
 # The test keeps a second run from nesting a copy inside the first (see below).

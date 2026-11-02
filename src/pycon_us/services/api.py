@@ -86,7 +86,8 @@ class ApiError(Exception):
         status: The HTTP status of a refusal (an error status, or an error envelope
             under a success), or None when the reply could not be read (`unreadable`).
         message: What went wrong: the server's own ``error`` or ``message`` when it sent
-            one, for the log.
+            one. The app doesn't control that text, and ``str()`` includes it, so a
+            private-API call logs ``status`` instead (D-72).
     """
 
     def __init__(self, status: int | None, message: str) -> None:

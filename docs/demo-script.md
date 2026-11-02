@@ -74,7 +74,8 @@ then shows its Scan badges card from the start.
 ## Before the talk
 
 The order matters: what needs a network comes first, and the app's first launch comes after the Wi-Fi goes off, so the
-schedule on screen is the bundled one.
+schedule on screen is the bundled one. The blocks here hold no comments, because in an interactive zsh `#` doesn't
+start one without `setopt interactivecomments` (`development.md` §5.1).
 
 **With the network on:**
 
@@ -87,12 +88,12 @@ schedule on screen is the bundled one.
 
 2. Boot both simulators (`xcrun simctl list devices available` gives the udids; `xcrun simctl boot <udid>`;
    `open -a Simulator`). In Simulator's menu, turn on I/O › Keyboard › Connect Hardware Keyboard.
-3. Start the companion (`development.md` §5.2), leaving both running. **Not tried:** whether they survive the Wi-Fi
-   going off.
+3. Start the companion (`development.md` §5.2), leaving both running: the first command in T2, at the repo root, and
+   the second in T3, about 2 minutes the first time. **Not tried:** whether they survive the Wi-Fi going off.
 
    ```bash
-   BROWSER=true uv run flet run -r -w -p 8550                       # T2, at the repo root
-   cd .flet-src/client && flutter run -d <simulator B udid>         # T3, about 2 minutes the first time
+   BROWSER=true uv run flet run -r -w -p 8550
+   cd .flet-src/client && flutter run -d <simulator B udid>
    ```
 
 4. Open beat 6's page in a private window, so no GitHub session or notification shows, and never reload it:
@@ -107,18 +108,18 @@ schedule on screen is the bundled one.
 
 **With the network off:**
 
-7. Start the mock in T1. Loopback only needs no firewall prompt and no hotspot.
+7. Start the mock in T1. Loopback only needs no firewall prompt and no hotspot. The `curl` answers 401,
+   "Unknown API key."
 
    ```bash
    uv run python -m tools.mock_api.server
-   curl -s http://localhost:8000/2026/api/v1/user/check_features/     # answers 401, "Unknown API key."
+   curl -s http://localhost:8000/2026/api/v1/user/check_features/
    ```
 
-8. Install on A from nothing. The bundle id is a placeholder until O-4 (#15). The first launch unpacks Python, so give
-   it time.
+8. Install on A from nothing. The first launch unpacks Python, so give it time.
 
    ```bash
-   xcrun simctl uninstall <simulator A udid> io.github.ndonkohenri.pyconus
+   xcrun simctl uninstall <simulator A udid> io.github.ndonkohenri.confcompanion
    xcrun simctl install <simulator A udid> build/ios-simulator/pycon-us.app
    ```
 
@@ -141,7 +142,7 @@ schedule on screen is the bundled one.
 
 12. On B: **Get started**, then the same fake clock and the same five stars, with no mock URL (Developer options is
     always there on B). The spare gets what A got, from `adb install -r build/apk/pycon-us.apk` (`development.md` §5.5).
-13. Quit A, so that beat 1 is a cold start: `xcrun simctl terminate <simulator A udid> io.github.ndonkohenri.pyconus`.
+13. Quit A, so that beat 1 is a cold start: `xcrun simctl terminate <simulator A udid> io.github.ndonkohenri.confcompanion`.
 14. On the laptop: Do Not Disturb on, the Dock hidden, windows placed, large fonts in the terminals and the editor.
     `git status` must be clean.
 
@@ -325,7 +326,6 @@ If this fails and a phone is still wanted, O-8 reopens (D-457).
 ## What changes before the freeze
 
 - **#834, #835:** View source becomes real; beat 6 stops being a sentence.
-- **#15 (O-4):** the bundle id and the app's name.
 - **#44, the 2027 feed:** the snapshot's date in beat 1, and if the 2027 feed replaces 2026, the fake clock, the session
   ids and every session name above.
 - **#520, #726:** a camera scan, on a phone only.
