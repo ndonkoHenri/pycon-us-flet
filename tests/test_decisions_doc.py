@@ -30,7 +30,9 @@ def _ids(path: str, pattern: str) -> list[str]:
 
 def _anchors(path: Path) -> set[str]:
     """Return GitHub's anchor for each heading of a Markdown file."""
-    headings = re.findall(r"^#{1,6} +(.+)$", FENCE.sub("", path.read_text()), re.MULTILINE)
+    headings = re.findall(
+        r"^#{1,6} +(.+)$", FENCE.sub("", path.read_text()), re.MULTILINE
+    )
     return {re.sub(r"[^\w\- ]", "", h.lower()).replace(" ", "-") for h in headings}
 
 
@@ -38,7 +40,9 @@ def _broken_link(doc: Path, target: str) -> bool:
     """Say whether a relative link leads to no file, or to no heading of that file."""
     path, _, anchor = target.partition("#")
     dest = doc.parent / path if path else doc
-    return not dest.exists() or bool(anchor and dest.suffix == ".md" and anchor not in _anchors(dest))
+    return not dest.exists() or bool(
+        anchor and dest.suffix == ".md" and anchor not in _anchors(dest)
+    )
 
 
 def test_every_decision_fact_and_gap_id_has_one_row() -> None:
