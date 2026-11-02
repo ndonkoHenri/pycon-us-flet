@@ -149,6 +149,7 @@ def OpenSpaces() -> ft.View:
             time_above=prefs.time_above,
             intro=copy.intro if copy else "",
             omit=omit,
+            key=day.isoformat(),  # pyright: ignore[reportCallIssue]  # as SessionRow's
         )
         for day, views in days
     ]
@@ -271,6 +272,8 @@ def none_yet(url: str, svc: Services, margin: float) -> ft.Control:
     )
 
 
+@ft.memo
+@ft.component
 def DayList(
     day: date,
     views: tuple[SessionView, ...],
@@ -286,8 +289,10 @@ def DayList(
 ) -> ft.Control:
     """Return one day's page: the intro line, then the day's open spaces by slot.
 
-    A memoised component keyed by the day (D-153): a star tap re-renders the day whose
-    ``saved`` changed and in it the one row (``SessionRow`` is memoised too).
+    A memoised component keyed by the day (D-153, F34): a star tap re-renders the day
+    whose ``saved`` changed and in it the one row (``SessionRow`` is memoised too). It
+    also follows the screen's side margin (``use_margin()``, D-305), which changes only
+    with the window.
 
     Args:
         day: The conference-local date.
@@ -301,41 +306,6 @@ def DayList(
             D-216).
         intro: The year's intro line; empty for none.
         omit: Badge labels the page already says: "Open space".
-    """
-    return _DayList(
-        day,
-        views,
-        saved,
-        changes,
-        on_toggle,
-        tokens,
-        use_24h=use_24h,
-        time_above=time_above,
-        intro=intro,
-        omit=omit,
-        key=day.isoformat(),  # pyright: ignore[reportCallIssue]  # as SessionRow's
-    )
-
-
-@ft.memo
-@ft.component
-def _DayList(
-    day: date,
-    views: tuple[SessionView, ...],
-    saved: frozenset[str],
-    changes: Changes,
-    on_toggle: ToggleFavorite,
-    tokens: Tokens,
-    *,
-    use_24h: bool,
-    time_above: bool,
-    intro: str,
-    omit: frozenset[str],
-) -> ft.Control:
-    """The body of ``DayList``; it runs only when its props change (F34).
-
-    It also follows the screen's side margin (``use_margin()``, D-305), which changes
-    only with the window.
     """
     zone = use_services().year.conference.zone
     margin = use_margin(LIST)

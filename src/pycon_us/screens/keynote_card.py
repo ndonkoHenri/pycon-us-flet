@@ -71,6 +71,8 @@ def card_text(keynote: Keynote) -> str:
     return "\n\n".join(person.bio for person in keynote.speakers if person.bio)
 
 
+@ft.memo
+@ft.component
 def KeynoteCard(
     session: Session,
     keynote: Keynote | None,
@@ -93,30 +95,6 @@ def KeynoteCard(
         on_toggle: The page's star handler (``use_favorite_toggle()``).
         star_color: The filled star's colour, ``Tokens.favorite``.
     """
-    # As SessionRow's: ft.component's typing leaves out the key= its wrapper takes.
-    return _KeynoteCard(
-        session,
-        keynote,
-        view,
-        saved=saved,
-        on_toggle=on_toggle,
-        star_color=star_color,
-        key=session.id,  # pyright: ignore[reportCallIssue]
-    )
-
-
-@ft.memo
-@ft.component
-def _KeynoteCard(
-    session: Session,
-    keynote: Keynote | None,
-    view: SessionView,
-    *,
-    saved: bool,
-    on_toggle: ToggleFavorite,
-    star_color: str,
-) -> ft.Control:
-    """The body of ``KeynoteCard``; it runs only when its props or "Read more" change."""
     expanded, set_expanded = ft.use_state(False)
     key = semantics_key(session.id)
     body: list[ft.Control] = _head(session, keynote, key)

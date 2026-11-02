@@ -70,6 +70,8 @@ type Reported = Callable[[date, str, float], None]
 """The Schedule's one height handler: an item's day, its key and its height (D-331)."""
 
 
+@ft.memo
+@ft.component
 def DayList(
     day: date,
     slots: tuple[Slot, ...],
@@ -93,9 +95,10 @@ def DayList(
 ) -> ft.Control:
     """Return one day's page: its slots, or the reason it has none (D-31, ux.md §4.6).
 
-    A memoised component keyed by the day (D-153): with stable props it re-renders only
-    when its slots, its own favourites or changes, the clock format, the slots' layout
-    or the tokens change.
+    A memoised component keyed by the day (D-153, F34): with stable props it re-renders
+    only when its slots, its own favourites or changes, the clock format, the slots'
+    layout or the tokens change. It also follows the screen's side margin
+    (``use_margin()``, D-305), which changes only with the window.
 
     Args:
         day: The conference-local date.
@@ -120,57 +123,6 @@ def DayList(
         on_measure: The screen's height handler, which each slot and the now line
             report to (D-331).
         on_clear_filters: What "Clear filters" does on a day the filter emptied.
-    """
-    return _DayList(
-        day,
-        slots,
-        views,
-        favorites,
-        changes,
-        on_toggle,
-        tokens,
-        use_24h=use_24h,
-        time_above=time_above,
-        full=full,
-        clearance=clearance,
-        empty=empty,
-        now=now,
-        head=head,
-        list_ref=list_ref,
-        on_scroll=on_scroll,
-        on_measure=on_measure,
-        on_clear_filters=on_clear_filters,
-        key=day.isoformat(),  # pyright: ignore[reportCallIssue]  # as SessionRow's
-    )
-
-
-@ft.memo
-@ft.component
-def _DayList(
-    day: date,
-    slots: tuple[Slot, ...],
-    views: Mapping[str, SessionView],
-    favorites: frozenset[str],
-    changes: Changes,
-    on_toggle: ToggleFavorite,
-    tokens: Tokens,
-    *,
-    use_24h: bool,
-    time_above: bool,
-    full: bool,
-    clearance: bool,
-    empty: Empty | None,
-    now: NowMark | None,
-    head: Head | None,
-    list_ref: ft.Ref[ft.ListView],
-    on_scroll: Scrolled,
-    on_measure: Reported,
-    on_clear_filters: Callable[[], object],
-) -> ft.Control:
-    """The body of ``DayList``; it runs only when the props change (F34).
-
-    It also follows the screen's side margin (``use_margin()``, D-305), which changes
-    only with the window.
     """
     page = ft.context.page
     zone = use_services().year.conference.zone
@@ -222,6 +174,7 @@ def _DayList(
                 on_measure=on_measure,
                 # The now line divides it from the slot above: one line, not two.
                 divider=index > 0 and (now is None or index != now.index),
+                key=slot.key,  # pyright: ignore[reportCallIssue]  # as SessionRow's
             )
             for index, slot in enumerate(slots)
         ]
@@ -243,6 +196,8 @@ def _DayList(
     )
 
 
+@ft.memo
+@ft.component
 def SlotItem(
     slot: Slot,
     views: Mapping[str, SessionView],
@@ -259,10 +214,11 @@ def SlotItem(
 ) -> ft.Control:
     """Return one time slot (D-31): its time in the gutter beside its rows, or above.
 
-    A memoised component keyed by the slot key (D-153); an anchor above its time and
-    rows carries ``ScrollKey(slot.key)``, the target of a jump (D-155, D-242), and its
-    divider sits above that anchor. Rows are in schedule order
-    (by room, D-31); breaks and notices are ``NoticeRow``s, without a star.
+    A memoised component keyed by the slot key (D-153, F34), which runs only when its
+    props change; an anchor above its time and rows carries ``ScrollKey(slot.key)``, the
+    target of a jump (D-155, D-242), and its divider sits above that anchor. Rows are in
+    schedule order (by room, D-31); breaks and notices are ``NoticeRow``s, without a
+    star.
 
     Args:
         slot: The slot, with its sessions in schedule order.
@@ -277,39 +233,6 @@ def SlotItem(
         day: The slot's day, which it reports its height with.
         on_measure: The screen's height handler (D-331).
     """
-    return _SlotItem(
-        slot,
-        views,
-        favorites,
-        changes,
-        on_toggle,
-        tokens,
-        label=label,
-        time_above=time_above,
-        divider=divider,
-        day=day,
-        on_measure=on_measure,
-        key=slot.key,  # pyright: ignore[reportCallIssue]  # as SessionRow's
-    )
-
-
-@ft.memo
-@ft.component
-def _SlotItem(
-    slot: Slot,
-    views: Mapping[str, SessionView],
-    favorites: frozenset[str],
-    changes: Changes,
-    on_toggle: ToggleFavorite,
-    tokens: Tokens,
-    *,
-    label: str,
-    time_above: bool,
-    divider: bool,
-    day: date,
-    on_measure: Reported,
-) -> ft.Control:
-    """The body of ``SlotItem``; it runs only when the props change (F34)."""
     info = use_services().year.conference
 
     @report_errors
