@@ -675,7 +675,7 @@ def test_declared_colour_pairs_are_readable(dark, high_contrast):
   | Phase | Flows |
   |---|---|
   | P1 | Search → favourite → session detail (exit criterion 4); Now → your next session → room; change day and apply a filter |
-  | P2 | Find a room on the map's list view; copy the Wi-Fi password; turn on reminders, including the permission primer |
+  | P2 | Find a room on the map's list view; copy the Wi-Fi password; review a schedule change. These are #462's three, as run on 2026-10-30. Turning on reminders, with the permission primer, is a fourth check outside the exit's three, heard once on the emulator (#815) |
   | P3 | Sign in with autofill; manual badge entry → outcome announced; open the sync queue and retry a failed row |
   | P4 | Every screen, once |
 
