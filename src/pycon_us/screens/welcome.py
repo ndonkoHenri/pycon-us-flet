@@ -4,7 +4,7 @@ One honest screen where the Ionic app had a tutorial of slides with a hard-coded
 and a permission prompt over it (ux.md §6.8): "Welcome to PyCon US 2026", the city and
 the dates from ``conference.toml`` (D-35), what the app does in three rows, Get started,
 and who built it: "Built with Python and Flet by the community · Not an official PSF
-app" (D-36). No permission prompt (D-61), no icon until O-4 gives the app one (#15).
+app" (D-36). No permission prompt (D-61), and no icon, though D-452 gave the app one.
 
 It is a root without a bar, in the splash's purple in every scheme, one of D-28's
 identity moments. Get started saves ``pycon.onboarded`` and replaces the route with
