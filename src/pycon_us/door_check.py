@@ -165,7 +165,8 @@ async def look_up(
     except ApiError as error:
         if error.status == NOT_FOUND:
             return not_registered(code)
-        logger.warning("door lookup refused: %s", error)  # the code isn't logged
+        # The status alone: the message is the server's text, which may hold the code.
+        logger.warning("door lookup refused: %s", error.status)
         return ScanResult(ScanOutcome.DENIED, CANT_CHECK, code, (LOOKUP_FAILED,), code)
     items = [item for item in items_of(found) if item.product_id in product_ids]
     quantities = tuple((i.product_id, i.redeemable) for i in items if i.redeemable > 0)
