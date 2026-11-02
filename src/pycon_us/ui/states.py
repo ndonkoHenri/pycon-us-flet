@@ -2,7 +2,8 @@
 
 ``EmptyState`` is for a screen with nothing to show (ux.md §4.1): no match, an unknown
 id, no data after a failed first fetch. It says why in one sentence and names a way
-out, as its button or, where no button can help, in its sentence (§4.6).
+out, as its button or, where no button can help, in its sentence (§4.6). ``not_found()``
+is the one of a detail whose id is not in the feed.
 ``SkeletonList`` is shown only while there is no data at all and the first fetch runs
 (NEW-03): with data, the screen shows it and the status strip says how old it is
 (D-32). ``NoDataState`` picks between the skeleton and the failed first fetch for every
@@ -16,6 +17,7 @@ import flet as ft
 
 from pycon_us.feed_refresh import Problem
 from pycon_us.prefs import use_prefs
+from pycon_us.services.errors import report_errors
 from pycon_us.theme import use_tokens
 from pycon_us.theme_hc import hc_border
 from pycon_us.ui.buttons import ICON_PADDING, LABEL_PADDING
@@ -154,6 +156,31 @@ def EmptyState(
         ),
         padding=ft.Padding.symmetric(horizontal=32, vertical=48),
         alignment=ft.Alignment.TOP_CENTER,
+    )
+
+
+def not_found(
+    title: str, *, icon: ft.IconData, action: str, location: str, identifier: str
+) -> ft.Control:
+    """Return the empty state of a detail whose id is not in the feed (ux.md §4.6).
+
+    It names the thing and offers its list, the way out (D-32).
+
+    Args:
+        title: What is missing: "This session isn't in the current schedule".
+        icon: An outlined icon for the thing (D-27).
+        action: The button's label: "Open schedule".
+        location: Where the button goes: the thing's list.
+        identifier: The state's semantics identifier, ``<screen>.not_found``.
+    """
+    page = ft.context.page
+
+    @report_errors
+    def go() -> None:
+        page.navigate(location)
+
+    return EmptyState(
+        title, icon=icon, action=action, on_action=go, identifier=identifier
     )
 
 

@@ -19,8 +19,7 @@ class ViewMemory:
     Plain, not observable: writing it re-renders nothing. ``main.py`` creates one at
     import and every session's ``App`` gets that one, so a new session in the same
     process (an Android activity recreation, F26, or a relaunch after Back on Now, F29)
-    finds it as the user left it. Fields join with the screens that remember something
-    (the Schedule's day and offsets; the search query and scope from P1).
+    finds it as the user left it.
 
     Attributes:
         last_location: The top View's route, where the start route returns a new

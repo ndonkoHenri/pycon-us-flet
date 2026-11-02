@@ -67,11 +67,6 @@ class CredentialStorage:
     secure: SecureStorage | None = field(default_factory=secure_storage)
     _memory: dict[str, str] = field(default_factory=dict, init=False)
 
-    @property
-    def persistent(self) -> bool:
-        """Whether the credentials outlive the session (the keystore is there)."""
-        return self.secure is not None
-
     async def read(self) -> Secrets | None:
         """Read the key and the secret.
 
