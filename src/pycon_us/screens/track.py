@@ -32,14 +32,14 @@ from pycon_us.core.timeline import DaySessions, track_sessions
 from pycon_us.favorites import use_favorites
 from pycon_us.prefs import use_prefs
 from pycon_us.screens.stub import not_found
-from pycon_us.services import use_services
+from pycon_us.services import Services, use_services
 from pycon_us.services.errors import report_errors
 from pycon_us.state import use_conference
 from pycon_us.theme import Tokens, use_tokens
 from pycon_us.ui.badges import NEW_TRACK, SPANISH, TrackBadge, badge_row
 from pycon_us.ui.day_groups import DayGroup
 from pycon_us.ui.favorite import use_add_all, use_favorite_toggle
-from pycon_us.ui.menus import menu_item, overflow_menu
+from pycon_us.ui.menus import menu_item, overflow_menu, view_source_items
 from pycon_us.ui.page_title import PageTitle
 from pycon_us.ui.scaffold import AppScaffold
 from pycon_us.ui.session_rows import (
@@ -115,6 +115,7 @@ def TrackDetail(slug: str) -> ft.View:
     if track is None:
         return AppScaffold(
             title="Not found",
+            source=__name__,
             body=ft.ListView(
                 [
                     not_found(
@@ -171,17 +172,19 @@ def TrackDetail(slug: str) -> ft.View:
             )
             for day in days
         )
+    has_menu = bool(ids) and offers_add_all(track)
     actions: list[ft.Control] = []
-    if ids and offers_add_all(track):
+    if has_menu:
 
         @report_errors  # every handler a screen defines has the net (D-163)
         async def add() -> None:
             await add_all(ids)
 
-        actions.append(_menu(add))
+        actions.append(_menu(add, svc))
     # The heading below names the page, so the app bar's title stays empty (D-186).
     return AppScaffold(
         title="",
+        source=None if has_menu else __name__,  # one overflow on the bar (D-461)
         body=ft.ListView(items, expand=True, padding=sides(margin)),
         actions=actions,
     )
@@ -199,7 +202,7 @@ def offers_add_all(track: Track) -> bool:
     return track.group != NOTICE_GROUP
 
 
-def _menu(on_add_all: Callable[[], Awaitable[None]]) -> ft.Control:
+def _menu(on_add_all: Callable[[], Awaitable[None]], svc: Services) -> ft.Control:
     """The app bar's overflow ("More options"): "Add all to My schedule" (D-209).
 
     Its label wraps at 200 % text beside its icon (``menu_item()``, F47, D-233).
@@ -207,7 +210,7 @@ def _menu(on_add_all: Callable[[], Awaitable[None]]) -> ft.Control:
     item = menu_item(
         ft.Icons.PLAYLIST_ADD, ADD_ALL, on_add_all, identifier=f"{SCREEN}.add_all"
     )
-    return overflow_menu(f"{SCREEN}.menu", [item])
+    return overflow_menu(f"{SCREEN}.menu", [item, *view_source_items(svc, __name__)])
 
 
 def shared_badges(track: Track, days: Sequence[DaySessions]) -> frozenset[str]:

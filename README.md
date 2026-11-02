@@ -98,6 +98,7 @@ access to it.
 | [`docs/development.md`](docs/development.md) | Toolchain and Flet pin, dev loop, mock server, builds, checks, signing |
 | [`docs/testing-and-quality.md`](docs/testing-and-quality.md) | Test strategy, UI flows, device checklist, performance |
 | [`docs/roadmap.md`](docs/roadmap.md) | The phases broken into epics and issues |
+| [`docs/demo-script.md`](docs/demo-script.md) | The stage demo, a draft: its beats, timings and fallbacks, with no Wi-Fi |
 | [`docs/feature-matrix.md`](docs/feature-matrix.md) | Every feature of the official app, plus ours: what we do with it, and in which phase |
 | [`docs/decisions.md`](docs/decisions.md) | The binding decisions (D-numbers) and verified Flet facts. It is large, so search it by id |
 | [`docs/spikes/`](docs/spikes/) | The verdicts of our technical spikes |

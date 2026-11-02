@@ -28,6 +28,7 @@ from pycon_us.services.pref_keys import THEME
 from pycon_us.services.storage import Storage
 from pycon_us.state import use_conference
 from pycon_us.theme import use_tokens
+from pycon_us.ui.menus import source_menu
 from pycon_us.ui.modals import use_modals_close_on_route_change
 from pycon_us.ui.navigation import (
     TABS,
@@ -46,6 +47,7 @@ logger = logging.getLogger(__name__)
 def AppScaffold(
     *,
     title: str,
+    source: str | None,
     body: ft.Control,
     actions: list[ft.Control] | None = None,
     on_retap: Retap | None = None,
@@ -79,6 +81,9 @@ def AppScaffold(
             page's level-1 heading (D-211). On a tab root it carries the identifier
             ``<tab>.title`` for UI flows (D-170). Empty on a detail page whose own
             title, in the page, is its level-1 heading (ux.md §5.5): no heading then.
+        source: The screen's ``__name__``, for View source: once ``SOURCE_URL`` is
+            set, the bar ends in an overflow with that one item (D-461). None on a
+            screen whose own menu lists the item, so a bar never has two overflows.
         body: What the View shows under the app bar, usually an ``expand=True``
             ``ListView``; it is placed in a ``SafeArea``, clear of the notch, the
             home indicator and the navigation bar in either orientation.
@@ -182,7 +187,7 @@ def AppScaffold(
             # Flutter would imply the iOS chevron on iOS; the Material arrow instead.
             automatically_imply_leading=False,
             leading=None if is_root else back_arrow,
-            actions=actions or [],
+            actions=[*(actions or []), *source_menu(svc, source)],
             # The surface it has unscrolled, and no scrolled-under elevation, whose
             # surface tint would colour it (F297, D-447).
             bgcolor=ft.Colors.SURFACE if still_bar else None,

@@ -680,7 +680,7 @@ mock connection said "Connected to the local mock server.", in light and dark, a
 - **Venue or office Wi-Fi often isolates clients.** Use a phone hotspot or a travel router instead.
 - **Tests** drive the same pure `handle()` behind `httpx.MockTransport` (D-50), so they cover signing, faults and both semantics without a network. Only `tests/test_mock_api_server.py` starts the server, in-process on `127.0.0.1` with an ephemeral port, under the `loopback` marker (`no_network`'s one opt-out).
 - **Badges.** `uv run python -m tools.mock_api.badges` writes `build/mock-badges.html`, the printable sheet of mock-badge QR codes for the P3 exit test (one card per seeded attendee, A4 or Letter; `segno`, D-391). The mock README says more.
-- **Stage demos** use this LAN mock from the laptop, with no in-app backend (D-457). A phone can't reach the laptop's loopback, so with no Wi-Fi it joins a laptop hotspot, with the server on `--host 0.0.0.0`; that hasn't been tried yet. An emulator or simulator on the laptop uses the table above. The demo script is #855's, and it reopens O-8 if it finds a reason.
+- **Stage demos** use this LAN mock from the laptop, with no in-app backend (D-457). [`demo-script.md`](demo-script.md) runs on simulators, which use the table above, so it needs no hotspot (D-463). A phone can't reach the laptop's loopback, so with no Wi-Fi it joins a laptop hotspot, with the server on `--host 0.0.0.0`; that hasn't been tried yet, and the script lists what's unknown.
 
 ---
 
@@ -938,7 +938,7 @@ There is no release train. The procedure:
 1. `main` is green: its tree is one the merge gate passed, or `tools/check.sh` passed on it (§7, D-273; when the repo is public, `ci.yml` passed on it). The phase status issue lists what this build is for.
 2. **Snapshot PR:** run `uv run python tools/update_snapshot.py`, which refreshes `data/<year>/conference.json` and its `snapshot_captured_at` in `conference.toml` (D-38, D-135, NEW-03). It refuses a feed that `feed.process` rejects, that has a record the parser skips, or whose days fall outside the conference dates, and then changes nothing (exit status 1). Otherwise it prints each count before and after (sessions, speakers, days, posters, sprints, job listings); put that in the PR body, review the diff, then merge.
 3. **Version PR:** bump `[project].version` and `__version__` (§4), then merge.
-4. **Tag** `vX.Y.Z` on `main`. While the repo is private the tag builds nothing (D-273): build the quick-look APK locally (§8.1), or run `build-android.yml` by hand on the tag (`gh workflow run build-android.yml --ref vX.Y.Z`, §7.4). Once the repo is public, the tag runs it.
+4. **Tag** `vX.Y.Z` on `main`. View source links to this tag, so a build without it opens a 404 (D-461). While the repo is private the tag builds nothing (D-273): build the quick-look APK locally (§8.1), or run `build-android.yml` by hand on the tag (`gh workflow run build-android.yml --ref vX.Y.Z`, §7.4). Once the repo is public, the tag runs it.
 5. **Locally, at the same commit:**
    - check the pin (§2.2) and run `uv sync`;
    - if another build may run on the Mac, build with the worktree's own pub cache and run §5.8's AAB and IPA checks before uploading;
@@ -960,7 +960,7 @@ Nothing here is planned. It is the list we would work through if the owner ever 
 | Accounts | Apple: individual, or organisation (needs a D-U-N-S number). Google Play: new personal accounts must run a closed test (a minimum number of testers for 14 days) before production access; check the current rules. |
 | Privacy | A privacy-policy URL (both stores require one). App Privacy: "Data Not Collected", since there are no analytics, no crash service and favourites stay on the device (D-08, D-72). The Play Data safety form. |
 | Private API | Public builds keep the D-51 guard: the mock-only features are invisible without the Developer screen. A real backend needs the PSF (PLAN appendix). |
-| Content and licences | Review `NOTICE`, the reused Ionic assets (floor plans, D-87), sponsor logos and the bundled dependencies' licences once. |
+| Content and licences | Settle [the licence and asset review](licence-and-assets-review.md) (#846): `NOTICE`, the reused Ionic assets (floor plans, D-87), sponsor logos and the bundled dependencies' licences. |
 | Signing in CI | Optional at that point: move the keys to CI secrets (§7.5), superseding D-86 by decision. |
 | Store assets | Screenshots, descriptions, the age-rating questionnaires. |
 

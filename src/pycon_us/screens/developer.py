@@ -131,10 +131,13 @@ def Developer() -> ft.View:
 
     chip = developer_chip(tokens.warning)
     if not prefs.developer:  # a packaged build opened here before the unlock (D-73)
-        return AppScaffold(title="Developer options", body=locked(margin))
+        return AppScaffold(
+            title="Developer options", source=__name__, body=locked(margin)
+        )
     now = clock.now()
     return AppScaffold(
         title="Developer options",
+        source=__name__,
         body=ft.ListView(
             [
                 # The mark opens the page rather than sitting in the app bar: there,

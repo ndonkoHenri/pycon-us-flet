@@ -131,6 +131,7 @@ def More() -> ft.View:
     expo = [entry for entry in EXPO_AND_SPONSORS if booths or entry != EXPO_HALL]
     return AppScaffold(
         title="More",
+        source=__name__,
         actions=[search_button(svc.memory, "all")],
         body=ft.ListView(
             [

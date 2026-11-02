@@ -107,6 +107,7 @@ def SignInPage() -> ft.View:
     if not prefs.private_api_enabled:
         return AppScaffold(
             title="Sign in",
+            source=__name__,
             body=ft.ListView(
                 [
                     EmptyState(
@@ -151,6 +152,7 @@ def SignInPage() -> ft.View:
     busy = account.signing_in
     return AppScaffold(
         title="Sign in",
+        source=__name__,
         body=ft.ListView(
             [
                 padded(

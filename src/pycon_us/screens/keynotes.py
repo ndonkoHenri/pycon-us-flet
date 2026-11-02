@@ -102,5 +102,6 @@ def Keynotes() -> ft.View:
         ]
     return AppScaffold(
         title=TITLE,
+        source=__name__,
         body=ft.ListView(items, expand=True, padding=sides(margin, top=8, bottom=16)),
     )

@@ -16,9 +16,10 @@ import flet as ft
 from pycon_us.change_log import ChangeLog
 from pycon_us.core.change_batches import Batch
 from pycon_us.prefs import Prefs
+from pycon_us.services import Services
 from pycon_us.services.errors import report_errors
 from pycon_us.services.storage import Storage
-from pycon_us.ui.menus import menu_item, overflow_menu
+from pycon_us.ui.menus import menu_item, overflow_menu, view_source_items
 
 SEEN_AFTER_S = 2.0
 """How long the list shows unseen batches before they are marked seen (ux.md §6.4)."""
@@ -97,7 +98,7 @@ def _mark(
 
 
 def mark_all_menu(
-    change_log: ChangeLog, storage: Storage, *, screen: str
+    change_log: ChangeLog, svc: Services, *, screen: str, source: str
 ) -> ft.Control:
     """Return the app bar's overflow with Mark all as seen, disabled with nothing unseen.
 
@@ -105,14 +106,15 @@ def mark_all_menu(
 
     Args:
         change_log: The session's ``ChangeLog``.
-        storage: Where the log is kept.
+        svc: The session's services: where the log is kept, and the launcher.
         screen: The screen's name in identifiers: the menu is ``<screen>.overflow``
             and the item ``<screen>.mark_all``.
+        source: The screen's ``__name__``, for View source (D-461).
     """
 
     @report_errors
     def mark_all() -> None:
-        change_log.mark_seen(storage)
+        change_log.mark_seen(svc.storage)
 
     item = menu_item(
         ft.Icons.DONE_ALL,
@@ -121,7 +123,7 @@ def mark_all_menu(
         identifier=f"{screen}.mark_all",
         disabled=not change_log.has_unseen,
     )
-    return overflow_menu(f"{screen}.overflow", [item])
+    return overflow_menu(f"{screen}.overflow", [item, *view_source_items(svc, source)])
 
 
 def with_dot(icon: ft.Control, *, unseen: bool, fade_ms: int) -> ft.Control:
