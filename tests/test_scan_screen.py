@@ -47,7 +47,7 @@ from tests.scan_rig import ACCEPTED, Rig, Show, enter, entry, panel, scan
 from tests.test_high_contrast import AAA_TEXT
 from tests.test_theme import AA_TEXT, contrast_ratio
 
-rig, show = scan_rig.rig, scan_rig.show
+rig, show, timer = scan_rig.rig, scan_rig.show, scan_rig.timer
 
 
 async def test_the_interim_camera_text_shows_while_the_build_has_no_scanner(
@@ -173,7 +173,7 @@ async def test_edit_code_gives_the_text_back_to_correct_by_hand(
     await shown.click(button)
     await shown.settle()
     assert entry(shown).value == "MOCK0005v4l1d05"
-    assert rig.focused == focused + 1  # the caret is after the text, ready to fix it
+    assert rig.focused == focused + 1  # the field has the focus again
     assert panel(shown) == spoken(None)  # the result is gone with its button
     assert not shown.nodes("scan.edit")
     assert rig.badges == []
@@ -445,3 +445,19 @@ def test_a_tool_opens_only_with_a_mock_url_an_account_and_its_flag(
     monkeypatch.setattr(scan_screen, "use_prefs", lambda: prefs)
     monkeypatch.setattr(scan_screen, "use_account", lambda: opened_by[tool])
     assert scan_screen.use_tool_allowed(tool) is (url and signed_in and flag)
+
+
+async def test_a_refused_entry_is_not_cleared_with_the_tool_s_timer(
+    show: Show, rig: Rig, timer: scan_rig.Timer
+) -> None:
+    """The Code of Conduct tool clears results after 15 s; "Edit code" outlasts it (D-473)."""
+    rig.clear_after = 15
+    shown = await show()
+    await enter(shown, "MOCK0001v1")
+    await enter(shown, "MOCK0002:v2")
+    assert timer.waits == [15]  # a badge's result clears
+    await enter(shown, "MOCK0003v3")
+    timer.ring()
+    await shown.settle()
+    assert shown.nodes("scan.edit")
+    assert panel(shown).startswith(NOT_A_BADGE.word)

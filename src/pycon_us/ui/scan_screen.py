@@ -59,7 +59,6 @@ from pycon_us.core.badges import (
     NOT_A_BADGE,
     Badge,
     Cooldown,
-    ScanOutcome,
     ScanResult,
     parse_badge,
 )
@@ -199,7 +198,10 @@ def ScanScreen(
         """Drop the result shown from state: ``serial``'s only, or any (#762)."""
         set_shown(lambda last: None if last and serial in (None, last.serial) else last)
 
-    use_clear_after(shown.serial if shown else 0, clear_after, drop)
+    # A refused entry holds no one's details, and its "Edit code" must outlast the
+    # tool's clear, or a typist has that long to reach it (D-473).
+    clears_in = None if shown and shown.result.entry else clear_after
+    use_clear_after(shown.serial if shown else 0, clears_in, drop)
     use_on_background(drop if clear_in_background else None)
 
     @report_errors
@@ -234,7 +236,8 @@ def ScanScreen(
             badge = parse_badge(raw)
             await query.clear()  # empties the field and puts the focus back in it
             if badge is None:  # what was read goes to the panel, not kept in the field
-                await show(replace(NOT_A_BADGE, title=raw.strip()))
+                text = raw.strip()
+                await show(replace(NOT_A_BADGE, title=text, entry=text))
                 return
             if not cooldown.accept(badge.code, clock()):
                 return  # the same code again within 4 s: a held badge
@@ -247,18 +250,15 @@ def ScanScreen(
     @report_errors
     async def edit(_: ft.Event[ft.FilledTonalButton]) -> None:
         if shown is not None:
-            text = shown.result.title
             drop(shown.serial)  # the text is back in the field: nothing left to edit
-            await query.put(text)
+            await query.put(shown.result.entry)
 
     for_result = (
         result_actions(shown)
         if result_actions is not None and shown is not None
         else []
     )
-    if shown and shown.result.outcome is ScanOutcome.INVALID and shown.result.title:
-        # Only the screen refuses an entry (the tools never answer INVALID), and an
-        # empty one has no text to give back (D-473).
+    if shown and shown.result.entry:  # an empty entry has no text to give back (D-473)
         for_result.insert(
             0, tool_button("scan.edit", EDIT_CODE, ft.Icons.EDIT_OUTLINED, edit)
         )
@@ -284,7 +284,7 @@ def ScanScreen(
     if not capabilities.SCANNER:  # the E1 preview takes this place (#726)
         body.append(padded(CameraUnavailable()))
     body += [
-        padded(ResultPanel(shown=shown, clear_after=clear_after)),
+        padded(ResultPanel(shown=shown, clear_after=clears_in)),
         *([padded(note)] if note is not None else []),
         padded(
             named(

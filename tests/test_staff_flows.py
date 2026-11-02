@@ -243,6 +243,7 @@ def test_lead_capture_expects_the_app_s_words() -> None:
             panel(named(ScanOutcome.ACCEPTED, CAPTURED, lead_row(GRACE))),
             panel(named(ScanOutcome.DUPLICATE, ALREADY, lead_row(ADA))),
             panel(replace(NOT_A_BADGE, title=FIELD_TEXT)),
+            FIELD_TEXT,
         ],
     )
 

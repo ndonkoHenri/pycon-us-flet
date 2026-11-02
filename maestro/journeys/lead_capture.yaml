@@ -111,6 +111,15 @@ tags:
     timeout: 15000
 - assertVisible:
     id: scan.edit  # the text read is in the panel, not kept in the field (D-473)
+- tapOn:
+    id: scan.edit  # a typist gets it back to correct
+- assertVisible:
+    text: not-a-badge
+- extendedWaitUntil:
+    visible:
+      id: scan.result
+      text: "(?s)Ready to scan.*"
+    timeout: 10000
 - assertNotVisible:
     id: lead.open_lead
 

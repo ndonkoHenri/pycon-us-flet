@@ -139,6 +139,8 @@ class ScanResult:
             repr, so neither a live region nor a log line holds it (D-72).
         sponsor: The sponsor a staff account's lead was scanned for, so "Add note" goes
             to that lead whatever is chosen since (D-459); None otherwise.
+        entry: The text the screen refused as not a badge, which its "Edit code" gives
+            back to the field (D-473); empty for every other result.
     """
 
     outcome: ScanOutcome
@@ -149,6 +151,7 @@ class ScanResult:
     tags: tuple[Tag, ...] = ()
     email: str = field(default="", repr=False)
     sponsor: LeadSponsor | None = None
+    entry: str = ""
 
     @property
     def spoken(self) -> str:
@@ -165,4 +168,4 @@ class ScanResult:
 NOT_A_BADGE = ScanResult(
     ScanOutcome.INVALID, "Not a badge code", details=("Check the code and try again.",)
 )
-"""The result of an entry ``parse_badge()`` refuses; the screen adds the text as the title."""
+"""The result of an entry ``parse_badge()`` refuses; the screen adds the text read (D-473)."""
