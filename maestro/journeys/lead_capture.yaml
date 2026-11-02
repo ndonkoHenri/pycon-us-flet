@@ -5,7 +5,7 @@
 # 2. A typed code (Ada's) says "Lead captured" with her first name and offers Add note; a
 #    second code sent as a HID scanner does (no tap on the field) is captured too.
 # 3. Ada again, past the 4 s cooldown: "Already in your leads", with Open lead; still
-#    two leads. Text with no colon: "Not a badge code", and the text stays.
+#    two leads. Text with no colon: "Not a badge code" with the text read, and Edit code (D-473).
 # 4. Back to More and in again: no consent page this time (asked once per account).
 #
 # Needs the mock running (maestro/README.md, "Staff flows and the mock"). The mock's seed
@@ -107,10 +107,19 @@ tags:
 - extendedWaitUntil:
     visible:
       id: scan.result
-      text: "(?s)Not a badge code.*"
+      text: "(?s)Not a badge code\\nnot-a-badge\\n.*"
     timeout: 15000
 - assertVisible:
-    text: not-a-badge  # the field keeps it for correction
+    id: scan.edit  # the text read is in the panel, not kept in the field (D-473)
+- tapOn:
+    id: scan.edit  # a typist gets it back to correct
+- assertVisible:
+    text: not-a-badge
+- extendedWaitUntil:
+    visible:
+      id: scan.result
+      text: "(?s)Ready to scan.*"
+    timeout: 10000
 - assertNotVisible:
     id: lead.open_lead
 

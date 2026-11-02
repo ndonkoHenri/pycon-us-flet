@@ -22,6 +22,8 @@ from pycon_us.ui.fields import SearchField, found_count, use_field_query
 from tests.sessions import connection, find, rendering, settle
 
 CLEAR = "Clear filter"
+PUT = "abc"
+"""The text the probe's "Put back" button gives the field."""
 
 
 @dataclass
@@ -46,6 +48,10 @@ class Probe:
             self.renders += 1
             query = use_field_query(self.initial)
             self.filtered.append(query.value)
+
+            async def put(_: ft.Event[ft.TextButton]) -> None:
+                await query.put(PUT)
+
             return ft.Column(
                 [
                     SearchField(
@@ -63,6 +69,8 @@ class Probe:
                     ft.TextButton("Show all", on_click=query.focus),
                     # A no-match state's "Clear filter", there whatever the text.
                     ft.TextButton("Clear all", on_click=query.clear),
+                    # Gives text back to the field, as the scan screen's "Edit code".
+                    ft.TextButton("Put back", on_click=put),
                 ]
             )
 
@@ -369,3 +377,53 @@ def test_the_count_has_one_padding_on_every_screen() -> None:
     assert cast(ft.Container, count.content).padding == ft.Padding.only(
         left=16, top=4, right=16, bottom=8
     )
+
+
+async def test_put_replaces_the_text_and_puts_the_focus_back_in_the_field(
+    shown: Shown,
+) -> None:
+    """#941: ``put(text)`` sends the text, the filter follows it, and the field is focused."""
+    await shown.type("py")
+    await shown.click(shown.text_button("Put back"))
+    assert shown.sent == [PUT]
+    assert shown.text_field.value == PUT
+    assert shown.probe.filtered[-1] == PUT
+    assert [f._i for f in shown.focused] == [shown.text_field._i]
+
+
+async def test_a_key_typed_while_a_put_lands_is_dropped_and_the_text_sent_again(
+    shown: Shown, answer: asyncio.Event
+) -> None:
+    """A key reported after the put's render, before Flutter answers, never joins its text.
+
+    As a Clear's (#307), but the text sent again is the put's, not the empty one.
+    """
+    await shown.type("mu")
+    answer.clear()  # Flutter has not had the text yet
+    await shown.click(shown.text_button("Put back"))
+    assert shown.sent == [PUT]
+    await shown.type("mumu")  # typed on the old text, before the put landed
+    answer.set()
+    await settle()
+    assert shown.sent == [PUT, PUT]
+    assert shown.text_field.value == PUT
+    assert shown.probe.filtered[-1] == PUT
+    await shown.type(f"{PUT}x")  # once landed, keys count again
+    assert shown.probe.filtered[-1] == f"{PUT}x"
+    assert shown.sent == [PUT, PUT]
+
+
+async def test_keys_reported_before_a_put_renders_are_dropped(
+    shown: Shown, answer: asyncio.Event
+) -> None:
+    """Keys typed right after the put's tap, on the old text, are dropped as a Clear's are."""
+    await shown.type("chen")
+    answer.clear()
+    button = shown.text_button("Put back")
+    await shown.session.dispatch_event(button._i, "click", None)  # no re-render yet
+    await shown.burst("chens", "chensw")
+    answer.set()
+    await settle()
+    assert shown.text_field.value == PUT
+    assert shown.probe.filtered[-1] == PUT
+    assert set(shown.sent) == {PUT}

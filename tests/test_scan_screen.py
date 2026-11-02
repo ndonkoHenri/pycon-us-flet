@@ -8,6 +8,7 @@ readers are checked on devices (the PR).
 
 import asyncio
 from collections.abc import Callable
+from dataclasses import replace
 from itertools import product
 from typing import cast
 
@@ -39,14 +40,14 @@ from pycon_us.ui.scan_result import (
     fill_of,
     spoken,
 )
-from pycon_us.ui.scan_screen import SCAN_AGAIN, ResultPanel, ScanScreen
+from pycon_us.ui.scan_screen import EDIT_CODE, SCAN_AGAIN, ResultPanel, ScanScreen
 from pycon_us.ui.scrolling import FULL_LIST_EXTENT
 from tests import scan_rig
 from tests.scan_rig import ACCEPTED, Rig, Show, enter, entry, panel, scan
 from tests.test_high_contrast import AAA_TEXT
 from tests.test_theme import AA_TEXT, contrast_ratio
 
-rig, show = scan_rig.rig, scan_rig.show
+rig, show, timer = scan_rig.rig, scan_rig.show, scan_rig.timer
 
 
 async def test_the_interim_camera_text_shows_while_the_build_has_no_scanner(
@@ -136,16 +137,66 @@ async def test_a_different_code_shows_at_once(show: Show, rig: Rig) -> None:
     assert panel(shown) == "Checked in\nGrace Hopper\nScan 2"
 
 
-async def test_junk_says_not_a_badge_code_and_keeps_the_text(
+async def test_junk_says_not_a_badge_code_with_the_text_and_clears_the_field(
     show: Show, rig: Rig
 ) -> None:
-    """Text without a code is no badge: said in the panel, kept for correction."""
+    """Text without a code is no badge: the panel shows what was read, the field is empty."""
     shown = await show()
     await enter(shown, "MOCK0001")
     assert rig.badges == []
-    assert panel(shown) == f"{NOT_A_BADGE.spoken}\nScan 1"
-    assert entry(shown).value == "MOCK0001"
-    assert rig.focused == 1  # Enter took the focus; it is back for the correction
+    assert panel(shown) == f"{replace(NOT_A_BADGE, title='MOCK0001').spoken}\nScan 1"
+    assert entry(shown).value == ""
+    assert rig.focused == 1  # Enter took the focus; it is back for the next scan
+
+
+async def test_a_scan_after_not_a_badge_code_is_read_alone(
+    show: Show, rig: Rig
+) -> None:
+    """The next HID scan is its own badge, not typed after the text refused (#941, D-473)."""
+    shown = await show()
+    await scan(shown, "NOCOLON")
+    await scan(shown, "MOCK0005:v4l1d05")
+    assert rig.badges == [Badge("MOCK0005", "v4l1d05", "v4l1d05")]
+    assert panel(shown) == "Checked in\nAda Lovelace\nScan 2"
+
+
+async def test_edit_code_gives_the_text_back_to_correct_by_hand(
+    show: Show, rig: Rig
+) -> None:
+    """A typist taps "Edit code": the text is in the field to fix, and the panel is clear."""
+    shown = await show()
+    await enter(shown, "MOCK0005v4l1d05")  # the colon forgotten
+    button = shown.node("scan.edit").content
+    assert isinstance(button, ft.FilledTonalButton)
+    assert button.content == EDIT_CODE
+    focused = rig.focused
+    await shown.click(button)
+    await shown.settle()
+    assert entry(shown).value == "MOCK0005v4l1d05"
+    assert rig.focused == focused + 1  # the field has the focus again
+    assert panel(shown) == spoken(None)  # the result is gone with its button
+    assert not shown.nodes("scan.edit")
+    assert rig.badges == []
+    await enter(shown, "MOCK0005:v4l1d05")  # the typist's fix, submitted as typed
+    assert rig.badges == [Badge("MOCK0005", "v4l1d05", "v4l1d05")]
+
+
+@pytest.mark.parametrize("text", ["", "   "])
+async def test_an_empty_entry_has_nothing_to_edit(
+    show: Show, rig: Rig, text: str
+) -> None:
+    """An empty entry's "Not a badge code" has no text to give back: no button."""
+    shown = await show()
+    await enter(shown, text)
+    assert panel(shown).startswith(NOT_A_BADGE.word)
+    assert not shown.nodes("scan.edit")
+
+
+async def test_a_tool_s_result_has_no_edit_code(show: Show, rig: Rig) -> None:
+    """Only a refused entry offers "Edit code"; a badge's result does not."""
+    shown = await show()
+    await enter(shown, "MOCK0001:v1")
+    assert not shown.nodes("scan.edit")
 
 
 async def test_a_submit_while_the_handler_runs_is_dropped(show: Show, rig: Rig) -> None:
@@ -394,3 +445,19 @@ def test_a_tool_opens_only_with_a_mock_url_an_account_and_its_flag(
     monkeypatch.setattr(scan_screen, "use_prefs", lambda: prefs)
     monkeypatch.setattr(scan_screen, "use_account", lambda: opened_by[tool])
     assert scan_screen.use_tool_allowed(tool) is (url and signed_in and flag)
+
+
+async def test_a_refused_entry_is_not_cleared_with_the_tool_s_timer(
+    show: Show, rig: Rig, timer: scan_rig.Timer
+) -> None:
+    """The Code of Conduct tool clears results after 15 s; "Edit code" outlasts it (D-473)."""
+    rig.clear_after = 15
+    shown = await show()
+    await enter(shown, "MOCK0001v1")
+    await enter(shown, "MOCK0002:v2")
+    assert timer.waits == [15]  # a badge's result clears
+    await enter(shown, "MOCK0003v3")
+    timer.ring()
+    await shown.settle()
+    assert shown.nodes("scan.edit")
+    assert panel(shown).startswith(NOT_A_BADGE.word)
