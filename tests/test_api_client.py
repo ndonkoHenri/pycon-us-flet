@@ -32,7 +32,14 @@ from pycon_us.services.endpoints import (
     fetch_products_query,
     lead_capture_query,
 )
-from tests.api_clients import Login, Recorder, client_for, replying, signed_in
+from tests.api_clients import (
+    Login,
+    Recorder,
+    ReplyReplaced,
+    client_for,
+    replying,
+    signed_in,
+)
 from tests.mock_calls import NOW, Clock, state_at
 from tools.mock_api.transport import mock_transport
 
@@ -180,46 +187,40 @@ async def test_an_unknown_attendee_is_an_api_error_that_is_not_auth() -> None:
     ("status", "content", "endpoint", "message"),
     [
         (502, b"<html>bad gateway</html>", CHECK_FEATURES, "Bad Gateway"),
-        (200, b"<html>ok</html>", CHECK_FEATURES, "The reply is not JSON."),
-        (200, b"\xff\xfe", CHECK_FEATURES, "The reply is not JSON."),
-        (200, b'{"code": 200}', COC_ATTENDEES, "The reply has no data."),
+        (None, b"<html>ok</html>", CHECK_FEATURES, "The reply is not JSON."),
+        (None, b"\xff\xfe", CHECK_FEATURES, "The reply is not JSON."),
+        (None, b'{"code": 200}', COC_ATTENDEES, "The reply has no data."),
+        (None, b'{"message": "Saved."}', COC_ATTENDEES, "Saved."),
         (200, b'{"code": 500, "error": "Boom."}', COC_ATTENDEES, "Boom."),
         (200, b'{"code": 500, "error": "Boom."}', CHECK_FEATURES, "Boom."),
         (200, b'{"code": 500, "error": "Boom."}', LEAD_NOTE, "Boom."),
         (500, b'{"code": 500, "error": "Boom."}', CHECK_FEATURES, "Boom."),
         (302, b"", CHECK_FEATURES, "Found"),
     ],
-    ids=["html-error", "html-ok", "not-utf8", "no-data", "error-envelope",
+    ids=["html-error", "html-ok", "not-utf8", "no-data", "no-envelope", "error-envelope",
          "error-envelope-bare", "error-envelope-note", "error-status", "redirect-not-followed"],
 )  # fmt: skip
 async def test_an_unusable_reply_is_an_api_error(
-    status: int, content: bytes, endpoint: Endpoint, message: str
+    status: int | None, content: bytes, endpoint: Endpoint, message: str
 ) -> None:
-    """Non-JSON, a missing ``data``, an error envelope or status give ``ApiError``."""
-    client = client_for(replying(status, content, {"Location": "/elsewhere/"}))
+    """An error status or envelope is a refusal; a success we can't read has no status.
+
+    The server may have applied a call it answered unreadably, so non-JSON or a
+    missing envelope is ``status`` None, ``unreadable``, unlike a refusal (#874).
+    """
+    answer = 200 if status is None else status
+    client = client_for(replying(answer, content, {"Location": "/elsewhere/"}))
     with pytest.raises(ApiError) as caught:
         await client.request(endpoint, *(["MOCK0001"] if endpoint is LEAD_NOTE else []))
     assert (caught.value.status, caught.value.message) == (status, message)
-
-
-class NullAfter(httpx.AsyncBaseTransport):
-    """A transport that lets ``inner`` handle a request, then replies JSON ``null``."""
-
-    def __init__(self, inner: httpx.AsyncBaseTransport) -> None:
-        """Wrap ``inner``, whose replies are replaced."""
-        self.inner = inner
-
-    async def handle_async_request(self, request: httpx.Request) -> httpx.Response:
-        """Let ``inner`` commit the request, and answer ``null`` with HTTP 200."""
-        await self.inner.handle_async_request(request)
-        return httpx.Response(200, content=b"null")
+    assert caught.value.unreadable == (status is None)
 
 
 async def test_a_null_reply_to_a_committed_note_is_a_success() -> None:
     """JSON ``null`` from a bare endpoint is returned, so the note isn't sent twice."""
     client, recorder, state = await signed_in("sponsor")
     await client.request(LEAD_CAPTURE, query=lead_capture_query("MOCK0001", "v4l1d01"))
-    recorder.inner = NullAfter(recorder.inner)
+    recorder.inner = ReplyReplaced(recorder.inner, b"null")
     note = {"accessCode": "MOCK0001", "note": "Interest: warm"}
     assert await client.request(LEAD_NOTE, "MOCK0001", payload=note) is None
     assert len(state.notes) == 1

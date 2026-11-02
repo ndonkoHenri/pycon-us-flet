@@ -2,10 +2,10 @@
 
 The machine plays the db and the ``SyncWorker`` with ``core/outbox.py``'s pure rules:
 scans, notes and door admissions, sends that succeed or fail with a ``NetworkError``
-(before the request left, or after: a lost answer) or an ``ApiError`` (one at a time or
-in streaks, to reach the cap), "Retry failed", sponsor and account switches, and time
-passing. It keeps its own record of what each row should
-be, independently of the rows, and checks the invariants after every step.
+(before the request left, or after: a lost answer) or an ``ApiError`` (a refusal or an
+answer we can't read; one at a time or in streaks, to reach the cap), "Retry failed",
+sponsor and account switches, and time passing. It keeps its own record of what each row
+should be, independently of the rows, and checks the invariants after every step.
 """
 
 import math
@@ -20,7 +20,7 @@ from pycon_us.core.outbox import Enqueued, Kind, Outcome, Row, Status
 OWNERS = ("a@example.com", "b@example.com")
 CODES = st.sampled_from(("A", "B", "C"))
 SPONSORS = st.sampled_from((("1", "One"), ("2", "Two"), (None, None)))
-SENDS = st.sampled_from(("ok", "network", "lost", "api"))
+SENDS = st.sampled_from(("ok", "network", "lost", "api", "unreadable"))
 NOTES = st.sampled_from(("", "  ", "Hot", "Cold"))
 PRODUCTS = st.lists(st.sampled_from((1, 2, 3)), min_size=1, max_size=3, unique=True)
 
@@ -185,8 +185,13 @@ class OutboxMachine(RuleBasedStateMachine):
             if lost:
                 self.lost.add(row.id)
         else:
-            self.rows[row.id] = outbox.after_error(row, "500", self.now)
+            unread = outcome == "unreadable"  # the server may have applied it
+            self.rows[row.id] = outbox.after_error(
+                row, "500", self.now, maybe_sent=unread
+            )
             self.api_errors[row.id] += 1
+            if unread:
+                self.lost.add(row.id)
 
     @rule(count=st.integers(1, outbox.RETRY_CAP))
     def refused_repeatedly(self, count: int) -> None:
@@ -274,7 +279,7 @@ class OutboxMachine(RuleBasedStateMachine):
 
     @invariant()
     def flagged_exactly_after_a_lost_answer(self) -> None:
-        """A row says "may be recorded twice" from its first lost answer on."""
+        """A row says "may be recorded twice" from its first lost or unread answer on."""
         for row_id, row in self.rows.items():
             assert row.maybe_sent == (row_id in self.lost)
             assert (outbox.MAYBE_TWICE in outbox.status_text(row)) == row.maybe_sent

@@ -3,13 +3,14 @@
 Each row of the issue's outcome table against the mock's real transport, signed in as
 the seeded staff account (Ada: 2 T-shirts, product 30, and a bag, 40), or a fixed
 ``httpx.MockTransport`` reply: all, part or nothing handed out, no connection, an
-answer lost after the server applied it (D-410), a refusal. Nothing is ever resent or
-queued (D-56, D-57).
+answer lost or unreadable after the server applied it (D-410), a refusal. Nothing is
+ever resent or queued (D-56, D-57).
 """
 
 import json
 
 import httpx
+import pytest
 
 from pycon_us.core.badges import Badge, ScanOutcome, ScanResult
 from pycon_us.services.api import ApiClient
@@ -28,7 +29,7 @@ from pycon_us.swag import (
     hand_out,
     look_up,
 )
-from tests.api_clients import Recorder, client_for, replying, signed_in
+from tests.api_clients import Recorder, ReplyReplaced, client_for, replying, signed_in
 from tests.test_swag import BOTH, badge
 from tools.mock_api.state import MockState, Redemption
 
@@ -178,6 +179,40 @@ async def test_a_lost_answer_is_not_confirmed_and_a_rescan_shows_the_truth() -> 
     assert len(redeems(recorder)) == 1  # never resent
     again = await look_up(client, ADA, categories=BOTH)
     assert again.word == ALREADY  # the rescan shows what was really recorded
+    await client.aclose()
+
+
+@pytest.mark.parametrize("body", [b"<html>ok</html>", b"\xff\xfe", b'{"ok": true}'])
+async def test_an_unreadable_answer_is_not_confirmed_and_never_resent(
+    body: bytes,
+) -> None:
+    """The mock applied it and the reply can't be read: "Not confirmed", rescan (#874)."""
+    client, recorder, state = await signed_in("staff")
+    offer = await offer_for(client)
+    applying = recorder.inner
+    recorder.inner = ReplyReplaced(applying, body)
+    result = await hand_out(client, offer, offer.available)
+    assert result == ScanResult(
+        ScanOutcome.DENIED, NOT_CONFIRMED, "Ada Example", (RESCAN,), "MOCK0001"
+    )
+    assert sorted(redeemed(state)) == [(30, 2), (40, 1)]  # applied once
+    assert len(redeems(recorder)) == 1  # never resent
+    recorder.inner = applying
+    again = await look_up(client, ADA, categories=BOTH)
+    assert again.word == ALREADY  # the rescan shows what was really recorded
+    await client.aclose()
+
+
+async def test_an_error_envelope_under_200_stays_a_refusal() -> None:
+    """A ``{"code", "error"}`` reply is the server's no: "Not handed out", its words."""
+    client, recorder, state = await signed_in("staff")
+    offer = await offer_for(client)
+    recorder.inner = replying(200, b'{"code": 500, "error": "Boom."}')
+    result = await hand_out(client, offer, offer.available)
+    assert result == ScanResult(
+        ScanOutcome.DENIED, NOT_HANDED_OUT, "Ada Example", ("Boom.",), "MOCK0001"
+    )
+    assert redeemed(state) == []
     await client.aclose()
 
 
