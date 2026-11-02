@@ -1,0 +1,10 @@
+# Wait until the scan screen will take the code on its panel again: a code accepted in
+# the last 4 s is cleared without a word (core/badges.py's Cooldown), so a rescan any
+# sooner shows nothing. The panel's age line has passed 4 s once it reads 5 seconds; a
+# result already over a minute old fails here, which no flow's pace comes near.
+appId: io.github.ndonkohenri.confcompanion
+---
+- extendedWaitUntil:
+    visible:
+      text: "Read ([5-9]|[1-5][0-9]) seconds ago"
+    timeout: 15000

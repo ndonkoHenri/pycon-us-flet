@@ -7,77 +7,26 @@
 # 3. Find by name (Margaret Test), Record, Show email reveals margaret@example.com;
 #    the app goes to the background and comes back: the result and the email are gone.
 #
-# Needs the mock running (`uv run python -m tools.mock_api.server`, docs/development.md
-# §6) at MOCK_URL: by default http://10.0.2.2:8000 from the Android emulator and
-# http://localhost:8000 from the iOS simulator (`-e MOCK_URL=...` for another port).
-# The mock's seed and fake data only.
+# Needs the mock running (maestro/README.md, "Staff flows and the mock"). The mock's seed
+# and fake data only.
 # Each run records two incidents in the mock's memory, so the counts grow run by run.
 appId: io.github.ndonkohenri.confcompanion
 name: CoC incident, clear after 15 s and in the background, email hidden
 tags:
   - staff
   - coc
-env:
-  MOCK_URL: "${MOCK_URL || (maestro.platform == 'android' ? 'http://10.0.2.2:8000' : 'http://localhost:8000')}"
 ---
 - runFlow: ../subflows/launch_fresh.yaml
 
-# Developer options › Mock API URL, then More › Sign in as the CoC account.
-- runFlow: ../subflows/open_developer.yaml
-- scrollUntilVisible:
-    element:
-      id: developer.mock_api_url
-    direction: DOWN
-- tapOn:
-    id: developer.mock_api_url
-- inputText: ${MOCK_URL}
-- pressKey: Enter  # closes the keyboard (maestro/README.md)
-- tapOn:
-    id: developer.mock_api_save
-- runFlow: ../subflows/back.yaml
-- runFlow:  # About this app, when it stayed under Developer options
-    when:
-      notVisible:
-        id: more.title
-    commands:
-      - runFlow: ../subflows/back.yaml
+- runFlow:
+    file: ../subflows/sign_in_mock.yaml
+    env:
+      EMAIL: coc@example.com
+      PASSWORD: mock-coc
 - extendedWaitUntil:
     visible:
       id: more.title
     timeout: 15000
-- scrollUntilVisible:
-    element:
-      id: more.sign_in
-    direction: UP
-- tapOn:
-    id: more.sign_in
-- tapOn:
-    id: sign_in.email
-- inputText: coc@example.com
-- tapOn:
-    id: sign_in.password
-- inputText: mock-coc
-- pressKey: Enter
-- tapOn:
-    id: sign_in.submit
-    optional: true  # Enter may have sent it already
-# iOS offers to save the password in its own sheet: Not Now keeps nothing.
-- runFlow:
-    when:
-      platform: iOS
-    commands:
-      - extendedWaitUntil:
-          visible:
-            text: Not Now
-          timeout: 8000
-          optional: true
-      - tapOn:
-          text: Not Now
-          optional: true
-- extendedWaitUntil:
-    visible:
-      id: more.title
-    timeout: 30000
 - scrollUntilVisible:
     element:
       id: more.staff.coc
