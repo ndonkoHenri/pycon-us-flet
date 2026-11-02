@@ -272,13 +272,13 @@ In parallel upstream: U1, U15 and spike S6.
 - "View source" on each screen.
 - The README, with screenshots and an accessibility section, plus CONTRIBUTING and good first issues.
 - A licence, asset and trademark review, then making the repo public.
-- The talk and demo script, with recorded fallbacks.
+- The talk and [demo script](docs/demo-script.md), with recorded fallbacks.
 - The decision on whether to approach the PSF (appendix).
 
 **Exit criteria:**
 1. There are no known data-loss or task-blocking bugs, and the performance targets are met on the iPhone and on a borrowed mid-range Android phone; if none was borrowed, the P4 status issue says that Android was measured on the emulator only (D-102).
 2. Someone else, or the owner on a clean machine, builds and runs the app from a clean checkout in 30 minutes or less, following `docs/development.md`.
-3. The demo script runs end to end twice without Wi-Fi.
+3. The [demo script](docs/demo-script.md) runs end to end twice without Wi-Fi (D-463 says what counts).
 4. The repo is public, and `v1.0.0` is tagged with internal builds for both platforms.
 
 **Optional and objective markers.**
@@ -343,7 +343,7 @@ The workflow is written down in [`AGENTS.md`](AGENTS.md), the operating manual f
 | The mock drifts from the real API | Cannot be detected without the PSF | A contract README citing Ionic's code, never a claim of compatibility, and the PSF appendix. |
 | Scope and complexity creep | Large PRs, new abstractions | The Zen rules (D-66), phase exit criteria, the `needs-decision` gate, and the matrix as an inventory. |
 | Solo capacity alongside Flet duties | A phase overruns its soft marker | Phases, not deadlines; a parallel upstream track; agents for mechanical work. Cut scope by phase, never quality. |
-| The live demo fails | A rehearsal fails | An offline-first app, the fake clock, the LAN mock on a laptop hotspot (D-457), and recorded fallbacks. |
+| The live demo fails | A rehearsal fails | An offline-first app, the fake clock, the mock on the laptop over loopback, or a hotspot for a phone once rehearsed (D-457, D-463), and recorded fallbacks. |
 
 ## 12. Open decisions
 

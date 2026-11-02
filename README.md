@@ -28,6 +28,7 @@ Start with [`PLAN.md`](PLAN.md): vision, principles, scope, phases with exit cri
 | [`docs/development.md`](docs/development.md) | Toolchain and Flet pin, dev loop, mock server, builds, CI, signing |
 | [`docs/testing-and-quality.md`](docs/testing-and-quality.md) | Test strategy, UI flows, device checklist, performance |
 | [`docs/roadmap.md`](docs/roadmap.md) | The phases broken into epics and issues |
+| [`docs/demo-script.md`](docs/demo-script.md) | The stage demo, a draft: its beats, timings and fallbacks, with no Wi-Fi |
 | [`docs/feature-matrix.md`](docs/feature-matrix.md) | Every feature of the original app, plus ours: disposition and phase |
 | [`docs/decisions.md`](docs/decisions.md) | The binding decisions (D-nn), names, and verified Flet facts |
 | [`docs/research/`](docs/research/) | Frozen analysis of the Ionic app and of Flet's capabilities |
