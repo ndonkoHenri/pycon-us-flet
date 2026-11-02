@@ -57,10 +57,13 @@ next to the `flet test` flows in `tests/ui/` is in
 | `journeys/rail_tabs.yaml` | tablet | On a tablet or a phone in landscape (`ORIENTATION`): each tab root through the rail by its name, with no bar; a session pushed from Now and About this app pushed from More show no rail; the filter sheet and an Undo SnackBar on the way; a screenshot of each to look at (SHELL-14, D-277, D-305, #461) |
 | `journeys/about_app.yaml` | journeys, tablet | More › About this app: Conference and Schedule's source and age (D-292); Licences › Python's text › Back › Back, one View each (D-296); Report a problem: the share sheet, dismissed with no line, or with `SHARE_FAILS=true` "Couldn't open the share sheet." (an iPad needed it until the pin `08b89cce5`, F115, F263) (INFO-03, INFO-04, #461) |
 | `journeys/theme_relaunch.yaml` | journeys, theme | More › Settings starts on System with High contrast following the device ("Follows your device setting", off); Dark and High contrast on; after a relaunch Dark is still chosen and the switch on with no subtitle; then High contrast off (following the device again) and System, so a second run starts the same way. The rows' states are read each platform's way (`subflows/theme_state.yaml`): Android's `checked`, iOS's `selected` radio rows and the switch's value "1" or "0" (THEME-01, STORE-08, D-286, #512) |
-| `journeys/coc_capture.yaml` | staff, coc | Against the local mock (`MOCK_URL`; by default port 8000 at `10.0.2.2` on Android, `localhost` on iOS) as `coc@example.com`: a typed badge code, the review, Record, "Incident recorded"; the line counts down and the result clears 15 s after it shows; Find by name, Record, Show email reveals `margaret@example.com`; Home and back: the result and the email are gone (MASK-05, #762). Needs the mock running; `--exclude-tags staff` leaves it out of a run without one |
+| `journeys/coc_capture.yaml` | staff, coc | Against the local mock ([below](#staff-flows-and-the-mock)) as `coc@example.com`: a typed badge code, the review, Record, "Incident recorded"; the line counts down and the result clears 15 s after it shows; Find by name, Record, Show email reveals `margaret@example.com`; Home and back: the result and the email are gone (MASK-05, #762). Needs the mock running; `--exclude-tags staff` leaves it out of a run without one |
+| `journeys/lead_capture.yaml` | staff, lead | Against the local mock as `sponsor@example.com`: sign-in lands on the scanner's consent page, Continue disabled until the box is ticked; a typed code and a HID-style one, "Lead captured" with Add note, "Leads (2)"; the first again past the cooldown, "Already in your leads" with Open lead; "Not a badge code", the text kept; Back and in again, no consent page (LEAD-01, LEAD-04, #825). Needs the mock running |
+| `journeys/door_check.yaml` | staff, door | Against the local mock as `staff@example.com`: the picker opens by itself, Tutorials › All about decorators, "Ready, works offline", 2 attendees; a typed code and a HID-style one, "Checked in" with the dietary chip and "Admits 2", "2 checked in"; the first again past the cooldown, "Already checked in", the count unchanged; off the list, "Not registered for this session"; "Not a badge code", the text kept; "All synced" (DOOR-04, #825). Needs the mock running |
+| `journeys/swag_pickup.yaml` | staff, swag | Against the local mock as `staff@example.com`: paused until a category is chosen; a typed code opens the hand-out sheet, Cancel, "Ready to hand out"; a HID-style code, on a mock that hasn't seen the flow, "Hand out 3 items", "Handed out 3 items"; that badge again, "Already picked up"; nothing bought, "Nothing to pick up"; "Not a badge code", the text kept (SHIRT-02, #825). Needs the mock running, just started to check the hand-out |
 | `regression/fling_after_sheet.yaml` | regression | Open space shown through the sheet, then a fling 0.8 to 1.0 s after "Show N sessions" (Maestro's pace, not #346's row D window), `TRIALS` times (at most about 35). Three control flings with no sheet first; each trial is "moved" (it ended within three rows of where a control ended, read from the first four rows of each; not merely in their slot), "short", "none" or "invalid" |
 
-Every flow but `theme_relaunch` and `reminder_settings` (which need no clock or feed, and start with `subflows/launch_fresh.yaml`) and `reminder_primer` (which launches with notifications `unset`, then runs `subflows/get_started.yaml` and the same scene) starts from `subflows/start_offline.yaml`: a fresh launch (`clearState`),
+Every flow but `theme_relaunch` and `reminder_settings` (which need no clock or feed, and start with `subflows/launch_fresh.yaml`), `reminder_primer` (which launches with notifications `unset`, then runs `subflows/get_started.yaml` and the same scene) and the `staff` flows ([below](#staff-flows-and-the-mock)) starts from `subflows/start_offline.yaml`: a fresh launch (`clearState`),
 airplane mode on Android, Get started on the first-run Welcome (D-287), then Developer
 options set as `tests/ui/developer.py` does
 (More › About this app › the version row 7 times › Developer options): a fake clock at
@@ -289,6 +292,56 @@ server. It turns no airplane mode on: that would cut the emulator's way to the l
 default to port 8460, the server's; for another `--port`, give both, as the server
 prints them. Its screenshots, one per step (`change_log-01-old-feed` …), go to the
 debug output's folder.
+
+### Staff flows and the mock
+
+The flows tagged `staff` drive the staff tools against the local mock
+([`docs/development.md`](../docs/development.md) §6), with its seed and fake data only.
+Start it first and keep it running; a flow sets nothing up in it and needs no reset:
+
+```bash
+uv run python -m tools.mock_api.server
+maestro --device <id> test --include-tags=staff maestro
+```
+
+Each flow runs `subflows/launch_fresh.yaml`, then `subflows/sign_in_mock.yaml`, which
+sets Developer's Mock API URL and signs in with the flow's seed account
+(`tests/fixtures/mock/seed.json`). The URL is `MOCK_URL`: by default port 8000 at
+`10.0.2.2` on the Android emulator and at `localhost` on the simulator. For another
+`--port`, give it: `-e MOCK_URL=http://10.0.2.2:8010`. The sign-in ends as its page goes,
+and the flow waits for where the account lands: More, or a sponsor's Lead scanner (D-16).
+
+The mock keeps what a run sends in memory until it restarts, and two devices on one mock
+share it. `clearState` empties the app's own rows, so a rerun starts from an empty outbox
+against a mock that remembers:
+
+| Flow | Account | What a run leaves in the mock | A rerun |
+|---|---|---|---|
+| `coc_capture` | `coc@example.com` | Two more incidents | Passes; the counts it doesn't assert grow |
+| `lead_capture` | `sponsor@example.com` | Ada's and Grace's leads for Example Corp | The same: a repeated capture answers the same and adds no lead |
+| `door_check` | `staff@example.com` | Product 10 redeemed for Ada and Linus | The same on screen: the door decides on the device, and the mock's "already redeemed" still syncs the row (D-441) |
+| `swag_pickup` | `staff@example.com` | Ada's shirts and bag redeemed, for good; Grace's sheet is only cancelled | **Checks less:** Ada has nothing left, so she shows "Already picked up" at once and the hand-out is skipped |
+
+So the hand-out is checked only on a mock that hasn't seen `swag_pickup` on any device:
+restart the mock first. The log tells which run you had, since a run with the hand-out
+has one more `POST /2026/api/v1/check_in/redeem_products/` than `door_check`'s two. The
+log names each endpoint, not the badge. A run of the four sends two
+`mask_violations/capture` POSTs and two `lead_retrieval/capture` GETs, whatever the mock
+remembers. These counts are at the default `--capture idempotent`, the one the flows have
+run against.
+
+Two subflows are the scanner's:
+
+- `subflows/scan.yaml` sends `CODE`, then Enter, with no tap on the field, as a USB or
+  Bluetooth HID scanner does: it fails if the screen lost the focus (F274). That is
+  HID-style entry only: real hardware is the owner's (#121), and the camera waits on E1
+  (#520). A flow's first scan on a screen taps `scan.keyboard` first, as a person typing.
+- `subflows/past_cooldown.yaml` waits until the panel's age line reads at least 5 seconds.
+  A code accepted in the last 4 s is cleared without a word, so a rescan any sooner shows
+  nothing, and the wait would fail on the old result. A different code goes at once.
+
+"Not a badge code" comes last in each flow, since its text stays in the field. Offline
+scans are #826's.
 
 ## Writing a flow
 

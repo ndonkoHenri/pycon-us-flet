@@ -538,6 +538,10 @@ run (§5.1), which Maestro does not see. Neither checks screen-reader speech (D-
 | `about_app` | journeys, tablet | About this app's data row, Licences › a licence › Back, Report a problem's share sheet, or with `SHARE_FAILS=true` the line that it couldn't open, which an iPad needed until the pin `08b89cce5` (INFO-03, INFO-04, F115, F263, #461, #462) |
 | `theme_relaunch` | journeys, theme | More › Settings › Dark and High contrast, held after a relaunch with no "Follows your device setting"; then back to System, following the device (THEME-01, STORE-08, D-286, #512). `tests/test_theme_flow.py` pins its identifiers and labels |
 | `deep_links` | journeys, deep_links | Links land on their target with the root below, cold and warm; an unknown id and an unknown path; an open sheet closes (D-291, #518). Its default scheme and host must equal `[tool.flet.deep_linking]`, which `tests/test_deep_link_flow.py` checks |
+| `coc_capture` | staff, coc | Against the mock: a typed code, the review, Record; the result clears after 15 s and in the background; the email stays hidden until asked (MASK-05, #762) |
+| `lead_capture` | staff, lead | Against the mock: consent once per account, then captured, already in your leads and not a badge, by typed and HID-style entry (LEAD-01, LEAD-04, #825) |
+| `door_check` | staff, door | Against the mock: the session picker, then checked in, already checked in, not registered and not a badge, by typed and HID-style entry (DOOR-04, #825) |
+| `swag_pickup` | staff, swag | Against the mock: the hand-out sheet and its Cancel, the hand-out on a mock just started, already picked up, nothing to pick up and not a badge, by typed and HID-style entry (SHIRT-02, #825) |
 | `fling_after_sheet` | regression | A fling 0.8 to 1.0 s after "Show N sessions" ends within three rows of where a control fling ends (its rows, not merely its slot), `TRIALS` times. Maestro's pace: it does not reach #346's row D window (0.33 to 0.6 s), which `tools/fling_after_sheet.py` reaches |
 
 **The scene.** Each flow starts fresh (`clearState`) and offline: airplane mode on
@@ -545,7 +549,9 @@ Android, then Developer options set as §5.2 does by hand, with the fake clock a
 2026-05-15 14:10 and a feed URL nothing answers at. Maestro cannot cut an iOS
 simulator's network, so there the launch's refresh may publish the year's live feed. A fresh iOS install
 that never reaches the feed is set up by writing that URL into the app's container
-before its first launch (`maestro/README.md`, "Offline on a fresh iOS install").
+before its first launch (`maestro/README.md`, "Offline on a fresh iOS install"). The
+`staff` flows start fresh too, but online: they point the app at a running local mock
+and sign in with a seed account (`maestro/README.md`, "Staff flows and the mock").
 
 **Caveats.**
 - On Android, any read of the accessibility tree makes Flutter report a screen reader
