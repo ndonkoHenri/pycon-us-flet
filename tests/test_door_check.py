@@ -8,6 +8,7 @@ its own count (#766; DOOR-04, DOOR-07, STORE-12, API-07; D-56, D-57, D-410, D-44
 """
 
 import asyncio
+import logging
 from collections.abc import Iterable
 from pathlib import Path
 
@@ -23,6 +24,7 @@ from pycon_us.door_check import (
     ANOTHER_DEVICE,
     CANT_CHECK,
     CHECKED_IN,
+    LOOKUP_FAILED,
     NO_CONNECTION,
     NOT_CHECKED_IN,
     NOT_REGISTERED,
@@ -31,7 +33,7 @@ from pycon_us.door_check import (
     check_in,
 )
 from pycon_us.door_inventory import load_inventory
-from pycon_us.services.api import ApiClient
+from pycon_us.services.api import ApiClient, ApiError
 from pycon_us.services.credentials import CredentialStorage
 from pycon_us.services.outbox_db import OutboxDb
 from pycon_us.services.storage import Storage
@@ -339,6 +341,32 @@ async def test_nothing_bought_or_unknown_is_not_registered(
         ScanOutcome.DENIED, NOT_REGISTERED, badge.code, (), badge.code
     )
     assert rig.rows() == []
+
+
+@pytest.mark.parametrize("status", [500, None])
+async def test_a_refused_lookup_logs_its_status_and_none_of_the_server_s_text(
+    rig: Rig,
+    monkeypatch: pytest.MonkeyPatch,
+    caplog: pytest.LogCaptureFixture,
+    status: int | None,
+) -> None:
+    """The log holds the status alone, though the server's text repeats the code (D-72).
+
+    Staff see the same result as ever: "Can't check this badge", the lookup failed.
+    """
+
+    async def refuse(*_args: object, **_kwargs: object) -> AttendeeProducts:
+        """Refuse the lookup with a message that holds the badge's code."""
+        raise ApiError(status, "no badge MOCK0001")
+
+    monkeypatch.setattr(door_check, "fetch_attendee_products", refuse)
+    with caplog.at_level(logging.DEBUG, logger=door_check.__name__):
+        result = await door_check.look_up(rig.api, "MOCK0001", (DECORATORS,))
+    assert result == ScanResult(
+        ScanOutcome.DENIED, CANT_CHECK, "MOCK0001", (LOOKUP_FAILED,), "MOCK0001"
+    )
+    logged = [r for r in caplog.records if r.name == door_check.__name__]
+    assert [r.getMessage() for r in logged] == [f"door lookup refused: {status}"]
 
 
 async def test_offline_known_badges_queue_and_sync_once_after_a_relaunch(

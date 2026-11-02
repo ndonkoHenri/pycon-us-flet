@@ -36,7 +36,7 @@ COLLAPSED = (
 """A collapsed break's synthetic id in the 2026 feed: spaces, commas and colons."""
 
 ODD_NAME = "Foo; Bar, 2027"
-"""An app name O-4 could pick that a TEXT value must escape: a semicolon and a comma."""
+"""An app name that a TEXT value must escape: a semicolon and a comma."""
 
 
 def lines(data: bytes) -> list[str]:

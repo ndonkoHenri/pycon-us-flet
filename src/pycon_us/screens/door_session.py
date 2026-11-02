@@ -33,20 +33,19 @@ from pycon_us.core.door_sessions import (
     door_sessions,
     filter_sessions,
 )
-from pycon_us.core.staff_tools import ToolKey, may_open
+from pycon_us.core.staff_tools import ToolKey
 from pycon_us.core.timefmt import day_heading, weekday_name
 from pycon_us.door_choice import (
     fetch_door_catalog,
     read_door_session,
     save_door_session,
 )
-from pycon_us.prefs import use_prefs
 from pycon_us.services import use_services
 from pycon_us.services.errors import report_errors
 from pycon_us.theme import use_tokens
 from pycon_us.ui.fields import SearchField, use_field_query
 from pycon_us.ui.scaffold import SectionHeader
-from pycon_us.ui.scan_screen import NotAvailable
+from pycon_us.ui.scan_screen import NotAvailable, use_tool_allowed
 from pycon_us.ui.semantics import named
 from pycon_us.ui.staff_picker import (
     CLEAR_SEARCH,
@@ -87,13 +86,8 @@ def SessionPicker() -> ft.Control:
     Re-checked on every render, as Door check is (architecture §12.4): an account
     without ``door_check``, a signed-out session or no mock URL (D-51) sees no list.
     """
-    prefs = use_prefs()
+    allowed = use_tool_allowed(ToolKey.DOOR)
     account = use_account()
-    allowed = (
-        prefs.private_api_enabled
-        and account.signed_in
-        and may_open(ToolKey.DOOR, account.role_flags)
-    )
     if not allowed:
         return NotAvailable(title=TITLE, source=__name__)
     return SessionList(owner=account.owner)

@@ -8,19 +8,25 @@ readers are checked on devices (the PR).
 
 import asyncio
 from collections.abc import Callable
+from itertools import product
 
 import flet as ft
 import pytest
 
 from pycon_us import capabilities
+from pycon_us.account import Account
 from pycon_us.core.badges import (
     NOT_A_BADGE,
     Badge,
     ScanOutcome,
     ScanResult,
 )
+from pycon_us.core.staff_tools import ToolKey
 from pycon_us.core.timefmt import seconds_ago
+from pycon_us.dev_options import DEV_MOCK_API_URL
+from pycon_us.prefs import Prefs
 from pycon_us.theme import LIGHT_TOKENS
+from pycon_us.ui import scan_screen
 from pycon_us.ui.scan_camera import CAMERA_UNAVAILABLE
 from pycon_us.ui.scan_result import (
     DIM_AFTER,
@@ -289,3 +295,27 @@ def test_high_contrast_picks_its_own_fills() -> None:
         fill_of(ScanOutcome.ACCEPTED, high_contrast=True, dimmed=False)
         == (HC_FILLS[ScanOutcome.ACCEPTED])
     )
+
+
+@pytest.mark.parametrize("tool", ToolKey)
+@pytest.mark.parametrize(
+    ("url", "signed_in", "flag"), list(product((True, False), repeat=3))
+)
+def test_a_tool_opens_only_with_a_mock_url_an_account_and_its_flag(
+    tool: ToolKey,
+    url: bool,
+    signed_in: bool,
+    flag: bool,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Any one of the gate's three terms missing refuses every tool (D-51, #900)."""
+    opened_by = {
+        ToolKey.LEAD: Account(signed_in=signed_in, lead_retrieval=flag),
+        ToolKey.DOOR: Account(signed_in=signed_in, door_check=flag),
+        ToolKey.SWAG: Account(signed_in=signed_in, door_check=flag),
+        ToolKey.COC: Account(signed_in=signed_in, mask_violation=flag),
+    }
+    prefs = Prefs(dev={DEV_MOCK_API_URL: "http://mock.test"} if url else {})
+    monkeypatch.setattr(scan_screen, "use_prefs", lambda: prefs)
+    monkeypatch.setattr(scan_screen, "use_account", lambda: opened_by[tool])
+    assert scan_screen.use_tool_allowed(tool) is (url and signed_in and flag)

@@ -18,7 +18,9 @@ that date motivates us but never justifies cutting corners.
 ## Read first
 
 1. [`PLAN.md`](PLAN.md): vision, phases, risks.
-2. [`docs/decisions.md`](docs/decisions.md): **binding** decisions (D-ids), naming, verified Flet facts.
+2. [`docs/decisions.md`](docs/decisions.md): **binding** decisions (D-ids), naming, verified Flet facts. Read the
+   D-ids the issue cites and those for your area, using
+   [CONTRIBUTING's lookup block](CONTRIBUTING.md#look-things-up), never the whole file.
 3. The doc for your area: [`docs/ux.md`](docs/ux.md), [`docs/architecture.md`](docs/architecture.md),
    [`docs/flet-gaps-and-extensions.md`](docs/flet-gaps-and-extensions.md),
    [`docs/development.md`](docs/development.md), [`docs/testing-and-quality.md`](docs/testing-and-quality.md).
@@ -176,13 +178,8 @@ that date motivates us but never justifies cutting corners.
   4. **The owner is heard.** A request from the owner to stop or change something is acted on, not just
      acknowledged; every owner comment has a reply.
   5. **No unsettled `needs-decision` question** affects the PR.
-- **A Copilot review** (D-103) is **paused while the repo is private** (D-273): it uses Actions minutes too, and its
-  quota is used up. When it returns, request one on every PR that changes code or configuration, right after
-  opening it: `gh pr edit <n> --add-reviewer @copilot`. It arrives in about 5 to 15 minutes as a review by
-  `copilot-pull-request-reviewer[bot]`, with inline comments by `Copilot`. Handle its comments before merging, like
-  any reviewer's: fix, or reply on the thread with the reason and evidence. If nothing has arrived after about 20
-  minutes, or the review only says the Copilot quota is used up, say so in the PR and go on. It never replaces the
-  second opinion above.
+- **A Copilot review** is **paused while the repo is private** (D-273): it uses Actions minutes too, and its quota
+  is used up. D-103 says when to request one and how to handle it; it never replaces the second opinion above.
 - Merge with `gh pr merge <n> --squash --delete-branch` (the PR title becomes the commit on `main`).
 - The owner may comment, request changes or revert at any time. Feedback that arrives after a merge becomes a new
   issue, or a revert PR when something is broken.
@@ -238,8 +235,9 @@ that date motivates us but never justifies cutting corners.
 
 ## Rules for AI agents
 
-1. Before starting: read this file, `PLAN.md`, `docs/decisions.md` and the docs for your area; read the issue and
-   its parent epic.
+1. Before starting: read this file, `PLAN.md` and the docs for your area; read the issue and its parent epic; from
+   `docs/decisions.md`, read the D-ids the issue cites and those for your area, using CONTRIBUTING's lookup block,
+   never the whole file.
 2. Say you're on it: comment on the issue with a short plan when the work is non-trivial, and open a draft PR
    early so progress is visible.
 3. Work on the issue branch; keep the PR scoped to the issue. Found something else? Open a new issue instead of

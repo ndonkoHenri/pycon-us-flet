@@ -23,15 +23,14 @@ import flet as ft
 
 from pycon_us.account import use_account
 from pycon_us.core.lead_sponsors import LeadSponsor, filter_sponsors
-from pycon_us.core.staff_tools import ToolKey, may_open, scans_for_sponsor
-from pycon_us.prefs import use_prefs
+from pycon_us.core.staff_tools import ToolKey, scans_for_sponsor
 from pycon_us.services import use_services
 from pycon_us.services.errors import report_errors
 from pycon_us.staff_sponsor import fetch_sponsors, read_sponsor, save_sponsor
 from pycon_us.theme import use_tokens
 from pycon_us.ui.fields import SearchField, use_field_query
 from pycon_us.ui.logos import logo_tile
-from pycon_us.ui.scan_screen import NotAvailable
+from pycon_us.ui.scan_screen import NotAvailable, use_tool_allowed
 from pycon_us.ui.staff_picker import (
     CLEAR_SEARCH,
     choice_row,
@@ -71,16 +70,9 @@ def SponsorPicker() -> ft.Control:
     Re-checked on every render, as the scanner is (architecture §12.4): a sponsor's
     own account, a signed-out session or no mock URL (D-51) never sees the list.
     """
-    prefs = use_prefs()
+    allowed = use_tool_allowed(ToolKey.LEAD)
     account = use_account()
-    flags = account.role_flags
-    allowed = (
-        prefs.private_api_enabled
-        and account.signed_in
-        and may_open(ToolKey.LEAD, flags)
-        and scans_for_sponsor(flags)
-    )
-    if not allowed:
+    if not allowed or not scans_for_sponsor(account.role_flags):
         return NotAvailable(title=TITLE, source=__name__)
     return SponsorList(owner=account.owner)
 

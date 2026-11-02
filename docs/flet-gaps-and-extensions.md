@@ -57,7 +57,7 @@ Only gaps that matter to a **Material 3 app on Android and iOS** are kept. Web, 
 Deep links (NEW-07, D-21) use what exists: the common `[tool.flet.deep_linking]` table, which `flet build` resolves per key for Android and iOS after any per-platform table (`get_deep_linking_setting()`, `CLI/commands/build_base.py:1449-1454, 3067-3089`; `flet-dev/flet#6953`, fixing `flet-dev/flet#6951`, merged into `flet-1.1.0` and in the pin since `68a4b326c`), and the template's custom-scheme intent filter (`TPL/android/app/src/main/AndroidManifest.xml:47-56`) and `CFBundleURLTypes` entry (`TPL/ios/Runner/Info.plist:53-69`). Both register nothing unless `scheme` and `host` both resolve; iOS registers the scheme alone, with the host as the entry's `CFBundleURLName`. We set **one common table** (D-269):
 
 ```toml
-# pyproject.toml (P2-24, #384). Placeholders until the app identity (O-4, #15).
+# pyproject.toml (P2-24, #384). The values are the app identity's (D-452).
 [tool.flet.deep_linking]
 scheme = "confcompanion"
 host = "app"
