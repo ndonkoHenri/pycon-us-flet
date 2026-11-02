@@ -1,6 +1,7 @@
 """The decision record stays whole: one row per id, every citation resolves, every amendment is marked."""
 
 import re
+from collections import Counter
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -28,12 +29,26 @@ def _ids(path: str, pattern: str) -> list[str]:
     return re.findall(pattern, (ROOT / path).read_text(), re.MULTILINE)
 
 
+def _amended(row: str) -> list[str]:
+    """Return the ids a decision row says it amends, reading its prose without the code spans."""
+    # A ``)`` in a code span, as in `build_tile()`, isn't the end of the clause.
+    clauses = AMENDS.findall(CODE_SPAN.sub("", row))
+    return [amended for clause in clauses for amended in re.findall(r"D-\d+", clause)]
+
+
 def _anchors(path: Path) -> set[str]:
     """Return GitHub's anchor for each heading of a Markdown file."""
     headings = re.findall(
         r"^#{1,6} +(.+)$", FENCE.sub("", path.read_text()), re.MULTILINE
     )
-    return {re.sub(r"[^\w\- ]", "", h.lower()).replace(" ", "-") for h in headings}
+    anchors = set()
+    seen = Counter()
+    for heading in headings:
+        slug = re.sub(r"[^\w\- ]", "", heading.lower()).replace(" ", "-")
+        # GitHub numbers the repeats of a heading: slug, slug-1, slug-2.
+        anchors.add(f"{slug}-{seen[slug]}" if seen[slug] else slug)
+        seen[slug] += 1
+    return anchors
 
 
 def _broken_link(doc: Path, target: str) -> bool:
@@ -104,8 +119,23 @@ def test_a_row_that_amends_another_is_named_in_it() -> None:
     unmarked = sorted(
         f"{amended} doesn't name {row_id}"
         for row_id, row in rows.items()
-        for clause in AMENDS.findall(row)
-        for amended in re.findall(r"D-\d+", clause)
+        for amended in _amended(row)
         if row_id not in named.get(amended, ())
     )
     assert not unmarked, unmarked
+
+
+def test_a_code_span_does_not_end_an_amends_clause() -> None:
+    """An id amended after a code span holding a ``)`` is read, and "keeps" still ends the clause."""
+    row = "(amends D-50's `build_tile()` and D-62's signature, keeps D-70)"
+    assert _amended(row) == ["D-50", "D-62"]
+
+
+def test_a_repeated_heading_gets_githubs_numbered_anchor(tmp_path: Path) -> None:
+    """The n-th repeat of a heading is linked as ``slug-n``, as GitHub numbers it; past the last repeat is broken."""
+    doc = tmp_path / "doc.md"
+    doc.write_text("# Other issues\n\n## Other issues\n\n## Other issues\n")
+    assert not _broken_link(doc, "#other-issues")
+    assert not _broken_link(doc, "#other-issues-1")
+    assert not _broken_link(doc, "#other-issues-2")
+    assert _broken_link(doc, "#other-issues-3")
