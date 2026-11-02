@@ -31,7 +31,9 @@ from pycon_us.core.timefmt import (
 )
 
 REMOVED_NOTE = "Removed from the latest schedule"
-"""What a removed session's item says inline (D-47, D-255)."""
+"""What a removed session's item says inline, and the note over its detail page (D-255).
+
+D-47's words, never "cancelled"."""
 
 AFFECTS_MY_SCHEDULE = "Affects My schedule"
 """The first section's title: the changes to saved sessions."""

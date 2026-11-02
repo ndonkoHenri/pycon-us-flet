@@ -23,9 +23,9 @@ SPACE_CHARS = " \t\n\r\f"
 _SPECIALS = re.compile(r"[\\`*_\[\](<>|~$&:]")
 # D-115: block markers that matter only at the start of a line (">" is already escaped).
 _LINE_START = re.compile(r"#|[-+=]|\d+[.)]")
-_URL = re.compile(r"https?://[^\s<>\"]+")
+URL = re.compile(r"https?://[^\s<>\"]+")
 # D-114: sentence punctuation after a URL ends the sentence, not the URL.
-_URL_TRAILER = re.compile(r"[.,;:!?'\")\]’”]+$")
+URL_TRAILER = re.compile(r"[.,;:!?'\")\]’”]+$")
 _DESTINATION_SAFE = ":/?#@!&'*+,;=%~-._"  # everything else is percent-encoded
 
 
@@ -38,8 +38,8 @@ def escape(text: str, *, linkify: bool = True) -> str:
         return _escape_chars(text)
     parts = []
     done = 0
-    for match in _URL.finditer(text):
-        url = _URL_TRAILER.sub("", match.group())
+    for match in URL.finditer(text):
+        url = URL_TRAILER.sub("", match.group())
         if url.endswith("://"):  # only punctuation after the scheme: not a URL
             continue
         parts.append(_escape_chars(text[done : match.start()]))

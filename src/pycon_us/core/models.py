@@ -16,6 +16,9 @@ import datetime as dt
 from collections.abc import Mapping
 from dataclasses import dataclass, field
 
+OPEN_SPACE = "open-space"
+"""The ``kind`` of an open space's session (DATA-05)."""
+
 
 @dataclass(frozen=True, eq=False)
 class Speaker:
