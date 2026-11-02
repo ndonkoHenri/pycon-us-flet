@@ -4,8 +4,9 @@ ux.md §7.3. Ionic's modal labelled its choices with emoji, which screen readers
 oddly; here a modal ``BottomSheet`` with a drag handle, everything scrolling together
 so Save stays in reach at 200 % text:
 
-- a level-1 heading "Note for Ada" (the lead's name, or its code), and the code under
-  it when the name is the heading;
+- a level-1 heading "Note for Ada" (the lead's name, or its code), the code under it
+  when the name is the heading, and "For Example Corp" on a staff account's lead, since
+  each sponsor's lead on an attendee has its own note (D-459);
 - **Interest**, a ``SegmentedButton`` Hot · Warm · Cold with icons, empty allowed (a
   tap on the chosen one clears it), each segment read with its state;
 - **Follow-up**, a filter ``Chip`` per label of ``FOLLOW_UPS``, each one stop that says
@@ -34,6 +35,7 @@ from flet.components.hooks.use_ref import MutableRef
 from pycon_us import lead_note
 from pycon_us.core.lead_notes import FOLLOW_UPS, Interest, LeadNote
 from pycon_us.core.lead_sponsors import LeadSponsor
+from pycon_us.core.lead_views import for_line
 from pycon_us.core.outbox import Outcome
 from pycon_us.locations import is_top_view
 from pycon_us.prefs import use_prefs
@@ -45,6 +47,10 @@ from pycon_us.theme_hc import hc_sheet_shape
 from pycon_us.ui.lead_note_fields import follow_up_chip, interest_button
 from pycon_us.ui.queue_rows import heading, note
 from pycon_us.ui.semantics import named
+
+type OpenNote = Callable[[str, str | None, LeadSponsor | None], None]
+"""Opens the sheet for a lead: its code, the name if any, and the sponsor it was scanned
+for (None for a sponsor's own lead)."""
 
 MAX_LENGTH = 4000
 """The note's longest free text, in characters (ux.md §7.3)."""
@@ -60,12 +66,14 @@ class Editing:
         draft: The interest and follow-ups as chosen so far, and the text the field
             started with: the field itself holds what is typed since (D-243).
         problem: Why the last Save stored nothing (``lead_note.NOT_SAVED``), or None.
+        sponsor: The sponsor the lead was scanned for; None for a sponsor's own lead.
     """
 
     code: str
     name: str | None
     draft: LeadNote
     problem: str | None = None
+    sponsor: LeadSponsor | None = None
 
 
 def title_of(editing: Editing) -> str:
@@ -113,6 +121,9 @@ def note_sheet(
     body: list[ft.Control] = [heading(title_of(editing), 1)]
     if editing.name:
         body.append(note(editing.code))
+    if editing.sponsor is not None:
+        line = for_line(editing.sponsor.name)
+        body.append(note(line, identifier="lead.note.sponsor"))
     body += [
         heading("Interest", 2),
         interest_button(draft.interest, actions.interest),
@@ -201,15 +212,15 @@ class NoteSheet:
     """What the Lead scanner gets from ``use_note_sheet()``.
 
     Attributes:
-        open: Opens the sheet for a lead: its code and the name, if the result had one.
+        open: Opens the sheet for a lead.
         is_open: The sheet is open: the scan screen pauses scanning meanwhile.
     """
 
-    open: Callable[[str, str | None], None]
+    open: OpenNote
     is_open: bool
 
 
-def use_note_sheet(*, owner: str, sponsor: LeadSponsor | None) -> NoteSheet:
+def use_note_sheet(*, owner: str) -> NoteSheet:
     """Keep the note sheet's lead and draft, show it while open; return what opens it.
 
     Call it on every render (D-70). The Notes field is built from what Flutter last
@@ -218,7 +229,6 @@ def use_note_sheet(*, owner: str, sponsor: LeadSponsor | None) -> NoteSheet:
 
     Args:
         owner: The signed-in account (``Account.owner``).
-        sponsor: The sponsor a staff account scans for now; None for a sponsor's own.
     """
     page = ft.context.page
     view_path = ft.use_view_path()
@@ -244,12 +254,13 @@ def use_note_sheet(*, owner: str, sponsor: LeadSponsor | None) -> NoteSheet:
     set_editing = partial(keep, latest, set_state)
 
     @report_errors
-    def open_for(code: str, name: str | None) -> None:
-        draft = lead_note.saved_note(svc.outbox, owner, code)
+    def open_for(code: str, name: str | None, sponsor: LeadSponsor | None) -> None:
+        sponsor_id = None if sponsor is None else sponsor.id
+        draft = lead_note.saved_note(svc.outbox, owner, code, sponsor_id)
         if draft is None:  # logged; a blank prefill would save over the note
             page.show_dialog(snack_bar(lead_note.NOT_LOADED))
             return
-        set_editing(Editing(code, name, draft))
+        set_editing(Editing(code, name, draft, sponsor=sponsor))
 
     @report_errors
     def close() -> None:
@@ -274,7 +285,7 @@ def use_note_sheet(*, owner: str, sponsor: LeadSponsor | None) -> NoteSheet:
         typed = current.draft.text if shown is None else shown.value or ""
         draft = replace(current.draft, text=typed)
         stored = lead_note.store(
-            svc.outbox, current.code, draft, owner=owner, sponsor=sponsor
+            svc.outbox, current.code, draft, owner=owner, sponsor=current.sponsor
         )
         if stored is None or svc.outbox is None:  # logged (D-120); the text stays
             set_editing(replace(current, problem=lead_note.NOT_SAVED))

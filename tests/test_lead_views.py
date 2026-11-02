@@ -37,6 +37,28 @@ def test_leads_are_newest_first_with_their_note_flag(db: OutboxDb) -> None:
     assert lead_count(db, OWNER) == 3
 
 
+def test_two_sponsors_on_one_attendee_are_two_leads_each_with_its_own_note(
+    db: OutboxDb,
+) -> None:
+    """Each row has its own key, and only the noted sponsor's says "has a note" (D-459)."""
+    add(db, "A1", 100.0, sponsor=("1", "Example Corp"))
+    add(db, "A1", 200.0, sponsor=("3", "Sample Systems"))
+    note(db, "A1", "Interest: warm", sponsor=("1", "Example Corp"))
+    found = leads(db, OWNER)
+    assert found is not None
+    assert [(row.sponsor_id, has_note) for row, has_note in found] == [
+        ("3", False),
+        ("1", True),
+    ]
+    assert lead_count(db, OWNER) == 2
+    assert [lead_view(row, n, NOW).key for row, n in found] == ["A1.3", "A1.1"]
+
+
+def test_a_sponsor_s_own_lead_is_keyed_by_its_code(db: OutboxDb) -> None:
+    """No sponsor snapshot: the row's key stays the code."""
+    assert lead_view(add(db, "A1", 100.0), False, NOW).key == "A1"
+
+
 def test_another_account_s_rows_never_show(db: OutboxDb) -> None:
     """A lead and a note of another owner are not this account's (D-414)."""
     add(db, "MINE", 100.0)
