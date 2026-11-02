@@ -1,6 +1,6 @@
 # Development, build and release
 
-**Status:** verified guide (v3), 2026-10-12. The developer guide of D-96. P0-05 (#53) completed it from the S5 verdict ([`spikes/05-build-and-ship.md`](spikes/05-build-and-ship.md)) and checked §5.1-§5.3 from a fresh clone on the reference emulator and simulator. The test strategy is in [`testing-and-quality.md`](testing-and-quality.md) (D-76..D-80). **Binding:** [`PLAN.md`](../PLAN.md) and [`decisions.md`](decisions.md) (D-ids). Where this document applies a decision, it cites it.
+**Status:** verified guide (v3), 2026-10-12. The developer guide of D-96. P0-05 (#53) completed it from the S5 verdict ([`spikes/05-build-and-ship.md`](spikes/05-build-and-ship.md)) and checked §5.1-§5.3 from a fresh clone on the reference emulator and simulator. #849 rewrote §5.1 for a clean Mac on 2026-11-02; what it couldn't check is marked there, and the timed clean-machine run is #850. The test strategy is in [`testing-and-quality.md`](testing-and-quality.md) (D-76..D-80). **Binding:** [`PLAN.md`](../PLAN.md) and [`decisions.md`](decisions.md) (D-ids). Where this document applies a decision, it cites it.
 
 **Scope.** This document covers how we build, run and distribute the app on **Android and iOS only** (D-09). There are no web, PWA or desktop targets. A desktop window is a developer convenience at most (§5.4).
 - The project file, validated against the local flet-cli (§3).
@@ -28,7 +28,7 @@
 
 | I want to… | Command (from the repo root) | Section |
 |---|---|---|
-| Set up a fresh clone | `git clone …`, the Flet checkout at `.flet-ref`, `uv sync` | §5.1 |
+| Set up a fresh clone | `gh repo clone …`, the Flet checkout at `.flet-ref`, `uv sync --locked` | §5.1 |
 | Run the real app shell on an emulator, simulator or phone | `uv run flet debug android -d emulator-5554` (or `ios -d <udid>`); `-d` is required | §5.3 |
 | Run the app with Python hot reload | `BROWSER=true uv run flet run -r -w -p 8550`, plus `flutter run -d <id>` in `.flet-src/client` | §5.2 |
 | List devices or emulators | `uv run flet devices`, `uv run flet emulators` | §5.5 |
@@ -51,11 +51,11 @@
 
 ## 2. Toolchain
 
-### 2.1 Facts (verified 2026-10-12 at `15854a0ac`; re-verified 2026-10-28 at `08b89cce5`, #445; Python again in #700; pin, Flutter and Python at `22a6dcb16` on 2026-10-30, #805)
+### 2.1 Facts (verified 2026-10-12 at `15854a0ac`; re-verified 2026-10-28 at `08b89cce5`, #445; Python again in #700; pin, Flutter and Python at `22a6dcb16` on 2026-10-30, #805; PyPI, Flutter, JDK and the Android SDK on 2026-11-02, #849)
 
 | Fact | Value | Source |
 |---|---|---|
-| Flet | **1.1** from flet-dev/flet's **`flet-1.1.0` branch**, pinned at `22a6dcb16` (`.flet-ref`; `08b89cce5` before #805) until 1.1.0 is on PyPI, where the latest is 1.0.4. The first pin (`3710aff`, on `main`) was 1.0.4 plus fixes: its template targets iOS 13.0, which Xcode 27 rejects. `flet --version` prints the nearest tag: `1.1.0.dev2` at `22a6dcb16`, `1.1.0.dev1` at `08b89cce5` (`1.0.4` at the pins before it; §2.2). | D-81, D-104; F20; S5 |
+| Flet | **1.1** from flet-dev/flet's **`flet-1.1.0` branch**, pinned at `22a6dcb16` (`.flet-ref`; `08b89cce5` before #805) until 1.1.0 is on PyPI, where the latest is 1.0.5 and the newest 1.1 pre-release 1.1.0.dev3 (2026-11-02). The first pin (`3710aff`, on `main`) was 1.0.4 plus fixes: its template targets iOS 13.0, which Xcode 27 rejects. `flet --version` prints the nearest tag: `1.1.0.dev2` at `22a6dcb16`, `1.1.0.dev1` at `08b89cce5` (`1.0.4` at the pins before it; §2.2). | D-81, D-104; F20; S5 |
 | Flutter | **3.47.8** (3.47.7 before `22a6dcb16`), read from the checkout's `.fvmrc`. flet-cli uses `~/flutter/3.47.8` if it exists, else the `flutter` on `PATH` if its major.minor matches (any 3.47.x); otherwise it asks, then downloads 3.47.8 into `~/flutter/3.47.8` (about 5 minutes; `--yes` skips the question). It adds that SDK to `PATH` only for its own subprocesses, not your shell. | `flet/version.py` `get_flutter_version`; `CLI/commands/flutter_base.py:207-234, 251-280, 334-338, 481-493`; `CLI/utils/flutter.py:43-55` |
 | JDK (Android builds) | **17**. flet-cli uses `JAVA_HOME`, then `/usr/libexec/java_home`, if either is a JDK 17; otherwise it downloads Temurin **17.0.13+11** into `~/java/17.0.13+11`. Either way it runs `flutter config --jdk-dir=<that JDK>`, a global Flutter setting. A newer system JDK is ignored. | `CLI/utils/jdk.py:15-18, 87-163`; `CLI/commands/flutter_base.py:382-405` |
 | Android SDK | `ANDROID_HOME`, then `ANDROID_SDK_ROOT`, then Android Studio's `~/Library/Android/sdk`, then `~/Android/sdk`; if none exists, flet-cli asks and installs one into `~/Android/sdk`. | `CLI/utils/android_sdk.py:42-103, 269` |
@@ -115,7 +115,9 @@ test "$(git -C .flet-src rev-parse HEAD)" = "$(cat .flet-ref)" \
    git -C .flet-src fetch -q origin <sha> && git -C .flet-src checkout -q --detach <sha>
    # Each bundled package's wheel build folder (flet's and the extensions', [tool.flet.dev_packages]) survives a
    # checkout, and its stale files would ship (§5.8). No Flet package tracks a top-level build/ folder.
-   rm -rf .flet-src/sdk/python/packages/*/build
+   # find, not a packages/*/build glob: when no such folder exists, zsh stops with "no matches found", ending an
+   # && chain. The depth limits spare the source folder flet-mcp/src/flet_mcp/build.
+   find .flet-src/sdk/python/packages -mindepth 2 -maxdepth 2 -type d -name build -exec rm -rf {} +
    ```
 2. Run `uv lock`, because Flet's own dependencies may have changed, then `uv sync`.
 3. Delete `build/` (`rm -rf build`) on every bump. It caches Dart build-hook binaries compiled by the previous
@@ -364,25 +366,108 @@ def test_version_matches_pyproject():
 
 ## 5. Development loop
 
-### 5.1 From a clean checkout
+### 5.1 From a clean Mac
 
-**Prerequisites:**
-- git, [uv](https://docs.astral.sh/uv/) (CI uses the 0.12 line, §7.2) and, while the repo is private, a `gh` login with access to it.
-- For Android, an emulator (§5.5) or a phone with USB or wireless debugging. flet-cli finds or installs the JDK, the Android SDK and Flutter the first time a mobile command needs them, and asks before each install (§2.1).
-- For iOS, a Mac with Xcode 27 and CocoaPods; export `LANG=en_US.UTF-8`, or CocoaPods warns. Simulators need no Apple account; a phone needs the signing setup of §8.2.
+This section is for a Mac with none of the tools. The timed run on a truly clean machine is #850 and hasn't happened, so **unverified** below means nobody has run that step on a Mac without the tool.
+
+**What you need.**
+
+| Tool | Version | How you get it | Where the version comes from |
+|---|---|---|---|
+| macOS, Apple silicon | macOS 27.0 on an M4 here | | Our AVDs are arm64 (§5.5). Intel is unverified. |
+| git | any | `xcode-select --install`, or Xcode | |
+| Homebrew | any | [brew.sh](https://brew.sh); only for `gh` and CocoaPods | |
+| Access to the repo, while it is private | `gh` 2.100.0 here | `brew install gh`, then `gh auth login` | See "What `gh` is for" below |
+| uv | CI uses 0.12.x; 0.13.6 here | `curl -LsSf https://astral.sh/uv/install.sh \| sh`, then open a new terminal | `ci.yml`, and `uv_build>=0.12,<0.13` in `pyproject.toml` |
+| Python on the Mac | 3.14.x (3.14.10 with uv 0.13.6) | `uv sync` downloads it | `requires-python` in `pyproject.toml`; the app's own Python is separate (§2.1) |
+| Flutter | 3.47.8 | flet-cli installs it (below) | `.flet-src/.fvmrc` |
+| JDK, Android only | 17 (Temurin 17.0.13+11) | flet-cli installs it (below) | `CLI/utils/jdk.py:15-18` |
+| Android SDK, Android only | `platform-tools`, `platforms;android-35`, `build-tools;34.0.0` | flet-cli installs them (below) | `CLI/utils/android_sdk.py:15-19` |
+| Xcode, iOS only | 27 (27.2 here); no older one has been tried with this pin | App Store | §2.1, D-81 |
+| CocoaPods, iOS only | 1.17.0 here | `brew install cocoapods` | Non-SPM plugins build with it (`CLI/commands/build_base.py:638-640`) |
+
+Allow about 20 GB of disk for Android (here: Flutter 2.1 GB, Android emulator 1.2 GB, system image 4.3 GB, NDK 2.8 GB, plus the Gradle and pub caches), and more for Xcode.
+
+**What `gh` is for.** Only for cloning this repo while it is private: any git credential with access works too. Building, running and testing never call it. The Flet clone is public and needs no login. People who open or merge PRs need it as well (`tools/gate.sh` posts through it). Once the repo is public (#852), clone with `git clone https://github.com/ndonkoHenri/pycon-us-flet.git` with no account; `gh` then leaves this list.
+
+**Pasting into zsh.** The blocks in this section hold no comments on purpose. In an interactive zsh, macOS's default shell, `#` doesn't start a comment unless you run `setopt interactivecomments` first, so a pasted `uv sync   # note` passes the note as arguments. Blocks elsewhere in this guide do have comments.
+
+**1. The checkout.**
 
 ```bash
 gh repo clone ndonkoHenri/pycon-us-flet && cd pycon-us-flet
-git clone --filter=blob:none https://github.com/flet-dev/flet.git .flet-src   # §2.2
+git clone --filter=blob:none https://github.com/flet-dev/flet.git .flet-src
 git -C .flet-src checkout --detach "$(cat .flet-ref)"
-uv sync                                       # Python 3.14 and the dev tools
-git config core.hooksPath .githooks           # once per clone: the pre-push checks (§7, D-273)
-uv run pytest                                 # no device needed
-uv run flet devices                           # the ids for -d
-uv run flet debug android -d emulator-5554    # or: uv run flet debug ios -d <simulator udid> (§5.3)
+uv sync --locked
+git config core.hooksPath .githooks
+uv run flet --version
+uv run pytest
 ```
 
-Followed literally on 2026-10-12 in a fresh directory (Mac M4, Flutter 3.47.7 on `PATH`, JDK 17 and the Android SDK already installed, warm Gradle and pub caches): `uv sync` took under a second, 4 tests passed, `flet debug android` had the app on `emulator-5554` 70 s after the command, and `flet debug ios` had it on an iPhone 17 Pro simulator in under 3 minutes. A machine without Flutter adds about 5 minutes for its download.
+- `.flet-src` is your own clone of Flet at the pin (§2.2, D-451). `git config` turns on the pre-push checks, once per clone (§7, D-273).
+- With a uv newer than 0.12, `uv sync` prints ``warning: `build_system.requires = ["uv-build>=0.12,<0.13"]` does not contain the current uv version``. It is harmless: uv fetches the older `uv_build`. `uv.lock` also passes `uv lock --check` under uv 0.12.24.
+- `flet --version` prints `Flet: 1.1.0.dev2` and `Flutter: 3.47.8`. It needs no Flutter yet.
+- `pytest` needs no device and takes about 6 minutes: 8,420 passed, 1 skipped on 2026-11-02. The count grows; what matters is that nothing fails. It can run in a second terminal while you go on.
+
+**2. Android.** The first command that needs the mobile tools installs them. flet-cli asks once for Flutter and once for the Android SDK, whose yes covers the JDK too; `--yes` skips both questions. Flutter goes to `~/flutter/3.47.8`, the JDK to `~/java/17.0.13+11` and the SDK to `~/Android/sdk`, and none of them joins your shell's `PATH` (§2.1).
+
+```bash
+uv run flet emulators
+```
+
+That SDK has no emulator or system image, so add them. These commands are **unverified** on a clean Mac: only `avdmanager list device` has been run here, which lists `pixel_6a`, and the package and device names match this Mac's `pycon_pixel6a_api36` (§5.5). Android Studio's Device Manager is the other way, if you have it.
+
+```bash
+export JAVA_HOME=~/java/17.0.13+11/Contents/Home
+~/Android/sdk/cmdline-tools/12.0/bin/sdkmanager --install emulator "system-images;android-36;google_apis;arm64-v8a"
+~/Android/sdk/cmdline-tools/12.0/bin/avdmanager create avd -n pycon_pixel6a_api36 -d pixel_6a -k "system-images;android-36;google_apis;arm64-v8a"
+uv run flet emulators start pycon_pixel6a_api36
+```
+
+When it has booted, run the app:
+
+```bash
+uv run flet devices
+uv run flet debug android -d emulator-5554
+```
+
+The first build also makes Gradle fetch what is still missing (on this Mac, `platforms;android-36` and an NDK). That is **unverified** on a clean Mac: if it stops on a missing SDK package, install the package with `sdkmanager` and tell #850.
+
+**3. iOS.** `flet devices` and `flet emulators` require the Android SDK even with `ios` (`CLI/commands/devices.py:82`, `CLI/commands/emulators.py:102`), so on an iOS-only Mac list simulators with `xcrun` instead. `flet debug ios` itself asks only for Flutter (`CLI/commands/build_base.py:938`).
+
+```bash
+sudo xcodebuild -license accept
+xcodebuild -runFirstLaunch
+xcodebuild -downloadPlatform iOS
+xcrun simctl list devices available
+xcrun simctl boot <simulator udid>
+open -a Simulator
+export LANG=en_US.UTF-8
+uv run flet debug ios -d <simulator udid>
+```
+
+- The three `xcodebuild` lines are **unverified**: this Mac's Xcode was set up long ago. Without `LANG`, CocoaPods warns.
+- A fresh Xcode downloads its own current runtime, which may not be the iOS 26.5 all our checks ran on (§5.5).
+- Simulators need no Apple account; a phone needs the signing setup of §8.2.
+
+**How long it takes.** Measured means the 2026-11-02 rehearsal below, or the source named. The rest are estimates that #850 will replace.
+
+| Step | Measured | On a clean Mac |
+|---|---|---|
+| `gh repo clone` | 11 s | About the same |
+| Flet clone and checkout (335 MB) | 12 s | About the same |
+| `uv sync --locked`, with CPython and every package downloaded | 6 s, fast connection (25.5 MiB Python, about 250 MB of packages) | Under a minute |
+| `uv run pytest` | 5 min 39 s | About the same on an M4 |
+| Flutter, on first use | About 5 min (S5: 305 s, with its setup) | About 5 min |
+| JDK and Android SDK | Never timed | Estimate: a few minutes |
+| Emulator and system image | Never timed | Estimate: 5 to 10 minutes |
+| First `flet debug android` | 70 s with warm caches (2026-10-12). Pieces of a colder run: 9 to 10 min for an empty pub cache on a busy host (#176, §5.8); Gradle 167.6 s with `~/.gradle` warm (S5, an older pin) | Estimate: 10 to 20 minutes |
+| Xcode and its runtime | Never timed | Depends on the connection; tens of minutes at least |
+| First `flet debug ios` | Under 3 min with warm caches (2026-10-12); `flet build ios-simulator` 4 min from a cloned pub cache (#176) | Estimate: 10 to 15 minutes |
+
+So Android from nothing comes to about 20 to 35 minutes, estimated, not counting `pytest`, which sits right at PLAN's 30-minute exit target; #850 settles it.
+
+**The rehearsal (#849, 2026-11-02, at `22a6dcb16`).** Step 1 was followed in a new directory, with new clones of both repos and uv's cache and Python folders empty (`UV_CACHE_DIR`, `UV_PYTHON_INSTALL_DIR`, `UV_PYTHON_PREFERENCE=only-managed`); then `uv run flet devices` ran (13 s, no devices). What wasn't clean: the owner's Mac already had Homebrew, Xcode 27.2, a logged-in `gh`, uv 0.13.6, Flutter 3.47.8 through fvm, the JDK, the Android SDK, and warm Gradle and pub caches. The Flutter, JDK and SDK installers write into the home folder, so they weren't run. Nothing was built, and no emulator or simulator was used; steps 2 and 3 were read against flet-cli's source at the pin only. This section's device steps last ran on 2026-10-12, at an older pin and with warm caches: the 70 s and 3 minutes above.
 
 `.gitignore` covers, among others:
 - `.venv/`, `.flet-src`, `.flet/` (the `flet run` storage, F14), `build/`, `excluded/`;
@@ -687,7 +772,7 @@ mock connection said "Connected to the local mock server.", in light and dark, a
 
 **While the repo is private, the checks run locally** (D-273). A private repo on GitHub Free includes 2,000 Linux minutes a month, and by 2026-10-20 `ci.yml`, run on every PR push and every push to `main`, had used about 1,875 of them. So GitHub Actions run only by hand, and local checks replace them.
 
-**`tools/check.sh`** runs `ci.yml`'s steps (§7.2) in the same order on your machine: `uv sync --locked`, `ruff check`, `ruff format --check`, `pyright`, `pytest --hypothesis-profile=ci`, with `UV_LOCKED=1`. `--fast` runs every step but pytest. It prints one line per step and stops at the first failure, with that step's exit status. It needs `.flet-src` (§2.2, §5.8). On the owner's Mac the fast run takes about 5 s and the full one about 1.5 minutes. It runs at three points:
+**`tools/check.sh`** runs `ci.yml`'s steps (§7.2) in the same order on your machine: `uv sync --locked`, `ruff check`, `ruff format --check`, `pyright`, `pytest --hypothesis-profile=ci`, with `UV_LOCKED=1`. `--fast` runs every step but pytest. It prints one line per step and stops at the first failure, with that step's exit status. It needs `.flet-src` (§2.2, §5.8). On the owner's Mac the fast run takes about 10 s and the full one about 6 minutes (344 s in the gate of 2026-11-02, for 8,420 tests). It runs at three points:
 - **The pre-push hook**, `.githooks/pre-push`, turned on once per clone with `git config core.hooksPath .githooks` (§5.1; every worktree of the clone then runs its own checkout's hook). Before each push it runs `tools/check.sh --fast`, unless the push changes only Markdown (`*.md`) or nothing: it compares a new branch with its merge base with `origin/main`, and an existing one with the remote's commit (a remote commit it doesn't have counts as code). The checks see the working tree, so it warns when that has uncommitted changes or HEAD isn't the pushed commit. `git push --no-verify` skips it once. A branch from before D-273 has no hook.
 - **Before you mark a PR ready**, run the full `tools/check.sh` and list it in the PR.
 - **The merge gate**, `tools/gate.sh <pr> [<pr>...]`, runs before every merge (D-100 condition 1, D-273). It fetches `main`, creates a scratch worktree detached at `origin/main` with its own copy of `.flet-src` (D-219), merges each PR's head into it in the order given, and runs the full `tools/check.sh` there, into a log.
