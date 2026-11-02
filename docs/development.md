@@ -679,7 +679,7 @@ mock connection said "Connected to the local mock server.", in light and dark, a
 - **Venue or office Wi-Fi often isolates clients.** Use a phone hotspot or a travel router instead.
 - **Tests** drive the same pure `handle()` behind `httpx.MockTransport` (D-50), so they cover signing, faults and both semantics without a network. Only `tests/test_mock_api_server.py` starts the server, in-process on `127.0.0.1` with an ephemeral port, under the `loopback` marker (`no_network`'s one opt-out).
 - **Badges.** `uv run python -m tools.mock_api.badges` writes `build/mock-badges.html`, the printable sheet of mock-badge QR codes for the P3 exit test (one card per seeded attendee, A4 or Letter; `segno`, D-391). The mock README says more.
-- **Stage demos** may need an in-app backend instead of the LAN mock. That is open decision O-8, decided at the P3 exit.
+- **Stage demos** use this LAN mock from the laptop, with no in-app backend (D-457). A phone can't reach the laptop's loopback, so with no Wi-Fi it joins a laptop hotspot, with the server on `--host 0.0.0.0`; that hasn't been tried yet. An emulator or simulator on the laptop uses the table above. The demo script is #855's, and it reopens O-8 if it finds a reason.
 
 ---
 
