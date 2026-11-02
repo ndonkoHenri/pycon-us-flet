@@ -6,10 +6,13 @@ The service runs over the in-memory SharedPreferences and a temporary directory,
 """
 
 import logging
+import re
+from pathlib import Path
 from typing import Any
 
 import pytest
 
+import pycon_us
 from pycon_us.services import pref_keys
 from pycon_us.services.pref_keys import Pref
 from pycon_us.services.storage import Storage
@@ -47,6 +50,19 @@ async def test_every_default_round_trips_through_shared_preferences(
     stored = prefs.values[pref.key]
     assert isinstance(stored, str | int | float | bool | list)  # F12
     assert await store.get(pref) == pref.default
+
+
+def test_only_the_key_table_builds_a_pref() -> None:
+    """A ``Pref`` built elsewhere fails here, as the checks that walk the table miss it."""
+    package = Path(pycon_us.__file__).parent
+    builds_a_pref = re.compile(r"\bPref(\[[^\]]*\])?\(")
+    strays = [
+        str(path.relative_to(package))
+        for path in package.rglob("*.py")
+        if path != Path(pref_keys.__file__)
+        and builds_a_pref.search(path.read_text(encoding="utf-8"))
+    ]
+    assert strays == []
 
 
 def test_favorites_are_kept_per_year() -> None:
