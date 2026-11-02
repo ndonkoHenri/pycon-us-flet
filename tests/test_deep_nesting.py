@@ -22,8 +22,8 @@ from pycon_us.feed_refresh import fetch
 from pycon_us.services.api import MAX_NESTING, ApiError, unwrap
 from pycon_us.services.storage import Storage
 from tests import feed_store
-from tests.feed_store import loaded, serving
-from tests.feeds import changed, document, settings
+from tests.feed_store import TOO_DEEP_FEED, loaded, serving
+from tests.feeds import document, settings
 from tests.small_stack import (
     DEPTHS,
     TOO_DEEP_TO_PARSE,
@@ -53,11 +53,6 @@ HOLE = "the nesting goes here"
 def first_talk(doc: dict[str, Any]) -> dict[str, Any]:
     """The first talk of a feed document, which reads as a good slot."""
     return next(slot for slot in doc["schedule"] if slot["kind"] == "talk")
-
-
-def with_deep_html(doc: dict[str, Any]) -> None:
-    """Give the first talk a description whose HTML nests past Python's recursion limit."""
-    first_talk(doc)["description"] = "<blockquote>" * 10_000
 
 
 TALK = first_talk(document(2026))
@@ -110,7 +105,7 @@ def test_no_depth_of_nesting_in_a_feed_gets_past_feed_error(
 def test_html_nested_past_the_recursion_limit_raises_feed_error() -> None:
     """A description whose HTML nests too deep to walk raises ``FeedError``, on any stack."""
     with pytest.raises(FeedError, match="nested too deep"):
-        process(changed(2026, with_deep_html), settings(2026))
+        process(TOO_DEEP_FEED, settings(2026))
 
 
 @pytest.mark.parametrize("raw", TOO_DEEP, ids=TOO_DEEP_IDS)
@@ -131,7 +126,7 @@ async def test_a_cache_nested_too_deep_is_deleted_and_the_snapshot_published(
     storage: Storage, year: YearData, caplog: pytest.LogCaptureFixture
 ) -> None:
     """A cache that overflows the stack is deleted with a warning, like a corrupt one."""
-    assert await storage.write_feed(changed(2026, with_deep_html))
+    assert await storage.write_feed(TOO_DEEP_FEED)
 
     with caplog.at_level(logging.WARNING):
         conference = await loaded(storage, year)

@@ -26,8 +26,7 @@ from pycon_us.feed_refresh import Status
 from pycon_us.services.storage import Storage
 from pycon_us.state import Conference
 from tests.fakes import MemoryPrefs
-from tests.feeds import changed
-from tests.small_stack import TOO_DEEP_TO_PARSE, nested_lists
+from tests.feeds import changed, slot
 
 NOW = datetime(2026, 10, 12, 9, 30, tzinfo=UTC)
 TALK = "142"  # a 2026 talk; the variants below rename it
@@ -43,8 +42,16 @@ def renamed(name: str) -> bytes:
     return changed(2026, rename)
 
 
+def with_deep_html(document: dict[str, Any]) -> None:
+    """Give talk 142 a description whose HTML nests past Python's recursion limit."""
+    slot(document, int(TALK))["description"] = "<blockquote>" * 10_000
+
+
 NETWORK_FEED = renamed("Renamed on the server")
 CACHED_FEED = renamed("Renamed in the cache")
+TOO_DEEP_FEED = changed(2026, with_deep_html)
+"""Overflows on any stack, in the walk of its HTML: how deep the parser goes depends on the
+platform, and on Linux's main thread even ``TOO_DEEP_TO_PARSE`` levels parse."""
 
 
 @pytest.fixture(autouse=True)
@@ -134,6 +141,6 @@ FAILURES: list[tuple[str, Callable[[], httpx.MockTransport], Status]] = [
     ("HTTP 404", lambda: serving(b"", status=404), "problem"),
     ("an HTML page", lambda: serving(b"<html>Wi-Fi sign-in</html>"), "problem"),
     ("a truncated feed", lambda: serving(NETWORK_FEED[:1000]), "problem"),
-    ("nested too deep", lambda: serving(nested_lists(TOO_DEEP_TO_PARSE)), "problem"),
+    ("nested too deep", lambda: serving(TOO_DEEP_FEED), "problem"),
     ("no schedule", lambda: serving(b'{"posters": []}'), "problem"),
 ]
