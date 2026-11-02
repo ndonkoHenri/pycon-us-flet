@@ -1,11 +1,12 @@
 """The staff outbox's sqlite database, ``outbox-<year>.db`` in the data directory (D-49, D-56).
 
-``core/outbox.py`` decides what a scan, a send or a sign-out does to the rows; this module
-only stores them. One connection, opened on first use and used only from the asyncio
-loop thread: statements take milliseconds, so nothing goes to ``to_thread``, and
-sqlite's ``check_same_thread`` refuses any other thread (D-49). The file is in WAL
-mode and migrated by ``PRAGMA user_version``. S1 ran ``sqlite3`` in the packaged
-runtime on both platforms, and the file survived update installs (D-108).
+``core/outbox_enqueue.py`` and ``core/outbox.py`` decide what a scan, a send or a
+sign-out does to the rows; this module only stores them. One connection, opened on
+first use and used only from the asyncio loop thread: statements take milliseconds,
+so nothing goes to ``to_thread``, and sqlite's ``check_same_thread`` refuses any other
+thread (D-49). The file is in WAL mode and migrated by ``PRAGMA user_version``. S1 ran
+``sqlite3`` in the packaged runtime on both platforms, and the file survived update
+installs (D-108).
 
 A database that cannot be opened, read or written is an expected failure: it is logged
 and returned, never raised (D-120), so the caller can say "Couldn't save the scan".
@@ -18,7 +19,8 @@ from collections.abc import Callable, Collection, Iterator
 from dataclasses import dataclass, replace
 from pathlib import Path
 
-from pycon_us.core.outbox import Enqueued, Outcome, Row, Status
+from pycon_us.core.outbox import Row, Status
+from pycon_us.core.outbox_enqueue import Enqueued, Outcome
 from pycon_us.services.outbox_schema import (
     COLUMNS,
     DELETE_SYNCED_SQL,
@@ -131,7 +133,7 @@ class OutboxDb:
     def enqueue(
         self, code: str, decide: Callable[[list[Row]], Enqueued]
     ) -> Enqueued | None:
-        """Apply an enqueue decision of ``core.outbox`` and store its row, atomically.
+        """Apply a ``core.outbox_enqueue`` decision and store its row, atomically.
 
         ``decide`` is ``scan_lead``, ``save_note`` or ``admit`` with every argument but
         the rows (a ``functools.partial``). It is given every row of the access code,

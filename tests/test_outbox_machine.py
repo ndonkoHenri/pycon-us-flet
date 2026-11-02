@@ -14,8 +14,9 @@ from dataclasses import replace
 from hypothesis import strategies as st
 from hypothesis.stateful import RuleBasedStateMachine, invariant, rule
 
-from pycon_us.core import outbox
-from pycon_us.core.outbox import Enqueued, Kind, Outcome, Row, Status
+from pycon_us.core import outbox, outbox_enqueue
+from pycon_us.core.outbox import Kind, Row, Status
+from pycon_us.core.outbox_enqueue import Enqueued, Outcome
 
 OWNERS = ("a@example.com", "b@example.com")
 CODES = st.sampled_from(("A", "B", "C"))
@@ -102,7 +103,7 @@ class OutboxMachine(RuleBasedStateMachine):
             and r.sponsor_id != self.sponsor[0]
             and r.sponsor_name
         )
-        decision = outbox.scan_lead(
+        decision = outbox_enqueue.scan_lead(
             self.rows.values(),
             owner=self.owner,
             code=code,
@@ -135,7 +136,7 @@ class OutboxMachine(RuleBasedStateMachine):
         if not leads:
             return
         lead = leads[pick % len(leads)]
-        decision = outbox.save_note(
+        decision = outbox_enqueue.save_note(
             self.rows.values(),
             owner=self.owner,
             code=code,
@@ -150,7 +151,7 @@ class OutboxMachine(RuleBasedStateMachine):
     @rule(code=CODES, products=PRODUCTS, session=st.sampled_from(("s1", "s2")))
     def admit(self, code: str, products: list[int], session: str) -> None:
         """Admit an attendee at the door in a scan session."""
-        decision = outbox.admit(
+        decision = outbox_enqueue.admit(
             self.rows.values(),
             owner=self.owner,
             code=code,

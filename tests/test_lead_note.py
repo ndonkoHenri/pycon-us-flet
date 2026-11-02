@@ -15,7 +15,8 @@ from pycon_us import lead_note
 from pycon_us.core.badges import Badge, ScanOutcome
 from pycon_us.core.lead_notes import Interest, LeadNote, compose
 from pycon_us.core.lead_sponsors import LeadSponsor
-from pycon_us.core.outbox import Kind, Outcome, Status, status_text
+from pycon_us.core.outbox import Kind, Status, status_text
+from pycon_us.core.outbox_enqueue import Outcome
 from pycon_us.lead_capture import capture
 from pycon_us.lead_note import NOTE_SAVED, WILL_SYNC, confirm, saved_note, store
 from pycon_us.services.credentials import CredentialStorage

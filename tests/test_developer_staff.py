@@ -16,7 +16,7 @@ import flet as ft
 import pytest
 
 from pycon_us.account import Account
-from pycon_us.core import outbox
+from pycon_us.core import outbox_enqueue
 from pycon_us.dev_options import DEV_MOCK_API_URL
 from pycon_us.prefs import Prefs
 from pycon_us.screens import developer_staff
@@ -46,7 +46,7 @@ def db(tmp_path: Path) -> Iterator[OutboxDb]:
 def seed(db: OutboxDb, code: str, owner: str) -> None:
     """Store a pending lead row of ``owner``'s for ``code``."""
     decide = partial(
-        outbox.scan_lead,
+        outbox_enqueue.scan_lead,
         owner=owner,
         code=code,
         payload={"badge_validator": "v"},

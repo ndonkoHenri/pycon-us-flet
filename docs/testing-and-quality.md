@@ -256,7 +256,7 @@ Deliberate differences live in one dict, `INTENDED_DIFFERENCES` (D-121 nested po
 | `ics.py` | UTC times, stable UID, RFC 5545 escaping (`PRODID` too), 75-octet folding, `VALARM`; one session and a whole agenda. Two tests read both feeds' whole agendas back with `icalendar` and `ical`, in the `dev` group (never bundled), so `tools/check.sh` and the gate run them | D-62, D-268, SESS-05 |
 | `badges.py` | Access code is segment 0; door and swag send the first validator, lead the last; CoC sends the code only | LEAD-03 |
 | `admission.py` | Inventory first, then online lookup; "Already checked in" on product overlap; unknown offline → "Can't check this badge" | DOOR-04 |
-| `signing.py`, `outbox.py` | §4 | D-52, D-56 |
+| `signing.py`, `outbox.py`, `outbox_enqueue.py` | §4 | D-52, D-56 |
 | reminders `plan()` | Deterministic ids (the numeric session id, or 1,000,000 + crc32(id) % 1,000,000 for synthetic ids; event reminders at 8000-8099, D-274; the test reminder at 8999), no collisions in a year's plan, only future reminders, at most 60, and the same inputs give the same plan | D-59, NEW-05 |
 | `staff_entries(flags)` | Exhaustive truth table over every role-flag combination, signed in and out | D-54, AUTH-05 |
 
@@ -378,7 +378,7 @@ Faults are raised by the transport or set on the mock, never by code in the app.
 
 ### 4.3 Outbox (D-56)
 
-A hypothesis `RuleBasedStateMachine` (`tests/test_outbox_machine.py`) drives the pure rules in `core/outbox.py` with rules for enqueue (lead, note, door), sync success, network failure (before the request left, or a lost answer), server failure (one, or a streak of up to 10), sponsor switch, account switch, time passing and "Retry failed". Invariants after every step:
+A hypothesis `RuleBasedStateMachine` (`tests/test_outbox_machine.py`) drives the pure rules in `core/outbox_enqueue.py` and `core/outbox.py` with rules for enqueue (lead, note, door), sync success, network failure (before the request left, or a lost answer), server failure (one, or a streak of up to 10), sponsor switch, account switch, time passing and "Retry failed". Invariants after every step:
 
 - no unsynced row is ever lost, an account switch included;
 - a row's owner, sponsor snapshot, kind, code, idempotency key and scan time never change after enqueue; a note keeps its lead's sponsor, and a scan for another sponsor always queues its own row (D-459);

@@ -36,7 +36,7 @@ from pycon_us import lead_note
 from pycon_us.core.lead_notes import FOLLOW_UPS, Interest, LeadNote
 from pycon_us.core.lead_sponsors import LeadSponsor
 from pycon_us.core.lead_views import for_line
-from pycon_us.core.outbox import Outcome
+from pycon_us.core.outbox_enqueue import Outcome
 from pycon_us.locations import is_top_view
 from pycon_us.prefs import use_prefs
 from pycon_us.services import use_services
