@@ -10,6 +10,7 @@ dependencies = [                      # bundled into the app by flet build: pin 
     "flet-notifications",             # E3 reminders (D-220): the monorepo's, pinned by .flet-ref
     "flet-permission-handler",        # permission status and settings (D-61): pinned by .flet-ref
     "flet-secure-storage",            # the mock API key and secret (D-49): pinned by .flet-ref
+    "httpx==0.28.1",                  # the app imports it: without this, phones get what pip finds that day (D-470)
     "tzdata==2026.5",                 # zoneinfo data on phones (D-43)
 ]
 
