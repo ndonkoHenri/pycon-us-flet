@@ -9,8 +9,9 @@ from dataclasses import replace
 
 import pytest
 
-from pycon_us.core import outbox
-from pycon_us.core.outbox import Kind, Outcome, Row, Status
+from pycon_us.core import outbox, outbox_enqueue
+from pycon_us.core.outbox import Kind, Row, Status
+from pycon_us.core.outbox_enqueue import Outcome
 
 OWNER = "staff@example.com"
 NOW = 1_000_000.0
@@ -32,7 +33,7 @@ def lead(
 
 def scan(rows: Iterable[Row], code: str = "A1", sponsor: str = "7", now: float = NOW):
     """Scan ``code`` for ``sponsor`` as ``OWNER``."""
-    return outbox.scan_lead(
+    return outbox_enqueue.scan_lead(
         rows,
         owner=OWNER,
         code=code,
@@ -51,7 +52,7 @@ def note(
     sponsor: tuple[str | None, str | None] = ("7", "Acme"),
 ):
     """Save ``text`` as ``OWNER``'s note on the lead of ``code`` for ``sponsor``."""
-    return outbox.save_note(
+    return outbox_enqueue.save_note(
         rows,
         owner=OWNER,
         code=code,
@@ -64,7 +65,7 @@ def note(
 
 def admit(rows: list[Row], products: list[int], session: str = "s1"):
     """Admit attendee ``A1`` to ``products`` in ``session`` as ``OWNER``."""
-    return outbox.admit(
+    return outbox_enqueue.admit(
         rows,
         owner=OWNER,
         code="A1",
@@ -80,14 +81,14 @@ def admit(rows: list[Row], products: list[int], session: str = "s1"):
 def test_lead_already_synced_adds_nothing() -> None:
     """A scan of a lead already synced says "already in your leads" and stores nothing."""
     synced = lead(status=Status.SYNCED)
-    assert scan([synced]) == outbox.Enqueued(Outcome.ALREADY, synced)
+    assert scan([synced]) == outbox_enqueue.Enqueued(Outcome.ALREADY, synced)
 
 
 def test_lead_pending_is_due_now_and_keeps_its_snapshot() -> None:
     """A scan of a pending lead makes it due now; payload and sponsor stay as queued."""
     waiting = lead(next_at=NOW + 60)
     decision = scan([waiting], now=NOW + 5)
-    assert decision == outbox.Enqueued(
+    assert decision == outbox_enqueue.Enqueued(
         Outcome.UPDATED, replace(waiting, next_at=NOW + 5)
     )
 
@@ -106,7 +107,7 @@ def test_new_lead_snapshots_the_sponsor() -> None:
     """A first scan queues a pending row due now, with the owner and current sponsor."""
     other_owner = replace(lead(), owner="else@example.com")
     decision = scan([other_owner], code="A1", sponsor="8")
-    assert decision == outbox.Enqueued(
+    assert decision == outbox_enqueue.Enqueued(
         Outcome.QUEUED,
         Row(Kind.LEAD, "A1", {"code": "A1"}, OWNER, "8", "Sponsor 8", NOW, NOW),
     )
@@ -120,7 +121,7 @@ def test_another_sponsor_gets_its_own_lead_after_any_row(status: Status) -> None
     """
     first = lead(status=status)
     decision = scan([first], sponsor="8")
-    assert decision == outbox.Enqueued(
+    assert decision == outbox_enqueue.Enqueued(
         Outcome.QUEUED,
         Row(Kind.LEAD, "A1", {"code": "A1"}, OWNER, "8", "Sponsor 8", NOW, NOW),
         ("Acme",),
@@ -160,7 +161,7 @@ def test_others_names_only_this_account_s_other_sponsors_on_this_attendee() -> N
 def test_a_sponsor_s_own_account_has_one_lead_per_attendee() -> None:
     """No sponsor snapshot: a rescan is a repeat, as it always was, and names nobody."""
     own = replace(lead(status=Status.SYNCED), sponsor_id=None, sponsor_name=None)
-    decision = outbox.scan_lead(
+    decision = outbox_enqueue.scan_lead(
         [own],
         owner=OWNER,
         code="A1",
@@ -169,7 +170,7 @@ def test_a_sponsor_s_own_account_has_one_lead_per_attendee() -> None:
         sponsor_name=None,
         now=NOW,
     )
-    assert decision == outbox.Enqueued(Outcome.ALREADY, own)
+    assert decision == outbox_enqueue.Enqueued(Outcome.ALREADY, own)
 
 
 def test_a_scan_from_an_iterator_finds_its_row_and_the_others() -> None:
@@ -177,19 +178,19 @@ def test_a_scan_from_an_iterator_finds_its_row_and_the_others() -> None:
     theirs = lead(id=1)
     mine = replace(lead(status=Status.SYNCED, id=2), sponsor_id="8", sponsor_name="B")
     decision = scan(iter([theirs, mine]), sponsor="8")
-    assert decision == outbox.Enqueued(Outcome.ALREADY, mine, ("Acme",))
+    assert decision == outbox_enqueue.Enqueued(Outcome.ALREADY, mine, ("Acme",))
 
 
 def test_empty_note_is_ignored() -> None:
     """An empty or blank note stores nothing."""
-    assert note([lead()], "") == outbox.Enqueued(Outcome.IGNORED)
-    assert note([lead()], " \n ") == outbox.Enqueued(Outcome.IGNORED)
+    assert note([lead()], "") == outbox_enqueue.Enqueued(Outcome.IGNORED)
+    assert note([lead()], " \n ") == outbox_enqueue.Enqueued(Outcome.IGNORED)
 
 
 def test_new_note_takes_its_leads_sponsor() -> None:
     """A first note queues one row with Ionic's body and its lead's sponsor snapshot."""
     decision = note([lead()], "Hot")
-    assert decision == outbox.Enqueued(
+    assert decision == outbox_enqueue.Enqueued(
         Outcome.QUEUED,
         Row(
             Kind.NOTE,
@@ -223,7 +224,7 @@ def test_note_upserts_one_row_per_lead(status: Status) -> None:
     first = stored(note([lead()], "Warm").row, 2)
     earlier = replace(first, status=status, tries=3, last_error="x", next_at=NOW + 60)
     decision = note([lead(), earlier], "Hot", now=NOW + 9)
-    assert decision == outbox.Enqueued(
+    assert decision == outbox_enqueue.Enqueued(
         Outcome.UPDATED,
         replace(
             first,
@@ -246,7 +247,7 @@ def test_door_admit_has_a_unique_idempotency_key() -> None:
 def test_door_one_row_per_check_in() -> None:
     """The same check-in again is the queued row; another session gets its own row."""
     first = stored(admit([], [3, 12]).row, 1)
-    assert admit([first], [12, 3]) == outbox.Enqueued(Outcome.ALREADY, first)
+    assert admit([first], [12, 3]) == outbox_enqueue.Enqueued(Outcome.ALREADY, first)
     assert admit([first], [3, 12], session="s2").outcome is Outcome.QUEUED
 
 
