@@ -108,7 +108,7 @@ def problem_of(error: ApiError | NetworkError) -> tuple[str, bool]:
     """
     if isinstance(error, NetworkError):
         return (MAYBE_RECORDED, True) if error.maybe_sent else (NO_CONNECTION, False)
-    if error.status is None:
+    if error.unreadable:
         return MAYBE_RECORDED, True
     return f"{NOT_RECORDED}. {error.message}", False
 
