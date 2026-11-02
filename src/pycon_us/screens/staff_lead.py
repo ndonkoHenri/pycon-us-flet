@@ -60,7 +60,7 @@ from pycon_us.staff_sponsor import read_sponsor
 from pycon_us.ui.lead_note_sheet import use_note_sheet
 from pycon_us.ui.scan_result import Shown
 from pycon_us.ui.scan_screen import NotAvailable, ScanScreen
-from pycon_us.ui.staff_picker import Reading
+from pycon_us.ui.staff_picker import Reading, use_arrival
 from pycon_us.ui.tool_controls import context_chip, tool_button
 
 TITLE = next(tool.title for tool in TOOLS if tool.key is ToolKey.LEAD)
@@ -133,10 +133,7 @@ def LeadTool(*, owner: str, for_sponsor: bool) -> ft.Control:
     """
     page = ft.context.page
     view_path = ft.use_view_path()
-    location = ft.use_route_location()  # changes as the picker opens and goes back
-    # A new token at each change. Not the location itself: out and back with the reads
-    # held, Flet cancels them, and the last to land was made at this same one (#873).
-    arrival = ft.use_memo(object, [owner, location])
+    arrival = use_arrival(owner)  # changes as the picker opens and goes back
     svc = use_services()
     staff = use_staff()
     read, set_read = ft.use_state(not_read)  # None until the first read

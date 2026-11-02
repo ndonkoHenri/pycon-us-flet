@@ -52,7 +52,7 @@ from pycon_us.services import use_services
 from pycon_us.services.errors import report_errors
 from pycon_us.staff import use_staff
 from pycon_us.ui.scan_screen import NotAvailable, ScanScreen
-from pycon_us.ui.staff_picker import Reading
+from pycon_us.ui.staff_picker import Reading, use_arrival
 from pycon_us.ui.tool_controls import context_chip, tool_button
 
 TITLE = next(tool.title for tool in TOOLS if tool.key is ToolKey.DOOR)
@@ -68,13 +68,13 @@ class Read:
 
     Attributes:
         owner: The account it was read for; another's never stands (D-423).
-        location: The route location it was read at; until the read at the current
-            one lands, the choice may be stale, so scanning waits.
+        arrival: ``DoorTool``'s token for the location it was read at; until the read
+            with the current one lands, the choice may be stale, so scanning waits.
         choice: The session, or sessions, chosen, or None.
     """
 
     owner: str
-    location: str
+    arrival: object
     choice: DoorChoice | None
 
 
@@ -108,7 +108,7 @@ def DoorTool(*, owner: str) -> ft.Control:
     """
     page = ft.context.page
     view_path = ft.use_view_path()
-    location = ft.use_route_location()  # changes as the picker opens and goes back
+    arrival = use_arrival(owner)  # changes as the picker opens and goes back
     svc = use_services()
     prefs = use_prefs()
     staff = use_staff()
@@ -119,14 +119,14 @@ def DoorTool(*, owner: str) -> ft.Control:
 
     @report_errors
     async def read_key() -> None:
-        set_read(Read(owner, location, await read_door_session(svc.storage)))
+        set_read(Read(owner, arrival, await read_door_session(svc.storage)))
 
-    ft.use_effect(read_key, [owner, location])
+    ft.use_effect(read_key, [arrival])
     current = read if read is not None and read.owner == owner else None
     needs_session = current is not None and current.choice is None
     # Back from the picker, the old choice shows until the new read lands; scanning
     # waits, so no badge is checked against the old session's list meanwhile.
-    rereading = current is not None and current.location != location
+    rereading = current is not None and current.arrival is not arrival
 
     @report_errors
     def open_picker() -> None:
