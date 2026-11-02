@@ -11,7 +11,6 @@ were.
 import re
 from collections.abc import Iterable
 from dataclasses import dataclass
-from typing import Literal
 
 from pycon_us.year_schema import YearDataError
 
@@ -20,8 +19,6 @@ _SLUG = re.compile(r"[a-z0-9]+(?:-[a-z0-9]+)*")
 
 TRACK_GROUPS = ("talks", "hands-on", "community", "logistics")
 """The filter-sheet groups a track can belong to, in display order (DATA-14)."""
-
-type TrackFormat = Literal["short", "plural", "long"]
 
 
 @dataclass(frozen=True)
@@ -33,7 +30,6 @@ class Track:
             upper-cased (``Ai``, ``Lightning-talks``, ``Open Space``).
         short: The name on badges and rows (``AI``).
         plural: The title of a list of its sessions (``Future of AI with Python``).
-        long: The full name, for session detail (``The Future of AI with Python``).
         icon: The name of an outlined ``ft.Icons`` member (D-27).
         group: Its group in the filter sheet, one of ``TRACK_GROUPS``.
         slug: Its page's segment in ``/more/tracks/<slug>`` (DATA-29): written out,
@@ -48,7 +44,6 @@ class Track:
     key: str
     short: str
     plural: str
-    long: str
     icon: str
     group: str
     slug: str

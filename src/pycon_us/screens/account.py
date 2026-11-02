@@ -21,6 +21,7 @@ the page shows a state instead.
 """
 
 import time
+from typing import cast
 
 import flet as ft
 from flet.components.hooks.use_ref import MutableRef
@@ -76,14 +77,6 @@ SIGNED_OUT_STATE = "You're not signed in"
 SIGNED_OUT_STATE_BODY = "Sign in from More to see your account."
 
 
-def not_asking() -> bool | None:
-    """Return None: the sign-out dialog is closed, the page's first state.
-
-    A function, so ``ft.use_state`` keeps the state typed as ``bool | None``.
-    """
-    return None
-
-
 @ft.component
 def AccountPage() -> ft.View:
     """The Account page: the account, its access, its sync, Discord and Sign out."""
@@ -96,7 +89,7 @@ def AccountPage() -> ft.View:
     staff = use_staff()  # the dialog's count follows each pass (D-414)
     margin = use_margin(LIST)  # its width class (D-305)
     # None while closed, else whether My schedule had synced when it opened.
-    asking, set_asking = ft.use_state(not_asking)
+    asking, set_asking = ft.use_state(cast(bool | None, None))
     syncing, set_syncing = ft.use_state(False)  # Sign out's try before it asks
     kicked: MutableRef[int | None] = ft.use_ref(None)  # the dialog's Sync now
     _, set_kicked_at = ft.use_state(-1)  # a re-render, so its ring shows at once
