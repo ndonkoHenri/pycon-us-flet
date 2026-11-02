@@ -25,7 +25,7 @@
 | Mock API, client, signing, outbox (§4) | `httpx.MockTransport`, hypothesis | every PR, from P3 | yes |
 | UI smoke flows (§5) | `flet test`, `flet_app`, `RemoteTester` | UI-heavy PRs; phase exits | no |
 | Device journeys and regression matrices (§5.5) | Maestro on packaged builds (`maestro/`) | PRs that change a journey; phase exits; a matrix's PRs | no |
-| Goldens (§6) | `take_screenshot`, `assert_screenshot` | P4 only | no |
+| Goldens (§6) | `adb exec-out screencap` on Android, `take_screenshot` on iOS; `assert_screenshot` | P4 only | no |
 | Accessibility (§7) | contrast test; flows at 200 %; screen readers | every PR (contrast); phase exits | contrast only |
 | Device checklist and performance (§8, §9) | packaged builds on an Android emulator and an iOS simulator; the iPhone for hardware checks (D-102) | phase exits | no |
 | Public feed check (§12) | `tools/check_feed.py`, `httpx.MockTransport` in its tests | by hand while the repo is private; weekly once it is public (D-273) | its tests; the check itself runs on its own |
@@ -368,6 +368,7 @@ Faults are raised by the transport or set on the mock, never by code in the app.
 | Connect timeout (a test's `Wire.before` raises `httpx.ConnectTimeout`) | the request never leaves | as `connect`: not flagged |
 | Timeout (`timeout`) | transport raises `httpx.ReadTimeout` before `handle`; per-endpoint timeouts match Ionic's table (API-12) | `NetworkError` with `maybe_sent` True: a read timeout can come after the server had it, so the row is flagged though this mock recorded nothing |
 | Server committed, response lost (`lost_response`) | transport calls `handle`, then raises `httpx.ReadError` | `NetworkError` with `maybe_sent` True; row stays pending and is flagged "may be recorded twice" for good (D-410); the retry must not duplicate under idempotent semantics (below) |
+| Server committed, reply unreadable (a test's `ReplyReplaced`, `tests/api_clients.py`) | `handle` runs, then a 200 whose body is not JSON or has no envelope | `ApiError.unreadable` (`status` None); an outbox row is counted, flagged "may be recorded twice" for good and resent after the backoff; Swag pickup says "Not confirmed" and the CoC review "may have been recorded" with Record anyway, neither resending on its own (#874, D-410, D-434). An error envelope under 200 or an error status stays a refusal, unflagged |
 | Expired auth (`revoked`) | mock answers 401 for every signed call | `ApiError.is_auth`; sign-in prompt; queue kept |
 | Skewed clock (`MockState.skew`) | mock clock offset, 900 s in the tests | skew learned from `Date`, one retry, then success |
 | Account or sponsor switch with rows pending | changed between syncs | rows keep owner and sponsor snapshot |
@@ -382,7 +383,7 @@ A hypothesis `RuleBasedStateMachine` (`tests/test_outbox_machine.py`) drives the
 - a row's owner, sponsor snapshot, kind, code, idempotency key and scan time never change after enqueue; a note keeps its lead's sponsor;
 - only rows sent successfully are synced, and a synced row is never due again;
 - network failures never increase `tries`; a row is `failed` exactly at 10 counted failures;
-- a row is flagged `maybe_sent` ("may be recorded twice") exactly from its first lost answer on, whatever follows (D-410);
+- a row is flagged `maybe_sent` ("may be recorded twice") exactly from its first lost or unreadable answer on, whatever follows (D-410);
 - a note is never due before its lead is synced, and its lead row is kept while it waits;
 - one lead and one note row per (owner, code); at most one door row per (code, products, session).
 
@@ -399,7 +400,7 @@ The machine records each row's attribution at enqueue time, and what it expects 
 | Fixture | `flet_app` (function scope, `flet/pytest_plugin.py`): each test function is a fresh `flutter test` launch, so **one journey per test function**. `flet_app.page` is not available in device mode (it raises `RuntimeError: page is not initialized`). Flows reach the app only through `flet_app.tester` finders. |
 | Tester | `flet_app.tester` is a `RemoteTester` (`flet.testing.remote_tester`): `find_by_semantics_identifier`, `find_by_text`, `find_by_text_containing`, `find_by_tooltip`, `find_by_key`, `find_by_icon`, `tap`, `long_press`, `enter_text`, `mouse_hover`, `pump(duration)`, `pump_and_settle(duration)`, `take_screenshot(name)`. A `Finder` has `count`, `first`, `last`, `at(i)`. |
 | Absent on device | `drag`, `drag_from`, `tap_at`, `mouse_click`, `right_mouse_click`, `mouse_double_click` and the `*_at` variants exist only on the host `Tester` (F21). `RemoteTester.pump_and_settle` has no `timeout` argument; each call fails after a fixed 60 s. |
-| Broken on device (#78) | `take_screenshot` works once per run on Android: it converts the Flutter surface to an image on every call, and the second call fails ("Surface already converted to an image"). `find_by_icon` sends Flet's packed icon value (`int(ft.Icons.CHEVRON_RIGHT)` is `0x10551`, set and index) where the device builds `IconData(<value>, fontFamily: "MaterialIcons")` from it (`_parseIcon` in `flet_integration_test`'s `remote_widget_tester.dart`), so it cannot match a Material icon (read in the source, not tried on a device). Flows use `adb exec-out screencap` / `simctl io screenshot` and find rows by text or identifier (D-171). |
+| Broken on device (#78) | `take_screenshot` works once per run on Android: it converts the Flutter surface to an image on every call, and the second call fails ("Surface already converted to an image"; U280, [#884](https://github.com/ndonkoHenri/pycon-us-flet/issues/884), F300). `find_by_icon` sends Flet's packed icon value (`int(ft.Icons.CHEVRON_RIGHT)` is `0x10551`, set and index) where the device builds `IconData(<value>, fontFamily: "MaterialIcons")` from it (`_parseIcon` in `flet_integration_test`'s `remote_widget_tester.dart`), so it cannot match a Material icon (read in the source, not tried on a device). Flows use `adb exec-out screencap` / `simctl io screenshot` and find rows by text or identifier (D-171). |
 | Lifecycle | Every run packages the app's Python again, then `flutter test` installs a debug build, launches it and uninstalls it when the flow ends: each flow starts from a fresh install, with the app's own bundle id (development.md §5.7). Finders skip offstage widgets (Flutter's `skipOffstage`): once a push has finished, the covered View's controls are no longer found, which is how a flow knows a push or a pop is over. |
 | Assertions | A Flutter-side error (for example "RenderFlex overflowed") makes `flutter test` exit non-zero, and `FletTestApp.teardown()` then raises, so the test fails even if every Python assertion passed. |
 | Targets | `FletTestApp` points the app at `10.0.2.2` on Android and `127.0.0.1` on iOS (`flet_test_app.py:295`). Those reach the laptop only from an **emulator or simulator**, so flows run there; the iPhone is covered by the device checklist (§9). |
@@ -573,9 +574,22 @@ checklist (§9). A regression matrix runs on a PR that touches what it guards, a
 Goldens churn while the UI evolves, so a handful arrive only in P4 (D-78):
 
 - **Set:** Now, Schedule and Session detail, each in light and dark: six images.
-- **One test, one launch:** `tests/ui/test_goldens.py` visits all six with the fixture feed and a fixed clock, switching the theme in Settings: `flet_app.assert_screenshot(name, await t.take_screenshot(name))` (99.0 % similarity by default).
-- **One device:** a named Android emulator (recorded in the docstring); images in `tests/ui/golden/android/goldens/`. iOS goldens are optional.
-- **Updating:** `-u` records; after an intentional change, `--update-failed-goldens` rewrites only what changed. The PR explains the image diffs. If the status bar shows in captures, freeze its clock with SystemUI demo mode.
+- **One test, one launch:** `tests/ui/test_goldens.py` visits all six with the fixture feed and a fixed clock, switching the theme in Settings. Each shot lets the screen settle, then runs `flet_app.assert_screenshot(name, await capture(t, name))` (99.0 % similarity by default).
+- **Capture:** `RemoteTester.take_screenshot` works once per launch on Android (U280, [#884](https://github.com/ndonkoHenri/pycon-us-flet/issues/884), F300), so six shots in one launch take the device's own bytes there; `assert_screenshot` takes any PNG bytes. On iOS, `take_screenshot` has no such limit. The helper #840 adds to `tests/ui/helpers.py`, beside `screenshot()`:
+
+  ```python
+  async def capture(t: RemoteTester, name: str) -> bytes:
+      """Return the screen as PNG bytes for ``assert_screenshot``."""
+      if PLATFORM == "android":
+          # take_screenshot's second call in a launch fails here (U280, #884).
+          return await run(adb(), "-s", DEVICE, "exec-out", "screencap", "-p")
+      return await t.take_screenshot(name)
+  ```
+
+  This path is read from the sources at the pin; no device has run it yet, and #840's first run is its proof. When U280 is fixed, the helper can go.
+- **What Android's capture holds:** the whole screen, status and navigation bars included. It pumps no frame, hence the settling first (`await t.pump_and_settle()`). `take_screenshot` pumps one and draws only the Flutter view (F300).
+- **One device:** a named Android emulator (recorded in the docstring); images in `tests/ui/golden/android/goldens/`. A capture of another size is not a failure: the comparison resizes it first (F300). iOS goldens are optional.
+- **Updating:** `-u` records; after an intentional change, `--update-failed-goldens` rewrites only what changed. The PR explains the image diffs. On Android, every capture shows the status bar, so freeze its clock and icons with SystemUI demo mode before recording or comparing; #840 writes the commands down here.
 
 ## 7. Accessibility checks (D-33)
 
@@ -852,7 +866,7 @@ Not in Flet today. Each has an interim; the upstream fixes are candidates withou
 | `RemoteTester.pump_and_settle` has a fixed 60 s timeout | `wait_for_id` polling | A `timeout` argument, as on `Tester` |
 | No accessibility guideline checks | Accessibility Scanner, Accessibility Inspector | Flutter's `meetsGuideline` on the tester |
 | No text-scale emulation | `adb` / `simctl` settings (§7.2) | With U16 `PageMediaData.text_scale_factor` |
-| `RemoteTester.take_screenshot` fails from its second call on Android (#78) | `adb exec-out screencap -p`, `xcrun simctl io <udid> screenshot` | Convert the surface to an image only once per run (`flet_integration_test`'s `takeScreenshot`) |
+| `RemoteTester.take_screenshot` fails from its second call on Android (U280, [#884](https://github.com/ndonkoHenri/pycon-us-flet/issues/884), F300; #78) | `adb exec-out screencap -p`, `xcrun simctl io <udid> screenshot`; §6's goldens feed the Android bytes to `assert_screenshot` | Convert the surface to an image only once per run (`flet_integration_test`'s `takeScreenshot`) |
 | `RemoteTester.find_by_icon` sends Flet's packed icon value, so it cannot find a Material icon (#78, from the source) | Find by text, tooltip or identifier | Decode the packed value on the device, as Flet's own icon parsing does |
 | No profile build or performance overlay | Perfetto, Instruments on release builds (§8) | A profile build mode in `flet build` |
 

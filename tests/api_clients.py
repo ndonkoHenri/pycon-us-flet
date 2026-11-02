@@ -43,6 +43,23 @@ def replying(
     )
 
 
+class ReplyReplaced(httpx.AsyncBaseTransport):
+    """A transport that lets ``inner`` commit each request, then answers ``content``.
+
+    What a server that applied a call but answered unusably looks like to the client.
+    """
+
+    def __init__(self, inner: httpx.AsyncBaseTransport, content: bytes) -> None:
+        """Wrap ``inner``, whose replies are replaced with ``content``."""
+        self.inner = inner
+        self.content = content
+
+    async def handle_async_request(self, request: httpx.Request) -> httpx.Response:
+        """Let ``inner`` commit the request, and answer ``content`` with HTTP 200."""
+        await self.inner.handle_async_request(request)
+        return httpx.Response(200, content=self.content)
+
+
 class Login:
     """The credentials a client signs with, as the Account store will hand them over."""
 

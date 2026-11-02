@@ -80,11 +80,11 @@ class NetworkError(Exception):
 
 
 class ApiError(Exception):
-    """An answer that cannot be used: an HTTP error status, or a malformed response.
+    """An answer that cannot be used: the server's refusal, or a reply we can't read.
 
     Attributes:
-        status: The HTTP status, or None when the response could not be read at all
-            (e.g. too many redirects or an undecodable body).
+        status: The HTTP status of a refusal (an error status, or an error envelope
+            under a success), or None when the reply could not be read (`unreadable`).
         message: What went wrong: the server's own ``error`` or ``message`` when it sent
             one, for the log.
     """
@@ -93,7 +93,7 @@ class ApiError(Exception):
         """Create the error.
 
         Args:
-            status: The HTTP status, or None when there is none to report.
+            status: The refusal's HTTP status, or None for a reply that can't be read.
             message: What went wrong.
         """
         super().__init__(status, message)
@@ -113,6 +113,16 @@ class ApiError(Exception):
         alike (``tools/mock_api/README.md``, Unknown).
         """
         return self.status in (401, 403)
+
+    @property
+    def unreadable(self) -> bool:
+        """Whether a reply came that says nothing: the call may have been applied.
+
+        Not JSON, no envelope, an undecodable body or a shape the caller can't parse,
+        unlike a refusal, which says the server didn't apply it. So a write must treat
+        this as ``NetworkError.maybe_sent``: "not confirmed", never "not recorded" (D-410).
+        """
+        return self.status is None
 
 
 async def fetch_feed(
@@ -216,9 +226,10 @@ def unwrap(response: httpx.Response, enveloped: bool) -> object:
         The decoded body (JSON ``null`` included), or its ``data`` when ``enveloped``.
 
     Raises:
-        ApiError: An error status (with the body's ``error`` or ``message`` when it has
-            one), a ``{"code", "error"}`` envelope whatever the status, a body that is
-            not JSON, or an envelope without ``data``.
+        ApiError: A refusal: an error status (with the body's ``error`` or ``message``
+            when it has one) or a ``{"code", "error"}`` envelope whatever the status.
+            Or ``unreadable``: a success whose body is not JSON or has no envelope, which
+            the server may have applied (#874).
     """
     try:
         body = json.loads(response.content)
@@ -228,7 +239,7 @@ def unwrap(response: httpx.Response, enveloped: bool) -> object:
     if not response.is_success:
         raise ApiError(status, error_message(body) or response.reason_phrase)
     if body is NOT_JSON:
-        raise ApiError(status, "The reply is not JSON.")
+        raise ApiError(None, "The reply is not JSON.")
     # An error envelope is a refusal even under HTTP 200 (#665).
     if isinstance(body, dict) and "code" in body and isinstance(body.get("error"), str):
         raise ApiError(status, body["error"])
@@ -236,7 +247,7 @@ def unwrap(response: httpx.Response, enveloped: bool) -> object:
         return body
     if isinstance(body, dict) and "data" in body:
         return body["data"]
-    raise ApiError(status, error_message(body) or "The reply has no data.")
+    raise ApiError(None, error_message(body) or "The reply has no data.")
 
 
 class ApiClient:
