@@ -338,7 +338,7 @@ def test_sync_is_blocked_signed_out_expired_or_without_a_client(
 ) -> None:
     """Each reason in words; none while a worker can run."""
     svc = cast(Services, type("Svc", (), {"api": None, "outbox": object()})())
-    account = Account(restored=True)
+    account = Account()
     assert sync_blocked(svc, account) == "Set the mock API URL in Developer to sync."
     svc = cast(Services, type("Svc", (), {"api": object(), "outbox": object()})())
     assert sync_blocked(svc, account) == "Sign in to sync."

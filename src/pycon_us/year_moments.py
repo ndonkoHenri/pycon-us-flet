@@ -30,9 +30,6 @@ from pycon_us.year_keynotes import Keynote, keynote_of
 from pycon_us.year_pages import check_https, check_text
 from pycon_us.year_schema import YearDataError
 
-CATEGORIES = ("lightning", "open_space", "keynote")
-"""What a moment is about; the reminder settings turn each one on or off (NOTIF-05)."""
-
 HAND_CATEGORIES = ("lightning", "open_space")
 """The categories a hand-authored moment can have: keynote moments are only derived."""
 
@@ -57,7 +54,8 @@ class EventReminder:
 
     Attributes:
         id: Its notification id: 8000–8049 written by hand, 8050–8099 derived (D-274).
-        category: One of ``CATEGORIES``.
+        category: What it is about, which the reminder settings turn on or off
+            (NOTIF-05): ``"lightning"``, ``"open_space"`` or ``"keynote"``.
         at: When it fires; aware.
         title: The notification's title.
         body: The notification's text.

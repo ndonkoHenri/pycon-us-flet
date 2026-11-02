@@ -86,8 +86,8 @@ def recorder(state: MockState) -> Recorder:
 
 @pytest.fixture
 def account() -> Account:
-    """A signed-out ``Account`` store, restored, as after a first launch."""
-    return Account(restored=True)
+    """A signed-out ``Account`` store, as after a first launch."""
+    return Account()
 
 
 @pytest.fixture
