@@ -74,6 +74,9 @@ them until a device runs them.
 **7. Look at the bundle.** The app never reads `2026/` again, but `flet build` copies all of `src/`, so its 860 KB
 and its 1.4 MB of plans still ship. `[tool.flet.app] exclude` can drop them; this has not been tried.
 
+A new brand's colours are not year data: they are code and build settings (`theme.py`, `pyproject.toml`'s splash and
+boot screen).
+
 The mock server and its badge sheet follow `config.YEAR` on their own. The seed's `products` keep their made-up
 "Wed May 13" names, and `tests/fixtures/mock/seed.json` keeps 2026 for the tests.
 
