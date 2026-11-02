@@ -20,7 +20,7 @@ import flet as ft
 import pytest
 
 from pycon_us.account import Account, SignIn
-from pycon_us.config import load_year
+from pycon_us.config import YearData, load_year
 from pycon_us.core import outbox
 from pycon_us.core.outbox import Status
 from pycon_us.dev_options import DEV_MOCK_API_URL
@@ -61,7 +61,13 @@ from tools.mock_api.transport import mock_transport
 
 VIEW = "/more/account"
 
-DISCORD_URL = "https://us.pycon.org/2026/speaker/join_discord/"
+DISCORD_URL = "https://example.org/2026/speaker/join_discord/"
+
+YEAR = load_year(2026)
+WITH_DISCORD = replace(
+    YEAR, conference=replace(YEAR.conference, speaker_discord_url=DISCORD_URL)
+)
+"""2026 as if its site still had the Discord page, which went with the live site (#824)."""
 
 type Show = Callable[..., Awaitable[Shown]]
 
@@ -116,7 +122,12 @@ async def show(
     """
     async with AsyncExitStack() as stack:
 
-        async def render(role: str | None = "attendee", **kwargs: object) -> Shown:
+        async def render(
+            role: str | None = "attendee",
+            *,
+            year: YearData = WITH_DISCORD,
+            **kwargs: object,
+        ) -> Shown:
             """Render the page, signed in as the seeded ``role`` (None: signed out)."""
             private_api = PrivateApi(recorder, credentials=account.credentials)
             prefs = Prefs(loaded=True)
@@ -126,7 +137,7 @@ async def show(
                 showing(
                     AccountPage,
                     account_screen,
-                    year=load_year(2026),
+                    year=year,
                     conference=Conference(),
                     tmp_path=tmp_path,
                     monkeypatch=monkeypatch,
@@ -272,6 +283,15 @@ async def test_speaker_discord_opens_the_year_s_page_in_the_in_app_browser(
     shown = await show("speaker")
     await shown.click(button(shown, "account.discord"))
     assert shown.launcher.launched == [(DISCORD_URL, ft.LaunchMode.IN_APP_BROWSER_VIEW)]
+
+
+async def test_2026_s_speakers_have_no_discord_button_since_its_page_is_gone(
+    show: Show,
+) -> None:
+    """The page went with the live site, so no heading and no dead button (#824)."""
+    shown = await show("speaker", year=YEAR)
+    assert shown.nodes("account.discord") == []
+    assert "Speakers" not in shown.texts()
 
 
 async def test_offline_speaker_discord_is_disabled_with_the_reason(

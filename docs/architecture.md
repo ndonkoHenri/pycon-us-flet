@@ -857,12 +857,12 @@ report_app_issue = "https://github.com/OWNER/pycon-us/issues"
 
 [open_spaces]                       # optional: the Open spaces page (EVT-01, EVT-02; D-205)
 intro = "Open spaces are hour-long sessions that attendees organize during the conference, ..."
-propose_url = "https://us.pycon.org/2026/signup/open-space/"   # "Propose an open space"
+propose_url = "https://us.pycon.org/2027/signup/open-space/"   # optional: "Propose an open space"; 2026 has none (#824)
 
 [lightning_talks]                   # optional: the Lightning talks page (EVT-03; D-205)
 heading = "What's a lightning talk?"
 intro = ["Five minutes at most, ...", "..."]   # the copy card's paragraphs
-signup_url = "https://us.pycon.org/2026/signup/lightning-talk/"
+signup_url = "https://us.pycon.org/2027/signup/lightning-talk/"   # optional: "Sign up for a lightning talk"; 2026 has none (#824)
 info_url = "https://us.pycon.org/2026/events/lightning-talks/"
 
 [[lightning_talks.doubts]]          # "Think you can't do one?", in order

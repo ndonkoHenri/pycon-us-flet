@@ -19,7 +19,9 @@ Notes for readers of the tests:
 - The app's bundled snapshot, `src/pycon_us/data/2026/conference.json`, is a separate file (D-135):
   `tools/update_snapshot.py` refreshes it before builds, while these stay as recorded, so the exact
   counts the tests assert never move with a snapshot refresh. When the bytes are equal, as on
-  2026-10-12, the repository stores them once (same blob).
+  2026-10-12, the repository stores them once (same blob). Since 2026-11-02 they differ: the live feed
+  names `pycon-archive.python.org` for the site and its assets and lists the schedule in another order,
+  and the recorded feed keeps `us.pycon.org` and S3 (#824).
 
 To record the 2027 feed when it appears: `curl -sSfo tests/fixtures/feeds/conference-2027.json
 https://us.pycon.org/2027/schedule/conference.json`, then add its row with `shasum -a 256`.
