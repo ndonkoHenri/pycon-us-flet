@@ -37,7 +37,8 @@ Start with [`PLAN.md`](PLAN.md): vision, principles, scope, phases with exit cri
 Work happens in GitHub issues and pull requests: phases are milestones, larger pieces are epics with sub-issues,
 and each change is one issue and one PR. [`AGENTS.md`](AGENTS.md) is the operating manual for humans and AI agents:
 the workflow, labels, branches, reviews and the definition of done. Decisions change only through a
-`needs-decision` issue and a PR that updates `docs/decisions.md`.
+`needs-decision` issue and a PR that updates `docs/decisions.md`. To contribute, start with
+[`CONTRIBUTING.md`](CONTRIBUTING.md).
 
 ## Licence
 
