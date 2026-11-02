@@ -67,7 +67,7 @@
 | iOS minimum | 15.0, fixed by the template | `TPL/ios/Runner.xcodeproj/project.pbxproj:348` |
 | Android release signing without a keystore | Signed with the **debug key**: it installs, but cannot go to Play | `TPL/android/app/build.gradle.kts:103-119` |
 | `flet build ipa` and signing | No profile configured: `--no-codesign` and only an `.xcarchive`. A profile configured but not installed: flet-cli stops within seconds, before Xcode. Installed: a signed `.ipa` (§8.2). | `CLI/commands/build.py:195-204, 297-389` |
-| What gets bundled | `[project].dependencies` (plus `[tool.flet.<platform>].dependencies`), pip-installed at build time. **`uv.lock` does not apply**, so bundled dependencies are pinned exactly in `pyproject.toml`. | `CLI/commands/build_base.py:2698-2741` |
+| What gets bundled | `[project].dependencies` (plus `[tool.flet.<platform>].dependencies`), pip-installed at build time. **`uv.lock` does not apply**, so bundled dependencies are pinned exactly in `pyproject.toml`; what those pull in is whatever pip resolves that day (§7.6). | `CLI/commands/build_base.py:2738-2780` |
 | App metadata at runtime | The app directory is copied, not installed, so `importlib.metadata` cannot see `pycon-us` | F15 |
 | Deep links on mobile | Each key (`scheme`, `host`) from `[tool.flet.<android\|ios>.deep_linking]`, else from the common `[tool.flet.deep_linking]` (`flet-dev/flet#6953`, in the pin since `68a4b326c`). The template registers a link only when both resolve: on Android an intent filter for the scheme and host, on iOS a `CFBundleURLTypes` entry for the scheme alone (the host is its `CFBundleURLName`). The host never reaches Python: Flet keeps only the link's path, query and fragment for `page.route`. | `CLI/commands/build_base.py:1449-1454, 3067-3089`; `TPL/android/app/src/main/AndroidManifest.xml:47-56`; `TPL/ios/Runner/Info.plist:53-69`; D-269 |
 | Gradle heap | The template default is `-Xmx8G`, more than a standard GitHub runner has. Our `-Xmx4G` override (`[tool.flet.android.gradle_properties]`) passed every build on the Mac and on `ubuntu-latest` (#54: at least 1 GB stayed available; §7.4). | `CLI/commands/build_base.py:1175-1184, 1290-1293` |
@@ -959,7 +959,7 @@ Only `example.com` and `example.org` sample accounts, the conference's public ad
 
 **Personal data in the text.** Look at the commit identities (`git -C build/sweep/mirror.git log --all --format='%ae%n%ce' | sort | uniq -c`), and grep the dump and `build/sweep/api` for phone numbers, emails and `/Users/`. A phone number that isn't a `555-01xx` fake or the Code of Conduct hotline needs a look. #847's first result lists what is already known.
 
-**Python dependencies.** The workspace's own Flet packages come from `.flet-src`, so they're left out of the export:
+**Python dependencies on the host.** `uv.lock` is what the tools and tests run on, and nothing else. The workspace's own Flet packages come from `.flet-src`, so they're left out of the export:
 
 ```sh
 uv export --locked --format requirements-txt --no-hashes --no-emit-workspace --no-editable -q -o build/sweep/req-all.txt
@@ -968,7 +968,23 @@ uvx pip-audit -r build/sweep/req.txt --no-deps --disable-pip
 osv-scanner -L uv.lock
 ```
 
-To see whether a hit ships to phones: `uv tree --locked --invert --package <name>`, then `uv tree --locked --no-default-groups`. Fix one with `uv lock --upgrade-package <name>`, and run `tools/check.sh`.
+Fix a hit here with `uv lock --upgrade-package <name>`, and run `tools/check.sh`. That changes nothing on a phone.
+
+**Python dependencies on phones.** `flet build` never reads `uv.lock` (§2). pip resolves `[project].dependencies` and everything they pull in when the build runs, wheels only, from PyPI and `pypi.flet.dev`, once per architecture. So only a build can say what ships, and the next build can ship something else. An iOS build of 2026-11-02 differed from the lock on three packages: `msgpack` 1.1.2 (lock: 1.2.3), `anyio` 4.16.0 (4.15.1) and `oauthlib` 4.0.1 (4.0.0).
+
+So audit builds, not the lock. On the day of the sweep, delete `build/site-packages`, make an Android build, and run this right after it. Then do the same with an iOS build, since each build replaces that folder:
+
+```sh
+for arch in build/site-packages/*/; do
+  echo "$arch"
+  find "$arch" -maxdepth 1 -name '*.dist-info' -exec basename {} .dist-info \; | sed -E 's/-([^-]+)$/==\1/' | grep -vE '^flet(_|==)' > build/sweep/req-phone.txt
+  uvx pip-audit -r build/sweep/req-phone.txt --no-deps --disable-pip
+done
+```
+
+The result covers those builds only. `uv tree --locked --no-default-groups` lists the names that may ship, but its versions are the lock's.
+
+Fix a hit that ships with an exact pin in `[project].dependencies`, like `tzdata==2026.5`, then `uv lock`, or by seeing that a new build already resolves the fixed version. Either way, run the audit on a new build to confirm it. If no phone wheel has the fix, a pin would break the build, so it's an `upstream` issue here (D-213). One is known: `msgpack` 1.1.2, the newest wheel on `pypi.flet.dev`, has two advisories (#890).
 
 **Dart dependencies.** The pin's client has a lockfile, and a real build has the set that ships, with the extensions (§5.3):
 
