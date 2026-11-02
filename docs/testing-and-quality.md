@@ -376,12 +376,12 @@ Faults are raised by the transport or set on the mock, never by code in the app.
 A hypothesis `RuleBasedStateMachine` (`tests/test_outbox_machine.py`) drives the pure rules in `core/outbox.py` with rules for enqueue (lead, note, door), sync success, network failure (before the request left, or a lost answer), server failure (one, or a streak of up to 10), sponsor switch, account switch, time passing and "Retry failed". Invariants after every step:
 
 - no unsynced row is ever lost, an account switch included;
-- a row's owner, sponsor snapshot, kind, code, idempotency key and scan time never change after enqueue; a note keeps its lead's sponsor;
+- a row's owner, sponsor snapshot, kind, code, idempotency key and scan time never change after enqueue; a note keeps its lead's sponsor, and a scan for another sponsor always queues its own row (D-459);
 - only rows sent successfully are synced, and a synced row is never due again;
 - network failures never increase `tries`; a row is `failed` exactly at 10 counted failures;
 - a row is flagged `maybe_sent` ("may be recorded twice") exactly from its first lost answer on, whatever follows (D-410);
-- a note is never due before its lead is synced, and its lead row is kept while it waits;
-- one lead and one note row per (owner, code); at most one door row per (code, products, session).
+- a note is never due before its lead, the same sponsor's, is synced, and that lead's row is kept while it waits;
+- one lead and one note row per (owner, code, sponsor); at most one door row per (code, products, session).
 
 The machine records each row's attribution at enqueue time, and what it expects of `tries` and the status, and compares them in `@invariant()`s; `TestOutbox = OutboxMachine.TestCase` exposes it to pytest. Each row of architecture §12.2's table, and `due()`'s order, is a plain test in `tests/test_outbox.py`. The sqlite layer (`services/`) gets plain tests on a temporary file: rows survive closing and reopening the connection mid-sync; `PRAGMA user_version` migrations run from every earlier version; WAL mode is on.
 

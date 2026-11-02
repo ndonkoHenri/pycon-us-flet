@@ -25,9 +25,9 @@ sees neither.
 
 After a capture (or a queued scan) the result has "Add note" (``lead.add_note``), and
 after a duplicate "Open lead" (``lead.open_lead``): both open ``ui/lead_note_sheet.py``'s
-sheet for that lead, prefilled with its saved note (#742, LEAD-10). Scanning is paused
-while it is open ("Paused while the note is open"), and the focus goes back to the
-field when it closes.
+sheet for that lead, the sponsor it was scanned for whatever is chosen since (D-459),
+prefilled with its saved note (#742, LEAD-10). Scanning is paused while it is open
+("Paused while the note is open"), and the focus goes back to the field when it closes.
 
 Under the field, "Leads (42)" (``lead.leads``, the account's lead rows, read again as
 the outbox changes) pushes ``staff_leads.py``'s list at ``…/staff/lead/leads`` (#743,
@@ -170,7 +170,7 @@ def LeadTool(*, owner: str, for_sponsor: bool) -> ft.Control:
     on_badge = partial(
         capture, svc.outbox, staff, svc.kick_sync, owner=owner, sponsor=sponsor
     )
-    sheet = use_note_sheet(owner=owner, sponsor=sponsor)
+    sheet = use_note_sheet(owner=owner)
     paused = NOTE_OPEN if sheet.is_open else None
     note_actions = partial(lead_actions, open_note=sheet.open)
     leads = leads_button(count, open_leads)
@@ -251,7 +251,7 @@ def leads_button(count: int | None, on_click: ft.ControlEventHandler) -> ft.Cont
 
 
 def lead_actions(
-    shown: Shown, open_note: Callable[[str, str | None], None]
+    shown: Shown, open_note: Callable[[str, str | None, LeadSponsor | None], None]
 ) -> list[ft.Control]:
     """Return the result's button: "Add note" on a lead, "Open lead" on a duplicate.
 
@@ -261,7 +261,8 @@ def lead_actions(
 
     Args:
         shown: The result on the panel.
-        open_note: Opens the note sheet for a code and the name, if any.
+        open_note: Opens the note sheet for a code, the name if any, and the sponsor
+            the result's lead was scanned for.
     """
     result = shown.result
     if not result.code:
@@ -270,7 +271,7 @@ def lead_actions(
 
     @report_errors
     def opened(_: ft.Event[ft.FilledTonalButton]) -> None:
-        open_note(result.code, name)
+        open_note(result.code, name, result.sponsor)
 
     match result.outcome:
         case ScanOutcome.ACCEPTED | ScanOutcome.QUEUED:

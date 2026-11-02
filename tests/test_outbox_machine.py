@@ -88,12 +88,20 @@ class OutboxMachine(RuleBasedStateMachine):
 
     @rule(code=CODES)
     def scan_lead(self, code: str) -> None:
-        """Scan a badge; a lead already synced adds nothing."""
+        """Scan a badge for the sponsor chosen; its lead already synced adds nothing."""
         existing = [
             r
             for r in self.rows.values()
-            if (r.owner, r.kind, r.key) == (self.owner, Kind.LEAD, code)
+            if (r.owner, r.kind, r.key, r.sponsor_id)
+            == (self.owner, Kind.LEAD, code, self.sponsor[0])
         ]
+        others = tuple(
+            r.sponsor_name
+            for r in self.rows.values()
+            if (r.owner, r.kind, r.key) == (self.owner, Kind.LEAD, code)
+            and r.sponsor_id != self.sponsor[0]
+            and r.sponsor_name
+        )
         decision = outbox.scan_lead(
             self.rows.values(),
             owner=self.owner,
@@ -103,28 +111,37 @@ class OutboxMachine(RuleBasedStateMachine):
             sponsor_name=self.sponsor[1],
             now=self.now,
         )
+        assert decision.others == others
         if existing and existing[0].status is Status.SYNCED:
-            assert decision == Enqueued(Outcome.ALREADY, existing[0])
+            assert decision == Enqueued(Outcome.ALREADY, existing[0], others)
+        if not existing:
+            assert decision.outcome is Outcome.QUEUED  # never dropped for another's row
         self.store(
             decision,
             counted_from_zero=bool(existing) and existing[0].status is Status.FAILED,
         )
 
-    @rule(code=CODES, text=NOTES)
-    def save_note(self, code: str, text: str) -> None:
-        """Note a lead this account has scanned (the app offers notes after a scan)."""
-        if not any(
-            (r.owner, r.kind, r.key) == (self.owner, Kind.LEAD, code)
+    @rule(code=CODES, text=NOTES, pick=st.integers(0, 2))
+    def save_note(self, code: str, text: str, pick: int) -> None:
+        """Note one of this account's leads (the app offers notes on a lead's row).
+
+        The sheet takes the sponsor from the lead, whichever is chosen now (D-459).
+        """
+        leads = [
+            r
             for r in self.rows.values()
-        ):
+            if (r.owner, r.kind, r.key) == (self.owner, Kind.LEAD, code)
+        ]
+        if not leads:
             return
+        lead = leads[pick % len(leads)]
         decision = outbox.save_note(
             self.rows.values(),
             owner=self.owner,
             code=code,
             note=text,
-            sponsor_id=self.sponsor[0],
-            sponsor_name=self.sponsor[1],
+            sponsor_id=lead.sponsor_id,
+            sponsor_name=lead.sponsor_name,
             now=self.now,
         )
         assert (decision.outcome is Outcome.IGNORED) == (not text.strip())
@@ -213,10 +230,10 @@ class OutboxMachine(RuleBasedStateMachine):
                 self.api_errors[row.id] = 0
 
     def lead_synced(self, note: Row) -> bool:
-        """Return whether a note's lead row is on the server."""
+        """Return whether a note's lead row, the same sponsor's, is on the server."""
         return any(
-            (r.owner, r.kind, r.key, r.status)
-            == (note.owner, Kind.LEAD, note.key, Status.SYNCED)
+            (r.owner, r.kind, r.key, r.sponsor_id, r.status)
+            == (note.owner, Kind.LEAD, note.key, note.sponsor_id, Status.SYNCED)
             for r in self.rows.values()
         )
 
@@ -251,18 +268,22 @@ class OutboxMachine(RuleBasedStateMachine):
         for row in self.rows.values():
             if row.kind is Kind.NOTE and row.status is not Status.SYNCED:
                 assert any(
-                    (r.owner, r.kind, r.key) == (row.owner, Kind.LEAD, row.key)
+                    (r.owner, r.kind, r.key, r.sponsor_id)
+                    == (row.owner, Kind.LEAD, row.key, row.sponsor_id)
                     for r in self.rows.values()
                 )
 
     @invariant()
     def notes_go_to_their_leads_sponsor(self) -> None:
         """A note keeps its lead's sponsor snapshot, whatever sponsor was chosen since."""
-        leads = {(r.owner, r.key): r for r in self.rows.values() if r.kind is Kind.LEAD}
+        leads = {
+            (r.owner, r.key, r.sponsor_id): r
+            for r in self.rows.values()
+            if r.kind is Kind.LEAD
+        }
         for row in self.rows.values():
-            lead = leads.get((row.owner, row.key))
+            lead = leads.get((row.owner, row.key, row.sponsor_id))
             if row.kind is Kind.NOTE and lead is not None:
-                assert row.sponsor_id == lead.sponsor_id
                 assert row.sponsor_name == lead.sponsor_name
 
     @invariant()
@@ -281,9 +302,9 @@ class OutboxMachine(RuleBasedStateMachine):
 
     @invariant()
     def one_row_per_lead_note_and_check_in(self) -> None:
-        """One lead and one note row per (owner, code); one door row per check-in."""
+        """One lead and one note row per (owner, code, sponsor); one door row per key."""
         leads_and_notes = [
-            (r.owner, r.kind, r.key)
+            (r.owner, r.kind, r.key, r.sponsor_id)
             for r in self.rows.values()
             if r.kind is not Kind.DOOR
         ]

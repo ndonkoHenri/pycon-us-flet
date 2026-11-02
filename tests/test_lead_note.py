@@ -121,7 +121,7 @@ async def test_a_note_on_a_captured_lead_is_sent_and_confirmed(
     note_row = next(row for row in rig.rows() if row.kind is Kind.NOTE)
     assert status_text(note_row) == "Confirmed"
     assert rig.staff.pending == 0
-    assert saved_note(rig.db, rig.account.owner, ADA.code) == WARM
+    assert saved_note(rig.db, rig.account.owner, ADA.code, None) == WARM
 
 
 async def test_offline_a_note_waits_for_its_lead_then_follows_it_to_its_sponsor(
@@ -129,13 +129,12 @@ async def test_offline_a_note_waits_for_its_lead_then_follows_it_to_its_sponsor(
 ) -> None:
     """Queued lead, then a note: "Will sync." at once; back online, lead then note.
 
-    A staff account switched sponsor between the scan and the note: both still reach
-    the scan-time sponsor (STORE-11).
+    The sheet hands over the lead's sponsor, so both reach it (STORE-11, D-459).
     """
     await rig.sign_in("staff")
     rig.state.faults.inject("connect", until_cleared=True)
     assert await booth.scan(SAMPLE) is ScanOutcome.QUEUED
-    assert await booth.note(sponsor=EXAMPLE) == WILL_SYNC
+    assert await booth.note(sponsor=SAMPLE) == WILL_SYNC
     assert rig.staff.pending == 2 and notes(rig) == []
     rig.state.faults.clear()
     rig.clock.at += 60  # the backoff's tick
@@ -151,6 +150,33 @@ async def test_offline_a_note_waits_for_its_lead_then_follows_it_to_its_sponsor(
     ]
 
 
+async def test_each_sponsor_s_lead_keeps_its_own_note(rig: Rig, booth: Booth) -> None:
+    """One attendee, two sponsors: two notes, each prefilled and sent alone (D-459)."""
+    await rig.sign_in("staff")
+    owner = rig.account.owner
+    await booth.scan(EXAMPLE)
+    await booth.scan(SAMPLE)
+    hot = LeadNote(Interest.HOT, ("Partner",))
+    assert await booth.note(WARM, EXAMPLE) == NOTE_SAVED
+    assert saved_note(rig.db, owner, ADA.code, SAMPLE.id) == LeadNote()  # not Example's
+    assert await booth.note(hot, SAMPLE) == NOTE_SAVED
+    assert notes(rig) == [(1, compose(WARM)), (3, compose(hot))]
+    assert saved_note(rig.db, owner, ADA.code, EXAMPLE.id) == WARM
+    assert saved_note(rig.db, owner, ADA.code, SAMPLE.id) == hot
+
+
+async def test_a_note_waits_for_its_own_lead_though_another_sponsor_s_is_synced(
+    rig: Rig, booth: Booth
+) -> None:
+    """Example's lead is synced, Sample's still queued: Sample's note says "Will sync"."""
+    await rig.sign_in("staff")
+    await booth.scan(EXAMPLE)
+    rig.state.faults.inject("connect", until_cleared=True)
+    assert await booth.scan(SAMPLE) is ScanOutcome.QUEUED
+    assert await booth.note(sponsor=SAMPLE) == WILL_SYNC
+    assert notes(rig) == []
+
+
 async def test_an_edited_note_is_sent_again(rig: Rig, booth: Booth) -> None:
     """A synced note saved with new text is sent again, and prefills with the new."""
     await rig.sign_in("sponsor")
@@ -162,7 +188,7 @@ async def test_an_edited_note_is_sent_again(rig: Rig, booth: Booth) -> None:
         compose(WARM),
         "Interest: hot\nFollow-up: Partner",
     ]
-    assert saved_note(rig.db, rig.account.owner, ADA.code) == hot
+    assert saved_note(rig.db, rig.account.owner, ADA.code, None) == hot
 
 
 async def test_the_same_note_twice_records_once_under_idempotent_capture(
@@ -194,10 +220,10 @@ async def test_a_note_the_outbox_can_t_store_says_so(rig: Rig) -> None:
     assert store(None, ADA.code, WARM, owner=owner, sponsor=None) is None
     rig.db.close()
     assert store(rig.db, ADA.code, WARM, owner=owner, sponsor=None) is None
-    assert saved_note(rig.db, owner, ADA.code) is None  # unreadable, not empty
+    assert saved_note(rig.db, owner, ADA.code, None) is None  # unreadable, not empty
 
 
 def test_without_a_saved_note_the_sheet_starts_empty(db: OutboxDb) -> None:
     """No row for the lead: an empty note; no outbox to read: None, not empty."""
-    assert saved_note(db, "a@example.com", "MOCK0001") == LeadNote()
-    assert lead_note.saved_note(None, "a@example.com", "MOCK0001") is None
+    assert saved_note(db, "a@example.com", "MOCK0001", None) == LeadNote()
+    assert lead_note.saved_note(None, "a@example.com", "MOCK0001", None) is None

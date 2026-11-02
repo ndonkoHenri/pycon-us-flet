@@ -4,7 +4,8 @@
 of, so each module stays under about 400 lines (D-66): ``row_tile()``, one outbox row
 with its icon and word (``core.outbox.status_text()``: Queued, Failed, Confirmed, and
 "may be recorded twice" with a warning icon beside it, D-410), its kind and access
-code, when it was scanned and a failed row's last error (``status_icon()``, the leads
+code, when it was scanned, the sponsor of a staff account's lead or note (D-459) and a
+failed row's last error (``status_icon()``, the leads
 list's too, #743); a check-in the server answered with ``errors`` reads "Confirmed ·
 Already redeemed", flagged too, with the server's messages (D-441); ``sync_button()`` and ``retry_button()``; ``title_row()`` with
 Close, ``heading()``, ``note()`` and ``empty_line()``.
@@ -16,6 +17,7 @@ from datetime import UTC, datetime
 import flet as ft
 
 from pycon_us.core.admission import redeem_errors
+from pycon_us.core.lead_views import for_line
 from pycon_us.core.outbox import Kind, Row, Status, status_text
 from pycon_us.core.timefmt import ago_label
 from pycon_us.theme import Tokens
@@ -58,10 +60,10 @@ def status_icon(status: Status, tokens: Tokens) -> ft.Icon:
 
 
 def row_tile(row: Row, now: float, tokens: Tokens) -> ft.Control:
-    """Return one row: its icon, kind and code, its status and age, its last error.
+    """Return one row: its icon, kind and code, its status, age, sponsor and last error.
 
-    One node (ux.md §9), e.g. "Lead · A1B2C3, Failed · 2 minutes ago, Not found".
-    The icons are decorative: the words say the state, the flag included. Only the
+    One node (ux.md §9), e.g. "Lead · A1B2C3, Failed · 2 minutes ago, For Example Corp,
+    Not found", so two sponsors' leads on one attendee are told apart (D-459). The icons are decorative: the words say the state, the flag included. Only the
     access code is shown, never a name or the badge's validator (LEAD-08).
 
     Args:
@@ -73,6 +75,9 @@ def row_tile(row: Row, now: float, tokens: Tokens) -> ft.Control:
     refused = redeem_errors(row)  # the person is in; resending can't change it
     status = f"{status_text(row)} · {ALREADY_REDEEMED}" if refused else status_text(row)
     lines: list[ft.Control] = [ft.Text(f"{status} · {ago(row.created_at, now)}")]
+    if row.sponsor_name:
+        words = for_line(row.sponsor_name)
+        lines.append(ft.Text(words, color=ft.Colors.ON_SURFACE_VARIANT))
     reason = "; ".join(refused) if refused else row.last_error
     if reason and (refused or row.status is Status.FAILED):
         lines.append(ft.Text(reason, color=ft.Colors.ON_SURFACE_VARIANT))
