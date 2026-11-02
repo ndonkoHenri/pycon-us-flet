@@ -153,8 +153,9 @@ def LightningTalks() -> ft.View:
 def copy_card(copy: LightningTalksInfo, svc: Services) -> ft.Control:
     """Return the card that says what a lightning talk is, with the sign-up button.
 
-    The button only when the year has a sign-up: no dead control (ux.md §1). A filled card (M3's ``surface_container_highest``), its heading a level-2 heading
-    (F40) and its paragraphs in ``BODY_LARGE``, as descriptions are (ux.md §3.6); for
+    The button only when the year has a sign-up: no dead control (ux.md §1). A filled
+    card (M3's ``surface_container_highest``), its heading a level-2 heading (F40) and
+    its paragraphs in ``BODY_LARGE``, as descriptions are (ux.md §3.6); for
     screen readers the heading, the paragraphs and the button are nodes of their own,
     the heading read first and alone (D-211). The
     button leaves the app, so its icon is ``OPEN_IN_NEW`` and its name ends with
