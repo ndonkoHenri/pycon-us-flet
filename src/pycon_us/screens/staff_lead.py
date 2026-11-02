@@ -35,7 +35,6 @@ D-428): a page of its own rather than a tab, so this screen stays as the four to
 share it and a HID scanner never types into the list's search.
 """
 
-from collections.abc import Callable
 from dataclasses import dataclass
 from functools import partial
 
@@ -56,7 +55,7 @@ from pycon_us.services.errors import report_errors
 from pycon_us.services.pref_keys import SCANNER_CONSENT
 from pycon_us.staff import use_staff
 from pycon_us.staff_sponsor import read_sponsor
-from pycon_us.ui.lead_note_sheet import use_note_sheet
+from pycon_us.ui.lead_note_sheet import OpenNote, use_note_sheet
 from pycon_us.ui.scan_result import Shown
 from pycon_us.ui.scan_screen import NotAvailable, ScanScreen
 from pycon_us.ui.staff_picker import Reading
@@ -250,9 +249,7 @@ def leads_button(count: int | None, on_click: ft.ControlEventHandler) -> ft.Cont
     )
 
 
-def lead_actions(
-    shown: Shown, open_note: Callable[[str, str | None, LeadSponsor | None], None]
-) -> list[ft.Control]:
+def lead_actions(shown: Shown, open_note: OpenNote) -> list[ft.Control]:
     """Return the result's button: "Add note" on a lead, "Open lead" on a duplicate.
 
     A lead captured or queued gets "Add note"; "Already in your leads" gets "Open

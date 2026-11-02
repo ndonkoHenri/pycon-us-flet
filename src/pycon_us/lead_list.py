@@ -3,8 +3,8 @@
 LEAD-08. ``leads()`` returns the signed-in account's ``lead`` rows, newest first, each
 with whether a note row exists for its code and sponsor (D-459): pending, failed and
 synced alike, as synced rows are kept (D-56), and only that account's (D-414; other
-accounts' rows stay in Developer). ``lead_count()`` is the "Leads (42)" button's number. Both return None
-when the outbox can't be read (logged by ``OutboxDb``), never an empty list, so the
+accounts' rows stay in Developer). ``lead_count()`` is the "Leads (42)" button's
+number. Both return None when the outbox can't be read (logged by ``OutboxDb``), never an empty list, so the
 page says so instead of "No leads yet" (D-120).
 """
 

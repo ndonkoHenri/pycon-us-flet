@@ -48,6 +48,10 @@ from pycon_us.ui.lead_note_fields import follow_up_chip, interest_button
 from pycon_us.ui.queue_rows import heading, note
 from pycon_us.ui.semantics import named
 
+type OpenNote = Callable[[str, str | None, LeadSponsor | None], None]
+"""Opens the sheet for a lead: its code, the name if any, and the sponsor it was scanned
+for (None for a sponsor's own lead)."""
+
 MAX_LENGTH = 4000
 """The note's longest free text, in characters (ux.md §7.3)."""
 
@@ -208,12 +212,11 @@ class NoteSheet:
     """What the Lead scanner gets from ``use_note_sheet()``.
 
     Attributes:
-        open: Opens the sheet for a lead: its code, the name if the result had one,
-            and the sponsor it was scanned for (None for a sponsor's own lead).
+        open: Opens the sheet for a lead.
         is_open: The sheet is open: the scan screen pauses scanning meanwhile.
     """
 
-    open: Callable[[str, str | None, LeadSponsor | None], None]
+    open: OpenNote
     is_open: bool
 
 

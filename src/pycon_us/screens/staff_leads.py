@@ -42,7 +42,7 @@ from pycon_us.staff import use_staff
 from pycon_us.staff_sponsor import read_sponsor
 from pycon_us.theme import Tokens, use_tokens
 from pycon_us.ui.fields import SearchField, found_count, use_field_query
-from pycon_us.ui.lead_note_sheet import use_note_sheet
+from pycon_us.ui.lead_note_sheet import OpenNote, use_note_sheet
 from pycon_us.ui.queue_rows import status_icon
 from pycon_us.ui.scaffold import AppScaffold
 from pycon_us.ui.scan_screen import NotAvailable
@@ -114,12 +114,8 @@ def LeadList(*, owner: str, for_sponsor: bool) -> ft.Control:
     sponsor, set_sponsor = ft.use_state(no_sponsor)
     only, set_only = ft.use_state(False)
     mounted = ft.use_ref(True)  # cleared on unmount: a late read then does nothing
-    opener: MutableRef[Callable[[str, str | None, LeadSponsor | None], None]] = (
-        ft.use_ref(
-            lambda: (
-                sheet.open
-            )  # a callable is use_ref's initialiser: wrapped, not called
-        )
+    opener: MutableRef[OpenNote] = ft.use_ref(
+        lambda: sheet.open  # a callable is use_ref's initialiser: wrapped, not called
     )
     opener.current = sheet.open  # the latest, which the stable callback below calls
     found = ft.use_memo(

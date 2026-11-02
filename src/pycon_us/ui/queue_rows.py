@@ -5,8 +5,7 @@ of, so each module stays under about 400 lines (D-66): ``row_tile()``, one outbo
 with its icon and word (``core.outbox.status_text()``: Queued, Failed, Confirmed, and
 "may be recorded twice" with a warning icon beside it, D-410), its kind and access
 code, when it was scanned, the sponsor of a staff account's lead or note (D-459) and a
-failed row's last error (``status_icon()``, the leads
-list's too, #743); a check-in the server answered with ``errors`` reads "Confirmed ·
+failed row's last error (``status_icon()``, the leads list's too, #743); a check-in the server answered with ``errors`` reads "Confirmed ·
 Already redeemed", flagged too, with the server's messages (D-441); ``sync_button()`` and ``retry_button()``; ``title_row()`` with
 Close, ``heading()``, ``note()`` and ``empty_line()``.
 """
@@ -63,8 +62,9 @@ def row_tile(row: Row, now: float, tokens: Tokens) -> ft.Control:
     """Return one row: its icon, kind and code, its status, age, sponsor and last error.
 
     One node (ux.md §9), e.g. "Lead · A1B2C3, Failed · 2 minutes ago, For Example Corp,
-    Not found", so two sponsors' leads on one attendee are told apart (D-459). The icons are decorative: the words say the state, the flag included. Only the
-    access code is shown, never a name or the badge's validator (LEAD-08).
+    Not found", so two sponsors' leads on one attendee are told apart (D-459). The
+    icons are decorative: the words say the state, the flag included. Only the access
+    code is shown, never a name or the badge's validator (LEAD-08).
 
     Args:
         row: An outbox row.

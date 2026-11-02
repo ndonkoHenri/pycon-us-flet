@@ -4,8 +4,8 @@
 row (``core/outbox.py``'s ``scan_lead``, one row per owner, code and sponsor, D-459), so
 it survives airplane mode and a kill (D-56); the row keeps the sponsor it was scanned
 for (STORE-11), and a staff account's result says which sponsor that is, and any other
-it has the attendee in its leads for. It then kicks the ``SyncWorker``, which stays the only sender (D-407),
-waits up to ``WAIT_SECONDS`` for the worker's pass to take the row, and reads the row
+it has the attendee in its leads for. It then kicks the ``SyncWorker``, which stays the
+only sender (D-407), waits up to ``WAIT_SECONDS`` for the worker's pass to take the row, and reads the row
 back by id: its state is the result (D-426). A ``Staff`` change marks each step of a
 pass, so the wait is driven by the worker's reports, never by polling (LEAD-09).
 """
