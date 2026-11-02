@@ -177,7 +177,7 @@ async def test_back_from_a_pushed_page_puts_the_focus_back_in_the_field(
     def Scan() -> ft.Control:
         _, set_count = ft.use_state(0)  # a render, as the Router's on a pop
         renders.append(set_count)
-        return ScanScreen(title="Lead scanner", on_badge=rig.on_badge)
+        return ScanScreen(title="Lead scanner", source=__name__, on_badge=rig.on_badge)
 
     shown = await show(Scan)
     assert rig.focused == 0  # autofocus serves the first View

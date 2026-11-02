@@ -33,6 +33,7 @@ CAPTURED = "Lead captured"
 ALREADY = "Already in your leads"
 SAVED = "Saved. Will sync."
 NOT_CAPTURED = "Not captured"
+NOT_CONFIRMED = "Not confirmed"
 """Each outcome's word (ux.md §7.3)."""
 
 WILL_RETRY = "It will retry. See the sync queue."
@@ -178,7 +179,8 @@ def result_of(before: Row, after: Row | None) -> ScanResult:
     Synced: "Lead captured" with the name. Refused in this pass: "Not captured", the
     server's message and "It will retry"; failed: "Retry it from the sync queue".
     Still waiting (offline, a backlog, the wait ran out, the row unreadable):
-    "Saved. Will sync.". A row whose answer was lost adds "May be recorded twice".
+    "Saved. Will sync.". A row whose answer was lost or could not be read adds "May be
+    recorded twice", and "Not confirmed" replaces "Not captured": it may be on record.
 
     Args:
         before: The row as enqueued.
@@ -194,7 +196,8 @@ def result_of(before: Row, after: Row | None) -> ScanResult:
     message = (after.last_error,) if after.last_error else ()
     then = RETRY_FROM_QUEUE if after.status is Status.FAILED else WILL_RETRY
     details = (*message, then, *flag(after))
-    return ScanResult(ScanOutcome.DENIED, NOT_CAPTURED, after.key, details, after.key)
+    word = NOT_CONFIRMED if after.maybe_sent else NOT_CAPTURED  # it may be on record
+    return ScanResult(ScanOutcome.DENIED, word, after.key, details, after.key)
 
 
 def named(outcome: ScanOutcome, word: str, row: Row) -> ScanResult:

@@ -63,6 +63,7 @@ def Licences() -> ft.View:
         )
     return AppScaffold(
         title=TITLE,
+        source=__name__,
         body=ft.ListView(rows, expand=True, padding=sides(margin, bottom=GUTTER)),
     )
 
@@ -93,6 +94,7 @@ def LicenceText(licence: str) -> ft.View:
     if component is None:
         return AppScaffold(
             title="Not found",
+            source=__name__,
             body=ft.ListView(
                 [
                     not_found(
@@ -111,6 +113,7 @@ def LicenceText(licence: str) -> ft.View:
     items.extend(paragraph(block.text, fixed=block.fixed) for block in blocks)
     return AppScaffold(
         title=component.name,
+        source=__name__,
         body=ft.ListView(
             items,
             expand=True,

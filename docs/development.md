@@ -1,6 +1,6 @@
 # Development, build and release
 
-**Status:** verified guide (v3), 2026-10-12. The developer guide of D-96. P0-05 (#53) completed it from the S5 verdict ([`spikes/05-build-and-ship.md`](spikes/05-build-and-ship.md)) and checked §5.1-§5.3 from a fresh clone on the reference emulator and simulator. The test strategy is in [`testing-and-quality.md`](testing-and-quality.md) (D-76..D-80). **Binding:** [`PLAN.md`](../PLAN.md) and [`decisions.md`](decisions.md) (D-ids). Where this document applies a decision, it cites it.
+**Status:** verified guide (v3), 2026-10-12. The developer guide of D-96. P0-05 (#53) completed it from the S5 verdict ([`spikes/05-build-and-ship.md`](spikes/05-build-and-ship.md)) and checked §5.1-§5.3 from a fresh clone on the reference emulator and simulator. #849 rewrote §5.1 for a clean Mac on 2026-11-02; what it couldn't check is marked there, and the timed clean-machine run is #850. The test strategy is in [`testing-and-quality.md`](testing-and-quality.md) (D-76..D-80). **Binding:** [`PLAN.md`](../PLAN.md) and [`decisions.md`](decisions.md) (D-ids). Where this document applies a decision, it cites it.
 
 **Scope.** This document covers how we build, run and distribute the app on **Android and iOS only** (D-09). There are no web, PWA or desktop targets. A desktop window is a developer convenience at most (§5.4).
 - The project file, validated against the local flet-cli (§3).
@@ -28,7 +28,7 @@
 
 | I want to… | Command (from the repo root) | Section |
 |---|---|---|
-| Set up a fresh clone | `git clone …`, the Flet checkout at `.flet-ref`, `uv sync` | §5.1 |
+| Set up a fresh clone | `gh repo clone …`, the Flet checkout at `.flet-ref`, `uv sync --locked` | §5.1 |
 | Run the real app shell on an emulator, simulator or phone | `uv run flet debug android -d emulator-5554` (or `ios -d <udid>`); `-d` is required | §5.3 |
 | Run the app with Python hot reload | `BROWSER=true uv run flet run -r -w -p 8550`, plus `flutter run -d <id>` in `.flet-src/client` | §5.2 |
 | List devices or emulators | `uv run flet devices`, `uv run flet emulators` | §5.5 |
@@ -51,11 +51,11 @@
 
 ## 2. Toolchain
 
-### 2.1 Facts (verified 2026-10-12 at `15854a0ac`; re-verified 2026-10-28 at `08b89cce5`, #445; Python again in #700; pin, Flutter and Python at `22a6dcb16` on 2026-10-30, #805)
+### 2.1 Facts (verified 2026-10-12 at `15854a0ac`; re-verified 2026-10-28 at `08b89cce5`, #445; Python again in #700; pin, Flutter and Python at `22a6dcb16` on 2026-10-30, #805; PyPI, Flutter, JDK and the Android SDK on 2026-11-02, #849)
 
 | Fact | Value | Source |
 |---|---|---|
-| Flet | **1.1** from flet-dev/flet's **`flet-1.1.0` branch**, pinned at `22a6dcb16` (`.flet-ref`; `08b89cce5` before #805) until 1.1.0 is on PyPI, where the latest is 1.0.4. The first pin (`3710aff`, on `main`) was 1.0.4 plus fixes: its template targets iOS 13.0, which Xcode 27 rejects. `flet --version` prints the nearest tag: `1.1.0.dev2` at `22a6dcb16`, `1.1.0.dev1` at `08b89cce5` (`1.0.4` at the pins before it; §2.2). | D-81, D-104; F20; S5 |
+| Flet | **1.1** from flet-dev/flet's **`flet-1.1.0` branch**, pinned at `22a6dcb16` (`.flet-ref`; `08b89cce5` before #805) until 1.1.0 is on PyPI, where the latest is 1.0.5 and the newest 1.1 pre-release 1.1.0.dev3 (2026-11-02). The first pin (`3710aff`, on `main`) was 1.0.4 plus fixes: its template targets iOS 13.0, which Xcode 27 rejects. `flet --version` prints the nearest tag: `1.1.0.dev2` at `22a6dcb16`, `1.1.0.dev1` at `08b89cce5` (`1.0.4` at the pins before it; §2.2). | D-81, D-104; F20; S5 |
 | Flutter | **3.47.8** (3.47.7 before `22a6dcb16`), read from the checkout's `.fvmrc`. flet-cli uses `~/flutter/3.47.8` if it exists, else the `flutter` on `PATH` if its major.minor matches (any 3.47.x); otherwise it asks, then downloads 3.47.8 into `~/flutter/3.47.8` (about 5 minutes; `--yes` skips the question). It adds that SDK to `PATH` only for its own subprocesses, not your shell. | `flet/version.py` `get_flutter_version`; `CLI/commands/flutter_base.py:207-234, 251-280, 334-338, 481-493`; `CLI/utils/flutter.py:43-55` |
 | JDK (Android builds) | **17**. flet-cli uses `JAVA_HOME`, then `/usr/libexec/java_home`, if either is a JDK 17; otherwise it downloads Temurin **17.0.13+11** into `~/java/17.0.13+11`. Either way it runs `flutter config --jdk-dir=<that JDK>`, a global Flutter setting. A newer system JDK is ignored. | `CLI/utils/jdk.py:15-18, 87-163`; `CLI/commands/flutter_base.py:382-405` |
 | Android SDK | `ANDROID_HOME`, then `ANDROID_SDK_ROOT`, then Android Studio's `~/Library/Android/sdk`, then `~/Android/sdk`; if none exists, flet-cli asks and installs one into `~/Android/sdk`. | `CLI/utils/android_sdk.py:42-103, 269` |
@@ -67,7 +67,7 @@
 | iOS minimum | 15.0, fixed by the template | `TPL/ios/Runner.xcodeproj/project.pbxproj:348` |
 | Android release signing without a keystore | Signed with the **debug key**: it installs, but cannot go to Play | `TPL/android/app/build.gradle.kts:103-119` |
 | `flet build ipa` and signing | No profile configured: `--no-codesign` and only an `.xcarchive`. A profile configured but not installed: flet-cli stops within seconds, before Xcode. Installed: a signed `.ipa` (§8.2). | `CLI/commands/build.py:195-204, 297-389` |
-| What gets bundled | `[project].dependencies` (plus `[tool.flet.<platform>].dependencies`), pip-installed at build time. **`uv.lock` does not apply**, so bundled dependencies are pinned exactly in `pyproject.toml`. | `CLI/commands/build_base.py:2698-2741` |
+| What gets bundled | `[project].dependencies` (plus `[tool.flet.<platform>].dependencies`), pip-installed at build time. **`uv.lock` does not apply**, so bundled dependencies are pinned exactly in `pyproject.toml`; what those pull in is whatever pip resolves that day (§7.6). | `CLI/commands/build_base.py:2738-2780` |
 | App metadata at runtime | The app directory is copied, not installed, so `importlib.metadata` cannot see `pycon-us` | F15 |
 | Deep links on mobile | Each key (`scheme`, `host`) from `[tool.flet.<android\|ios>.deep_linking]`, else from the common `[tool.flet.deep_linking]` (`flet-dev/flet#6953`, in the pin since `68a4b326c`). The template registers a link only when both resolve: on Android an intent filter for the scheme and host, on iOS a `CFBundleURLTypes` entry for the scheme alone (the host is its `CFBundleURLName`). The host never reaches Python: Flet keeps only the link's path, query and fragment for `page.route`. | `CLI/commands/build_base.py:1449-1454, 3067-3089`; `TPL/android/app/src/main/AndroidManifest.xml:47-56`; `TPL/ios/Runner/Info.plist:53-69`; D-269 |
 | Gradle heap | The template default is `-Xmx8G`, more than a standard GitHub runner has. Our `-Xmx4G` override (`[tool.flet.android.gradle_properties]`) passed every build on the Mac and on `ubuntu-latest` (#54: at least 1 GB stayed available; §7.4). | `CLI/commands/build_base.py:1175-1184, 1290-1293` |
@@ -115,7 +115,9 @@ test "$(git -C .flet-src rev-parse HEAD)" = "$(cat .flet-ref)" \
    git -C .flet-src fetch -q origin <sha> && git -C .flet-src checkout -q --detach <sha>
    # Each bundled package's wheel build folder (flet's and the extensions', [tool.flet.dev_packages]) survives a
    # checkout, and its stale files would ship (§5.8). No Flet package tracks a top-level build/ folder.
-   rm -rf .flet-src/sdk/python/packages/*/build
+   # find, not a packages/*/build glob: when no such folder exists, zsh stops with "no matches found", ending an
+   # && chain. The depth limits spare the source folder flet-mcp/src/flet_mcp/build.
+   find .flet-src/sdk/python/packages -mindepth 2 -maxdepth 2 -type d -name build -exec rm -rf {} +
    ```
 2. Run `uv lock`, because Flet's own dependencies may have changed, then `uv sync`.
 3. Delete `build/` (`rm -rf build`) on every bump. It caches Dart build-hook binaries compiled by the previous
@@ -183,8 +185,9 @@ dev = [                               # host only, never bundled; versions in uv
 
 # ------------------------------------------------------------------ flet build
 [tool.flet]
-product = "Conf Companion"            # display name: neutral placeholder until O-4 (D-36)
-bundle_id = "io.github.ndonkohenri.pyconus"   # placeholder until O-4, both platforms
+product = "Conf Companion"            # display name, neutral: no PSF mark (D-36, D-452)
+bundle_id = "io.github.ndonkohenri.confcompanion"   # both platforms (D-452)
+icon_background = "#680579"           # behind src/assets/icon.svg where a platform needs an opaque icon (D-452)
 
 [tool.flet.app]
 path = "src"                          # entry point src/main.py
@@ -282,7 +285,7 @@ S5 then built every target from this setup, and P0-04 (#52) built `apk --arch ar
 | `tool.flet.ios.info` | `CLI/commands/build_base.py:1232-1240` | Merged into `Info.plist` |
 | `tool.flet.flutter.pubspec.dependencies` | `CLI/commands/build_base.py:2034-2052` | Merged into `build/flutter/pubspec.yaml`, so relative paths resolve from `build/flutter/`; adds `roboto_fonts` (D-105) |
 | `tool.flet.ios.team_id`, `tool.flet.ios.export_methods.<method>` | `CLI/commands/build_base.py:1493-1528` | The method from `--ios-export-method`, else `export_method`, else `debugging` picks its table; its `provisioning_profile`, `signing_certificate` and `export_options` go into the Runner's build settings and `ios/exportOptions.plist` (§8.2) |
-| `tool.flet.deep_linking` | `CLI/commands/build_base.py:1449-1454, 3067-3089` (`get_deep_linking_setting`) | `pyconus://app/<route path>` on Android and iOS (D-269, §5.5); a platform table would override it per key, and we have none |
+| `tool.flet.deep_linking` | `CLI/commands/build_base.py:1449-1454, 3067-3089` (`get_deep_linking_setting`) | `confcompanion://app/<route path>` on Android and iOS (D-269, §5.5); a platform table would override it per key, and we have none |
 | `tool.flet.android.permission` | `CLI/commands/build_base.py:1285-1288`; `TPL/android/app/src/main/AndroidManifest.xml:3-7` | Merged over the template's `INTERNET`: one `<uses-permission>` per `true` key; adds `POST_NOTIFICATIONS` and `SCHEDULE_EXACT_ALARM` (D-221, #446) |
 | `tool.flet.dev_packages` | `CLI/commands/build_base.py:2714-2738` | Rewrites `flet`, `flet-notifications`, `flet-permission-handler` and `flet-secure-storage` to `<name> @ file:///…/.flet-src/…` for the bundle; relative paths resolve from the project root |
 
@@ -303,9 +306,9 @@ Not set, because the default is what we want:
 `flet build` generates every icon and splash image from `src/assets/` (`DOCS/publish/index.md` "Icons" and "Splash screen", lines 832-1228). Nothing is copied into the template by hand.
 - **P0:** Flet's default icon. A build that has a placeholder icon is obviously a development build. Since `08b89cce5` (flet-dev/flet#6973) flet-cli renders that default in every build from the Flet logo SVG that `flet-platform-assets` bundles ("Generated default app icons" in the build log) instead of keeping the template's committed rasters; on #445's builds the launcher showed the Flet mark labelled "Conf Companion" on Android 16 and iOS 26.5, as before.
 - **P0 (SHELL-01):** the splash and boot-screen colours in §3.1, `#680579` in light and dark. Native splash, Flet's boot screen and our `BootView` then share one background, so nothing flashes between them. The colours live in `pyproject.toml`, not in `--splash-color` flags, so the file stays the only configuration (§7.4).
-- **When O-4 settles the identity:** add `src/assets/icon.png` (1024 × 1024, transparent background, our own mark, no PSF logo per D-36) and `[tool.flet] icon_background`.
-  - If the generated framing looks wrong, add `icon_ios.png` or `icon_android.png`: artwork within the central 60 % for iOS, and within a centred circle of about 57 % for Android.
-  - The splash artwork (`splash.png`, plus the same file as `splash_dark.png`, which iOS needs before it applies `dark_color`) also waits for O-4. Until then the splash falls back to the icon, then to the default Flet icon (`DOCS/publish/index.md` "Splash images"): #445's builds showed the Flet mark on our `#680579` on both platforms.
+- **Since D-452:** our own mark, `src/assets/icon.svg`, with `[tool.flet] icon_background = "#680579"`. flet-cli renders every platform's sizes from that one file and frames it for each platform. The native splash has no artwork of its own, so it falls back to the icon on the same purple.
+  - The other two drafts are in `docs/icon-options/`. To change the icon, replace `icon.svg`: an icon stays free to change.
+  - If the generated framing ever looks wrong, add `icon_ios.png` or `icon_android.png`: artwork within the central 60 % for iOS, and within a centred circle of about 57 % for Android.
 
 ### 3.4 Additions by phase
 
@@ -316,7 +319,7 @@ Each row lands in the PR that ships the feature, never earlier. A Flet extension
 
 | Phase | Feature | Addition | Exists in flet-cli today? |
 |---|---|---|---|
-| P2 | Deep links (NEW-07, D-21) | **Done in P2-24 (#384), now in `pyproject.toml`:** one common `[tool.flet.deep_linking]` table with the placeholders `scheme = "pyconus"` and `host = "app"` (D-269), which O-4 (#15) swaps. Links look like `pyconus://app/schedule/session/42`. `tests/test_deep_linking.py` runs flet-cli's resolver for Android and iOS. | Yes (`flet-dev/flet#6953`, in the pin) |
+| P2 | Deep links (NEW-07, D-21) | **Done in P2-24 (#384), now in `pyproject.toml`:** one common `[tool.flet.deep_linking]` table with `scheme = "confcompanion"` and `host = "app"` (D-269, D-452). Links look like `confcompanion://app/schedule/session/42`. `tests/test_deep_linking.py` runs flet-cli's resolver for Android and iOS. | Yes (`flet-dev/flet#6953`, in the pin) |
 | P2 | Runtime permissions (D-75) | **Done in P2-86 (#446), now in `pyproject.toml`:** `"flet-permission-handler"`, added three times as above; `Services.permissions` holds its service only when `capabilities.PERMISSIONS` (architecture §4.2). | Yes (monorepo package) |
 | P2 | Reminders (E3, D-58..D-61) | **Done in P2-86 (#446), now in `pyproject.toml`:** `"flet-notifications"` from the monorepo (flet-dev/flet#6999, module `flet_notifications`), added three times as above; PyPI's `flet-notifications` is an unrelated project, so the path tables stay until Flet publishes it. `[tool.flet.android.permission]` declares `POST_NOTIFICATIONS` and `SCHEDULE_EXACT_ALARM` (D-221; never `USE_EXACT_ALARM`). The rest comes with the extension: its Android manifest adds the action, scheduled and boot receivers and `RECEIVE_BOOT_COMPLETED`, its `flet-extension.toml` turns on core library desugaring (U7), and the template's `AppDelegate.swift` sets the iOS notification delegate (D-220). iOS needs no plist key; permission is requested through the extension (F17). | Yes, at `08b89cce5` (#445) |
 | P3 | Mock credentials (D-49) | **Done in #684, now in `pyproject.toml`:** `"flet-secure-storage"` from the monorepo, added three times as above (the dependency, `[tool.uv.sources]` and `[tool.flet.dev_packages]`); `capabilities.SECURE_STORAGE` turns on in packaged builds, and `services/credentials.py` owns it. | Yes (monorepo package) |
@@ -364,25 +367,111 @@ def test_version_matches_pyproject():
 
 ## 5. Development loop
 
-### 5.1 From a clean checkout
+### 5.1 From a clean Mac
 
-**Prerequisites:**
-- git, [uv](https://docs.astral.sh/uv/) (CI uses the 0.12 line, §7.2) and, while the repo is private, a `gh` login with access to it.
-- For Android, an emulator (§5.5) or a phone with USB or wireless debugging. flet-cli finds or installs the JDK, the Android SDK and Flutter the first time a mobile command needs them, and asks before each install (§2.1).
-- For iOS, a Mac with Xcode 27 and CocoaPods; export `LANG=en_US.UTF-8`, or CocoaPods warns. Simulators need no Apple account; a phone needs the signing setup of §8.2.
+This section is for a Mac with none of the tools. The timed run on a truly clean machine is #850 and hasn't happened, so **unverified** below means nobody has run that step on a Mac without the tool.
+
+**What you need.**
+
+| Tool | Version | How you get it | Where the version comes from |
+|---|---|---|---|
+| macOS, Apple silicon | macOS 27.0 on an M4 here | | Our AVDs are arm64 (§5.5). Intel is unverified. |
+| git | any | `xcode-select --install`, or Xcode | |
+| Homebrew | any | [brew.sh](https://brew.sh); only for `gh` and CocoaPods | |
+| Access to the repo, while it is private | `gh` 2.100.0 here | `brew install gh`, then `gh auth login` | See "What `gh` is for" below |
+| uv | CI uses 0.12.x; 0.13.6 here | `curl -LsSf https://astral.sh/uv/install.sh \| sh`, then open a new terminal | `ci.yml`, and `uv_build>=0.12,<0.13` in `pyproject.toml` |
+| Python on the Mac | 3.14.x (3.14.10 with uv 0.13.6) | `uv sync` downloads it | `requires-python` in `pyproject.toml`; the app's own Python is separate (§2.1) |
+| Flutter | 3.47.8 | flet-cli installs it (below) | `.flet-src/.fvmrc` |
+| JDK, Android only | 17 (Temurin 17.0.13+11) | flet-cli installs it (below) | `CLI/utils/jdk.py:15-18` |
+| Android SDK, Android only | `platform-tools`, `platforms;android-35`, `build-tools;34.0.0` | flet-cli installs them (below) | `CLI/utils/android_sdk.py:15-19` |
+| Xcode, iOS only | 27 (27.2 here); no older one has been tried with this pin | App Store | §2.1, D-81 |
+| CocoaPods, iOS only | 1.17.0 here | `brew install cocoapods` | Non-SPM plugins build with it (`CLI/commands/build_base.py:638-640`) |
+
+Allow about 20 GB of disk for Android (here: Flutter 2.1 GB, Android emulator 1.2 GB, system image 4.3 GB, NDK 2.8 GB, plus the Gradle and pub caches), and more for Xcode.
+
+**What `gh` is for.** Only for cloning this repo while it is private: any git credential with access works too. Building, running and testing never call it. The Flet clone is public and needs no login. People who open or merge PRs need it as well (`tools/gate.sh` posts through it). Once the repo is public (#852), clone with `git clone https://github.com/ndonkoHenri/pycon-us-flet.git` with no account; `gh` then leaves this list.
+
+**Pasting into zsh.** The blocks in this section hold no comments on purpose. In an interactive zsh, macOS's default shell, `#` doesn't start a comment unless you run `setopt interactivecomments` first, so a pasted `uv sync   # note` passes the note as arguments. Blocks elsewhere in this guide do have comments.
+
+**1. The checkout.**
 
 ```bash
 gh repo clone ndonkoHenri/pycon-us-flet && cd pycon-us-flet
-git clone --filter=blob:none https://github.com/flet-dev/flet.git .flet-src   # §2.2
+git clone --filter=blob:none https://github.com/flet-dev/flet.git .flet-src
 git -C .flet-src checkout --detach "$(cat .flet-ref)"
-uv sync                                       # Python 3.14 and the dev tools
-git config core.hooksPath .githooks           # once per clone: the pre-push checks (§7, D-273)
-uv run pytest                                 # no device needed
-uv run flet devices                           # the ids for -d
-uv run flet debug android -d emulator-5554    # or: uv run flet debug ios -d <simulator udid> (§5.3)
+uv sync --locked
+git config core.hooksPath .githooks
+uv run flet --version
+uv run pytest
 ```
 
-Followed literally on 2026-10-12 in a fresh directory (Mac M4, Flutter 3.47.7 on `PATH`, JDK 17 and the Android SDK already installed, warm Gradle and pub caches): `uv sync` took under a second, 4 tests passed, `flet debug android` had the app on `emulator-5554` 70 s after the command, and `flet debug ios` had it on an iPhone 17 Pro simulator in under 3 minutes. A machine without Flutter adds about 5 minutes for its download.
+- `.flet-src` is your own clone of Flet at the pin (§2.2, D-451). `git config` turns on the pre-push checks, once per clone (§7, D-273).
+- With a uv newer than 0.12, `uv sync` prints ``warning: `build_system.requires = ["uv-build>=0.12,<0.13"]` does not contain the current uv version``. It is harmless: uv fetches the older `uv_build`. `uv.lock` also passes `uv lock --check` under uv 0.12.24.
+- `flet --version` prints `Flet: 1.1.0.dev2` and `Flutter: 3.47.8`. It needs no Flutter yet.
+- `pytest` needs no device and takes about 6 minutes: 8,420 passed, 1 skipped on 2026-11-02. The count grows; what matters is that nothing fails. It can run in a second terminal while you go on.
+
+**2. Android.** The first command that needs the mobile tools installs them. flet-cli asks once for Flutter and once for the Android SDK, whose yes covers the JDK too; `--yes` skips both questions. Flutter goes to `~/flutter/3.47.8`, the JDK to `~/java/17.0.13+11` and the SDK to `~/Android/sdk`, and none of them joins your shell's `PATH` (§2.1).
+
+```bash
+uv run flet emulators
+```
+
+That SDK has no emulator or system image, so add them. These commands are **unverified** on a clean Mac: only `avdmanager list device` has been run here, which lists `pixel_6a`, and the package and device names match this Mac's `pycon_pixel6a_api36` (§5.5). Android Studio's Device Manager is the other way, if you have it.
+
+```bash
+export JAVA_HOME=~/java/17.0.13+11/Contents/Home
+~/Android/sdk/cmdline-tools/12.0/bin/sdkmanager --install emulator "system-images;android-36;google_apis;arm64-v8a"
+~/Android/sdk/cmdline-tools/12.0/bin/avdmanager create avd -n pycon_pixel6a_api36 -d pixel_6a -k "system-images;android-36;google_apis;arm64-v8a"
+uv run flet emulators start pycon_pixel6a_api36
+```
+
+When it has booted, run the app:
+
+```bash
+uv run flet devices
+uv run flet debug android -d emulator-5554
+```
+
+The first build also makes Gradle fetch what is still missing (on this Mac, `platforms;android-36` and an NDK). That is **unverified** on a clean Mac: if it stops on a missing SDK package, install the package with `sdkmanager` and tell #850.
+
+**3. iOS.** `flet devices` and `flet emulators` require the Android SDK even with `ios` (`CLI/commands/devices.py:82`, `CLI/commands/emulators.py:102`), so on an iOS-only Mac list simulators with `xcrun` instead. `flet debug ios` itself asks only for Flutter (`CLI/commands/build_base.py:938`).
+
+```bash
+sudo xcode-select --switch /Applications/Xcode.app/Contents/Developer
+sudo xcodebuild -license accept
+sudo xcodebuild -runFirstLaunch
+xcodebuild -downloadPlatform iOS
+xcrun simctl list devices available
+xcrun simctl boot <simulator udid>
+open -a DeviceHub
+export LANG=en_US.UTF-8
+uv run flet debug ios -d <simulator udid>
+```
+
+- `xcode-select` comes first because a Mac that got git from `xcode-select --install` stays on the Command Line Tools after Xcode is installed; there `xcodebuild` stops with "requires Xcode" and `xcrun` can't find `simctl`.
+- The `xcode-select` line and the three `xcodebuild` lines are **unverified**: this Mac's Xcode was set up long ago. Without `LANG`, CocoaPods warns.
+- Xcode 27 has Device Hub in place of the Simulator app, so `open -a` no longer finds the old name.
+- A fresh Xcode downloads its own current runtime, which may not be the iOS 26.5 all our checks ran on (§5.5).
+- Simulators need no Apple account; a phone needs the signing setup of §8.2.
+
+**How long it takes.** Measured means the 2026-11-02 rehearsal below, or the source named. The rest are estimates that #850 will replace.
+
+| Step | Measured | On a clean Mac |
+|---|---|---|
+| `gh repo clone` | 11 s | About the same |
+| Flet clone and checkout (335 MB) | 12 s | About the same |
+| `uv sync --locked`, with CPython and every package downloaded | 6 s, fast connection (25.5 MiB Python, about 250 MB of packages) | Under a minute |
+| `uv run pytest` | 5 min 39 s | About the same on an M4 |
+| Flutter, on first use | About 5 min (S5: 305 s, with its setup) | About 5 min |
+| JDK and Android SDK | Never timed | Estimate: a few minutes |
+| Emulator and system image | Never timed | Estimate: 5 to 10 minutes |
+| First `flet debug android` | 70 s with warm caches (2026-10-12). Pieces of a colder run: 9 to 10 min for an empty pub cache on a busy host (#176, §5.8); Gradle 167.6 s with `~/.gradle` warm (S5, an older pin) | Estimate: 10 to 20 minutes |
+| Xcode and its runtime | Never timed | Depends on the connection; tens of minutes at least |
+| First `flet debug ios` | Under 3 min with warm caches (2026-10-12); `flet build ios-simulator` 4 min from a cloned pub cache (#176) | Estimate: 10 to 15 minutes |
+
+So Android from nothing, not counting `pytest`, comes to about 20 to 35 minutes, estimated. That sits right at PLAN's 30-minute exit target; #850 settles it.
+
+**The rehearsal (#849, 2026-11-02, at `22a6dcb16`).** Step 1 was followed in a new directory, with new clones of both repos and uv's cache and Python folders empty (`UV_CACHE_DIR`, `UV_PYTHON_INSTALL_DIR`, `UV_PYTHON_PREFERENCE=only-managed`); then `uv run flet devices` ran (13 s, no devices). What wasn't clean: the owner's Mac already had Homebrew, Xcode 27.2, a logged-in `gh`, uv 0.13.6, Flutter 3.47.8 through fvm, the JDK, the Android SDK, and warm Gradle and pub caches. The Flutter, JDK and SDK installers write into the home folder, so they weren't run. Nothing was built, and no emulator or simulator was used; steps 2 and 3 were read against flet-cli's source at the pin only. This section's device steps last ran on 2026-10-12, at an older pin and with warm caches: the 70 s and 3 minutes above.
 
 `.gitignore` covers, among others:
 - `.venv/`, `.flet-src`, `.flet/` (the `flet run` storage, F14), `build/`, `excluded/`;
@@ -456,12 +545,12 @@ Notes:
 |---|---|
 | List connected devices | `uv run flet devices [android\|ios]` (USB and wireless; `--device-connection attached\|wireless`) |
 | Android emulators | `uv run flet emulators`; `uv run flet emulators start <name> [--cold]`; `uv run flet emulators create <name>` |
-| iOS simulators | `xcrun simctl list devices available` for the udids; `xcrun simctl boot <udid>` and `open -a Simulator`, then `flet debug ios -d <udid>`. A simulator that a build left shut down comes back with `xcrun simctl boot <udid>`. Simulator builds need no signing. |
-| Install an APK over the previous build | `adb install -r build/apk/pycon-us.apk`, then `adb shell am force-stop io.github.ndonkohenri.pyconus` before launching, so the update is judged from a cold start: a process still running from the old build keeps its old state until it stops. On the Android 16 emulator the install ended the running app both times it was tried (#53); the force-stop makes that certain. |
+| iOS simulators | `xcrun simctl list devices available` for the udids; `xcrun simctl boot <udid>` and `open -a DeviceHub`, then `flet debug ios -d <udid>`. A simulator that a build left shut down comes back with `xcrun simctl boot <udid>`. Simulator builds need no signing. |
+| Install an APK over the previous build | `adb install -r build/apk/pycon-us.apk`, then `adb shell am force-stop io.github.ndonkohenri.confcompanion` before launching, so the update is judged from a cold start: a process still running from the old build keeps its old state until it stops. On the Android 16 emulator the install ended the running app both times it was tried (#53); the force-stop makes that certain. |
 | Android Python log | `adb logcat -s flet.python` (`-d` dumps the buffer, `-c` clears it) |
 | iOS simulator Python log | `xcrun simctl spawn booted log stream --style compact --predicate 'sender == "dart_bridge"'` |
 | Open a route directly (a packaged build) | Android: `adb shell am start -n <package>/.MainActivity --es route /schedule/session/42` (what `flet debug --route` passes); iOS simulator: `xcrun simctl launch <udid> <bundle id> --route=/schedule/session/42`. `simctl openurl` with a custom scheme waits for a tap on the system's "Open" prompt (F31) |
-| Open a deep link (a packaged build, D-269) | Android: `adb -s <serial> shell am start -W -a android.intent.action.VIEW -d 'pyconus://app/now'` (no `-n`: the intent filter picks the app, and `-W` waits for the launch; `Activity: io.github.ndonkohenri.pyconus/.MainActivity` says it matched, and on a busy host `Status` may read `timeout` while the app still opens). `adb shell pm query-activities -a android.intent.action.VIEW -d <link>` lists what would answer a link without opening it. iOS simulator: `xcrun simctl openurl <udid> 'pyconus://app/now'`; the first link on a simulator stops at the system's "Open in …?" prompt, which simctl cannot answer (F31) and a Maestro `tapOn: "Open"` does; later links, even after a reinstall, open the app directly. The link's path becomes `page.route` (`/now`); iOS checks only the scheme, and the host never reaches `page.route` (D-269). |
+| Open a deep link (a packaged build, D-269) | Android: `adb -s <serial> shell am start -W -a android.intent.action.VIEW -d 'confcompanion://app/now'` (no `-n`: the intent filter picks the app, and `-W` waits for the launch; `Activity: io.github.ndonkohenri.confcompanion/.MainActivity` says it matched, and on a busy host `Status` may read `timeout` while the app still opens). `adb shell pm query-activities -a android.intent.action.VIEW -d <link>` lists what would answer a link without opening it. iOS simulator: `xcrun simctl openurl <udid> 'confcompanion://app/now'`; the first link on a simulator stops at the system's "Open in …?" prompt, which simctl cannot answer (F31) and a Maestro `tapOn: "Open"` does; later links, even after a reinstall, open the app directly. The link's path becomes `page.route` (`/now`); iOS checks only the scheme, and the host never reaches `page.route` (D-269). |
 | iPhone Python log | Console.app › the device › filter on the app process |
 | A tester's log | Developer screen › Share log, which sends `console.log` (D-72) |
 
@@ -503,7 +592,7 @@ uv run flet test ios -d <udid> --tests-dir tests/ui -v -k "offline or switch_day
 
 - `-d` is required for both platforms, and `--tests-dir tests/ui` points `flet test` at the flows (its default is `tests`, which would collect the unit tests too). `-v` streams the Flutter test process's output; without it a failure prints only the output's tail. `-k <expression>` runs some flows only.
 - `flet test` first provisions a Flutter test host in `build/flutter` through the `flet build` pipeline (1 to 2½ minutes; the app's Python is packaged again on every run), then pytest runs each flow: `flutter test` builds a debug binary, installs it, launches it and connects the tester, and the app is uninstalled when the flow ends. So every flow starts from a fresh install, with no stored settings or cache. On #78's Mac (M4), with warm Gradle and Xcode caches, the shell flow took about 3½ minutes on Android (provisioning 1 min, Gradle 45 s, install 15 s, the flow about 1 min) and about 5 minutes on iOS (provisioning 2½ min, Xcode build 67 s); a first run on a host busy with other emulators took 15 minutes on Android.
-- The bundle id is the app's own (`io.github.ndonkohenri.pyconus`), so a run on a shared emulator replaces and then removes another build of the app there: use an emulator or a simulator of your own.
+- The bundle id is the app's own (`io.github.ndonkohenri.confcompanion`), so a run on a shared emulator replaces and then removes another build of the app there: use an emulator or a simulator of your own.
 - Each step's screenshot is saved under `build/ui/<platform>/` (git-ignored), and a step that times out saves `timed-out-<flow>.png` (D-223): look there first when a flow fails.
 - The flows reach the laptop at `10.0.2.2` (Android emulator) or `127.0.0.1` (iOS simulator), as Flet's `FletTestApp` sets it, so they cannot run on a physical phone (testing-and-quality.md §13).
 - When another build may run on the Mac, run the flows with the worktree's own pub cache (§5.8): `PUB_CACHE=$PWD/build/pub-cache uv run flet test …`.
@@ -679,7 +768,7 @@ mock connection said "Connected to the local mock server.", in light and dark, a
 - **Venue or office Wi-Fi often isolates clients.** Use a phone hotspot or a travel router instead.
 - **Tests** drive the same pure `handle()` behind `httpx.MockTransport` (D-50), so they cover signing, faults and both semantics without a network. Only `tests/test_mock_api_server.py` starts the server, in-process on `127.0.0.1` with an ephemeral port, under the `loopback` marker (`no_network`'s one opt-out).
 - **Badges.** `uv run python -m tools.mock_api.badges` writes `build/mock-badges.html`, the printable sheet of mock-badge QR codes for the P3 exit test (one card per seeded attendee, A4 or Letter; `segno`, D-391). The mock README says more.
-- **Stage demos** use this LAN mock from the laptop, with no in-app backend (D-457). A phone can't reach the laptop's loopback, so with no Wi-Fi it joins a laptop hotspot, with the server on `--host 0.0.0.0`; that hasn't been tried yet. An emulator or simulator on the laptop uses the table above. The demo script is #855's, and it reopens O-8 if it finds a reason.
+- **Stage demos** use this LAN mock from the laptop, with no in-app backend (D-457). [`demo-script.md`](demo-script.md) runs on simulators, which use the table above, so it needs no hotspot (D-463). A phone can't reach the laptop's loopback, so with no Wi-Fi it joins a laptop hotspot, with the server on `--host 0.0.0.0`; that hasn't been tried yet, and the script lists what's unknown.
 
 ---
 
@@ -687,7 +776,7 @@ mock connection said "Connected to the local mock server.", in light and dark, a
 
 **While the repo is private, the checks run locally** (D-273). A private repo on GitHub Free includes 2,000 Linux minutes a month, and by 2026-10-20 `ci.yml`, run on every PR push and every push to `main`, had used about 1,875 of them. So GitHub Actions run only by hand, and local checks replace them.
 
-**`tools/check.sh`** runs `ci.yml`'s steps (§7.2) in the same order on your machine: `uv sync --locked`, `ruff check`, `ruff format --check`, `pyright`, `pytest --hypothesis-profile=ci`, with `UV_LOCKED=1`. `--fast` runs every step but pytest. It prints one line per step and stops at the first failure, with that step's exit status. It needs `.flet-src` (§2.2, §5.8). On the owner's Mac the fast run takes about 5 s and the full one about 1.5 minutes. It runs at three points:
+**`tools/check.sh`** runs `ci.yml`'s steps (§7.2) in the same order on your machine: `uv sync --locked`, `ruff check`, `ruff format --check`, `pyright`, `pytest --hypothesis-profile=ci`, with `UV_LOCKED=1`. `--fast` runs every step but pytest. It prints one line per step and stops at the first failure, with that step's exit status. It needs `.flet-src` (§2.2, §5.8). On the owner's Mac the fast run takes about 10 s and the full one about 6 minutes (344 s in the gate of 2026-11-02, for 8,420 tests). It runs at three points:
 - **The pre-push hook**, `.githooks/pre-push`, turned on once per clone with `git config core.hooksPath .githooks` (§5.1; every worktree of the clone then runs its own checkout's hook). Before each push it runs `tools/check.sh --fast`, unless the push changes only Markdown (`*.md`) or nothing: it compares a new branch with its merge base with `origin/main`, and an existing one with the remote's commit (a remote commit it doesn't have counts as code). The checks see the working tree, so it warns when that has uncommitted changes or HEAD isn't the pushed commit. `git push --no-verify` skips it once. A branch from before D-273 has no hook.
 - **Before you mark a PR ready**, run the full `tools/check.sh` and list it in the PR.
 - **The merge gate**, `tools/gate.sh <pr> [<pr>...]`, runs before every merge (D-100 condition 1, D-273). It fetches `main`, creates a scratch worktree detached at `origin/main` with its own copy of `.flet-src` (D-219), merges each PR's head into it in the order given, and runs the full `tools/check.sh` there, into a log.
@@ -807,7 +896,7 @@ When 1.1.0 is on PyPI and the Flet checkout goes, the action is worth another lo
 
 **This APK is a quick look, not an install to keep.** It is signed with the runner's throwaway debug key, which differs from your machine's and changes with every run.
 - Download it with `gh run download <run-id>`, which unzips it into a folder named after the APK, then run `adb install <that folder>/pycon-us-<…>.apk`. The run page gives you the zip; unzip it first.
-- Installing over an earlier CI build, or over a local build, therefore fails with `INSTALL_FAILED_UPDATE_INCOMPATIBLE`. Run `adb uninstall io.github.ndonkohenri.pyconus` first, which loses the app's data.
+- Installing over an earlier CI build, or over a local build, therefore fails with `INSTALL_FAILED_UPDATE_INCOMPATIBLE`. Run `adb uninstall io.github.ndonkohenri.confcompanion` first, which loses the app's data.
 - Builds you want to keep updating come from §8.1 instead.
 
 ### 7.5 Not in CI: iOS
@@ -823,6 +912,90 @@ iOS builds run on the owner's Mac (D-84). Signing material never enters CI (D-86
   - `apple-actions/import-codesign-certs` and `apple-actions/download-provisioning-profiles`, then `xcrun altool --upload-package`.
 - **Android Play uploads** would need the keystore (base64) and the `FLET_ANDROID_SIGNING_*` values as secrets.
 - **Without environments on a private Free repo,** all of these would be plain repository secrets, readable by any workflow on any branch. That is one more reason to keep signing local.
+
+### 7.6 Sweep for secrets and vulnerabilities (#847)
+
+Everything in the repository becomes visible when it goes public, including every PR's `refs/pull/*` head, which no one can delete, and the `pr-assets` images. So this sweep runs twice: once while the repo is private, and again right before the flip (#852 needs the second result clean). The results go on #847. It's local and free, and it changes nothing on GitHub.
+
+**Tools,** once: `brew install gitleaks trufflehog osv-scanner tesseract`. The scratch folder `build/` is git-ignored; delete `build/sweep` when you're done.
+
+**Secrets in history.** A mirror clone is the only checkout that holds all the branches and `refs/pull/*`. The scan reads a dump of it because that also covers commit messages and deleted lines, which `gitleaks git` skips (and an agent's isolated worktree refuses `gitleaks git`). `--redact` keeps values out of the report and `--no-verification` keeps candidates on this machine: **never** let a scanner try one against a live service.
+
+```sh
+mkdir -p build/sweep/api
+git clone --mirror https://github.com/ndonkoHenri/pycon-us-flet.git build/sweep/mirror.git
+git -C build/sweep/mirror.git log --all --full-history -p -U0 --diff-merges=cc --format='commit %H%n%an <%ae>%n%cn <%ce>%n%B' > build/sweep/history.patch
+gitleaks dir build/sweep/history.patch --redact --exit-code 0 --report-format json --report-path build/sweep/gitleaks-history.json
+trufflehog filesystem build/sweep/history.patch --no-verification --no-update --json --results=verified,unknown,unverified > build/sweep/trufflehog-history.jsonl
+```
+
+A hit's `StartLine` is a line of the dump. To find its commit: `awk -v n=<line> 'NR<=n && /^commit /{c=$0} NR==n{print c; exit}' build/sweep/history.patch`.
+
+The first sweep's only hits were 34 `generic-api-key` from gitleaks, all false positives: 28 in `tests/fixtures/ionic/signing.json` (two commits; signatures made with the fixture's own dummy secret) and 6 in `src/pycon_us/screens/track.py` (four commits; the argument name `tokens` beside an identifier). Anything else is new: look at it. Never paste a value. Say where it is, and mark it for the owner to rotate; rewriting history is the owner's call (D-101).
+
+**Secrets in what people wrote** (issues, PRs, comments, reviews):
+
+```sh
+gh api 'repos/ndonkoHenri/pycon-us-flet/issues?state=all&per_page=100' --paginate > build/sweep/api/issues.json
+gh api 'repos/ndonkoHenri/pycon-us-flet/issues/comments?per_page=100' --paginate > build/sweep/api/issue-comments.json
+gh api 'repos/ndonkoHenri/pycon-us-flet/pulls/comments?per_page=100' --paginate > build/sweep/api/review-comments.json
+gh api graphql --paginate -f query='query($endCursor:String){repository(owner:"ndonkoHenri",name:"pycon-us-flet"){pullRequests(first:100,after:$endCursor){pageInfo{hasNextPage endCursor} nodes{number reviews(first:50){nodes{body}}}}}}' > build/sweep/api/pr-reviews.json
+gitleaks dir build/sweep/api --redact --exit-code 0 --report-format json --report-path build/sweep/gitleaks-github.json
+trufflehog filesystem build/sweep/api --no-verification --no-update --json --results=verified,unknown,unverified > build/sweep/trufflehog-github.jsonl
+```
+
+**Personal data in the `pr-assets` images.** Read their text, scan it, and look through what's new since the last sweep (#847 names that commit; `git -C build/sweep/mirror.git diff --name-only <commit> pr-assets`):
+
+```sh
+mkdir -p build/sweep/pr-assets
+git -C build/sweep/mirror.git archive --format=tar pr-assets -o ../pr-assets.tar
+tar -xf build/sweep/pr-assets.tar -C build/sweep/pr-assets
+find build/sweep/pr-assets \( -name '*.png' -o -name '*.jpg' \) -print0 | OMP_THREAD_LIMIT=1 xargs -0 -P 8 -I{} tesseract {} {} --psm 11
+gitleaks dir build/sweep/pr-assets --redact --exit-code 0 --report-format json --report-path build/sweep/gitleaks-images.json
+grep -rhoE --include='*.txt' '[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[a-z]{2,}' build/sweep/pr-assets | sort | uniq -c | sort -rn
+```
+
+Only `example.com` and `example.org` sample accounts, the conference's public addresses and Mastodon handles should show. OCR misses what small text and pictures hold, so looking is still part of it.
+
+**Personal data in the text.** Look at the commit identities (`git -C build/sweep/mirror.git log --all --format='%ae%n%ce' | sort | uniq -c`), and grep the dump and `build/sweep/api` for phone numbers, emails and `/Users/`. A phone number that isn't a `555-01xx` fake or the Code of Conduct hotline needs a look. #847's first result lists what is already known.
+
+**Python dependencies on the host.** `uv.lock` is what the tools and tests run on, and nothing else. The workspace's own Flet packages come from `.flet-src`, so they're left out of the export:
+
+```sh
+uv export --locked --format requirements-txt --no-hashes --no-emit-workspace --no-editable -q -o build/sweep/req-all.txt
+grep -vE '^\./\.flet-src' build/sweep/req-all.txt > build/sweep/req.txt
+uvx pip-audit -r build/sweep/req.txt --no-deps --disable-pip
+osv-scanner -L uv.lock
+```
+
+Fix a hit here with `uv lock --upgrade-package <name>`, and run `tools/check.sh`. That changes nothing on a phone.
+
+**Python dependencies on phones.** `flet build` never reads `uv.lock` (§2). pip resolves `[project].dependencies` and everything they pull in when the build runs, wheels only, from PyPI and `pypi.flet.dev`, once per architecture. So only a build can say what ships, and the next build can ship something else. An iOS build of 2026-11-02 differed from the lock on three packages: `msgpack` 1.1.2 (lock: 1.2.3), `anyio` 4.16.0 (4.15.1) and `oauthlib` 4.0.1 (4.0.0).
+
+So audit builds, not the lock. On the day of the sweep, delete `build/site-packages`, make an Android build, and run this right after it. Then do the same with an iOS build, since each build replaces that folder:
+
+```sh
+for arch in build/site-packages/*/; do
+  echo "$arch"
+  find "$arch" -maxdepth 1 -name '*.dist-info' -exec basename {} .dist-info \; | sed -E 's/-([^-]+)$/==\1/' | grep -vE '^flet(_|==)' > build/sweep/req-phone.txt
+  uvx pip-audit -r build/sweep/req-phone.txt --no-deps --disable-pip
+done
+```
+
+The result covers those builds only. `uv tree --locked --no-default-groups` lists the names that may ship, but its versions are the lock's.
+
+Fix a hit that ships with an exact pin in `[project].dependencies`, like `tzdata==2026.5`, then `uv lock`, or by seeing that a new build already resolves the fixed version. Either way, run the audit on a new build to confirm it. If no phone wheel has the fix, a pin would break the build, so it's an `upstream` issue here (D-213). One is known: `msgpack` 1.1.2, the newest wheel on `pypi.flet.dev`, has two advisories (#890).
+
+**Dart dependencies.** The pin's client has a lockfile, and a real build has the set that ships, with the extensions (§5.3):
+
+```sh
+osv-scanner -L .flet-src/client/pubspec.lock
+osv-scanner -L build/flutter/pubspec.lock
+```
+
+The OSV database covers few Dart packages, so "no issues found" there says less than it does for Python. A vulnerable Dart package is a Flet matter: an `upstream` issue here (D-213).
+
+**Not covered:** the Android and iOS native dependencies (Gradle, CocoaPods) of a build; commits that a force-push left unreachable from any ref (GitHub keeps them for a while, and no one can list them); old versions of edited comments; and the logs of past Actions runs, which hold no repository secrets since there are none (D-86).
 
 ---
 
@@ -848,7 +1021,7 @@ A device can update in place only from one signing identity: our upload key (sid
 
 ```bash
 mkdir -p ~/keys
-keytool -genkeypair -v -keystore ~/keys/pyconus-upload.jks \
+keytool -genkeypair -v -keystore ~/keys/confcompanion-upload.jks \
     -keyalg RSA -keysize 2048 -validity 10000 -alias upload
 ```
 
@@ -856,19 +1029,19 @@ keytool -genkeypair -v -keystore ~/keys/pyconus-upload.jks \
 
 ```bash
 # The values come from the password manager; nothing is written to the repo.
-export FLET_ANDROID_SIGNING_KEY_STORE=~/keys/pyconus-upload.jks
+export FLET_ANDROID_SIGNING_KEY_STORE=~/keys/confcompanion-upload.jks
 export FLET_ANDROID_SIGNING_KEY_ALIAS=upload
 read -rs FLET_ANDROID_SIGNING_KEY_STORE_PASSWORD && export FLET_ANDROID_SIGNING_KEY_STORE_PASSWORD
 uv run flet build aab --build-number "$(git rev-list --count HEAD)"   # or: apk --arch arm64-v8a
 ```
 
 - flet-cli reads these four variables (`CLI/commands/build_base.py:3424-3456`). One password fills the other, and the alias defaults to `upload`. The template switches the release build to that signing config (`TPL/android/app/build.gradle.kts:103-119`).
-- **Play Console setup,** once, after O-4 settles the identity:
+- **Play Console setup,** once:
   - create the app under the neutral working name;
   - keep Play App Signing (the default for new apps);
   - complete the declarations Play asks for before the first internal release.
 - **Target API.** Play enforces a minimum `targetSdk` on uploads; ours is 36, the latest stable level (D-106).
-- **The bundle id cannot change** once an app exists in Play Console. That is why O-4 must be decided before this step.
+- **The bundle id cannot change** once an app exists in Play Console: D-452 settled it first.
 
 ### 8.2 iOS
 
@@ -881,11 +1054,11 @@ uv run flet build aab --build-number "$(git rev-list --count HEAD)"   # or: apk 
 
 Internal TestFlight testers are members of the owner's App Store Connect team: up to 100 people, with no Beta App Review. A build expires after 90 days. **External** testing would need Beta App Review, and the store name would then be visible outside the team, so it is out of scope (D-85).
 
-**Setup** (owner-only, #121), first with a throwaway bundle id, then with the O-4 identity. Today the Mac has a valid Apple Distribution identity, but its Apple Development certificate is revoked and no profile exists for our bundle id (S5):
+**Setup** (owner-only, #121), with the identity in D-452. Today the Mac has a valid Apple Distribution identity, but its Apple Development certificate is revoked and no profile exists for our bundle id (S5):
 1. Register an explicit App ID for the bundle id, and register the owner's devices.
 2. Create an Apple Development certificate and a **Development** provisioning profile for the App ID that includes those devices (`flet debug ios` needs it; see the Flet blog post "flet debug", 2025-12-02, "Testing on a real iPhone/iPad device"). Regenerate it whenever a device is added.
 3. Create an Apple Distribution certificate, and an App Store profile. Name both profiles exactly as in `pyproject.toml`.
-4. Create an App Store Connect record under the neutral working name (O-4) and a SKU.
+4. Create an App Store Connect record under the name Conf Companion (D-452) and a SKU.
 5. Commit the signing configuration. Team ids and profile names are not secrets; another contributor overrides them with `--ios-team-id` and `--ios-provisioning-profile` (`DOCS/publish/ios.md` "Resolution order"). P0-04 (#52) committed the team id and the certificate names; the two `provisioning_profile` lines follow once #121 has created the profiles.
 
 As applied in `pyproject.toml` (§3.1), with the lines #121 adds commented out:
@@ -937,7 +1110,7 @@ There is no release train. The procedure:
 1. `main` is green: its tree is one the merge gate passed, or `tools/check.sh` passed on it (§7, D-273; when the repo is public, `ci.yml` passed on it). The phase status issue lists what this build is for.
 2. **Snapshot PR:** run `uv run python tools/update_snapshot.py`, which refreshes `data/<year>/conference.json` and its `snapshot_captured_at` in `conference.toml` (D-38, D-135, NEW-03). It refuses a feed that `feed.process` rejects, that has a record the parser skips, or whose days fall outside the conference dates, and then changes nothing (exit status 1). Otherwise it prints each count before and after (sessions, speakers, days, posters, sprints, job listings); put that in the PR body, review the diff, then merge.
 3. **Version PR:** bump `[project].version` and `__version__` (§4), then merge.
-4. **Tag** `vX.Y.Z` on `main`. While the repo is private the tag builds nothing (D-273): build the quick-look APK locally (§8.1), or run `build-android.yml` by hand on the tag (`gh workflow run build-android.yml --ref vX.Y.Z`, §7.4). Once the repo is public, the tag runs it.
+4. **Tag** `vX.Y.Z` on `main`. View source links to this tag, so a build without it opens a 404 (D-461). While the repo is private the tag builds nothing (D-273): build the quick-look APK locally (§8.1), or run `build-android.yml` by hand on the tag (`gh workflow run build-android.yml --ref vX.Y.Z`, §7.4). Once the repo is public, the tag runs it.
 5. **Locally, at the same commit:**
    - check the pin (§2.2) and run `uv sync`;
    - if another build may run on the Mac, build with the worktree's own pub cache and run §5.8's AAB and IPA checks before uploading;
@@ -955,11 +1128,12 @@ Nothing here is planned. It is the list we would work through if the owner ever 
 | Topic | What it takes |
 |---|---|
 | **Trademark** | "PyCon" and the PyCon and PSF logos are PSF trademarks, and Apache-2.0 grants no trademark rights (D-36, D-87). A store listing needs either the PSF's written permission under its trademark usage policy, or a name and icon with no PSF marks. Even then the app describes an event the PSF runs, so App Review's intellectual-property rules (guideline 5.2) and Play's impersonation policy apply. "Not an official PSF app" stays wherever the app names itself. |
-| Identity | The final name, icon and bundle id (O-4). The bundle id cannot change once a store record exists. |
+| Identity | Settled by D-452. The bundle id cannot change once a build is uploaded to App Store Connect or an app exists in Play Console. |
 | Accounts | Apple: individual, or organisation (needs a D-U-N-S number). Google Play: new personal accounts must run a closed test (a minimum number of testers for 14 days) before production access; check the current rules. |
 | Privacy | A privacy-policy URL (both stores require one). App Privacy: "Data Not Collected", since there are no analytics, no crash service and favourites stay on the device (D-08, D-72). The Play Data safety form. |
 | Private API | Public builds keep the D-51 guard: the mock-only features are invisible without the Developer screen. A real backend needs the PSF (PLAN appendix). |
-| Content and licences | Review `NOTICE`, the reused Ionic assets (floor plans, D-87), sponsor logos and the bundled dependencies' licences once. |
+| Content and licences | Settle [the licence and asset review](licence-and-assets-review.md) (#846): `NOTICE`, the reused Ionic assets (floor plans, D-87), sponsor logos and the bundled dependencies' licences. |
+| Secrets and vulnerabilities | Run the sweep in §7.6 again right before the flip (#847, #852). |
 | Signing in CI | Optional at that point: move the keys to CI secrets (§7.5), superseding D-86 by decision. |
 | Store assets | Screenshots, descriptions, the age-rating questionnaires. |
 
@@ -975,7 +1149,6 @@ S5 closed the rows it answered: builds from the `.flet-src` setup (§2.2, §8), 
 | An iPhone development certificate and profiles; the release numbers on the iPhone | #121 | Simulators only for iOS (§5.3) |
 | `build-android.yml` on a GitHub runner: the `-Xmx4G` heap, `--arch arm64-v8a`, the first run's time | P0-06 (#54) | **Answered** by #54: the heap fits `ubuntu-latest` (7.9 GB; at least 1 GB available, swap under 400 MB), and a clean run takes about 9.5-12.5 minutes (§7.4) |
 | A Flet companion app in the stores that speaks 1.1 | Flet 1.1.0 release | The companion client from `.flet-src/client` (§5.2), or `flet debug` |
-| App identity: name, icon, bundle id, URL scheme | O-4 | Placeholders as in §3.1 |
 | Distribution routes | O-5 | Internal only (D-85) |
 | Cleartext HTTP and iOS local-network behaviour with the LAN mock | The first P3 device test | Use the companion client or the emulator |
 | serious_python stages the app in the shared pub cache, so overlapping builds can ship each other's Python (§5.8) | U28 (#185, flet-dev/serious-python#255) | A pub cache per worktree and the bundle check (§5.8, D-176) |

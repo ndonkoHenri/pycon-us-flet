@@ -4,7 +4,7 @@
 # permission. On Android that includes notifications, so a star shows no reminders
 # primer (D-395); on the iOS simulator it does not, so a flow's first star runs
 # primer_not_now.yaml (#710).
-appId: io.github.ndonkohenri.pyconus
+appId: io.github.ndonkohenri.confcompanion
 ---
 - launchApp:
     clearState: true

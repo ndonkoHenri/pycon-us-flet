@@ -3,7 +3,7 @@
 # Save the panel (session 123, 1:45 to 2:30 PM) on Now, and The Bakery (session 30,
 # 2:00 to 2:30 PM) on the Schedule, which opens on the 2:00 PM slot at 14:10. My
 # schedule lists both, each row saying which saved session it overlaps.
-appId: io.github.ndonkohenri.pyconus
+appId: io.github.ndonkohenri.confcompanion
 name: My schedule shows two saved sessions that overlap
 tags:
   - journeys

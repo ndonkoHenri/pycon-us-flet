@@ -14,7 +14,7 @@
 # The OS's own flag (Increase Contrast, Android's Color contrast) is off on a fresh
 # device; a flow cannot set it (simctl ui increase_contrast, settings put secure
 # contrast_level), so its resume path stays out (#512).
-appId: io.github.ndonkohenri.pyconus
+appId: io.github.ndonkohenri.confcompanion
 name: Dark and High contrast, held after a relaunch
 tags:
   - journeys

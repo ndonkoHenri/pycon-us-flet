@@ -1212,7 +1212,7 @@ test, area:quality · after P2-73, P2-74, P2-77, P2-78, #348 · NEW-04
 
 ### P2-E8 · Epic: deep links
 
-epic, area:shell · NEW-07 · a placeholder scheme and host (`pyconus://app`, D-269) until P1-34 (#15) swaps them; not a blocker
+epic, area:shell · NEW-07 · the scheme and host `confcompanion://app` (D-269, D-452)
 
 `<scheme>://<host>/<route path>` links, with scheme and host set once in the common `[tool.flet.deep_linking]` table; links and reminder taps land with a back stack.
 
@@ -1453,7 +1453,7 @@ README with screenshots and an accessibility section, CONTRIBUTING, `good first 
 
 epic, area:quality
 
-The demo script (offline start, Now & Next for me, My schedule, live edit in the companion app, a staff scan against the mock, View source), recorded fallbacks, and whether to approach the PSF. The script runs on the LAN mock from the laptop (D-457), and reopens O-8 if it finds a reason.
+The demo script (offline start, Now & Next for me, My schedule, live edit in the companion app, a staff scan against the mock, View source), recorded fallbacks, and whether to approach the PSF. The script is [`demo-script.md`](demo-script.md), a draft until the UI freezes: it runs on simulators against the mock on the laptop (D-457, D-463), and reopens O-8 if it finds a reason.
 
 ## 8. Upstream track
 

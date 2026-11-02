@@ -125,6 +125,7 @@ def SessionDetail(session_id: str) -> ft.View:
     if session is None or where is None:
         return AppScaffold(
             title="Not found",
+            source=__name__,
             body=ft.ListView(
                 [
                     not_found(
@@ -160,8 +161,11 @@ def SessionDetail(session_id: str) -> ft.View:
     open_space = session.kind == OPEN_SPACE
     site = bool(session.url) and not open_space  # an open space's is in the page
     calendar = savable and current is not None  # not once a newer feed dropped it
-    if site or calendar:
-        actions.append(SessionMenu(session, site=site, calendar=calendar))
+    has_menu = site or calendar
+    if has_menu:
+        actions.append(
+            SessionMenu(session, site=site, calendar=calendar, source=__name__)
+        )
     controls: list[ft.Control] = []
     if current is None:  # a newer feed dropped it while it was open
         controls.append(_removed_note(tokens.high_contrast))
@@ -223,7 +227,12 @@ def SessionDetail(session_id: str) -> ft.View:
         spacing=SECTION_GAP,
         padding=sides(margin, top=8, bottom=24),
     )
-    return AppScaffold(title="", body=body, actions=actions)
+    return AppScaffold(
+        title="",
+        source=None if has_menu else __name__,  # one overflow on the bar (D-461)
+        body=body,
+        actions=actions,
+    )
 
 
 def _header(

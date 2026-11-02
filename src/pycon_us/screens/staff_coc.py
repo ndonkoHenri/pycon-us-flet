@@ -119,7 +119,7 @@ def CocScanner() -> ft.Control:
         and may_open(ToolKey.COC, account.role_flags)
     )
     if not allowed:
-        return NotAvailable(title=TITLE)
+        return NotAvailable(title=TITLE, source=__name__)
     memory.staff_tool = ToolKey.COC  # plain: Now's card reads it when it renders
     return CocTool(owner=account.owner)
 
@@ -224,6 +224,7 @@ def CocTool(*, owner: str) -> ft.Control:
         paused = None
     return ScanScreen(
         title=TITLE,
+        source=__name__,
         on_badge=partial(review_badge, review.open, current),
         context=status_line(
             current.status,

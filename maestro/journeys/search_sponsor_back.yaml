@@ -4,7 +4,7 @@
 # the Sponsors (search.sponsor.bloomberg, below any session it finds). Its row pushes
 # the sponsor's page over search (D-17); Back leaves that one View, and search shows the
 # same query and the same row (D-193).
-appId: io.github.ndonkohenri.pyconus
+appId: io.github.ndonkohenri.confcompanion
 name: Now, search a sponsor, the sponsor, then Back to the search
 tags:
   - journeys

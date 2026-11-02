@@ -109,6 +109,15 @@ def test_the_bundled_notice_and_apache_texts_match_their_sources() -> None:
     assert (TEXTS_DIR / licences.APACHE).read_bytes() == roboto.read_bytes()
 
 
+def test_the_simple_icons_row_says_what_the_notice_says_of_cc0() -> None:
+    """The row and ``NOTICE``, on one page, both say CC0 doesn't reach every icon (#846)."""
+    row = COMPONENTS["simple-icons"].copyright
+    notice = " ".join((ROOT / "NOTICE").read_text().split())
+    assert "public domain" not in row
+    assert "mean every icon in it is" in row
+    assert "mean every icon in it is" in notice
+
+
 def test_the_app_and_its_notice_come_first() -> None:
     """The list opens with the app's licence, then its ``NOTICE`` (#442)."""
     assert list(COMPONENTS)[:2] == ["app", "notice"]

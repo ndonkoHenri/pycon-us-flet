@@ -93,6 +93,7 @@ def AboutApp() -> ft.View:
     rows.append(HelpUsFixIt())
     return AppScaffold(
         title="About this app",
+        source=__name__,
         body=ft.ListView(rows, expand=True, padding=sides(margin)),
     )
 

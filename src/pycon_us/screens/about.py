@@ -54,6 +54,7 @@ def AboutPycon() -> ft.View:
     info = svc.year.conference
     return AppScaffold(
         title=TITLE,
+        source=__name__,
         body=ft.ListView(
             [
                 Band(info, dark=prefs.dark),

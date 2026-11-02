@@ -95,7 +95,7 @@ def SessionPicker() -> ft.Control:
         and may_open(ToolKey.DOOR, account.role_flags)
     )
     if not allowed:
-        return NotAvailable(title=TITLE)
+        return NotAvailable(title=TITLE, source=__name__)
     return SessionList(owner=account.owner)
 
 
@@ -184,6 +184,7 @@ def SessionList(*, owner: str) -> ft.Control:
                 items.append(none_available())
     return picker_page(
         title=TITLE,
+        source=__name__,
         prefix=PREFIX,
         cancel=picking.cancel,
         margin=margin,

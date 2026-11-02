@@ -136,6 +136,7 @@ async def show(
             def Scan() -> ft.Control:
                 return ScanScreen(
                     title="Lead scanner",
+                    source=__name__,
                     on_badge=rig.on_badge,
                     paused=rig.paused,
                     clear_after=rig.clear_after,

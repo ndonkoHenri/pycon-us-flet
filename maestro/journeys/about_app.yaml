@@ -13,7 +13,7 @@
 # env:
 #   SHARE_FAILS  true expects "Couldn't open the share sheet."; anything else (the
 #                default) expects the system's sheet, dismissed with no line.
-appId: io.github.ndonkohenri.pyconus
+appId: io.github.ndonkohenri.confcompanion
 name: About this app, its data row, Licences and Report a problem
 tags:
   - journeys

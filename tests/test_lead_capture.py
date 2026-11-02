@@ -22,6 +22,7 @@ from pycon_us.lead_capture import (
     CAPTURED,
     MAY_BE_TWICE,
     NOT_CAPTURED,
+    NOT_CONFIRMED,
     NOT_SAVED,
     RETRY_FROM_QUEUE,
     SAVED,
@@ -33,6 +34,7 @@ from pycon_us.services.outbox_db import OutboxDb
 from pycon_us.services.storage import Storage
 from pycon_us.services.sync import SyncWorker
 from tests import accounts
+from tests.api_clients import ReplyReplaced
 from tests.sync_rig import Rig, outbox_db
 
 shared, storage, keystore, credentials = (
@@ -333,6 +335,126 @@ async def test_a_lost_answer_says_may_be_recorded_twice_and_loses_nothing(
             "MOCK0001",
         )
         assert captures(rig) == [(1, "MOCK0001")] * 2  # both kept: none lost
+    finally:
+        await scanner.stop()
+
+
+async def test_an_unreadable_answer_is_not_confirmed_and_never_not_captured(
+    db: OutboxDb, storage: Storage, credentials: CredentialStorage
+) -> None:
+    """The mock recorded it and the reply can't be read: "Not confirmed", flagged (#874)."""
+    rig = Rig(db, storage, credentials, "non_idempotent")
+    scanner = Scanner(rig)
+    scanner.start()
+    try:
+        await rig.sign_in("sponsor")
+        committing = rig.wire.inner
+        rig.wire.inner = ReplyReplaced(committing, b"<html>ok</html>")
+        result = await scanner.scan()
+        (row,) = rig.rows()
+        assert row.last_error
+        assert result == ScanResult(
+            ScanOutcome.DENIED,
+            NOT_CONFIRMED,
+            "MOCK0001",
+            (row.last_error, WILL_RETRY, MAY_BE_TWICE),
+            "MOCK0001",
+        )
+        rig.wire.inner = committing
+        rig.clock.at += 60  # the backoff; then the resend lands
+        again = await scanner.scan()
+        assert again == ScanResult(
+            ScanOutcome.ACCEPTED,
+            CAPTURED,
+            "Ada",
+            ("MOCK0001", MAY_BE_TWICE),
+            "MOCK0001",
+        )
+        assert captures(rig) == [(1, "MOCK0001")] * 2  # both kept: none lost
+    finally:
+        await scanner.stop()
+
+
+async def test_an_unreadable_answer_flags_only_that_sponsor_s_lead(
+    db: OutboxDb, storage: Storage, credentials: CredentialStorage
+) -> None:
+    """The second sponsor's reply can't be read: "Not confirmed" on that row alone.
+
+    The first sponsor's lead stays clean through the flag and the resend that follows,
+    and the flag outlives the second row's success (D-410, D-459, #874).
+    """
+    rig = Rig(db, storage, credentials, "non_idempotent")
+    scanner = Scanner(rig)
+    scanner.start()
+    try:
+        await rig.sign_in("staff")
+        await scanner.scan(sponsor=EXAMPLE)
+        committing = rig.wire.inner
+        rig.wire.inner = ReplyReplaced(committing, b"<html>ok</html>")
+        result = await scanner.scan(sponsor=SAMPLE)
+        (first, second) = rig.rows()
+        assert second.last_error
+        assert result == ScanResult(
+            ScanOutcome.DENIED,
+            NOT_CONFIRMED,
+            "MOCK0001",
+            (
+                "For Sample Systems",
+                f"{ALSO_FOR} Example Corp",
+                second.last_error,
+                WILL_RETRY,
+                MAY_BE_TWICE,
+            ),
+            "MOCK0001",
+            sponsor=SAMPLE,
+        )
+        assert (first.sponsor_id, first.maybe_sent) == ("1", False)
+        assert (second.sponsor_id, second.maybe_sent, second.tries) == ("3", True, 1)
+        rig.wire.inner = committing
+        repeat = await scanner.scan(sponsor=EXAMPLE)
+        assert repeat.word == ALREADY
+        assert MAY_BE_TWICE not in repeat.details
+        rig.clock.at += 60  # the backoff; then the resend lands
+        again = await scanner.scan(sponsor=SAMPLE)
+        assert again.word == CAPTURED
+        assert again.details[-1] == MAY_BE_TWICE
+        assert [(row.sponsor_id, row.maybe_sent) for row in rig.rows()] == [
+            ("1", False),
+            ("3", True),
+        ]
+        # The mock had the second sponsor's lead both times: both kept, none lost.
+        assert captures(rig) == [(1, "MOCK0001"), (3, "MOCK0001"), (3, "MOCK0001")]
+    finally:
+        await scanner.stop()
+
+
+async def test_a_refusal_after_another_sponsor_s_flagged_lead_is_not_captured(
+    db: OutboxDb, storage: Storage, credentials: CredentialStorage
+) -> None:
+    """A refusal for the next sponsor stays "Not captured": the words go by the row.
+
+    The first sponsor's unreadable reply flags its row, and the attendee's next row,
+    refused outright, is neither flagged nor said to be on record (D-459, #874).
+    """
+    rig = Rig(db, storage, credentials, "non_idempotent")
+    scanner = Scanner(rig)
+    scanner.start()
+    try:
+        await rig.sign_in("staff")
+        committing = rig.wire.inner
+        rig.wire.inner = ReplyReplaced(committing, b"<html>ok</html>")
+        flagged = await scanner.scan(sponsor=EXAMPLE)
+        assert flagged.word == NOT_CONFIRMED
+        rig.wire.inner = committing
+        refused = await scanner.scan(
+            Badge("MOCK0001", "v4l1d01", "wrong"), sponsor=SAMPLE
+        )
+        assert refused.word == NOT_CAPTURED
+        assert MAY_BE_TWICE not in refused.details
+        assert [(row.sponsor_id, row.maybe_sent) for row in rig.rows()] == [
+            ("1", True),
+            ("3", False),
+        ]
     finally:
         await scanner.stop()
 

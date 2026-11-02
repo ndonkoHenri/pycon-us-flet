@@ -6,7 +6,7 @@
 #
 # Under Maestro on Android the app sees a screen reader (F72) and opens the expo on the
 # List; the flow taps Map when booth 613 isn't there.
-appId: io.github.ndonkohenri.pyconus
+appId: io.github.ndonkohenri.confcompanion
 name: Map, Expo, a booth's card, then Close
 tags:
   - journeys

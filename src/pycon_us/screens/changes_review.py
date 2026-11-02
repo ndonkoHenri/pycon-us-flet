@@ -28,7 +28,7 @@ from pycon_us.locations import drill_href
 from pycon_us.prefs import Prefs
 from pycon_us.services import Services, use_services
 from pycon_us.services.errors import report_errors
-from pycon_us.ui.menus import menu_item, overflow_menu
+from pycon_us.ui.menus import menu_item, overflow_menu, view_source_items
 from pycon_us.ui.snack_bars import SNACK_BAR_MS, keep_while_screen_reader
 
 REVIEW = "Review"
@@ -167,11 +167,14 @@ def use_close_review() -> None:
 
 
 @ft.component
-def ScheduleOverflow() -> ft.Control:
+def ScheduleOverflow(*, source: str) -> ft.Control:
     """The Schedule's overflow ("More options"): "Schedule changes" (ux.md §5.2 item 1).
 
     The item pushes the list on the Schedule, ``/schedule/changes/<year>``, so Back
     returns to the Schedule (D-255).
+
+    Args:
+        source: The Schedule's ``__name__``, for View source (D-461).
     """
     page = ft.context.page
     svc = use_services()
@@ -187,4 +190,4 @@ def ScheduleOverflow() -> ft.Control:
         open_changes,
         identifier="schedule.changes",
     )
-    return overflow_menu("schedule.overflow", [item])
+    return overflow_menu("schedule.overflow", [item, *view_source_items(svc, source)])

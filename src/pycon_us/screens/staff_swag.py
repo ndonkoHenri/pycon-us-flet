@@ -9,7 +9,8 @@ itself as the last tool opened (D-421); More and Now list it (``BUILT_TOOLS``, #
 The **categories** head the screen, in the context slot rather than a pushed page:
 swag has a handful. A wrapping row of filter chips from ``swag_catalog()`` of the
 ``redeemable`` catalog, fetched as the screen opens (a progress line meanwhile,
-"Couldn't load categories" with Retry on a failure, D-120). The choice is the staff key
+"Couldn't load categories" with Retry on a failure, D-120); until it has loaded, a
+connection that returns restarts the fetch. The choice is the staff key
 ``STAFF_SWAG_CATEGORIES``, read from storage as the screen opens, as the Lead
 scanner's sponsor is (D-425), so it survives a restart and goes at a sign-out (D-414);
 ids no longer in the catalog are ignored.
@@ -107,7 +108,7 @@ def SwagPickup() -> ft.Control:
         and may_open(ToolKey.SWAG, account.role_flags)
     )
     if not allowed:
-        return NotAvailable(title=TITLE)
+        return NotAvailable(title=TITLE, source=__name__)
     memory.staff_tool = ToolKey.SWAG  # plain: Now's card reads it when it renders
     return SwagTool(owner=account.owner)
 
@@ -156,9 +157,15 @@ def SwagTool(*, owner: str) -> ft.Control:
 
     ft.use_effect(load, [tries])
 
+    was_online = ft.use_ref(online)  # so opening the screen isn't a return
+
     @report_errors
     def reload_when_online() -> None:
-        if online and loaded.status == "failed":
+        returned = online and not was_online.current
+        was_online.current = online
+        # Even while loading: a fetch sent before the return may still fail, and Flet
+        # cancels it as the new one starts (D-70), so only the newest answer shows.
+        if returned and loaded.status != "loaded":
             set_tries(lambda n: n + 1)
 
     ft.use_effect(reload_when_online, [online])
@@ -201,6 +208,7 @@ def SwagTool(*, owner: str) -> ft.Control:
     )
     return ScanScreen(
         title=TITLE,
+        source=__name__,
         on_badge=partial(look_up, svc.api, categories=categories, offer=sheet.offer),
         context=category_area(loaded, current, toggle, retry),
         paused=paused,

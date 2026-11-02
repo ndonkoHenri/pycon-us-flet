@@ -7,7 +7,7 @@
 # The rooms, the pins and the plans are bundled year data (map.toml, D-36), so the
 # flow runs with the feed unreachable (start_offline.yaml; airplane mode on Android).
 # The plan's image is one node that names the room it marks ("…, Room 103 marked").
-appId: io.github.ndonkohenri.pyconus
+appId: io.github.ndonkohenri.confcompanion
 name: Map, a room, its floor plan
 tags:
   - journeys

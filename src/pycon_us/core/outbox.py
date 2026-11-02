@@ -7,9 +7,9 @@ and live here, so a hypothesis state machine proves them (D-77) before any sqlit
 takes rows and returns new ones; the caller stores them. ``due()`` is the Python twin of
 the due-rows query in docs/architecture.md §12.1, and §12.2 is the transition table.
 ``status_text()`` says a row's status, flagged "may be recorded twice" after a send
-whose answer was lost (D-57, D-410). A lead belongs to a sponsor, so an account keeps
-one lead row and one note row per (owner, code, sponsor id); a sponsor's own account
-has one sponsor id, None (D-459).
+whose answer was lost or could not be read (D-57, D-410). A lead belongs to a
+sponsor, so an account keeps one lead row and one note row per (owner, code, sponsor
+id); a sponsor's own account has one sponsor id, None (D-459).
 """
 
 from collections.abc import Iterable, Mapping
@@ -66,9 +66,10 @@ class Row:
         revision: How many times an enqueue changed the stored row. A send's outcome
             is saved only over the revision it was read at, so a note edited while
             its old text was in flight keeps the new text (D-56).
-        maybe_sent: Whether a send got no answer after the server may have had the
-            request (``NetworkError.maybe_sent``), so a resend may record it twice
-            (D-57, D-410). Once set, never cleared: a later success keeps it.
+        maybe_sent: Whether a send got no answer, or none we could read, after the
+            server may have had the request (``NetworkError.maybe_sent``,
+            ``ApiError.unreadable``), so a resend may record it twice (D-57, D-410).
+            Once set, never cleared: a later success keeps it.
     """
 
     kind: Kind
@@ -358,16 +359,20 @@ def after_network_error(row: Row, now: float, *, maybe_sent: bool = False) -> Ro
     return replace(row, next_at=now + NETWORK_BACKOFF, maybe_sent=flagged)
 
 
-def after_error(row: Row, message: str, now: float) -> Row:
-    """Return a row the server refused: one more counted failure.
+def after_error(row: Row, message: str, now: float, *, maybe_sent: bool = False) -> Row:
+    """Return a row the server answered unusably: one more counted failure.
 
     The row waits a tick like after a network error; the ``RETRY_CAP``-th counted
-    failure makes it ``failed``, until "Retry failed".
+    failure makes it ``failed``, until "Retry failed". An answer that could not be read
+    flags the row for good, as a lost one does, and still counts: resending it for ever
+    to a server that always answers so could record it without end (D-410).
 
     Args:
         row: The pending row that was sent.
         message: The ``ApiError``'s message.
         now: The current time (epoch seconds).
+        maybe_sent: Whether the server may have applied it though it answered
+            (``ApiError.unreadable``); False for a refusal.
 
     Returns:
         The row, pending and due in ``NETWORK_BACKOFF`` seconds, or failed.
@@ -381,6 +386,7 @@ def after_error(row: Row, message: str, now: float) -> Row:
         tries=tries,
         last_error=message,
         next_at=now + NETWORK_BACKOFF,
+        maybe_sent=row.maybe_sent or maybe_sent,
     )
 
 
