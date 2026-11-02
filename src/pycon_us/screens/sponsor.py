@@ -37,7 +37,6 @@ from pycon_us.core.sponsors import sponsor_by_slug
 from pycon_us.locations import booth_href
 from pycon_us.prefs import use_prefs
 from pycon_us.screens.plan_tables import table_href
-from pycon_us.screens.stub import not_found
 from pycon_us.services import Services, use_services
 from pycon_us.services.errors import report_errors
 from pycon_us.state import use_conference
@@ -55,7 +54,7 @@ from pycon_us.ui.page_title import PageTitle
 from pycon_us.ui.rows import LinkTile
 from pycon_us.ui.scaffold import AppScaffold, SectionHeader
 from pycon_us.ui.semantics import named
-from pycon_us.ui.states import NoDataState
+from pycon_us.ui.states import NoDataState, not_found
 from pycon_us.ui.widths import READING, sides, use_margin
 
 SCREEN = "sponsor"

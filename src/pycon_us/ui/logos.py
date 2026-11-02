@@ -3,7 +3,7 @@
 Logos are drawn for a white page: a dark mark on a transparent ground vanishes on the
 dark surface. So a logo sits on a white tile in both schemes, with a hairline
 ``outline_variant`` edge, wherever the app shows one: a sprint project's card (EVT-05,
-D-202) and, from P2, the Sponsors list (D-279) and detail, Job listings and Now's sponsor
+D-202), the Sponsors list (D-279) and detail, Job listings and Now's sponsor
 spotlight (ux.md §5.1, §6.5, §6.6). One builder, so the tile is drawn one way (D-262).
 """
 
