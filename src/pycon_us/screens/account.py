@@ -21,6 +21,7 @@ the page shows a state instead.
 """
 
 import time
+from typing import cast
 
 import flet as ft
 from flet.components.hooks.use_ref import MutableRef
@@ -38,7 +39,7 @@ from pycon_us.screens.account_sign_out import (
 from pycon_us.screens.more import account_avatar
 from pycon_us.screens.sign_in import EXPIRED, mock_line
 from pycon_us.services import Services, use_services
-from pycon_us.services.errors import report_errors
+from pycon_us.services.errors import report_errors, say
 from pycon_us.staff import use_staff
 from pycon_us.staff_data import unsynced
 from pycon_us.ui.actions import padded
@@ -76,14 +77,6 @@ SIGNED_OUT_STATE = "You're not signed in"
 SIGNED_OUT_STATE_BODY = "Sign in from More to see your account."
 
 
-def not_asking() -> bool | None:
-    """Return None: the sign-out dialog is closed, the page's first state.
-
-    A function, so ``ft.use_state`` keeps the state typed as ``bool | None``.
-    """
-    return None
-
-
 @ft.component
 def AccountPage() -> ft.View:
     """The Account page: the account, its access, its sync, Discord and Sign out."""
@@ -96,7 +89,7 @@ def AccountPage() -> ft.View:
     staff = use_staff()  # the dialog's count follows each pass (D-414)
     margin = use_margin(LIST)  # its width class (D-305)
     # None while closed, else whether My schedule had synced when it opened.
-    asking, set_asking = ft.use_state(not_asking)
+    asking, set_asking = ft.use_state(cast(bool | None, None))
     syncing, set_syncing = ft.use_state(False)  # Sign out's try before it asks
     kicked: MutableRef[int | None] = ft.use_ref(None)  # the dialog's Sync now
     _, set_kicked_at = ft.use_state(-1)  # a re-render, so its ring shows at once
@@ -142,12 +135,7 @@ def AccountPage() -> ft.View:
     async def sign_out() -> None:
         set_asking(None)
         removed = await account.sign_out(svc.storage, svc.credentials)
-        page.show_dialog(
-            ft.SnackBar(
-                ft.Text(SIGNED_OUT if removed else SIGNED_OUT_PARTLY),
-                behavior=ft.SnackBarBehavior.FLOATING,
-            )
-        )
+        say(page, SIGNED_OUT if removed else SIGNED_OUT_PARTLY)
         if is_top_view(page.route, view_path):  # not if Back left it meanwhile
             page.navigate(parent_of(view_path, svc.memory.search_base))
 

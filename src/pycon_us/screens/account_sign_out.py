@@ -13,7 +13,7 @@ from typing import Any
 
 import flet as ft
 
-from pycon_us.ui.buttons import ICON_PADDING
+from pycon_us.ui.buttons import ICON_PADDING, busy_label
 from pycon_us.ui.queue_rows import sync_button
 from pycon_us.ui.semantics import named
 
@@ -36,22 +36,12 @@ def sign_out_button(
     *, syncing: bool, on_click: ft.ControlEventHandler[ft.OutlinedButton]
 ) -> ft.Control:
     """Return Sign out: disabled with a ring while it tries to send My schedule first."""
-    label: ft.Control = (
-        ft.Row(
-            [
-                ft.ProgressRing(width=16, height=16, stroke_width=2),
-                ft.Text("Syncing My schedule…"),
-            ],
-            spacing=8,
-            tight=True,
-        )
-        if syncing
-        else ft.Text("Sign out")
-    )
     return named(
         "account.sign_out",
         ft.OutlinedButton(
-            content=label,
+            content=busy_label("Syncing My schedule…")
+            if syncing
+            else ft.Text("Sign out"),
             icon=None if syncing else ft.Icons.LOGOUT,
             on_click=on_click,
             disabled=syncing,

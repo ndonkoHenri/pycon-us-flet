@@ -18,6 +18,7 @@ are in ``developer_clock.py``.
 """
 
 import logging
+from typing import cast
 
 import flet as ft
 from flet.utils import is_embedded
@@ -27,9 +28,9 @@ from pycon_us.account import Account, use_account
 from pycon_us.favorites import Favorites, use_favorites
 from pycon_us.locations import WELCOME, start_target
 from pycon_us.prefs import Prefs, use_prefs
-from pycon_us.screens.developer_ui import Asking, confirmation, none_open, snapshot_day
+from pycon_us.screens.developer_ui import Asking, confirmation, snapshot_day
 from pycon_us.services import Services, changes_file, use_services
-from pycon_us.services.errors import report_errors, show_details
+from pycon_us.services.errors import report_errors, say, show_details
 from pycon_us.staff import Staff, use_staff
 from pycon_us.staff_data import clear_staff_data, staff_counts
 from pycon_us.state import Conference, use_conference
@@ -80,7 +81,7 @@ def DataActions() -> ft.Control:
     tokens = use_tokens()
     use_minute()  # Refresh now's second line says the schedule's age
     info = svc.year.conference
-    asking, set_asking = ft.use_state(none_open)  # the open confirmation
+    asking, set_asking = ft.use_state(cast(Asking, None))  # the open confirmation
     outcome, set_outcome = ft.use_state(NO_OUTCOME)
     sharing, set_sharing = ft.use_state(False)  # the share sheet is up
     packaged = is_embedded()  # where the log is a file here, and Developer can lock
@@ -148,12 +149,7 @@ def DataActions() -> ft.Control:
                 memory.last_location, memory.search_base, onboarded=prefs.onboarded
             )
         )
-        page.show_dialog(
-            ft.SnackBar(
-                ft.Text("App reset" if complete else RESET_INCOMPLETE),
-                behavior=ft.SnackBarBehavior.FLOATING,
-            )
-        )
+        say(page, "App reset" if complete else RESET_INCOMPLETE)
 
     # Read when Reset app asks, and after each pass while it does (D-414).
     rows = ft.use_memo(
@@ -162,7 +158,7 @@ def DataActions() -> ft.Control:
     )
     ft.use_dialog(
         confirmation(
-            asking,
+            cast(Asking, asking),  # use_state's type drops the Literal
             saved=len(favorites.ids),
             packaged=packaged,
             snapshot_day=snapshot_day(info),

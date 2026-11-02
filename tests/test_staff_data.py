@@ -19,7 +19,7 @@ import pytest
 
 from pycon_us.account import SignIn
 from pycon_us.config import load_year
-from pycon_us.core import outbox
+from pycon_us.core import outbox, outbox_enqueue
 from pycon_us.core.outbox import Row, Status
 from pycon_us.memory import ViewMemory
 from pycon_us.services import Services, pref_keys
@@ -75,7 +75,7 @@ def rig(db: OutboxDb, storage: Storage, credentials: CredentialStorage) -> Rig:
 
 def seed(db: OutboxDb, code: str, owner: str, status: Status = Status.PENDING) -> Row:
     """Store a lead row of ``owner``'s for ``code`` in ``status``."""
-    decide = outbox.scan_lead
+    decide = outbox_enqueue.scan_lead
     enqueued = db.enqueue(
         code,
         lambda rows: decide(
@@ -201,7 +201,7 @@ def test_a_switch_forgets_other_accounts_synced_rows_only(db: OutboxDb) -> None:
     lead = seed(db, "A4", A, Status.SYNCED)
     note = db.enqueue(
         lead.key,
-        lambda rows: outbox.save_note(
+        lambda rows: outbox_enqueue.save_note(
             rows,
             owner=A,
             code=lead.key,

@@ -16,7 +16,7 @@ from datetime import UTC, date, datetime
 from typing import Any, TypeIs
 
 from pycon_us.core.check_in import Catalog, Category
-from pycon_us.core.queries import fold
+from pycon_us.core.queries import fold, matching
 
 ALL_SESSIONS = "All sessions"
 """The chip's words for a whole category: "Tutorials · All sessions"."""
@@ -192,14 +192,7 @@ def filter_sessions(
     Returns:
         The sessions found, in their order; ``sessions`` itself without a word.
     """
-    words = fold(query).split()
-    if not words:
-        return sessions
-    return tuple(
-        session
-        for session in sessions
-        if all(word in fold(f"{session.title} {session.when}") for word in words)
-    )
+    return matching(sessions, query, lambda s: fold(f"{s.title} {s.when}"))
 
 
 def choose_session(category: int, session: DoorSession) -> DoorChoice:

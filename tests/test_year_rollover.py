@@ -19,7 +19,7 @@ from pycon_us.account import Account
 from pycon_us.app import bootstrap
 from pycon_us.change_log import ChangeLog
 from pycon_us.config import YearData, load_year
-from pycon_us.core import outbox
+from pycon_us.core import outbox, outbox_enqueue
 from pycon_us.core.change_batches import Batch
 from pycon_us.core.door_sessions import DoorChoice
 from pycon_us.core.lead_sponsors import LeadSponsor
@@ -249,11 +249,11 @@ def outboxes(directory: Path) -> Iterator[tuple[OutboxDb, OutboxDb]]:
 
 def scan(
     db: OutboxDb, code: str, sponsor: tuple[str, str] = ("7", "Old Sponsor")
-) -> outbox.Enqueued:
+) -> outbox_enqueue.Enqueued:
     """Enqueue a lead scan of ``code`` for ``OWNER`` and ``sponsor``, not sent yet."""
     enqueued = db.enqueue(
         code,
-        lambda rows: outbox.scan_lead(
+        lambda rows: outbox_enqueue.scan_lead(
             rows,
             owner=OWNER,
             code=code,
@@ -267,7 +267,7 @@ def scan(
     return enqueued
 
 
-def synced(db: OutboxDb, enqueued: outbox.Enqueued) -> None:
+def synced(db: OutboxDb, enqueued: outbox_enqueue.Enqueued) -> None:
     """Store a scan's row as sent, as a pass of the worker would."""
     assert enqueued.row is not None
     assert db.save(outbox.after_success(stored(db, enqueued.row.key), {"ok": True}))
@@ -315,7 +315,7 @@ def test_a_lead_synced_in_2026_is_no_repeat_and_no_other_sponsor_in_2027(
     old, new = outboxes
     synced(old, scan(old, "MOCK0001"))
     enqueued = scan(new, "MOCK0001", sponsor)
-    assert enqueued.outcome is outbox.Outcome.QUEUED
+    assert enqueued.outcome is outbox_enqueue.Outcome.QUEUED
     assert enqueued.others == ()
 
 
@@ -327,7 +327,7 @@ def test_a_note_in_2027_does_not_follow_a_lead_synced_in_2026(
     synced(old, scan(old, "MOCK0001"))
     noted = new.enqueue(
         "MOCK0001",
-        lambda rows: outbox.save_note(
+        lambda rows: outbox_enqueue.save_note(
             rows,
             owner=OWNER,
             code="MOCK0001",
@@ -337,7 +337,7 @@ def test_a_note_in_2027_does_not_follow_a_lead_synced_in_2026(
             now=1.0,
         ),
     )
-    assert noted is not None and noted.outcome is outbox.Outcome.QUEUED
+    assert noted is not None and noted.outcome is outbox_enqueue.Outcome.QUEUED
     assert new.due_rows(OWNER, 2.0) == []
 
 

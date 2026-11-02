@@ -200,7 +200,7 @@ async def test_a_star_tap_re_renders_one_day_and_one_row(
     """A star tap re-renders one day body and one row (D-153).
 
     Each day is memoised and given only its own saved ids; the test fails with
-    ``ft.memo`` taken off ``_DayList`` or ``SessionRow``.
+    ``ft.memo`` taken off ``DayList`` or ``SessionRow``.
     """
     days: list[date] = []
     slots = screen.by_slot

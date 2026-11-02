@@ -36,7 +36,7 @@ import flet as ft
 
 from pycon_us.core.links import feed_link
 from pycon_us.services import Services
-from pycon_us.services.errors import report_errors
+from pycon_us.services.errors import report_errors, say
 from pycon_us.services.storage import SERVICE_ERRORS
 from pycon_us.theme_markdown import MARKDOWN_STYLE
 from pycon_us.ui.focus_back import focus_back
@@ -178,7 +178,7 @@ async def open_link(
         logger.warning(
             "Could not open the %s link: %s", kind.value, type(error).__name__
         )
-        _say(COULD_NOT_OPEN)
+        say(page, COULD_NOT_OPEN)
 
 
 def external(identifier: str, button: ft.Control) -> ft.Control:
@@ -218,7 +218,7 @@ async def open_feed_link(svc: Services, href: str | None) -> None:
     target = feed_link(href, svc.year.conference.site_url)
     if target is None:
         logger.warning("A link in a feed text has no address the app opens")
-        _say(COULD_NOT_OPEN)
+        say(ft.context.page, COULD_NOT_OPEN)
         return
     await open_link(svc, target)
 
@@ -300,10 +300,10 @@ async def copy_text(svc: Services, text: str, copied: str, failed: str) -> None:
     except SERVICE_ERRORS as error:
         # Our words and the class only: the error's text repeats the value (D-72).
         logger.warning("%s: %s", failed, type(error).__name__)
-        _say(failed)
+        say(ft.context.page, failed)
         return
     if not await _system_confirms_copies():
-        _say(copied)
+        say(ft.context.page, copied)
 
 
 async def _system_confirms_copies() -> bool:
@@ -319,9 +319,3 @@ async def _system_confirms_copies() -> bool:
     if info is None or not isinstance(info, ft.AndroidDeviceInfo):
         return False
     return info.version.sdk >= SYSTEM_COPY_CONFIRMATION_SDK
-
-
-def _say(text: str) -> None:
-    ft.context.page.show_dialog(
-        ft.SnackBar(ft.Text(text), behavior=ft.SnackBarBehavior.FLOATING)
-    )

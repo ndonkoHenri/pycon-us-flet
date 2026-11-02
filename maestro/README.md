@@ -69,7 +69,9 @@ options set as `tests/ui/developer.py` does
 nothing answers at, then Refresh now must say "Couldn't refresh: no answer from the feed". `NOW` and
 `OFFLINE_URL` override them (`-e NOW="2026-05-16 10:00"`). On iOS Maestro cannot cut the
 simulator's network, so the launch's own refresh may publish the year's live feed, which
-lists the same sessions as the bundled snapshot.
+lists the same sessions as the bundled snapshot. A cold start with no network is checked
+on Android, or on iOS as [below](#offline-on-a-fresh-ios-install). The venue flows don't
+mind: their pages are bundled year data (`content.toml`) and need no feed.
 
 ### The reminders primer on iOS
 
@@ -170,6 +172,15 @@ step's screenshot and the view hierarchy are in the debug output, under
 `~/.maestro/tests/<date>/` unless `--debug-output` names a folder (keep it under
 `build/`, which git ignores).
 
+A journey takes one to two minutes on a quiet host, most of it the fresh start in
+Developer options, and up to about three on a busy one. On a very busy host the XCTest
+driver may not start in time, and an iOS run stops before any flow:
+`MAESTRO_DRIVER_STARTUP_TIMEOUT=240000` (ms) gives it the time. Results go on the phase's
+status issue and the PR, not here.
+
+Maestro does not drive a screen reader: for TalkBack, see
+[`docs/testing-and-quality.md`](../docs/testing-and-quality.md) §7.3.
+
 **Comparing two builds** (the fling after the sheet, at Maestro's pace): install `main`'s
 APK, run the regression flow, install the PR's APK, run it again with the same `TRIALS`,
 and compare the two summaries (`flings after the sheet, N moved, N short, N none, N
@@ -184,7 +195,9 @@ fails unless every trial moved and every tap reached the button. It starts the f
 clock at 14:01, so the now slot stays 2:00 PM for about 35 trials. On Android the
 launcher logs every touch, so the time from the tap on "Show N sessions" to the fling is
 `adb -s emulator-5570 logcat -d | grep TaplEvents`: the `ACTION_UP` at (540, 2232), then
-the `ACTION_DOWN` at (540, 1800), by `eventTime` (ms).
+the `ACTION_DOWN` at (540, 1800), by `eventTime` (ms). Compare builds only on a quiet
+host, one right after the other: a busy host stretches the sheet's exit past the fling,
+and `main` loses flings too.
 
 ### Deep links
 
@@ -231,12 +244,26 @@ takes a screenshot of each page to look at for clipping and overlap (ux.md §9).
 relaunch may show the bundled snapshot rather than the scene's feed, whose time the
 fake clock set in May, so logos may load.
 
+At iOS's `accessibility-large`, about 200 %, a fresh start does work:
+`open_developer.yaml` and `set_scene.yaml` scroll to each row before they tap it. At
+`accessibility-extra-extra-extra-large` the flows still cannot set their scene, so a
+flow's pages are walked there after a run at the default size.
+
 ```bash
 # iOS: Bold Text is Settings › Accessibility › Display & Text Size › Bold Text.
 xcrun simctl ui <udid> content_size accessibility-extra-extra-extra-large   # or accessibility-large, about 200 %
 # Android: adb -s emulator-5570 shell settings put system font_scale 2.0
 maestro --device <udid> test --test-output-dir build/maestro/large-text maestro/journeys/sponsors_large_text.yaml
 ```
+
+### Calendar
+
+A second run of `calendar_export` on the same simulator finds the events already there:
+iOS then shows "Delete Event" (one event) or "Add (1)" (some added), and
+`subflows/calendar_handoff.yaml` taps Add only when it shows. To see what landed, read the
+simulator's calendar store,
+`~/Library/Developer/CoreSimulator/Devices/<udid>/data/Library/Calendar/Calendar.sqlitedb`:
+each event has its UTC time, its `UID` (`2026-<key>@…`) and an alarm 600 s before.
 
 ### Feed pairs
 
@@ -358,80 +385,10 @@ fails under `tools/check.sh`. A new `text:` in those flows needs its words there
 - The expo opens on the List under a screen reader and on the Map otherwise
   (`view_of()`), and Maestro makes Android report one (F72): a flow that needs one view
   taps its segment (`expo.view.map`, `expo.view.list`) when that view isn't showing.
-
-## Calendar and reminders (#458)
-
-On an iPhone 17 simulator (iOS 26.5) with an `ios-simulator` build of `main` at
-`e5f2e0a` (Flet pin `15854a0ac`), on 2026-10-27, at iOS's `accessibility-large` text
-size (about 200 %): `calendar_export` passed in 2 min 36 s and `reminder_banner` in
-2 min 35 s, on a freshly erased simulator. What landed in the simulator's calendar was
-read from its store (`data/Library/Calendar/Calendar.sqlitedb`): both events at their
-UTC times (21:45 and 21:00 on May 15), each with its `UID` (`2026-<key>@…`) and an alarm
-600 s before. A second run on the same simulator finds the events already there: iOS
-then shows "Delete Event" (one event) or "Add (1)" (some added), and the subflow taps
-Add only when it shows. At 200 % text, Developer options' rows sit below the fold, so
-`open_developer.yaml` and `set_scene.yaml` scroll to each row before they tap it.
-The Android half runs later (#458).
-
-## Run times (#348)
-
-Release APK on `flet_probe_api34` (Android 14) and an `ios-simulator` build on an
-iPhone 17 simulator (iOS 26.5), Flet pin `15854a0ac`, on 2026-10-20, on a host shared
-with other agents' builds and emulators. Each journey takes 1 to 1.5 minutes on a quiet
-host, most of it the fresh start in Developer options; the runs while the host's load
-average was in the hundreds took up to 3 minutes a journey.
-
-| Run (the flows as merged) | Android | iOS |
-|---|---|---|
-| Journeys, run 1 | 6 of 6 passed, 9 min 10 s | 6 of 6 passed, 8 min 13 s |
-| Journeys, run 2 | 6 of 6 passed, 7 min 55 s | 6 of 6 passed, 7 min 29 s |
-| `regression`, `main`'s build (`1a2c2b5`) | `TRIALS=20`: 20 moved, 10 min 23 s; tap to fling 773-914 ms (median 870) | `TRIALS=10`: 10 moved, 5 min 5 s; tap command 0.77 s |
-| `regression`, #346's build (`7ccd74f`) | `TRIALS=20`: 20 moved, 10 min 44 s; tap to fling 807-1,019 ms (median 858) | not run |
-
-After P2 (#496, on 2026-10-21, `main` at `6979c0b`): every journey stopped at the launch,
-because a fresh install now opens Welcome (D-287) and Refresh now's failure line was
-reworded. `launch_fresh.yaml` taps Get started (`welcome.start`) until Now shows, and
-`start_offline.yaml` expects the new words (#496 and #518 made the same fix). Then, on an iPhone 17 simulator (iOS 26.5), at a
-load average of 40 to 300: the six journeys passed (1 min 27 s to 1 min 50 s each), and
-`sponsors_back` passed.
-
-Earlier versions of the flows failed twice on iOS while the host's load average was 400
-to 700: Developer's feed URL lost two characters as it was typed (F63), and the overlap
-flow's star tap landed while the Schedule was still jumping to now. Both are handled now
-(a field is typed until it holds the whole value; the star waits for the jump, then is
-tapped again if it stayed off). At that load the regression flow also lost a fling on
-`main`, with 1.3 to 3.5 s between the tap and the fling: a busy host stretches the
-sheet's exit past the fling. Compare builds only on a quiet host, one right after the
-other.
-
-`deep_links` (#518), on 2026-10-21 at a load average of 100 to 500: passed on an iPhone 17
-simulator (iOS 26.5), the first link through "Open in …?". Not yet run on Android: the
-emulator did not finish booting at that load. By then `main` had the first-run Welcome
-(#504) and Developer's new refresh wording, which `launch_fresh.yaml` and
-`start_offline.yaml` now expect, so every journey starts again.
-
-#346's row D failed with 0.33 to 0.6 s between the tap and the fling. Both builds ran
-every fling in full at about 0.85 s, the soonest Maestro gets there, so this flow does
-not reach that window: it guards the fling at Maestro's pace only. The rows above were
-judged by the slot alone, the rule before #484's review; the flow now judges by rows.
-With rows, on #348's build (`f5785bb`) on Android: `TRIALS=5`, 5 moved, 4 min 52 s, at
-a load average under 3. An earlier run, at a load average of 370, counted one fling as
-short: it had stopped two rows past the rest, in the 12:30 PM slot.
-
-**#455** (2026-10-27, `main` at `e5f2e0a`, Flet pin `15854a0ac`), an `ios-simulator`
-build on an iPhone 17 simulator (iOS 26.5), at a load average of 90 to 130:
-`sponsors_back`, `jobs_filter_back`, `spotlight_back` and `search_sponsor_back` passed
-(1 min 29 s to 1 min 38 s each); `sponsors_offline_logos` passed, every tile showing
-initials; `sponsors_large_text` passed with Bold Text at `accessibility-large` and at
-`accessibility-extra-extra-extra-large`. A second scene in one flow first failed:
-Developer's feed URL kept its old tail, since the tap put the caret mid-URL, so
-`set_scene.yaml` now taps and erases twice. Not yet run on Android.
-
-**The expo flows (#454)**, on 2026-10-27, `main` at `e5f2e0a`, an `ios-simulator`
-build on an iPhone 17 simulator (iOS 26.5): the four `expo` journeys passed (1 min 24 s
-to 1 min 47 s each, 6 min 7 s in all). Not yet run on Android (#454's Android sweep).
-
-**The theme flow (#512)**, on 2026-10-28, `main` at `bb1c255`: `theme_relaunch` passed twice in a row on a release APK on `pycon_pixel6a_api36` (55 s, 56 s) and on an `ios-simulator` build on an iPhone 17 simulator (iOS 26.5; 49 s, 52 s). Each state check was also run against the wrong state and failed, so none passes by itself.
+- A busy host can lose keystrokes in a controlled field (F63): type in a `retry` until the
+  field shows the whole value, as `set_scene.yaml` does. On iOS a tap can put the caret
+  mid-field, so it taps and erases twice. A tap on a moving list only stops it: wait for
+  the animation, and tap again if the state didn't change (`my_schedule_overlap.yaml`).
 
 ## Tablets and landscape (#461)
 
@@ -482,19 +439,6 @@ What the flows met on the way, now handled in the shared subflows:
   orientations; `subflows/dismiss_share.yaml` taps it on the right, since a tap near the
   left edge of an iPhone in landscape left the sheet open.
 
-**Results** (2026-10-27, `main` at `e0f3c1f` plus these flows, Flet pin `15854a0ac`,
-load averages 2 to 16):
-
-| Device | Run | Result |
-|---|---|---|
-| iPad Pro 11-inch (M5), iOS 26.5, `ios-simulator` build | `tablet`, portrait and landscape, light | 2 of 2 passed each (4 min 25 s, 5 min 6 s) |
-| same | `rail_tabs`, portrait and landscape, dark | passed |
-| iPhone 17, iOS 26.5 | `tablet` in landscape; `about_app` in portrait | passed (7 min 13 s for the pair) |
-| `pycon_tablet_api36`, Android 16, release APK (arm64) | `tablet`, landscape and portrait, light | 2 of 2 passed each (7 min 20 s, 6 min 18 s) |
-| same | `rail_tabs`, landscape, dark | passed |
-| same | `rail_tabs`, portrait, dark | stopped twice in `set_scene.yaml` while erasing the feed URL (the caret sat at the field's start, and Maestro's erase never returned), at a load average of 15; the dark portrait screenshots were taken by hand |
-| `pycon_pixel6a_api36`, Android 16, release APK | `tablet` in landscape | 2 of 2 passed, 7 min 37 s; More, at the short rail's bottom edge, is reached through `tab.yaml` |
-
 ## Offline on a fresh iOS install
 
 Maestro cannot cut a simulator's network, so the launch's refresh reaches the year's
@@ -511,114 +455,3 @@ xcrun simctl spawn <udid> defaults write "$data/Library/Preferences/io.github.nd
 
 Then launch it without `clearState` (which would drop the value): its refresh finds no
 feed, and Settings › Refresh now says "Bundled with the app" (#454).
-
-## Venue pages (#456)
-
-The three `venue` flows, on 2026-10-27, `main` at `e5f2e0a` plus the flows, an
-`ios-simulator` build whose bundle matched `build/python-app`, Flet pin `15854a0ac`, at
-load averages of 15 to 730:
-
-| Device | Run | Result |
-|---|---|---|
-| iPhone 17, iOS 26.5 | `--include-tags=venue` | 3 of 3 passed, 4 min 12 s; `xcrun simctl pbpaste` gave the password |
-| iPad Air 11-inch (M4), iOS 26.5 (the rail) | `--include-tags=venue` | 3 of 3 passed, 5 min 9 s, through `tab.yaml`; `pbpaste` gave the password |
-| Android | not run yet | the Android sweep runs them, TalkBack and airplane mode included |
-
-At 200 % text (iOS's Larger Text at `accessibility-large`) the flows cannot start:
-Developer options' rows (`about_app.developer`, `developer.apply`) are below the fold,
-and the shared subflows tap them without a scroll. The pages were checked at 200 % in
-an app the flows had set up, after the text size changed: nothing clips, Report a
-concern stays first, and both copies are confirmed; the email address breaks inside
-`python.org` (#642).
-
-A simulator cannot be put in airplane mode, so on iOS the launch's own refresh may
-reach the year's live feed before Developer points the app at a feed that never
-answers; a cold start with no network is checked on Android. The three pages need no
-feed: they are bundled year data (`content.toml`).
-
-## The P2 exit's device run (#462)
-
-On 2026-10-28, `main` at `9ae2d49`, Flet pin `08b89cce5`: an `ios-simulator` build and a
-release APK (arm64), each matching `build/python-app`, at load averages of 4 to 43.
-Results and screenshots are on #347.
-
-| Device | Run | Result |
-|---|---|---|
-| iPhone 17, iOS 26.5 | `--include-tags=venue,expo` (`find_room` included) | 8 of 8 passed, 17 min 37 s |
-| same | `change_log`, `reminder_primer` (`PRIMER=allow OS_ANSWER=deny`), `deep_links`, `theme_relaunch` | 4 of 4 passed, 7 min 57 s |
-| iPad Pro 11-inch (M5), iOS 26.5 | `rail_tabs`, `find_room`; `about_app` without `SHARE_FAILS` | passed; the share sheet opens (F263) |
-| `pycon_pixel6a_api36`, Android 16 | `--include-tags=venue,expo`, each a cold start in airplane mode | 8 of 8 passed, 19 min 52 s |
-| same | `change_log`, `reminder_primer` (`OS_ANSWER=deny`), `deep_links`, `theme_relaunch` | 4 of 4 passed, 8 min 32 s |
-
-At the largest text (iOS's `accessibility-extra-extra-extra-large`) the flows still
-cannot set their scene (Developer options' rows are below the fold); the three
-screen-reader flows' pages were walked there after a run at the default size.
-
-## The map journeys (#453)
-
-P2-93's three map journeys, `--include-tags=map`, on 2026-10-30, `main` at `4cd9ae28`
-plus the flows, Flet pin `08b89cce5`: a release APK (arm64) and an `ios-simulator`
-build, each matching `build/python-app` (the APK's `.pyc` bytes aside, rebuilt by the
-iOS build after it), at load averages of 6 to 74.
-
-| Device | Run | Result |
-|---|---|---|
-| iPhone 17, iOS 26.5 | `--include-tags=map` | 3 of 3 passed, 6 min 31 s (2 min 14 s, 2 min 18 s, 1 min 59 s) |
-| `pycon_pixel6a_api36`, Android 16 | `--include-tags=map`, each a cold start in airplane mode | 3 of 3 passed, 7 min 28 s (2 min 43 s, 2 min 32 s, 2 min 14 s) |
-
-At a load average of 74 the first iOS run stopped before any flow: the XCTest driver
-did not start in time. `MAESTRO_DRIVER_STARTUP_TIMEOUT=240000` (ms) gave it the time.
-
-Offline: a fresh install of the APK, in airplane mode from its first launch, and a fresh
-install on the simulator whose feed URL was set before its first launch
-([above](#offline-on-a-fresh-ios-install)): each opened on the bundled schedule
-("Offline · schedule from …"), and Map › Floor plans showed every thumbnail, and each of
-the five plans (Campus, Concourse, Upper, Arena, Seaside) drew in full.
-
-TalkBack drives through the emulator's own touchscreen, not `adb shell input`, which
-TalkBack lets through to the app as plain taps. The console's `event mouse <x> <y> 0 1`
-(down or move) and `… 0 0` (up), sent over one socket to the console port with its
-auth token, at about 12 ms between moves, are a swipe TalkBack recognises
-(`GESTURE_SWIPE_RIGHT`, "NEXT"), and two quick taps its double tap;
-[`docs/testing-and-quality.md`](../docs/testing-and-quality.md) §7.3 has the
-`sendevent` way and how to read what TalkBack said. Do not dump the screen
-(`uiautomator dump`) between gestures: here, after each dump the app's nodes had new
-ids, and TalkBack's next swipe started again from the screen's first item; read the
-spoken words from logcat instead.
-
-
-TalkBack on `pycon_pixel6a_api36`, from the Map's title: 14 swipes right (Search, More
-options, the four tabs, "Concourse level, Heading", then each room row, "Room 101A,
-5 sessions" …) reach "Room 103ABC, 26 sessions", and a double tap opens it with
-TalkBack on Back. Five swipes on (the title, the three day tabs) is "Show Room 103 on
-the Concourse level floor plan"; its double tap opens the plan, read Back, "Concourse level,
-Heading", More options, "Concourse level floor plan, Room 103 marked", the label "Room
-103, Concourse level · Talk track / Security track", "Zoom in, Button", "Zoom out,
-Button, disabled", "Reset view, Button, disabled". A double tap on Zoom in zooms the
-plan, and Zoom out and Reset view then read enabled. TalkBack says nothing of the zoom
-itself.
-
-At the largest text, after a run at the default size (no fresh start), the three
-journeys' pages were walked on Android at `font_scale 2.0` and on iOS at
-`accessibility-extra-extra-extra-large` with Bold Text: every step works and nothing
-clips, but the floor viewer's label card covers the marked room at iOS's largest
-(#793), Search's preset Places chip is off screen (#794), and the location card
-narrows to its content (#795).
-
-## The staff journeys (#825)
-
-`--include-tags=staff`, run twice in a row against one running mock (restarted between
-platforms), on 2026-11-02, `main` at `1826388a` plus these flows, Flet pin `22a6dcb16`: a
-release APK (arm64) and an `ios-simulator` build, each matching `build/python-app`, at
-load averages of 5 to 13. The flows passed the same way on the two earlier merges of
-`main` on the way, without #872, #882 and #889 and then with them.
-
-| Device | Run 1 | Run 2 |
-|---|---|---|
-| `pycon_pixel6a_api36`, Android 16 | 4 of 4 passed, 8 min 2 s | 4 of 4 passed, 8 min 19 s |
-| iPhone 17, iOS 26.5 | 4 of 4 passed, 6 min 29 s | 4 of 4 passed, 6 min 17 s |
-
-The mock's log for each platform's two runs agrees: four `lead_retrieval/capture` GETs,
-four `mask_violations/capture` POSTs, and five `check_in/redeem_products` POSTs, the
-door's two per run and swag's one on the first. A result's check was also run against
-the wrong outcome ("Already picked up" with "Not a badge code" on the panel), and failed.

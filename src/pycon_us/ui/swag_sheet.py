@@ -30,6 +30,7 @@ hand-out stays in progress (and scanning paused) until its answer settles it (#7
 import asyncio
 from collections.abc import Callable
 from dataclasses import dataclass, field, replace
+from typing import cast
 
 import flet as ft
 from flet.components.hooks.use_ref import MutableRef
@@ -42,7 +43,7 @@ from pycon_us.services import use_services
 from pycon_us.services.errors import report_errors
 from pycon_us.theme import use_tokens
 from pycon_us.theme_hc import hc_sheet_shape
-from pycon_us.ui.buttons import LABEL_PADDING
+from pycon_us.ui.buttons import LABEL_PADDING, busy_label
 from pycon_us.ui.queue_rows import heading
 from pycon_us.ui.semantics import named
 
@@ -216,19 +217,10 @@ def hand_out_button(
         sending: The hand-out is being sent.
         on_click: Sends it.
     """
-    label: ft.Control = (
-        ft.Row(
-            [ft.ProgressRing(width=16, height=16, stroke_width=2), ft.Text(SENDING)],
-            spacing=8,
-            tight=True,
-        )
-        if sending
-        else ft.Text(hand_out_words(count))
-    )
     return named(
         "swag.hand_out",
         ft.FilledButton(
-            content=label,
+            content=busy_label(SENDING) if sending else ft.Text(hand_out_words(count)),
             icon=None if sending else ft.Icons.REDEEM_OUTLINED,
             on_click=on_click,
             disabled=sending or count == 0,
@@ -264,7 +256,7 @@ def use_swag_sheet() -> SwagSheet:
     svc = use_services()
     prefs = use_prefs()
     tokens = use_tokens()
-    handing, set_state = ft.use_state(not_handing)
+    handing, set_state = ft.use_state(cast(Handing | None, None))
     latest: MutableRef[Handing | None] = ft.use_ref(handing)
     pending: MutableRef[asyncio.Future[ScanResult | None] | None] = ft.use_ref(None)
     mounted = ft.use_ref(True)  # cleared on unmount: a late answer then sets nothing
@@ -347,8 +339,3 @@ def use_swag_sheet() -> SwagSheet:
         else None
     )
     return SwagSheet(offer, handing is not None)
-
-
-def not_handing() -> Handing | None:
-    """Return None: no sheet open, the hook's first state (a typed default)."""
-    return None

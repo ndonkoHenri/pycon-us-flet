@@ -38,6 +38,7 @@ share it and a HID scanner never types into the list's search.
 
 from dataclasses import dataclass, replace
 from functools import partial
+from typing import cast
 
 import flet as ft
 
@@ -129,7 +130,7 @@ def LeadTool(*, owner: str, for_sponsor: bool) -> ft.Control:
     arrival = use_arrival(owner)  # changes as the picker opens and goes back
     svc = use_services()
     staff = use_staff()
-    read, set_read = ft.use_state(not_read)  # None until the first read
+    read, set_read = ft.use_state(cast(Read | None, None))  # None until the first read
     asked = ft.use_ref(False)  # the picker opened by itself: only once
     count = ft.use_memo(  # "Leads (42)", read again as the outbox changes (D-69)
         lambda: lead_count(svc.outbox, owner), [owner, staff.revision, svc.outbox]
@@ -302,8 +303,3 @@ def given(last: Read | None, owner: str) -> bool:
         owner: The signed-in account.
     """
     return last is not None and last.owner == owner and last.consent
-
-
-def not_read() -> Read | None:
-    """Return None: the keys not read yet, ``LeadTool``'s first state (typed)."""
-    return None

@@ -26,14 +26,6 @@ type Asking = Literal["clear", "reset"] | None
 """Which confirmation is open: Clear cached feed's, Reset app's, or none."""
 
 
-def none_open() -> Asking:
-    """Return None: no confirmation open, the Data section's first state.
-
-    A function, so ``ft.use_state`` keeps the state typed as ``Asking``.
-    """
-    return None
-
-
 NBSP = "\u00a0"
 """A non-breaking space: the dialog never wraps a date in its middle."""
 

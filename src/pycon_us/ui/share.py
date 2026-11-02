@@ -23,7 +23,7 @@ from pycon_us.favorites import Favorites, use_favorites
 from pycon_us.prefs import Prefs, use_prefs
 from pycon_us.services import Services, use_services
 from pycon_us.services.diagnostics import diagnostics_text, gather_facts
-from pycon_us.services.errors import report_errors
+from pycon_us.services.errors import report_errors, say
 from pycon_us.services.storage import SERVICE_ERRORS
 from pycon_us.state import Conference, use_conference
 from pycon_us.theme import Tokens
@@ -161,9 +161,7 @@ async def share_text(svc: Services, text: str, *, subject: str) -> None:
         )
     except SERVICE_ERRORS as error:
         logger.warning("Could not share a text: %s", type(error).__name__)
-        page.show_dialog(
-            ft.SnackBar(ft.Text(NOT_SHARED), behavior=ft.SnackBarBehavior.FLOATING)
-        )
+        say(page, NOT_SHARED)
 
 
 def report_subtitle(packaged: bool) -> str:

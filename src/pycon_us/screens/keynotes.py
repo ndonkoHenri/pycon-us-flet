@@ -97,6 +97,7 @@ def Keynotes() -> ft.View:
                 saved=view.session.id in favorites.ids,
                 on_toggle=on_toggle,
                 star_color=tokens.favorite,
+                key=view.session.id,  # pyright: ignore[reportCallIssue]  # as SessionRow's
             )
             for view in views
         ]

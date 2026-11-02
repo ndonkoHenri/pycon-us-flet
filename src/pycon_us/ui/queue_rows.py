@@ -20,7 +20,7 @@ from pycon_us.core.lead_views import for_line
 from pycon_us.core.outbox import Kind, Row, Status, status_text
 from pycon_us.core.timefmt import ago_label
 from pycon_us.theme import Tokens
-from pycon_us.ui.buttons import ICON_PADDING, LABEL_PADDING
+from pycon_us.ui.buttons import ICON_PADDING, LABEL_PADDING, busy_label
 from pycon_us.ui.semantics import named
 
 SYNC_NOW = "staff.queue.sync_now"
@@ -185,22 +185,10 @@ def sync_button(
         on_click: Kicks the worker.
         identifier: Its identifier: the sheet's, or sign-out's dialog's (D-414).
     """
-    label: ft.Control = (
-        ft.Row(
-            [
-                ft.ProgressRing(width=16, height=16, stroke_width=2),
-                ft.Text("Syncing…"),
-            ],
-            spacing=8,
-            tight=True,
-        )
-        if busy
-        else ft.Text("Sync now")
-    )
     return named(
         identifier,
         ft.FilledButton(
-            content=label,
+            content=busy_label("Syncing…") if busy else ft.Text("Sync now"),
             on_click=on_click,
             disabled=busy or disabled,
             style=ft.ButtonStyle(padding=LABEL_PADDING),
