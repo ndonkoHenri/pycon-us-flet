@@ -4,7 +4,7 @@
 **For:** whoever implements a module, screen or service. **Companion to** [`PLAN.md`](../PLAN.md) §5 and [`decisions.md`](decisions.md), which is binding; §19 lists where this file departs from it.
 
 **Conventions**
-- `D-nn` are decisions, `F1`..`F31` the verified Flet facts (decisions §N), `S1`..`S9` the spikes (PLAN §8), `E*`/`U*` upstream items. Feature ids (`SCHED-16`, `NEW-03`) are rows of [`feature-matrix.md`](feature-matrix.md).
+- `D-nn` are decisions, `Fnn` the verified Flet facts (decisions §N; numbers have gaps), `S1`..`S9` the spikes (PLAN §8), `E*`/`U*` upstream items. Feature ids (`SCHED-16`, `NEW-03`) are rows of [`feature-matrix.md`](feature-matrix.md).
 - Every Flet API named here was introspected in the local monorepo (flet-dev/flet `9fbe52a61`, unreleased 1.1.0). An API that does **not exist yet** is marked *(not in Flet yet: Ux/Ex)* and has an interim; §18 is the ledger.
 - Code blocks are sketches: they parse and use only verified APIs, but leave out obvious imports, copy and styling.
 - Each module says when it arrives (P0..P4). Build only what the current phase needs (D-66).
