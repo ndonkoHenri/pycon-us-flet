@@ -22,6 +22,7 @@ emulator, iOS simulator, phone) and the Flet pin (`.flet-ref`). Never claim a ch
 UI changes only; otherwise write "No UI change". Android emulator and iOS simulator, light and dark when relevant.
 Push the PNGs to the pr-assets branch (AGENTS.md, D-162) and embed them as
 ![Android, light](https://github.com/ndonkoHenri/pycon-us-flet/blob/pr-assets/<pr>/<file>.png?raw=true)
+From a fork, drag the images into the PR instead (CONTRIBUTING.md).
 
 | | Android emulator | iOS simulator |
 |---|---|---|
