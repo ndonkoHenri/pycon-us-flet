@@ -465,7 +465,7 @@ uv run flet debug ios -d <simulator udid>
 | Xcode and its runtime | Never timed | Depends on the connection; tens of minutes at least |
 | First `flet debug ios` | Under 3 min with warm caches (2026-10-12); `flet build ios-simulator` 4 min from a cloned pub cache (#176) | Estimate: 10 to 15 minutes |
 
-So Android from nothing comes to about 20 to 35 minutes, estimated, not counting `pytest`, which sits right at PLAN's 30-minute exit target; #850 settles it.
+So Android from nothing, not counting `pytest`, comes to about 20 to 35 minutes, estimated. That sits right at PLAN's 30-minute exit target; #850 settles it.
 
 **The rehearsal (#849, 2026-11-02, at `22a6dcb16`).** Step 1 was followed in a new directory, with new clones of both repos and uv's cache and Python folders empty (`UV_CACHE_DIR`, `UV_PYTHON_INSTALL_DIR`, `UV_PYTHON_PREFERENCE=only-managed`); then `uv run flet devices` ran (13 s, no devices). What wasn't clean: the owner's Mac already had Homebrew, Xcode 27.2, a logged-in `gh`, uv 0.13.6, Flutter 3.47.8 through fvm, the JDK, the Android SDK, and warm Gradle and pub caches. The Flutter, JDK and SDK installers write into the home folder, so they weren't run. Nothing was built, and no emulator or simulator was used; steps 2 and 3 were read against flet-cli's source at the pin only. This section's device steps last ran on 2026-10-12, at an older pin and with warm caches: the 70 s and 3 minutes above.
 
