@@ -1,9 +1,11 @@
-"""Rows already on a device under one lead per (owner, code) (D-459, #829).
+"""Rows written under one lead per (owner, code), in a version 2 file (D-459, #829).
 
-Keying leads and notes by sponsor as well changes no column, so ``outbox.db`` isn't
-migrated: every row written before it is already a valid row of the new key, since a
-note always took its lead's sponsor. These tests write such a file by hand, with the
+Keying leads and notes by sponsor as well changes no column, so the file isn't migrated:
+every row written before it is already a valid row of the new key, since a note always
+took its lead's sponsor. These tests write a year's file (D-466) by hand, with the
 migrations as they were, and use it through ``OutboxDb`` and the rules as the app does.
+A device's ``outbox.db`` from those builds is left unread (D-466), and the last test
+pins that.
 """
 
 import contextlib
@@ -18,22 +20,22 @@ import pytest
 from pycon_us.core import outbox
 from pycon_us.core.outbox import Kind, Outcome, Status
 from pycon_us.services.outbox_db import OutboxDb
-from pycon_us.services.outbox_schema import OUTBOX_V1, OUTBOX_V2
+from pycon_us.services.outbox_schema import OUTBOX_V1, OUTBOX_V2, file_name
 
+YEAR = 2026
 OWNER = "staff@example.com"
 NOW = 1_000_000.0
 ANSWERED = json.dumps({"badge_validator": "v", "result": {"first_name": "Ada"}})
 NOTED = json.dumps({"accessCode": "A1", "note": "Hot"})
 
 
-@pytest.fixture
-def device(tmp_path: Path) -> Iterator[OutboxDb]:
-    """Yield an outbox over a version 2 file holding what an earlier build left.
+def write_old_rows(path: Path) -> None:
+    """Write a version 2 file at ``path`` holding what an earlier build left.
 
     A1: a synced lead for Acme with a note waiting. B2: a pending lead for Acme.
     C3: a failed lead for Acme. D4: a sponsor's own synced lead (no sponsor).
     """
-    with contextlib.closing(sqlite3.connect(tmp_path / "outbox.db")) as old, old:
+    with contextlib.closing(sqlite3.connect(path)) as old, old:
         old.executescript(f"{OUTBOX_V1}{OUTBOX_V2}PRAGMA user_version = 2;")
         old.executemany(
             "INSERT INTO outbox (kind, key, payload_json, owner, sponsor_id,"
@@ -47,7 +49,13 @@ def device(tmp_path: Path) -> Iterator[OutboxDb]:
                 ("lead", "D4", ANSWERED, OWNER, None, None, "synced", 0, NOW, NOW),
             ],
         )
-    database = OutboxDb(tmp_path)
+
+
+@pytest.fixture
+def device(tmp_path: Path) -> Iterator[OutboxDb]:
+    """Yield an outbox over a version 2 file of its year, with the old rows in it."""
+    write_old_rows(tmp_path / file_name(YEAR))
+    database = OutboxDb(tmp_path, YEAR)
     yield database
     database.close()
 
@@ -150,3 +158,17 @@ def test_a_switch_of_account_keeps_the_old_lead_its_note_waits_for(
     assert device.delete_synced(OWNER)
     kept = device.rows(OWNER, list(Status)) or []
     assert sorted({r.key for r in kept}) == ["A1", "B2", "C3"]
+
+
+def test_a_device_s_outbox_db_from_before_the_years_is_left_unread(
+    tmp_path: Path,
+) -> None:
+    """Its rows are the mock's (D-466): the year's outbox starts empty, the file as it was."""
+    old_file = tmp_path / "outbox.db"
+    write_old_rows(old_file)
+    before = old_file.read_bytes()
+    database = OutboxDb(tmp_path, YEAR)
+    assert database.rows(OWNER, list(Status)) == []
+    assert database.due_rows(OWNER, NOW) == []
+    database.close()
+    assert old_file.read_bytes() == before

@@ -1,4 +1,4 @@
-"""The staff outbox's sqlite database, ``outbox.db`` in the data directory (D-49, D-56).
+"""The staff outbox's sqlite database, ``outbox-<year>.db`` in the data directory (D-49, D-56).
 
 ``core/outbox.py`` decides what a scan, a send or a sign-out does to the rows; this module
 only stores them. One connection, opened on first use and used only from the asyncio
@@ -23,8 +23,8 @@ from pycon_us.services.outbox_schema import (
     COLUMNS,
     DELETE_SYNCED_SQL,
     DUE_SQL,
-    FILE_NAME,
     VALUES,
+    file_name,
     is_edit,
     migrate,
     to_params,
@@ -55,7 +55,7 @@ class Counts:
 
 
 class OutboxDb:
-    """The outbox rows in ``outbox.db``: every outbox read and write goes through here.
+    """A year's outbox rows: every outbox read and write goes through here.
 
     Built by ``Services.create()`` and closed by ``Services.close()``. The connection
     opens on first use, from the loop thread that then owns it, so an install whose
@@ -63,16 +63,17 @@ class OutboxDb:
     the file. Every method is synchronous and runs on that thread (D-49).
 
     Attributes:
-        path: The database file, ``outbox.db`` in the data directory.
+        path: The database file, ``outbox-<year>.db`` in the data directory.
     """
 
-    def __init__(self, directory: Path) -> None:
-        """Point at ``outbox.db`` in ``directory``; nothing is opened yet.
+    def __init__(self, directory: Path, year: int) -> None:
+        """Point at ``year``'s file in ``directory``; nothing is opened yet.
 
         Args:
             directory: The durable data directory, from ``data_dir()`` (D-108).
+            year: The conference year whose rows it holds (D-466).
         """
-        self.path = directory / FILE_NAME
+        self.path = directory / file_name(year)
         self._connection: sqlite3.Connection | None = None
         self._closed = False
 

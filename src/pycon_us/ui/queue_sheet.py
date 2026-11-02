@@ -3,7 +3,7 @@
 ux.md §7.2 (LEAD-12, LEAD-13, API-10; #694). Failures must be visible, with Retry (P3
 exit criterion 2): Ionic's pull-to-refresh synced only pending scans, never failed ones.
 
-- ``read_queue()`` reads what the sheet lists from ``outbox.db``: the account's pending
+- ``read_queue()`` reads what the sheet lists from ``outbox-<year>.db``: the account's pending
   and failed rows, newest first, its latest confirmed rows, and, where the host asks
   (Developer, D-412), other accounts' unsynced rows, which wait for their own sign-in
   (architecture §12.1).

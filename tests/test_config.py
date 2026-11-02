@@ -42,10 +42,17 @@ def test_the_year_loader_loads_no_flet_module() -> None:
     assert result.stdout.strip() == "False"
 
 
-def test_the_active_year_is_2026_in_pacific_time() -> None:
-    """The active year is 2026 in Pacific Time, May 13 to 19 with talks to May 17."""
+def test_the_active_year_has_a_folder_of_its_own() -> None:
+    """``load_year()`` reads ``YEAR``'s folder, whose dates fall in that year (D-05)."""
     conference = load_year().conference
-    assert config.YEAR == 2026
+    assert conference.year == config.YEAR
+    assert conference.first_day.year == config.YEAR
+    assert conference.last_day.year == config.YEAR
+
+
+def test_2026_is_in_pacific_time() -> None:
+    """2026 is in Pacific Time, May 13 to 19 with talks to May 17."""
+    conference = load_year(2026).conference
     assert conference.zone == ZoneInfo("America/Los_Angeles")
     assert conference.time_zone_name == "Pacific Time"
     assert (conference.first_day, conference.last_talk_day, conference.last_day) == (
@@ -129,7 +136,8 @@ def test_the_active_year_bundles_its_snapshot() -> None:
     """NEW-03: the app has data on its first launch, offline."""
     data = load_year()
     snapshot = data.read_snapshot()
-    assert snapshot.raw == (config.DATA_DIR / "2026" / "conference.json").read_bytes()
+    folder = config.DATA_DIR / str(config.YEAR)
+    assert snapshot.raw == (folder / config.SNAPSHOT_FILE).read_bytes()
     assert snapshot.captured_at == data.conference.snapshot_captured_at
     assert snapshot.captured_at.utcoffset() is not None
     assert snapshot.captured_at < datetime.now(UTC)

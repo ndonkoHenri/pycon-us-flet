@@ -41,7 +41,7 @@ def outbox_db(tmp_path: Path) -> Iterator[OutboxDb]:
     """
     directory = tmp_path / "outbox"
     directory.mkdir()
-    database = OutboxDb(directory)
+    database = OutboxDb(directory, 2026)
     yield database
     database.close()
 

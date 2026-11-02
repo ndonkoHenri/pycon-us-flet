@@ -27,7 +27,7 @@ from pycon_us.screens import lead_consent
 from pycon_us.screens.staff_lead import LeadScanner
 from pycon_us.services import Services
 from pycon_us.services.outbox_db import OutboxDb
-from pycon_us.services.pref_keys import SCANNER_CONSENT, STAFF_SPONSOR
+from pycon_us.services.pref_keys import SCANNER_CONSENT, staff_sponsor
 from pycon_us.state import Conference
 from pycon_us.ui import scan_screen, staff_picker
 from tests import harness
@@ -58,7 +58,7 @@ def signed_in(
 
 def choose(stored: dict[str, Any], sponsor: LeadSponsor) -> None:
     """Store ``sponsor`` as the chosen one, as the picker saves it."""
-    stored[STAFF_SPONSOR.key] = json.dumps(to_stored(sponsor))
+    stored[staff_sponsor(2026).key] = json.dumps(to_stored(sponsor))
 
 
 def chip_text(shown: Shown) -> str | None:

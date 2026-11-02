@@ -2,7 +2,7 @@
 
 ``StaffQueue`` runs outside a renderer: its hooks are replaced, and the sheet's own hook
 (``use_queue_sheet()``, whose sheet ``test_queue_sheet.py`` checks) by an opener that
-counts its calls. The rows are seeded into a real ``outbox.db``.
+counts its calls. The rows are seeded into a real ``outbox-<year>.db``.
 """
 
 import inspect
@@ -38,7 +38,7 @@ OTHER = "door@example.com"
 @pytest.fixture
 def db(tmp_path: Path) -> Iterator[OutboxDb]:
     """Yield an empty outbox in its own directory, closed afterwards."""
-    database = OutboxDb(tmp_path)
+    database = OutboxDb(tmp_path, 2026)
     yield database
     database.close()
 
@@ -145,7 +145,7 @@ def tile(control: ft.Control) -> ft.ListTile:
 def test_without_a_mock_api_url_the_row_is_not_there(
     render: Callable[..., tuple[ft.Control, list[int]]],
 ) -> None:
-    """Staff features hide without the mock (D-51), and outbox.db stays unopened."""
+    """Staff features hide without the mock (D-51), and the outbox stays unopened."""
     control, _ = render(mock=False)
     assert control.visible is False
 

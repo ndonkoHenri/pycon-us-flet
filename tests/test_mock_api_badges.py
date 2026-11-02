@@ -3,6 +3,7 @@
 import re
 from pathlib import Path
 
+from pycon_us.config import YEAR
 from tools.mock_api.badges import main, payload, qr_svg, sheet
 from tools.mock_api.state import MockState
 
@@ -35,7 +36,5 @@ def test_main_writes_the_sheet(tmp_path: Path) -> None:
     """``python -m tools.mock_api.badges --out FILE`` writes the seeded sheet there."""
     out = tmp_path / "sheet" / "badges.html"
     main(["--out", str(out)])
-    state = MockState.from_seed()
-    assert out.read_text(encoding="utf-8") == sheet(
-        state.year, state.attendees.values()
-    )
+    attendees = MockState.from_seed().attendees.values()
+    assert out.read_text(encoding="utf-8") == sheet(YEAR, attendees)

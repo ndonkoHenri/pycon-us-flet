@@ -1,9 +1,8 @@
 """The SharedPreferences key table (STORE-01; decisions §M, D-49, D-108).
 
 Every small value the app keeps is a ``Pref`` here, prefixed ``pycon.``, with its type
-and default: the app-wide keys in ``APP_PREFS``, the per-year ones built by
-``favorites()``, ``favorites_sync()`` and ``fetched()``. ``services/storage.py``'s
-``Storage`` reads and writes them.
+and default: the app-wide keys in ``APP_PREFS``, the per-year ones built by the functions
+below it (D-48, D-466). ``services/storage.py``'s ``Storage`` reads and writes them.
 """
 
 from dataclasses import dataclass
@@ -34,7 +33,7 @@ PREFIX = "pycon."
 STAFF_PREFIX = "pycon.staff_"
 """Starts every staff key (the chosen sponsor, the scanner consent): what sign-out, an
 account switch and Clear staff data remove with ``clear_prefs(STAFF_PREFIX)`` (D-414),
-so a staff key added later is removed with the others."""
+every year's, so a staff key added later is removed with the others."""
 
 THEME: Pref[str] = Pref("pycon.theme", "system")
 """``system``, ``light`` or ``dark`` (THEME-01)."""
@@ -63,21 +62,6 @@ SCANNER_CONSENT: Pref[bool] = Pref("pycon.staff_scanner_consent", False)
 key: a sign-out, a sign-in as another account and Clear staff data remove it, so the
 Lead scanner asks again. In no store: the scanner reads it as it opens (D-423)."""
 
-STAFF_SPONSOR: Pref[dict[str, Any]] = Pref("pycon.staff_sponsor", {})
-"""The sponsor door staff scan leads for, ``{id, name, logo_url}`` (LEAD-05, STORE-11;
-``core/lead_sponsors.py``); ``{}`` until one is chosen. A staff key (D-414), read as
-the Lead scanner opens and as it comes back on top, as the consent is (D-425)."""
-
-STAFF_DOOR_SESSION: Pref[dict[str, Any]] = Pref("pycon.staff_door_session", {})
-"""The session, or a category's sessions, Door check checks in for, ``{category_id,
-product_ids, label, all}`` (DOOR-02; ``core/door_sessions.py``); ``{}`` until one is
-chosen. A staff key (D-414), read as Door check opens and as it comes back on top, as
-the sponsor is (D-425, D-433)."""
-STAFF_SWAG_CATEGORIES: Pref[list[str]] = Pref("pycon.staff_swag_categories", [])
-"""The swag category ids Swag pickup hands out, as strings (SHIRT-01; #768): a
-SharedPreferences string list, as ``excluded_tracks``. A staff key (D-414), read as
-the screen opens, as the sponsor is (D-425); ids no longer in the catalog are ignored."""
-
 ACCOUNT: Pref[dict[str, Any]] = Pref("pycon.account", {})
 """The signed-in mock account: ``email``, ``nickname`` and ``features`` (P3, D-49).
 Its key and secret are ``services/credentials.py``'s, never here."""
@@ -91,9 +75,6 @@ APP_PREFS: tuple[Pref[Any], ...] = (
     DEV,
     START_SCREEN,
     SCANNER_CONSENT,
-    STAFF_SPONSOR,
-    STAFF_DOOR_SESSION,
-    STAFF_SWAG_CATEGORIES,
     ACCOUNT,
 )
 """Every app-wide key; per-year keys are built by the functions below."""
@@ -132,3 +113,51 @@ def fetched(year: int) -> Pref[bool]:
     over the bundled snapshot is not diffed (``ChangeLog``). Reset app clears it.
     """
     return Pref(f"pycon.{year}.fetched", False)
+
+
+def staff_sponsor(year: int) -> Pref[dict[str, Any]]:
+    """Return the key of the sponsor door staff scan leads for in a year (D-466).
+
+    ``{id, name, logo_url}`` (LEAD-05, STORE-11; ``core/lead_sponsors.py``); ``{}`` until
+    one is chosen. A staff key (D-414), read as the Lead scanner opens and as it comes
+    back on top, as the consent is (D-425).
+
+    Args:
+        year: The conference year; a sponsor's id means nothing in another year's data.
+
+    Returns:
+        The ``pycon.staff_<year>_sponsor`` key.
+    """
+    return Pref(f"{STAFF_PREFIX}{year}_sponsor", {})
+
+
+def staff_door_session(year: int) -> Pref[dict[str, Any]]:
+    """Return the key of the session or sessions Door check checks in for (D-466).
+
+    ``{category_id, product_ids, label, all}`` (DOOR-02; ``core/door_sessions.py``); ``{}``
+    until one is chosen. A staff key (D-414), read as Door check opens and as it comes
+    back on top, as the sponsor is (D-425, D-433).
+
+    Args:
+        year: The conference year; a product's id means nothing in another year's data.
+
+    Returns:
+        The ``pycon.staff_<year>_door_session`` key.
+    """
+    return Pref(f"{STAFF_PREFIX}{year}_door_session", {})
+
+
+def staff_swag_categories(year: int) -> Pref[list[str]]:
+    """Return the key of the swag category ids Swag pickup hands out (D-466).
+
+    As strings (SHIRT-01; #768): a SharedPreferences string list, as ``excluded_tracks``.
+    A staff key (D-414), read as the screen opens, as the sponsor is (D-425); ids no
+    longer in the catalog are ignored.
+
+    Args:
+        year: The conference year; a category's id means nothing in another year's data.
+
+    Returns:
+        The ``pycon.staff_<year>_swag_categories`` key.
+    """
+    return Pref(f"{STAFF_PREFIX}{year}_swag_categories", [])

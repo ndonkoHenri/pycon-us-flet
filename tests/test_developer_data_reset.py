@@ -318,6 +318,31 @@ async def test_reset_app_deletes_the_change_log_when_no_feed_url_was_set(
     assert not changes_file.changes_path(svc.storage).exists()
 
 
+async def test_reset_app_deletes_other_years_files_but_not_their_outbox(
+    svc: Services,
+    prefs: Prefs,
+    conference: Conference,
+    favorites: Favorites,
+) -> None:
+    """After a rollover, last year's cache and log go too; its outbox rows stay (D-466).
+
+    Nothing reads the cache and the log, and a fresh install has neither. The rows may
+    be unsynced, and no confirmation named them (D-414).
+    """
+    directory = svc.storage.directory
+    old_files = [directory / "feed-2025.json", directory / "changes-2025.json"]
+    for path in old_files:
+        path.write_bytes(b"{}")
+    old_outbox = directory / "outbox-2025.db"
+    old_outbox.write_bytes(b"")
+
+    assert (
+        await reset_app(svc, conference, prefs, favorites, Account(), Staff()) is True
+    )
+    assert not any(path.exists() for path in old_files)
+    assert old_outbox.exists()
+
+
 async def test_a_reset_that_cannot_delete_everything_says_so(
     render: Callable[[], ft.Column],
     rendered: Rendered,

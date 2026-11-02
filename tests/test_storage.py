@@ -22,7 +22,13 @@ prefs, store = memory_storage.prefs, memory_storage.store
 # ------------------------------------------------------------------ the key table
 
 
-ALL_PREFS = [*pref_keys.APP_PREFS, pref_keys.favorites(2026)]
+ALL_PREFS = [
+    *pref_keys.APP_PREFS,
+    pref_keys.favorites(2026),
+    pref_keys.staff_sponsor(2026),
+    pref_keys.staff_door_session(2026),
+    pref_keys.staff_swag_categories(2026),
+]
 
 
 def test_every_key_is_prefixed_and_listed_once() -> None:
@@ -55,6 +61,20 @@ def test_favorites_are_kept_per_year() -> None:
     """The favourites key names its year, so each year keeps its own."""
     assert pref_keys.favorites(2026).key == "pycon.2026.favorites"
     assert pref_keys.favorites(2027).key != pref_keys.favorites(2026).key
+
+
+@pytest.mark.parametrize(
+    "key",
+    [
+        pref_keys.staff_sponsor,
+        pref_keys.staff_door_session,
+        pref_keys.staff_swag_categories,
+    ],
+)
+def test_the_staff_choices_are_kept_per_year_under_the_staff_prefix(key: Any) -> None:
+    """Each names its year, and a sign-out's ``STAFF_PREFIX`` still finds it (D-466)."""
+    assert key(2027).key != key(2026).key
+    assert key(2026).key.startswith(pref_keys.STAFF_PREFIX)
 
 
 # ------------------------------------------------------------------ preferences

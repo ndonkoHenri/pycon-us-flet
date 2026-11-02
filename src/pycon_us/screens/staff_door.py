@@ -8,7 +8,7 @@ opened (D-421); More's row and Now's card open it, with the outbox's counts (#76
 
 What it checks in for is chosen on ``door_session.py``'s picker, pushed at
 ``…/staff/door/session``, as the Lead scanner's sponsor (D-425, D-433). The choice
-(``STAFF_DOOR_SESSION``) is read as the screen opens and again whenever the location
+(``staff_door_session()``) is read as the screen opens and again whenever the location
 changes, so it is current when the picker goes back; until that read lands, scanning
 waits, so no badge is checked against the previous session's list. With none, the picker opens by
 itself once per visit and scanning is paused ("Choose a session to start checking in")

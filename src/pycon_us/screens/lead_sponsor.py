@@ -7,7 +7,7 @@ else, and a deep link, sees "Not available for this account"): a search field
 (``lead.sponsor.search``) that matches the name or booth, then one row per sponsor
 (``lead.sponsor.<id>``): its logo (``logo_tile()``, the initials without one), its name
 and "Booth 101", the current one ticked. One node each, read "Example Corp, Booth 101,
-selected". A tap saves the choice (``STAFF_SPONSOR``) and goes back; a save that fails
+selected". A tap saves the choice (``staff_sponsor()``) and goes back; a save that fails
 stays here and says so, since the scanner would not see it (D-120, D-425). Cancel (a close
 icon in the app bar) and Back leave the choice as it was.
 

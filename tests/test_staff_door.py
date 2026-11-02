@@ -26,7 +26,7 @@ from pycon_us.door_check import ALREADY, CHECKED_IN
 from pycon_us.screens.door_session import ALL_SESSIONS, NONE_AVAILABLE, NOT_LOADED
 from pycon_us.screens.door_session import TITLE as PICKER_TITLE
 from pycon_us.screens.staff_door import NO_SESSION, TITLE
-from pycon_us.services.pref_keys import STAFF_DOOR_SESSION, STAFF_PREFIX
+from pycon_us.services.pref_keys import STAFF_PREFIX, staff_door_session
 from pycon_us.ui import scan_screen
 from pycon_us.ui.scan_screen import NOT_AVAILABLE
 from tests import door_rig, harness
@@ -274,7 +274,7 @@ async def test_back_from_the_picker_shows_the_session_chosen(
     location[0] = PICKER
     account.nickname = "Picker"
     await shown.settle()
-    stored[STAFF_DOOR_SESSION.key] = json.dumps(to_stored(ASYNC))
+    stored[staff_door_session(2026).key] = json.dumps(to_stored(ASYNC))
     location[0] = VIEW  # a tap: back with Async in depth
     account.nickname = "Chosen"
     await shown.settle()
@@ -296,7 +296,7 @@ async def test_the_session_goes_with_a_sign_out_and_a_switch(
     await shown.settle()
     assert chip_text(shown) is None
     assert helper(shown) == NO_SESSION
-    stored[STAFF_DOOR_SESSION.key] = json.dumps(to_stored(ASYNC))
+    stored[staff_door_session(2026).key] = json.dumps(to_stored(ASYNC))
     assert await shown.storage.clear_prefs(STAFF_PREFIX)  # as a switch's sign-in
     account.email = "b@example.com"
     await shown.settle()

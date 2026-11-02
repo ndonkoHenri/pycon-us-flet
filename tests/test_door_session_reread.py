@@ -22,7 +22,7 @@ from pycon_us.door_check import CHECKED_IN, NOT_REGISTERED
 from pycon_us.door_choice import read_door_session
 from pycon_us.screens import staff_door
 from pycon_us.screens.door_preload import LOADING
-from pycon_us.services.pref_keys import STAFF_DOOR_SESSION
+from pycon_us.services.pref_keys import staff_door_session
 from pycon_us.services.storage import Storage
 from tests import door_rig
 from tests.door_rig import (
@@ -88,7 +88,7 @@ async def test_a_scan_on_a_return_with_the_reads_held_checks_nobody_in(
     shown = await show(VIEW, account, chosen=TUTORIALS)
     gate.clear()
     await go(shown, account, PICKER)
-    stored[STAFF_DOOR_SESSION.key] = json.dumps(to_stored(SUMMIT))
+    stored[staff_door_session(2026).key] = json.dumps(to_stored(SUMMIT))
     await go(shown, account, VIEW)
     await enter(shown, GRACE)
     assert rows(shown) == []

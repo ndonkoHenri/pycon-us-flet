@@ -6,7 +6,7 @@ logo_url?}]}``. Ionic stripped one ``"`` from each end of a name (``/^"|"$/``,
 to find the chosen sponsor (LEAD-05, LEAD-06). Here a sponsor is found by its id, kept
 as a string because the capture query and the outbox's ``sponsor_id`` carry it so
 (STORE-11); the name is only shown. The chosen one is kept as ``{id, name, logo_url}``
-under ``pycon.staff_sponsor`` (``services/pref_keys.py``'s ``STAFF_SPONSOR``).
+under ``pycon.staff_<year>_sponsor`` (``services/pref_keys.py``'s ``staff_sponsor()``).
 """
 
 import re
@@ -126,7 +126,7 @@ def filter_sponsors(
 
 
 def to_stored(sponsor: LeadSponsor) -> dict[str, Any]:
-    """Return the chosen sponsor as ``pycon.staff_sponsor`` keeps it (STORE-11).
+    """Return the chosen sponsor as ``pycon.staff_<year>_sponsor`` keeps it (STORE-11).
 
     Args:
         sponsor: The sponsor chosen.
@@ -138,7 +138,7 @@ def to_stored(sponsor: LeadSponsor) -> dict[str, Any]:
 
 
 def from_stored(value: dict[str, Any]) -> LeadSponsor | None:
-    """Return the chosen sponsor ``pycon.staff_sponsor`` holds, or None.
+    """Return the chosen sponsor ``pycon.staff_<year>_sponsor`` holds, or None.
 
     Args:
         value: The stored object; ``{}`` when nothing was chosen.

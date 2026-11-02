@@ -6,7 +6,7 @@ the sync chip, showing the signed-in account's rows as ``Staff`` counts them, an
 many rows of other accounts wait; a tap opens the sheet, which lists those too
 (architecture §12.1: a previous owner's unsynced rows are "visible in Developer"). The
 row shows only while a mock API URL is set, as every staff feature (D-51), so an
-install whose staff tools never run never opens ``outbox.db``.
+install whose staff tools never run never opens its file.
 
 **Clear staff data** (``developer.clear_staff_data``, DEV-03) under it, shown with it,
 deletes every account's rows and the staff keys (``staff_data.clear_staff_data()``)

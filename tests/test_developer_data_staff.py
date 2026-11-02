@@ -2,7 +2,8 @@
 
 ``ClearStaffData`` and ``DataActions`` run outside a renderer, their hooks replaced
 (``tests/data_section.py``'s hand renderer); the rows are seeded into a real
-``outbox.db``. How the rows and the confirmations look is checked on devices (the PR).
+``outbox-<year>.db``. How the rows and the confirmations look is checked on devices
+(the PR).
 """
 
 import inspect
@@ -159,7 +160,7 @@ def db(tmp_path: Path) -> Iterator[OutboxDb]:
     """Yield an empty outbox in its own directory, closed afterwards."""
     directory = tmp_path / "outbox"
     directory.mkdir()
-    database = OutboxDb(directory)
+    database = OutboxDb(directory, 2026)
     yield database
     database.close()
 
@@ -168,7 +169,7 @@ def db(tmp_path: Path) -> Iterator[OutboxDb]:
 def shared() -> MemoryPrefs:
     """The session's SharedPreferences, with a staff key and a setting."""
     prefs = MemoryPrefs()
-    prefs.values.update({"pycon.staff_sponsor": "{}", "pycon.theme": "dark"})
+    prefs.values.update({"pycon.staff_2026_sponsor": "{}", "pycon.theme": "dark"})
     return prefs
 
 
@@ -226,7 +227,7 @@ def outcome(control: ft.Control) -> str | None:
 def test_without_a_mock_api_url_the_row_is_not_there(
     clear: Callable[..., ft.Control], db: OutboxDb
 ) -> None:
-    """Staff features hide without the mock (D-51), and outbox.db stays unopened."""
+    """Staff features hide without the mock (D-51), and the outbox stays unopened."""
     assert clear(mock=False).visible is False
     assert not db.path.exists()
 
@@ -317,7 +318,7 @@ async def test_reset_app_deletes_the_staff_records_after_naming_them(
     """The dialog counts every account's rows; confirming deletes them and the keys."""
     assert svc.outbox is not None
     seed(svc.outbox, A, Status.PENDING, Status.SYNCED)
-    stored["pycon.staff_sponsor"] = "{}"
+    stored["pycon.staff_2026_sponsor"] = "{}"
     await tap(render, "developer.reset_app")
     render()
     dialog = rendered.dialog
@@ -325,7 +326,7 @@ async def test_reset_app_deletes_the_staff_records_after_naming_them(
     assert lines(dialog)[-1] == "Staff records: 1 synced, 1 not synced yet"
     await press(dialog, "developer.reset_app.confirm")
     assert svc.outbox.counts(None) == Counts()
-    assert "pycon.staff_sponsor" not in stored
+    assert "pycon.staff_2026_sponsor" not in stored
 
 
 async def test_reset_app_keeps_the_rows_its_confirmation_could_not_read(
@@ -342,7 +343,7 @@ async def test_reset_app_keeps_the_rows_its_confirmation_could_not_read(
     """
     assert svc.outbox is not None
     seed(svc.outbox, A, Status.PENDING)
-    stored["pycon.staff_sponsor"] = "{}"
+    stored["pycon.staff_2026_sponsor"] = "{}"
     readable = False
     counts = developer_data.staff_counts
     monkeypatch.setattr(
@@ -357,4 +358,4 @@ async def test_reset_app_keeps_the_rows_its_confirmation_could_not_read(
     render()
     await press(dialog, "developer.reset_app.confirm")
     assert svc.outbox.counts(None) == Counts(pending=1)
-    assert "pycon.staff_sponsor" not in stored
+    assert "pycon.staff_2026_sponsor" not in stored

@@ -17,6 +17,7 @@ from collections.abc import Sequence
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from typing import cast
 
+from pycon_us.config import YEAR
 from tools.mock_api.faults import FAULTS, Fault
 from tools.mock_api.state import CAPTURES, MockState
 from tools.mock_api.transport import handle_with_faults
@@ -314,6 +315,7 @@ def attendee_count(value: str) -> int:
 def state_for(args: argparse.Namespace) -> MockState:
     """A fresh seeded state with the command line's semantics, attendees, faults and skew."""
     state = MockState.from_seed(capture=args.capture, attendees=args.attendees)
+    state.year = YEAR  # the app's: the seed stays on the year the tests pin
     for fault in args.fault:
         state.faults.inject(fault, until_cleared=args.every_request)
     state.skew = args.skew

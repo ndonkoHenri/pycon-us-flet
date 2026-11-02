@@ -18,7 +18,7 @@ from flet.utils.object_model import patch_dataclass
 
 from pycon_us.screens.staff_swag import HAND_OUT_OPEN
 from pycon_us.services.endpoints import REDEEM
-from pycon_us.services.pref_keys import STAFF_SWAG_CATEGORIES
+from pycon_us.services.pref_keys import staff_swag_categories
 from pycon_us.swag import ALREADY, NOT_CONFIRMED, READY, RESCAN
 from pycon_us.ui import scan_feedback, scan_screen
 from pycon_us.ui.swag_sheet import PICKED_UP, SENDING
@@ -59,7 +59,7 @@ def switch(recorder: Recorder) -> Switch:
 @pytest.fixture
 def stored() -> dict[str, Any]:
     """The device's SharedPreferences, with both swag categories chosen."""
-    return {STAFF_SWAG_CATEGORIES.key: ["3", "4"]}
+    return {staff_swag_categories(2026).key: ["3", "4"]}
 
 
 @pytest.fixture(autouse=True)

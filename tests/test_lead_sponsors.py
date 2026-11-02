@@ -3,7 +3,7 @@
 ``parse_sponsors`` reads ``lead_sponsors``' reply as Ionic did, without its bugs (API-09):
 quotes stripped from names, ids kept as strings, bad entries left out; the filter finds
 by name or booth among 150 sponsors (LEAD-05's "usable with 100+"); the saved choice
-round-trips through ``pycon.staff_sponsor`` (STORE-11). ``fetch_sponsors`` runs against
+round-trips through ``pycon.staff_2026_sponsor`` (STORE-11). ``fetch_sponsors`` runs against
 the mock over its real transport, signed in as the seeded staff account.
 """
 

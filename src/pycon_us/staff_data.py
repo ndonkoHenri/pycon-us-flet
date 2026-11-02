@@ -14,8 +14,10 @@ with the next person, and its "Clear scan data" missed the door-check keys.
   every account and the staff keys, after a confirmation that names how many rows have
   not synced (``clear_staff_data()``).
 
-``outbox.db`` is opened only where staff tools run (D-51): ``staff_counts()`` answers
-zeros without opening a file that was never created.
+``outbox-<year>.db`` is opened only where staff tools run (D-51): ``staff_counts()``
+answers zeros without opening a file that was never created. Another year's file is left
+alone, unsynced rows and all: this year's server would misattribute them, and no
+confirmation names them (D-466).
 """
 
 import logging
@@ -40,7 +42,7 @@ def staff_counts(db: OutboxDb | None) -> Counts | None:
         db: The outbox, or None where the session has none.
 
     Returns:
-        The counts; zeros without opening ``outbox.db`` when it was never created
+        The counts; zeros without opening the file when it was never created
         (D-51); None when it can't be read (logged, D-120).
     """
     if db is None or not db.path.exists():

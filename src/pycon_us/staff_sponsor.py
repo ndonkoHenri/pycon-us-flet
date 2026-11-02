@@ -2,9 +2,9 @@
 
 ``fetch_sponsors()`` asks ``lead_sponsors`` each time the picker opens: the list is
 never kept, since it is needed only to change sponsor (LEAD-05). The choice is
-``STAFF_SPONSOR``, a staff key (D-414), so a sign-out, a sign-in as another account
-and Clear staff data remove it with no code of their own; it is in no store, and the
-Lead scanner reads it as it opens, as it does the consent (D-423, D-425).
+``staff_sponsor()``, a staff key of the year (D-414, D-466), so a sign-out, a sign-in as
+another account and Clear staff data remove it with no code of their own; it is in no
+store, and the Lead scanner reads it as it opens, as it does the consent (D-423, D-425).
 """
 
 from pycon_us.core.lead_sponsors import (
@@ -15,7 +15,7 @@ from pycon_us.core.lead_sponsors import (
 )
 from pycon_us.services.api import ApiClient, ApiError
 from pycon_us.services.endpoints import LEAD_SPONSORS
-from pycon_us.services.pref_keys import STAFF_SPONSOR
+from pycon_us.services.pref_keys import staff_sponsor
 from pycon_us.services.storage import Storage
 
 
@@ -46,7 +46,7 @@ async def read_sponsor(storage: Storage) -> LeadSponsor | None:
     Args:
         storage: The session's storage.
     """
-    return from_stored(await storage.get(STAFF_SPONSOR))
+    return from_stored(await storage.get(staff_sponsor(storage.year)))
 
 
 async def save_sponsor(storage: Storage, sponsor: LeadSponsor) -> bool:
@@ -56,4 +56,4 @@ async def save_sponsor(storage: Storage, sponsor: LeadSponsor) -> bool:
         storage: The session's storage.
         sponsor: The sponsor chosen in the picker.
     """
-    return await storage.set(STAFF_SPONSOR, to_stored(sponsor))
+    return await storage.set(staff_sponsor(storage.year), to_stored(sponsor))

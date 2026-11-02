@@ -11,7 +11,7 @@ swag has a handful. A wrapping row of filter chips from ``swag_catalog()`` of th
 ``redeemable`` catalog, fetched as the screen opens (a progress line meanwhile,
 "Couldn't load categories" with Retry on a failure, D-120); until it has loaded, a
 connection that returns restarts the fetch. The choice is the staff key
-``STAFF_SWAG_CATEGORIES``, read from storage as the screen opens, as the Lead
+``staff_swag_categories()``, read from storage as the screen opens, as the Lead
 scanner's sponsor is (D-425), so it survives a restart and goes at a sign-out (D-414);
 ids no longer in the catalog are ignored.
 
@@ -40,7 +40,7 @@ from pycon_us.prefs import use_prefs
 from pycon_us.services import use_services
 from pycon_us.services.api import ApiError, NetworkError
 from pycon_us.services.errors import report_errors
-from pycon_us.services.pref_keys import STAFF_SWAG_CATEGORIES
+from pycon_us.services.pref_keys import staff_swag_categories
 from pycon_us.swag import look_up
 from pycon_us.ui.online import use_online
 from pycon_us.ui.scan_screen import NotAvailable, ScanScreen
@@ -123,6 +123,7 @@ def SwagTool(*, owner: str) -> ft.Control:
     page = ft.context.page
     view_path = ft.use_view_path()
     svc = use_services()
+    key = staff_swag_categories(svc.storage.year)
     online = use_online(svc, watch=True)
     loaded, set_loaded = ft.use_state(Loaded("loading"))
     tries, set_tries = ft.use_state(0)  # Retry asks again
@@ -172,7 +173,7 @@ def SwagTool(*, owner: str) -> ft.Control:
 
     @report_errors
     async def read_chosen() -> None:
-        stored = await svc.storage.get(STAFF_SWAG_CATEGORIES)  # a failure reads []
+        stored = await svc.storage.get(key)  # a failure reads []
         ids = frozenset(int(i) for i in stored if i.isdigit())
         if mounted.current:
             set_chosen(Chosen(owner, ids))
@@ -185,9 +186,7 @@ def SwagTool(*, owner: str) -> ft.Control:
         ids = before | {category.id} if selected else before - {category.id}
         latest.current = ids
         set_chosen(Chosen(owner, ids))
-        saved = await svc.storage.set(
-            STAFF_SWAG_CATEGORIES, [str(i) for i in sorted(ids)]
-        )
+        saved = await svc.storage.set(key, [str(i) for i in sorted(ids)])
         if mounted.current and is_top_view(page.route, view_path):
             say_if_unsaved(page, saved)  # chosen for this visit all the same
 
