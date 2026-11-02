@@ -3,7 +3,7 @@
 # row 7 times › Developer options. Once unlocked, the version taps are skipped.
 # Unlike a flet test flow, Maestro can scroll, so About this app is reached on any
 # phone size (the iPhone 17 hides it under the bar).
-appId: io.github.ndonkohenri.pyconus
+appId: io.github.ndonkohenri.confcompanion
 ---
 - runFlow:
     file: tab.yaml

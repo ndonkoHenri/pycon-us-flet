@@ -90,7 +90,7 @@ def test_the_link_values_live_in_one_table() -> None:
     ("table", "missing"),
     [
         ('[tool.flet.deep_linking]\nhost = "app"\n', "scheme"),
-        ('[tool.flet.deep_linking]\nscheme = "pyconus"\n', "host"),
+        ('[tool.flet.deep_linking]\nscheme = "confcompanion"\n', "host"),
         ("[tool.flet]\n", "scheme"),
     ],
 )
@@ -112,7 +112,7 @@ def test_a_scheme_the_app_cannot_own_is_reported(tmp_path: Path, scheme: str) ->
 @pytest.mark.parametrize("host", ["", "App", "app/now", "-app"])
 def test_an_invalid_host_is_reported(tmp_path: Path, host: str) -> None:
     """An empty, uppercase or malformed host fails the check."""
-    table = f'[tool.flet.deep_linking]\nscheme = "pyconus"\nhost = "{host}"\n'
+    table = f'[tool.flet.deep_linking]\nscheme = "confcompanion"\nhost = "{host}"\n'
     problems = link_problems(write_pyproject(tmp_path, table))
     assert len(problems) == len(PLATFORMS)
 
@@ -120,7 +120,7 @@ def test_an_invalid_host_is_reported(tmp_path: Path, host: str) -> None:
 def test_a_platform_table_overrides_the_common_one(tmp_path: Path) -> None:
     """A per-platform key wins over the common table, so the check reads what each build uses."""
     table = (
-        '[tool.flet.deep_linking]\nscheme = "pyconus"\nhost = "app"\n'
+        '[tool.flet.deep_linking]\nscheme = "confcompanion"\nhost = "app"\n'
         '[tool.flet.ios.deep_linking]\nscheme = "https"\n'
     )
     assert link_problems(write_pyproject(tmp_path, table)) == [

@@ -8,7 +8,7 @@
 # the email alone (no public hotline), so the flow copies the address; a year with a
 # phone row would add help.copy.tel. The copy is confirmed by the app's SnackBar on iOS
 # and on Android before 13; Android 13 and later confirms every copy itself (D-263).
-appId: io.github.ndonkohenri.pyconus
+appId: io.github.ndonkohenri.confcompanion
 name: More, Help & safety, Report a concern first, copy the address
 tags:
   - journeys

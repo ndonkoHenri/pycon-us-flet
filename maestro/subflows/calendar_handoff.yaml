@@ -17,7 +17,7 @@
 #
 # Android: the system save dialog, whose Save keeps the folder it opens on; then the
 # app's SnackBar says to open the file from the Files app, and promises no alarm.
-appId: io.github.ndonkohenri.pyconus
+appId: io.github.ndonkohenri.confcompanion
 ---
 - runFlow:
     when:

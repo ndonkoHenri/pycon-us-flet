@@ -12,7 +12,7 @@
 #
 # Under Maestro on Android the app sees a screen reader (F72) and opens the expo on the
 # List; on iOS it opens on the Map. The flow taps List when the field isn't there.
-appId: io.github.ndonkohenri.pyconus
+appId: io.github.ndonkohenri.confcompanion
 name: Search finds a booth off the plan, and the expo's List says so
 tags:
   - journeys

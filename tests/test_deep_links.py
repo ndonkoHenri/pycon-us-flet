@@ -1,6 +1,6 @@
 """Deep links land on their target with the root below, cold and warm (P2-79, #439).
 
-A link ``pyconus://app/<path>`` reaches the app as the path (D-21, D-269, F31): cold,
+A link ``confcompanion://app/<path>`` reaches the app as the path (D-21, D-269, F31): cold,
 the start route; warm, a route change. These tests start the app's own route table
 and screens at a location, or move a running session there, in a real Flet session
 (``tests/links.py``), then press Back until the app exits: one View per press, a root

@@ -11,7 +11,7 @@
 #   HC        the switch: on or off
 #   HC_LABEL  the switch row's label as a regular expression: "High contrast", or
 #             "High contrast\\s+Follows your device setting" while it follows the device
-appId: io.github.ndonkohenri.pyconus
+appId: io.github.ndonkohenri.confcompanion
 ---
 - extendedWaitUntil:
     visible:

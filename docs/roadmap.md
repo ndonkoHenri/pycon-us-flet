@@ -1212,7 +1212,7 @@ test, area:quality · after P2-73, P2-74, P2-77, P2-78, #348 · NEW-04
 
 ### P2-E8 · Epic: deep links
 
-epic, area:shell · NEW-07 · a placeholder scheme and host (`pyconus://app`, D-269) until P1-34 (#15) swaps them; not a blocker
+epic, area:shell · NEW-07 · the scheme and host `confcompanion://app` (D-269, D-452)
 
 `<scheme>://<host>/<route path>` links, with scheme and host set once in the common `[tool.flet.deep_linking]` table; links and reminder taps land with a back stack.
 

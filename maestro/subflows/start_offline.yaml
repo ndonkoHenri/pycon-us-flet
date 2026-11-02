@@ -14,7 +14,7 @@
 # sessions as the bundled snapshot (D-223). On both, Developer then points the app at
 # OFFLINE_URL, so no later refresh reaches a network during the flow, and Refresh now
 # must say that the feed did not answer.
-appId: io.github.ndonkohenri.pyconus
+appId: io.github.ndonkohenri.confcompanion
 ---
 - runFlow:
     when:

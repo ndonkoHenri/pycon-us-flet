@@ -4,7 +4,7 @@
 # Star the panel happening now (session 123) on Now: Now shows it as your session
 # (P1 exit criterion 2), and My schedule lists it. Unstar it on My schedule: the row
 # goes and the SnackBar offers Undo (D-30, D-184), which brings the row back.
-appId: io.github.ndonkohenri.pyconus
+appId: io.github.ndonkohenri.confcompanion
 name: Star on Now, unstar on My schedule, then Undo
 tags:
   - journeys
