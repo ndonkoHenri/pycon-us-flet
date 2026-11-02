@@ -75,6 +75,7 @@ from pycon_us.ui.scan_result import (
     result_panel,
     spoken,
 )
+from pycon_us.ui.scrolling import FULL_LIST_EXTENT
 from pycon_us.ui.semantics import named
 from pycon_us.ui.states import EmptyState
 from pycon_us.ui.sync_chip import SyncChip
@@ -296,7 +297,15 @@ def ScanScreen(
                 ),
             ),
         ],
-        body=ft.ListView(body, expand=True, padding=sides(margin, top=8, bottom=16)),
+        # The field must always be built, or autofocus and every focus() find nothing
+        # to focus: at the largest text the panels push it past a lazy list's cache,
+        # and the keyboard button then timed out with a raw error (F32, #828).
+        body=ft.ListView(
+            body,
+            expand=True,
+            padding=sides(margin, top=8, bottom=16),
+            cache_extent=FULL_LIST_EXTENT,
+        ),
     )
 
 

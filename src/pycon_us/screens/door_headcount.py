@@ -23,6 +23,10 @@ from pycon_us.services import use_services
 from pycon_us.services.outbox_db import OutboxDb
 from pycon_us.staff import use_staff
 
+WORDS = " checked in"
+"""What follows the number on the line."""
+WORDS_SIZE = 24
+"""The words' size, ``HEADLINE_SMALL``'s; the number keeps ``DISPLAY_SMALL``."""
 UNAVAILABLE = "Check-in count unavailable"
 """What the line says when the outbox can't be read (D-120)."""
 
@@ -66,14 +70,16 @@ def read_headcount(
 
 def headcount_words(count: int | None) -> str:
     """Return what the line shows: "42 checked in", or that the count is unavailable."""
-    return UNAVAILABLE if count is None else f"{count:,} checked in"
+    return UNAVAILABLE if count is None else f"{count:,}{WORDS}"
 
 
 def headcount_line(count: int | None) -> ft.Control:
-    """Return the headcount, large (``DISPLAY_SMALL``), as one node (``door.headcount``).
+    """Return the headcount, its number large (``DISPLAY_SMALL``), as one node.
 
-    Read "42 checked in for this session"; a failed read is a plain line in
-    ``error``. The words wrap at large text.
+    The node is ``door.headcount``, read "42 checked in for this session"; a failed read
+    is a plain line in ``error``. The words are smaller than the number, so "checked"
+    fits a phone's line at iOS's largest text, where ``DISPLAY_SMALL`` broke it in two
+    (#828); they wrap between words.
 
     Args:
         count: The count, or None when it couldn't be read.
@@ -81,9 +87,10 @@ def headcount_line(count: int | None) -> ft.Control:
     words = headcount_words(count)
     text = (
         ft.Text(
-            words,
+            f"{count:,}",
             theme_style=ft.TextThemeStyle.DISPLAY_SMALL,
             color=ft.Colors.ON_SURFACE,
+            spans=[ft.TextSpan(text=WORDS, style=ft.TextStyle(size=WORDS_SIZE))],
         )
         if count is not None
         else ft.Text(

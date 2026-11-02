@@ -40,6 +40,7 @@ from pycon_us.ui.scan_result import (
     spoken,
 )
 from pycon_us.ui.scan_screen import SCAN_AGAIN, ResultPanel, ScanScreen
+from pycon_us.ui.scrolling import FULL_LIST_EXTENT
 from tests import scan_rig
 from tests.scan_rig import ACCEPTED, Rig, Show, enter, entry, panel, scan
 from tests.test_high_contrast import AAA_TEXT
@@ -283,6 +284,15 @@ async def test_the_keyboard_button_focuses_the_field(show: Show, rig: Rig) -> No
     assert button.tooltip == "Type a badge code"
     await shown.click(button)
     assert rig.focused == 1
+
+
+async def test_the_field_is_built_however_far_down_the_large_text_pushes_it(
+    show: Show,
+) -> None:
+    """The list builds all of itself: a focus on an unbuilt field timed out (#828)."""
+    shown = await show()
+    (body,) = shown.find(ft.ListView)
+    assert body.cache_extent == FULL_LIST_EXTENT
 
 
 @pytest.mark.parametrize(("age", "dimmed"), [(DIM_AFTER - 1, False), (DIM_AFTER, True)])
