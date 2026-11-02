@@ -98,4 +98,4 @@ What a person kept under 2026, once an update makes 2027 the year (D-48, D-466; 
 
 Reset app deletes every year's preferences, cache and change log, and this year's outbox rows. Another year's
 `outbox-<year>.db` stays until the app is uninstalled: its rows may be unsynced, and no confirmation names them
-(D-414, D-466).
+(D-414, D-466). That is accepted while those rows are the mock's (D-51); D-466 says what changes if they ever aren't.

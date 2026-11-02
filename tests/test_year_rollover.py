@@ -306,3 +306,20 @@ async def test_only_other_years_files_go_at_a_reset(
         "feed-2027.json",
         "outbox-2026.db",
     ]
+
+
+async def test_a_reset_that_cannot_list_the_files_does_not_call_them_gone(
+    last_year: Storage,
+    this_year: Storage,
+    directory: Path,
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    """A failed listing is a failed deletion, logged: Reset app must not report success."""
+    await last_year.write_feed(b"{}")
+    directory.chmod(0o000)  # a real failure: os.scandir and os.listdir both refuse
+    try:
+        assert await this_year.delete_other_years() is False
+    finally:
+        directory.chmod(0o700)
+    assert "Could not list the data directory" in caplog.text
+    assert (directory / "feed-2026.json").exists()

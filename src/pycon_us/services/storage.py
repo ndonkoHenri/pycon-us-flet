@@ -21,6 +21,7 @@ import asyncio
 import copy
 import json
 import logging
+import os
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, cast
@@ -238,16 +239,25 @@ class Storage:
         """Delete other years' feed caches and change logs: Reset app (D-198, D-466).
 
         Nothing reads them once the active year has moved on, and Reset app promises a
-        fresh install's state, as it does for every year's preferences.
+        fresh install's state, as it does for every year's preferences. Other years'
+        outboxes stay: no confirmation names their rows.
 
         Returns:
             Whether they are all gone; a failure is logged (D-120).
         """
+        try:
+            # Not Path.glob(): it swallows a failed listing, and finding nothing would
+            # report the files gone when they are still there.
+            names = await asyncio.to_thread(os.listdir, self.directory)
+        except OSError:
+            logger.warning("Could not list the data directory", exc_info=True)
+            return False
         others = [
-            path
-            for pattern in ("feed-*.json", "changes-*.json")
-            for path in self.directory.glob(pattern)
-            if not path.stem.endswith(f"-{self.year}")
+            self.directory / name
+            for name in names
+            if name.startswith(("feed-", "changes-"))
+            and name.endswith(".json")
+            and not name.endswith(f"-{self.year}.json")
         ]
         return all([await self.delete_file(path, "Reset app") for path in others])
 
