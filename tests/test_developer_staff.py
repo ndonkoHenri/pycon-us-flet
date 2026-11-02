@@ -94,7 +94,7 @@ def render(
         *, signed_in: bool = True, mock: bool = True, staff: Staff | None = None
     ) -> tuple[ft.Control, list[int]]:
         opened: list[int] = []
-        account = Account(restored=True, signed_in=signed_in, email=OWNER)
+        account = Account(signed_in=signed_in, email=OWNER)
         prefs = Prefs(
             loaded=True, dev={DEV_MOCK_API_URL: "http://10.0.2.2:8000"} if mock else {}
         )

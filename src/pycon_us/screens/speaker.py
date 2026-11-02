@@ -25,7 +25,6 @@ from pycon_us.core.models import Speaker
 from pycon_us.core.speakers import has_bio, speaker_sessions
 from pycon_us.favorites import use_favorites
 from pycon_us.prefs import use_prefs
-from pycon_us.screens.stub import not_found
 from pycon_us.services import use_services
 from pycon_us.services.errors import report_errors
 from pycon_us.state import use_conference
@@ -37,7 +36,7 @@ from pycon_us.ui.page_title import PageTitle
 from pycon_us.ui.rows import speaker_avatar
 from pycon_us.ui.scaffold import AppScaffold, SectionHeader
 from pycon_us.ui.session_rows import changes_of, use_recent_changes, use_session_views
-from pycon_us.ui.states import EmptyState, NoDataState
+from pycon_us.ui.states import EmptyState, NoDataState, not_found
 from pycon_us.ui.widths import READING, sides, use_margin
 
 SCREEN = "speaker"

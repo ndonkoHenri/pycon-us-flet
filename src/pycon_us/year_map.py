@@ -220,7 +220,7 @@ class MapData:
         return self.pin(normalize_room_key(room))
 
 
-def check_map(data: MapData, file: str, assets_dir: Path = ASSETS_DIR) -> None:
+def check_map(data: MapData, file: str) -> None:
     """Check the rules of ``map.toml`` that its types cannot say.
 
     Plans: unique ids, a title, a note that is not blank when given, a positive size,
@@ -234,13 +234,12 @@ def check_map(data: MapData, file: str, assets_dir: Path = ASSETS_DIR) -> None:
     Args:
         data: The year's map data.
         file: The file's name in error messages (``2026/map.toml``).
-        assets_dir: Where the plans' paths start.
 
     Raises:
         YearDataError: An entry breaks a rule; the message names the file, the entry
             and the field (``2026/map.toml: pins[3].x: 120.0 is not between 0 and 100``).
     """
-    _check_plans_and_pins(data, file, assets_dir)
+    _check_plans_and_pins(data, file)
     _check_areas(data.booths, "booths", EXPO_PLAN, data, file)
     for index, booth in enumerate(data.booths):
         if booth.label:
@@ -248,7 +247,7 @@ def check_map(data: MapData, file: str, assets_dir: Path = ASSETS_DIR) -> None:
     _check_areas(data.tables, "tables", JOB_FAIR_PLAN, data, file)
 
 
-def _check_plans_and_pins(data: MapData, file: str, assets_dir: Path) -> None:
+def _check_plans_and_pins(data: MapData, file: str) -> None:
     """Check the tour, the plans and the pins (``check_map()``'s first half)."""
     if data.tour_url:
         check_https(data.tour_url, file, "tour_url")
@@ -267,7 +266,7 @@ def _check_plans_and_pins(data: MapData, file: str, assets_dir: Path) -> None:
                 raise YearDataError(f"{file}: {key}.{field}: must be positive")
         for field in ("image", "thumb"):
             path = getattr(plan, field)
-            if not (assets_dir / path).is_file():
+            if not (ASSETS_DIR / path).is_file():
                 raise YearDataError(
                     f"{file}: {key}.{field}: no file {path!r} under src/assets"
                 )
