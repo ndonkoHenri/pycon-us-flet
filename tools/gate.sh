@@ -46,7 +46,9 @@ say "fetching origin/main"
 git -C "$root" fetch -q origin main
 base=$(git -C "$root" rev-parse --verify origin/main)
 
-scratch=$(mktemp -d "${TMPDIR:-/tmp}/gate.XXXXXX")
+# Not $TMPDIR: macOS's dirhelper sweeps it daily at 03:35, removing files older than 3 days, and uv's clones keep their
+# old timestamps, so a sweep during a gate can take files from its fresh .venv and fail tests falsely.
+scratch=$(mktemp -d "$HOME/Library/Caches/gate.XXXXXX")
 cleanup() {
     git -C "$root" worktree remove --force "$scratch" 2> /dev/null || rm -rf "$scratch"
     git -C "$root" worktree prune
