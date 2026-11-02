@@ -10,9 +10,9 @@ stays until the next scan (the scan screen keeps it), unlike Ionic's 1 s card.
 With items left, ``look_up()`` hands an ``Offer`` to the screen's hand-out sheet
 (``ui/swag_sheet.py``) and awaits it: the panel then says how the hand-out went, or
 keeps "Ready to hand out" when it was cancelled. ``hand_out()`` sends the ``redeem``
-once, online; an answer lost after the server may have applied it is "Not confirmed"
-with the advice to rescan, never a resend: a second POST could hand out twice under
-non-idempotent semantics (D-57, D-410).
+once, online; an answer lost or unreadable after the server may have applied it is
+"Not confirmed" with the advice to rescan, never a resend: a second POST could hand out
+twice under non-idempotent semantics (D-57, D-410).
 """
 
 import time
@@ -141,8 +141,8 @@ async def hand_out(
 
     Returns:
         The result panel's answer (ux.md §7.3): accepted, partly (a duplicate),
-        nothing redeemed, no connection, not confirmed (the answer lost, D-410) or
-        the server's refusal (all denied).
+        nothing redeemed, no connection, not confirmed (the answer lost or unreadable,
+        D-410) or the server's refusal (all denied).
     """
     badge = offer.badge
     payload = redeem_payload(
@@ -157,6 +157,8 @@ async def hand_out(
             return denied(NOT_CONFIRMED, offer.name, RESCAN, code=badge.code)
         return denied(NOT_HANDED_OUT, offer.name, NOTHING_RECORDED, code=badge.code)
     except ApiError as error:
+        if error.unreadable:
+            return denied(NOT_CONFIRMED, offer.name, RESCAN, code=badge.code)
         return denied(NOT_HANDED_OUT, offer.name, error.message, code=badge.code)
     return redeemed(reply, offer, quantities)
 

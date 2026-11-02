@@ -54,7 +54,8 @@ async def record(api: ApiClient, code: str, notes: str = "") -> Recorded:
         NetworkError: No answer arrived; ``maybe_sent`` says whether the incident may
             have been recorded all the same (D-410).
         ApiError: The mock refused the call (403 without the flag, 404 for an unknown
-            code), or its reply could not be read.
+            code), or its reply could not be read (``unreadable``), so the incident
+            may have been recorded all the same.
     """
     payload: dict[str, object] = {"attendee_access_code": code}
     if notes.strip():

@@ -16,7 +16,7 @@ import pytest
 from pycon_us.conduct import fetch_directory, record
 from pycon_us.core.conduct import Recorded, display_name
 from pycon_us.services.api import ApiError, NetworkError
-from tests.api_clients import client_for, replying, signed_in
+from tests.api_clients import ReplyReplaced, client_for, replying, signed_in
 from tests.mock_calls import Clock, state_at
 from tools.mock_api.state import CAPTURES, Capture, Incident, MockState
 
@@ -133,6 +133,25 @@ async def test_a_record_reply_without_an_attendee_is_an_api_error() -> None:
     client = client_for(replying(200, b'{"code": 200, "data": []}'))
     with pytest.raises(ApiError):
         await record(client, "MOCK0001")
+
+
+@pytest.mark.parametrize(
+    "body",
+    [
+        b"<html>ok</html>",
+        b'{"ok": true}',
+        b'{"code": 200}',
+        b'{"code": 200, "data": []}',
+    ],
+)
+async def test_a_committed_record_with_an_unreadable_reply_says_so(body: bytes) -> None:
+    """Whatever made the reply unreadable, the error says it may be on record (#874)."""
+    client, recorder, state = await signed_in("coc")
+    recorder.inner = ReplyReplaced(recorder.inner, body)
+    with pytest.raises(ApiError) as raised:
+        await record(client, "MOCK0002", NOTES)
+    assert raised.value.unreadable
+    assert len(state.incidents) == 1
 
 
 async def test_no_log_line_holds_a_code_a_name_the_notes_or_an_email(
