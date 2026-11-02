@@ -1,5 +1,6 @@
 """CoC's filled action obeys D-344 in every label state, including a pending send."""
 
+import flet as ft
 import pytest
 
 from pycon_us.ui.coc_review_dialog import Review, record_button
@@ -18,6 +19,6 @@ def test_record_action_reserves_space_around_wrapped_labels(
     )
     assert button.style is not None
     padding = button.style.padding
-    assert padding is not None
+    assert isinstance(padding, ft.Padding)
     assert (padding.left, padding.right, padding.top, padding.bottom) == (24, 24, 8, 8)
     assert button.elevation == 0
