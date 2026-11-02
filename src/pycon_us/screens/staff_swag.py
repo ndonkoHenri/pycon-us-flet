@@ -9,11 +9,11 @@ itself as the last tool opened (D-421); More and Now list it (``BUILT_TOOLS``, #
 The **categories** head the screen, in the context slot rather than a pushed page:
 swag has a handful. A wrapping row of filter chips from ``swag_catalog()`` of the
 ``redeemable`` catalog, fetched as the screen opens (a progress line meanwhile,
-"Couldn't load categories" with Retry on a failure, D-120); until it has loaded, a
-connection that returns restarts the fetch. The choice is the staff key
-``staff_swag_categories()``, read from storage as the screen opens, as the Lead
-scanner's sponsor is (D-425), so it survives a restart and goes at a sign-out (D-414);
-ids no longer in the catalog are ignored.
+"Couldn't load categories" with Retry on a failure, D-120; ``ui/staff_picker.py``'s
+``use_fetch()``); until it has loaded, a connection that returns restarts the fetch.
+The choice is the staff key ``staff_swag_categories()``, read from storage as the
+screen opens, as the Lead scanner's sponsor is (D-425), so it survives a restart and
+goes at a sign-out (D-414); ids no longer in the catalog are ignored.
 
 Swag pickup is **online only** (D-56): while ``use_online()`` says offline (checked
 every 5 s), and while no category is chosen, scanning is paused with the reason under
@@ -23,11 +23,9 @@ pre-ticked, and the panel says how the hand-out went (#769). Scanning is paused 
 the sheet is open ("Paused while the hand-out is open").
 """
 
-import logging
 from collections.abc import Awaitable, Callable
 from dataclasses import dataclass
 from functools import partial
-from typing import Literal
 
 import flet as ft
 
@@ -37,7 +35,7 @@ from pycon_us.core.check_in import Category, swag_catalog
 from pycon_us.core.staff_tools import TOOLS, ToolKey
 from pycon_us.locations import is_top_view
 from pycon_us.services import use_services
-from pycon_us.services.api import ApiError, NetworkError
+from pycon_us.services.api import ApiClient
 from pycon_us.services.errors import report_errors
 from pycon_us.services.pref_keys import staff_swag_categories
 from pycon_us.swag import look_up
@@ -45,12 +43,11 @@ from pycon_us.ui.online import use_online
 from pycon_us.ui.scan_screen import NotAvailable, ScanScreen, use_tool_allowed
 from pycon_us.ui.semantics import named
 from pycon_us.ui.snack_bars import say_if_unsaved
+from pycon_us.ui.staff_picker import Loaded, use_fetch
 from pycon_us.ui.swag_sheet import use_swag_sheet
 
 type OnToggle = Callable[[Category, bool], Awaitable[None]]
 """Saves a category chosen (True) or no longer chosen (False)."""
-
-logger = logging.getLogger(__name__)
 
 TITLE = next(tool.title for tool in TOOLS if tool.key is ToolKey.SWAG)
 """The app bar's title, "Swag pickup", as the staff entry points name it."""
@@ -66,21 +63,6 @@ NONE_AVAILABLE = "No swag categories available"
 RETRY = "Retry"
 """The categories' states (D-120)."""
 
-type Status = Literal["loading", "failed", "loaded"]
-
-
-@dataclass(frozen=True)
-class Loaded:
-    """Where the catalog's fetch is.
-
-    Attributes:
-        status: Loading, failed (offline or an error) or loaded.
-        categories: The swag categories, once loaded, in the catalog's order.
-    """
-
-    status: Status
-    categories: tuple[Category, ...] = ()
-
 
 @dataclass(frozen=True)
 class Chosen:
@@ -93,6 +75,15 @@ class Chosen:
 
     owner: str
     ids: frozenset[int]
+
+
+async def fetch_categories(api: ApiClient) -> tuple[Category, ...]:
+    """Return the swag categories, in the catalog's order.
+
+    Args:
+        api: The signed client.
+    """
+    return swag_catalog(await fetch_catalog(api)).categories
 
 
 @ft.component
@@ -119,38 +110,19 @@ def SwagTool(*, owner: str) -> ft.Control:
     svc = use_services()
     key = staff_swag_categories(svc.storage.year)
     online = use_online(svc, watch=True)
-    loaded, set_loaded = ft.use_state(Loaded("loading"))
-    tries, set_tries = ft.use_state(0)  # Retry asks again
+    loaded, retry = use_fetch(fetch_categories, what="Swag categories")
     chosen, set_chosen = ft.use_state(not_read)
-    mounted = ft.use_ref(True)  # cleared on unmount: a late reply is then dropped
+    mounted = ft.use_ref(True)  # cleared on unmount: a late answer is then dropped
     current = chosen.ids if chosen is not None and chosen.owner == owner else None
     latest = ft.use_ref(frozenset[int]())  # what a toggle builds on (#756)
     latest.current = current or frozenset()
 
     @report_errors
     def unmount() -> None:
-        """Mark the screen gone, so a fetch or save still running stays quiet."""
+        """Mark the screen gone, so a read or save still running stays quiet."""
         mounted.current = False
 
     ft.use_effect(lambda: None, [], cleanup=unmount)
-
-    @report_errors
-    async def load() -> None:
-        set_loaded(Loaded("loading"))
-        api = svc.api
-        try:
-            if api is None:  # the URL went meanwhile; the guard follows
-                raise NetworkError("no mock client")
-            catalog = swag_catalog(await fetch_catalog(api))
-        except (NetworkError, ApiError) as error:
-            logger.info("Swag categories not loaded: %s", type(error).__name__)
-            if mounted.current:
-                set_loaded(Loaded("failed"))
-            return
-        if mounted.current:
-            set_loaded(Loaded("loaded", catalog.categories))
-
-    ft.use_effect(load, [tries])
 
     was_online = ft.use_ref(online)  # so opening the screen isn't a return
 
@@ -161,7 +133,7 @@ def SwagTool(*, owner: str) -> ft.Control:
         # Even while loading: a fetch sent before the return may still fail, and Flet
         # cancels it as the new one starts (D-70), so only the newest answer shows.
         if returned and loaded.status != "loaded":
-            set_tries(lambda n: n + 1)
+            retry()
 
     ft.use_effect(reload_when_online, [online])
 
@@ -184,12 +156,8 @@ def SwagTool(*, owner: str) -> ft.Control:
         if mounted.current and is_top_view(page.route, view_path):
             say_if_unsaved(page, saved)  # chosen for this visit all the same
 
-    @report_errors
-    def retry() -> None:
-        set_tries(lambda n: n + 1)
-
     sheet = use_swag_sheet()
-    categories = tuple(c for c in loaded.categories if c.id in (current or ()))
+    categories = tuple(c for c in loaded.value or () if c.id in (current or ()))
     paused = (
         HAND_OUT_OPEN
         if sheet.is_open
@@ -209,7 +177,7 @@ def SwagTool(*, owner: str) -> ft.Control:
 
 
 def category_area(
-    loaded: Loaded,
+    loaded: Loaded[tuple[Category, ...]],
     chosen: frozenset[int] | None,
     on_toggle: OnToggle,
     on_retry: ft.ControlEventHandler[ft.TextButton],
@@ -225,6 +193,7 @@ def category_area(
         on_toggle: Called with a category and whether it is now selected.
         on_retry: Asks for the catalog again.
     """
+    categories = loaded.value or ()
     match loaded.status:
         case "loading":
             return loading_line()
@@ -247,7 +216,7 @@ def category_area(
             )
         case _ if chosen is None:
             return loading_line()
-        case _ if not loaded.categories:
+        case _ if not categories:
             return ft.Text(
                 NONE_AVAILABLE,
                 theme_style=ft.TextThemeStyle.BODY_MEDIUM,
@@ -255,10 +224,7 @@ def category_area(
             )
         case _:
             return ft.Row(
-                [
-                    category_chip(c, c.id in chosen, on_toggle)
-                    for c in loaded.categories
-                ],
+                [category_chip(c, c.id in chosen, on_toggle) for c in categories],
                 wrap=True,
                 spacing=8,
                 run_spacing=8,
