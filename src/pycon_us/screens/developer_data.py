@@ -30,7 +30,7 @@ from pycon_us.locations import WELCOME, start_target
 from pycon_us.prefs import Prefs, use_prefs
 from pycon_us.screens.developer_ui import Asking, confirmation, snapshot_day
 from pycon_us.services import Services, changes_file, use_services
-from pycon_us.services.errors import report_errors, show_details
+from pycon_us.services.errors import report_errors, say, show_details
 from pycon_us.staff import Staff, use_staff
 from pycon_us.staff_data import clear_staff_data, staff_counts
 from pycon_us.state import Conference, use_conference
@@ -149,12 +149,7 @@ def DataActions() -> ft.Control:
                 memory.last_location, memory.search_base, onboarded=prefs.onboarded
             )
         )
-        page.show_dialog(
-            ft.SnackBar(
-                ft.Text("App reset" if complete else RESET_INCOMPLETE),
-                behavior=ft.SnackBarBehavior.FLOATING,
-            )
-        )
+        say(page, "App reset" if complete else RESET_INCOMPLETE)
 
     # Read when Reset app asks, and after each pass while it does (D-414).
     rows = ft.use_memo(

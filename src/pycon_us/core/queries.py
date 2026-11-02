@@ -1,14 +1,16 @@
-"""The days query, the fold and the Speakers order (architecture §7.5).
+"""The days query, the fold, the word filter and the Speakers order (architecture §7.5).
 
 The questions screens ask of the processed feed are queries: pure functions that never
 change the model (SCHED-17) and return new values computed from it. The schedule queries
 are in ``timeline.py`` (D-178), Now's and My schedule's in ``agenda.py`` (D-179) and
 search in ``search.py`` (D-180); this module holds what the rest of the app shares with
-them: the Schedule's days, the one fold and the order it gives speakers.
+them: the Schedule's days, the one fold, the filter built on it and the order it gives
+speakers.
 """
 
 import re
 import unicodedata
+from collections.abc import Callable
 from datetime import date, timedelta
 
 from pycon_us.core.models import ConferenceData, Speaker
@@ -109,6 +111,32 @@ def fold(text: str) -> str:
 
 def _without_marks(run: re.Match[str]) -> str:
     return "".join(c for c in run[0] if unicodedata.category(c) not in _DROPPED)
+
+
+def matching[T](
+    items: tuple[T, ...], query: str, text_of: Callable[[T], str]
+) -> tuple[T, ...]:
+    """Return the items whose text holds every word of ``query``, each as a substring.
+
+    The query folds as search's does (D-46), and the words may come in any order.
+
+    Screens rely on the identity: a query with no word to match returns ``items``
+    itself, not a copy, so ``found is not items`` says that a filter applies. That covers
+    a blank query and one that folds to nothing (a lone ``’``).
+
+    Args:
+        items: What the filter narrows, in the order shown.
+        query: What the user typed in the filter.
+        text_of: An item's text, folded by the caller: a text folded once per feed
+            version (``search_text``) is not folded again here.
+
+    Returns:
+        The items found, in their order; ``items`` itself without a word.
+    """
+    words = fold(query).split()
+    if not words:
+        return items
+    return tuple(item for item in items if all(word in text_of(item) for word in words))
 
 
 def speaker_order(speaker: Speaker) -> tuple[str, str]:

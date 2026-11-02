@@ -39,7 +39,7 @@ from pycon_us.core.outbox_enqueue import Outcome
 from pycon_us.locations import is_top_view
 from pycon_us.prefs import use_prefs
 from pycon_us.services import use_services
-from pycon_us.services.errors import report_errors
+from pycon_us.services.errors import report_errors, say
 from pycon_us.staff import use_staff
 from pycon_us.theme import use_tokens
 from pycon_us.theme_hc import hc_sheet_shape
@@ -247,7 +247,7 @@ def use_note_sheet(*, owner: str) -> NoteSheet:
         sponsor_id = None if sponsor is None else sponsor.id
         draft = lead_note.saved_note(svc.outbox, owner, code, sponsor_id)
         if draft is None:  # logged; a blank prefill would save over the note
-            page.show_dialog(snack_bar(lead_note.NOT_LOADED))
+            say(page, lead_note.NOT_LOADED)
             return
         set_editing(Editing(code, name, draft, sponsor=sponsor))
 
@@ -286,7 +286,7 @@ def use_note_sheet(*, owner: str) -> NoteSheet:
                 svc.outbox, staff, svc.kick_sync, stored.row
             )
         if mounted.current and is_top_view(page.route, view_path):
-            page.show_dialog(snack_bar(words))
+            say(page, words)
 
     text = ""  # the prefill on an opening's first render, then what Flutter reported
     if editing is not None:
@@ -305,11 +305,6 @@ def use_note_sheet(*, owner: str) -> NoteSheet:
         else None
     )
     return NoteSheet(open_for, is_open)
-
-
-def snack_bar(words: str) -> ft.SnackBar:
-    """Return the floating SnackBar that says ``words``."""
-    return ft.SnackBar(ft.Text(words), behavior=ft.SnackBarBehavior.FLOATING)
 
 
 def toggled(last: Editing | None, label: str, selected: bool) -> Editing | None:

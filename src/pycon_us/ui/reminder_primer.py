@@ -38,7 +38,7 @@ from pycon_us.theme_hc import hc_sheet_shape
 from pycon_us.ui.buttons import LABEL_PADDING
 from pycon_us.ui.focus_back import Star, refocus_star
 from pycon_us.ui.semantics import named
-from pycon_us.ui.snack_bars import NOT_SAVED, SNACK_BAR_MS
+from pycon_us.ui.snack_bars import say_if_unsaved
 
 SCREEN = "reminder.primer"
 """The primer's name in the identifiers (decisions §M): ``reminder.primer.allow``."""
@@ -161,14 +161,7 @@ async def _save(
     saved = await prefs.change_reminders(
         svc.storage, lambda current: answered(current, allow=allow, granted=granted)
     )
-    if not saved:
-        page.show_dialog(
-            ft.SnackBar(
-                ft.Text(NOT_SAVED),
-                behavior=ft.SnackBarBehavior.FLOATING,
-                duration=SNACK_BAR_MS,
-            )
-        )
+    say_if_unsaved(page, saved)
 
 
 def answered(

@@ -32,6 +32,7 @@ from urllib.parse import quote
 import flet as ft
 
 from pycon_us.services import Services
+from pycon_us.services.errors import say
 from pycon_us.services.storage import SERVICE_ERRORS
 
 logger = logging.getLogger(__name__)
@@ -70,16 +71,16 @@ async def add_to_calendar(svc: Services, slug: str, data: bytes) -> None:
     name = f"{slug}.ics"
     if page.platform == ft.PagePlatform.IOS:
         if not await _open_in_browser(svc, name, data):
-            _say(NOT_OPENED)
+            say(page, NOT_OPENED)
         return
     try:
         saved = await svc.file_picker.save_file(file_name=name, src_bytes=data)
     except SERVICE_ERRORS as error:
         logger.warning("Could not save the calendar file: %s", type(error).__name__)
-        _say(NOT_OPENED)
+        say(page, NOT_OPENED)
         return
     if saved is not None:  # None is a cancel, which needs no answer
-        _say(saved_text(name))
+        say(page, saved_text(name))
 
 
 async def _open_in_browser(svc: Services, name: str, data: bytes) -> bool:
@@ -199,10 +200,3 @@ class _Handler(BaseHTTPRequestHandler):
     def log_message(self, format: str, *args: object) -> None:
         """Log the request line and status through ``logging``, not ``stderr``."""
         logger.info("Calendar file server: %s", format % args)
-
-
-def _say(text: str) -> None:
-    """Show ``text`` in a SnackBar on the View the user is on (D-210)."""
-    ft.context.page.show_dialog(
-        ft.SnackBar(ft.Text(text), behavior=ft.SnackBarBehavior.FLOATING)
-    )
