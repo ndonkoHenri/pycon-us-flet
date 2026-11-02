@@ -246,12 +246,12 @@ In parallel upstream: U1, U15 and spike S6.
 **Scope:**
 - **The mock and its contract:** the mock server, contract README and signing vectors.
 - **Account:** sign-in, the account screen, role flags and favourites sync.
-- **Staff tools:** the staff section and the shared scan screen, then the tools in the order lead retrieval (consent, sponsor picker, notes) → door check → swag → CoC (O-7).
+- **Staff tools:** the staff section and the shared scan screen, then the tools in the order lead retrieval (consent, sponsor picker, notes) → door check → swag → CoC (D-456).
 - **Offline queue:** the outbox and the sync worker.
 - **Scanner:** E1 integration once the extension is pinned (spike S8 runs earlier, on the upstream track).
 
 **Exit criteria:**
-1. Every tool kept under O-7 completes scripted scenarios against the mock on an Android emulator and the iPhone, with manual and HID entry, and with the camera when E1 is bundled (the iPhone's camera, or the emulator's virtual scene camera on Android, D-102); otherwise the scan screen shows the interim honestly.
+1. Every staff tool (all four, D-456) completes scripted scenarios against the mock on an Android emulator and the iPhone, with manual and HID entry, and with the camera when E1 is bundled (the iPhone's camera, or the emulator's virtual scene camera on Android, D-102); otherwise the scan screen shows the interim honestly.
 2. The offline queue holds:
    - Scans made in airplane mode queue and survive kill and restart.
    - Under idempotent mock semantics each record syncs exactly once; under non-idempotent semantics no record is lost, and a duplicate occurs only after a lost response, where it is detected and shown (D-57).
@@ -343,11 +343,11 @@ The workflow is written down in [`AGENTS.md`](AGENTS.md), the operating manual f
 | The mock drifts from the real API | Cannot be detected without the PSF | A contract README citing Ionic's code, never a claim of compatibility, and the PSF appendix. |
 | Scope and complexity creep | Large PRs, new abstractions | The Zen rules (D-66), phase exit criteria, the `needs-decision` gate, and the matrix as an inventory. |
 | Solo capacity alongside Flet duties | A phase overruns its soft marker | Phases, not deadlines; a parallel upstream track; agents for mechanical work. Cut scope by phase, never quality. |
-| The live demo fails | A rehearsal fails | An offline-first app, the fake clock, the demo-backend choice (O-8), and recorded fallbacks. |
+| The live demo fails | A rehearsal fails | An offline-first app, the fake clock, the LAN mock on a laptop hotspot (D-457), and recorded fallbacks. |
 
 ## 12. Open decisions
 
-The full list, each with a recommendation, is in [`docs/decisions.md` › Open decisions](docs/decisions.md#open-decisions); provisional decisions apply until they are settled under D-101 (owner-only ones by the owner). **O-1** the tabs and start screen (recommended: Now · Schedule · My schedule · Map · More, opening on Now); **O-2** per-platform page transitions (yes; settled by D-148 after S4); **O-3** the font (Roboto); **O-4** app identity, bundle id and icon (no PSF marks on anything that leaves our devices); **O-5** distribution (internal only); **O-6** a CFP proposal (decide around 2026-11-20); **O-7** staff-tool depth (all four, ordered so the last two can slip); **O-8** a stage-demo backend (decide at the P3 exit).
+The full list, each with a recommendation, is in [`docs/decisions.md` › Open decisions](docs/decisions.md#open-decisions); provisional decisions apply until they are settled under D-101 (owner-only ones by the owner). **O-1** the tabs and start screen (settled by D-454: Now · Schedule · My schedule · Map · More, opening on Now, with no dogfooding behind it); **O-2** per-platform page transitions (yes; settled by D-148 after S4); **O-3** the font (settled by D-455: Roboto); **O-4** app identity, bundle id and icon (no PSF marks on anything that leaves our devices); **O-5** distribution (internal only); **O-6** a CFP proposal (decide around 2026-11-20); **O-7** staff-tool depth (settled by D-456: all four, all built); **O-8** a stage-demo backend (settled by D-457: the LAN mock from the laptop).
 
 ---
 
