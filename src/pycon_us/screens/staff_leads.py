@@ -90,7 +90,7 @@ def LeadsPage() -> ft.Control:
         and may_open(ToolKey.LEAD, flags)
     )
     if not allowed:
-        return NotAvailable(title=TITLE)
+        return NotAvailable(title=TITLE, source=__name__)
     return LeadList(owner=account.owner, for_sponsor=scans_for_sponsor(flags))
 
 
@@ -206,6 +206,7 @@ def LeadList(*, owner: str, for_sponsor: bool) -> ft.Control:
             )
     return AppScaffold(
         title=TITLE,
+        source=__name__,
         body=ft.Column(
             [
                 # The field and chip in a column of their own, so the list keeps its

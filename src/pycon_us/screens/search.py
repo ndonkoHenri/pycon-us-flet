@@ -268,6 +268,7 @@ def Search() -> ft.View:
     )
     return AppScaffold(
         title="Search",
+        source=__name__,
         body=ft.Column(
             [
                 # The field, the chips and the count stay put above the list, in a

@@ -101,11 +101,13 @@ def SpeakerDetail(speaker_id: str) -> ft.View:
         # heading, as "Not found" does below (D-211).
         return AppScaffold(
             title="Speaker",
+            source=__name__,
             body=ft.ListView([no_data], expand=True, padding=sides(margin)),
         )
     if speaker is None:
         return AppScaffold(
             title="Not found",
+            source=__name__,
             body=ft.ListView(
                 [
                     not_found(
@@ -150,7 +152,7 @@ def SpeakerDetail(speaker_id: str) -> ft.View:
         items.append(feed_markdown(speaker.bio_md, svc, identifier=f"{SCREEN}.bio"))
     body = ft.ListView(items, expand=True, padding=sides(margin, bottom=24))
     # The heading below names the page, so the app bar's title stays empty (D-186).
-    return AppScaffold(title="", body=body)
+    return AppScaffold(title="", source=__name__, body=body)
 
 
 def intro(speaker: Speaker, *, large_text: bool) -> ft.Control:

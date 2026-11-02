@@ -115,6 +115,7 @@ def Speakers() -> ft.View:
             )
     return AppScaffold(
         title="Speakers",
+        source=__name__,
         body=ft.Column(
             [
                 # The count goes after the field, in a column of their own: put

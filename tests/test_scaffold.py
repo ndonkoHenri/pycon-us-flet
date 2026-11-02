@@ -226,7 +226,7 @@ def test_only_the_top_view_records_where_a_new_session_returns(
     assert svc.memory.last_location == ""
 
     hooks.view_path = "/schedule/session/42"
-    AppScaffold(title="Session", body=ft.Text("body"))
+    AppScaffold(title="Session", source=None, body=ft.Text("body"))
     assert svc.memory.last_location == "/schedule/session/42?highlight=1"
 
 

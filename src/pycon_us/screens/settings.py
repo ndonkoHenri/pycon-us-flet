@@ -98,6 +98,7 @@ def Settings() -> ft.View:
     rows.append(DataSection(RADIO_WIDTH))
     return AppScaffold(
         title="Settings",
+        source=__name__,
         body=ft.ListView(
             rows,
             expand=True,

@@ -171,6 +171,7 @@ def NotFound() -> ft.View:
 
     return AppScaffold(
         title="Not found",
+        source=None,  # a link the app doesn't have: no screen's code to show
         unknown=True,
         body=ft.ListView(
             [

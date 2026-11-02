@@ -64,6 +64,7 @@ def Social() -> ft.View:
     site = urlsplit(svc.year.conference.site_url).hostname or ""
     return AppScaffold(
         title=TITLE,
+        source=__name__,
         body=InfoBody(
             blocks, block="social-media", screen=SCREEN, empty=empty_state(site)
         ),

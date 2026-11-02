@@ -90,7 +90,7 @@ def DoorCheck() -> ft.Control:
         and may_open(ToolKey.DOOR, account.role_flags)
     )
     if not allowed:
-        return NotAvailable(title=TITLE)
+        return NotAvailable(title=TITLE, source=__name__)
     memory.staff_tool = ToolKey.DOOR  # plain: Now's card reads it when it renders
     return DoorTool(owner=account.owner)
 
@@ -145,10 +145,11 @@ def DoorTool(*, owner: str) -> ft.Control:
     count = use_headcount(owner, choice.product_ids if choice is not None else ())
 
     if current is None:
-        return Reading(title=TITLE)
+        return Reading(title=TITLE, source=__name__)
     if current.choice is None:
         return ScanScreen(
             title=TITLE,
+            source=__name__,
             on_badge=no_session,
             paused=NO_SESSION,
             actions=[choose_button(open_picker)],
@@ -167,6 +168,7 @@ def DoorTool(*, owner: str) -> ft.Control:
     )
     return ScanScreen(
         title=TITLE,
+        source=__name__,
         on_badge=on_badge,
         context=ft.Column(
             [

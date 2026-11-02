@@ -153,6 +153,7 @@ def use_pick[T](save: Callable[[Storage, T], Awaitable[bool]]) -> Picking[T]:
 def picker_page(
     *,
     title: str,
+    source: str,
     prefix: str,
     cancel: Callable[[ft.Event[ft.IconButton]], None],
     margin: float,
@@ -166,6 +167,7 @@ def picker_page(
 
     Args:
         title: The app bar's title, "Choose sponsor".
+        source: The picker's ``__name__``, for View source (D-461).
         prefix: The page's identifiers' start, ``lead.sponsor``.
         cancel: ``Picking.cancel``.
         margin: The list's side margin (``use_margin(LIST)``, D-305).
@@ -174,6 +176,7 @@ def picker_page(
     """
     return AppScaffold(
         title=title,
+        source=source,
         actions=[
             # An icon, as M3's full-screen dialogs close: a text button's label grew
             # with the text and squeezed the title to "Choose sp…" at 200 %.
@@ -317,7 +320,7 @@ def choice_row(
 
 
 @ft.component
-def Reading(*, title: str) -> ft.Control:
+def Reading(*, title: str, source: str) -> ft.Control:
     """The empty page under a tool's title while it reads its keys from storage.
 
     A component of its own: ``AppScaffold`` calls hooks, which in a tool's loading
@@ -325,8 +328,9 @@ def Reading(*, title: str) -> ft.Control:
 
     Args:
         title: The tool's name, the app bar's title.
+        source: The tool's ``__name__``, for View source (D-461).
     """
     margin = use_margin(LIST)  # its width class (D-305)
     return AppScaffold(
-        title=title, body=ft.ListView(expand=True, padding=sides(margin))
+        title=title, source=source, body=ft.ListView(expand=True, padding=sides(margin))
     )

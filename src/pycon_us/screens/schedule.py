@@ -298,7 +298,11 @@ def Schedule() -> ft.View:
     if data is None or shown is None:
         return AppScaffold(
             title="Schedule",
-            actions=[search_button(memory, "sessions"), ScheduleOverflow()],
+            source=None,  # in its overflow
+            actions=[
+                search_button(memory, "sessions"),
+                ScheduleOverflow(source=__name__),
+            ],
             body=ft.ListView(
                 [
                     strip_view(strip, tokens),
@@ -401,10 +405,11 @@ def Schedule() -> ft.View:
     )
     return AppScaffold(
         title="Schedule",
+        source=None,  # in its overflow
         actions=[
             search_button(memory, "sessions"),
             track_filter.button,
-            ScheduleOverflow(),  # Schedule changes (D-255)
+            ScheduleOverflow(source=__name__),  # Schedule changes (D-255)
         ],
         body=tabs,
         on_retap=scroll_to_top,

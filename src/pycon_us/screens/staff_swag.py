@@ -107,7 +107,7 @@ def SwagPickup() -> ft.Control:
         and may_open(ToolKey.SWAG, account.role_flags)
     )
     if not allowed:
-        return NotAvailable(title=TITLE)
+        return NotAvailable(title=TITLE, source=__name__)
     memory.staff_tool = ToolKey.SWAG  # plain: Now's card reads it when it renders
     return SwagTool(owner=account.owner)
 
@@ -201,6 +201,7 @@ def SwagTool(*, owner: str) -> ft.Control:
     )
     return ScanScreen(
         title=TITLE,
+        source=__name__,
         on_badge=partial(look_up, svc.api, categories=categories, offer=sheet.offer),
         context=category_area(loaded, current, toggle, retry),
         paused=paused,

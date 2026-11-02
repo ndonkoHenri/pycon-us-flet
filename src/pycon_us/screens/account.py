@@ -185,6 +185,7 @@ def AccountPage() -> ft.View:
         )
     return AppScaffold(
         title=TITLE,
+        source=__name__,
         body=ft.ListView(body, expand=True, padding=sides(margin, top=8, bottom=16)),
     )
 

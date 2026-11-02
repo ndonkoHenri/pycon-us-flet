@@ -102,12 +102,14 @@ def SponsorDetail(sponsor_slug: str) -> ft.View:
         # No name to show yet: the bar names the page, its level-1 heading (D-211).
         return AppScaffold(
             title="Sponsor",
+            source=__name__,
             body=ft.ListView([no_data], expand=True, padding=sides(margin)),
         )
     sponsor = sponsor_by_slug(data, sponsor_slug)
     if sponsor is None:
         return AppScaffold(
             title="Not found",
+            source=__name__,
             body=ft.ListView(
                 [
                     not_found(
@@ -131,7 +133,7 @@ def SponsorDetail(sponsor_slug: str) -> ft.View:
     items.extend(open_roles(data, sponsor, svc))
     body = ft.ListView(items, expand=True, padding=sides(margin, bottom=24))
     # The heading in the intro names the page, so the app bar's title stays empty.
-    return AppScaffold(title="", body=body)
+    return AppScaffold(title="", source=__name__, body=body)
 
 
 def facts_line(sponsor: Sponsor, *, hall: bool) -> str | None:
