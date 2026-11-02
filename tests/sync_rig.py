@@ -16,7 +16,7 @@ import httpx
 import pytest
 
 from pycon_us.account import Account, SignIn
-from pycon_us.core import outbox
+from pycon_us.core import outbox_enqueue
 from pycon_us.core.outbox import Row, Status
 from pycon_us.services.api import ApiClient
 from pycon_us.services.credentials import CredentialStorage
@@ -158,7 +158,7 @@ class Rig:
     ) -> None:
         """Queue the signed-in account's lead scan, for ``sponsor`` (None: its own)."""
         decide = partial(
-            outbox.scan_lead,
+            outbox_enqueue.scan_lead,
             owner=self.account.owner,
             code=code,
             payload={"badge_validator": validator},
@@ -173,7 +173,7 @@ class Rig:
     ) -> None:
         """Queue the signed-in account's note on ``code``'s lead."""
         decide = partial(
-            outbox.save_note,
+            outbox_enqueue.save_note,
             owner=self.account.owner,
             code=code,
             note=text,
@@ -195,7 +195,7 @@ class Rig:
             f"product-{product}-quantity": 1,
         }
         decide = partial(
-            outbox.admit,
+            outbox_enqueue.admit,
             owner=self.account.owner,
             code=code,
             product_ids=[product],

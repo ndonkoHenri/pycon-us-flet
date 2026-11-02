@@ -4,11 +4,12 @@ LEAD-10, LEAD-11. The note sheet (``ui/lead_note_sheet.py``) prefills from
 ``saved_note()``: the account's note row for the lead (its code and its sponsor, D-459),
 pending, failed or synced, its text parsed (``core/lead_notes.parse``), or None when the
 outbox can't be read (the sheet then stays closed). Its Save calls ``store()``, which
-enqueues the composed text as the lead's one ``note`` row (``core/outbox.save_note``: a
-blank note is ignored, an edit is sent again, the row keeps its lead's sponsor), then
-``confirm()``, which kicks the worker and says how it went: "Note saved" once the note
-has synced, "Note saved. Will sync." while it is queued. A note waits for its lead
-(D-56), so a note on a lead still queued is said at once, without a wait; otherwise
+enqueues the composed text as the lead's one ``note`` row
+(``core/outbox_enqueue.save_note``: a blank note is ignored, an edit is sent again,
+the row keeps its lead's sponsor), then ``confirm()``, which kicks the worker and says
+how it went: "Note saved" once the note has synced, "Note saved. Will sync." while it
+is queued. A note waits for its lead (D-56), so a note on a lead still queued is said
+at once, without a wait; otherwise
 the wait is the capture's (``lead_capture.sent()``, at most ``WAIT_SECONDS``), driven
 by the worker's reports. The ``SyncWorker`` stays the only sender (D-407).
 """
@@ -19,7 +20,8 @@ from functools import partial
 
 from pycon_us.core.lead_notes import LeadNote, compose, parse
 from pycon_us.core.lead_sponsors import LeadSponsor
-from pycon_us.core.outbox import Enqueued, Kind, Row, Status, save_note
+from pycon_us.core.outbox import Kind, Row, Status
+from pycon_us.core.outbox_enqueue import Enqueued, save_note
 from pycon_us.lead_capture import sent
 from pycon_us.services.outbox_db import OutboxDb
 from pycon_us.staff import Staff

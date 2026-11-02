@@ -8,7 +8,7 @@ have left it in, and ``note()`` enqueues its note (``save_note``).
 from dataclasses import replace
 from functools import partial
 
-from pycon_us.core import outbox
+from pycon_us.core import outbox, outbox_enqueue
 from pycon_us.core.outbox import Row, Status
 from pycon_us.services.outbox_db import OutboxDb
 
@@ -39,7 +39,7 @@ def add(
         sponsor: The ``(id, name)`` a staff account scanned it for.
     """
     decide = partial(
-        outbox.scan_lead,
+        outbox_enqueue.scan_lead,
         owner=owner,
         code=code,
         payload={"badge_validator": "v"},
@@ -72,7 +72,7 @@ def note(
 ) -> None:
     """Store ``text`` as the account's note on the lead ``code`` for ``sponsor``."""
     decide = partial(
-        outbox.save_note,
+        outbox_enqueue.save_note,
         owner=owner,
         code=code,
         note=text,

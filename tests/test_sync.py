@@ -1,8 +1,9 @@
 """``SyncWorker.drain()`` against the in-process mock and its faults (#692; D-56, D-57).
 
-Each test queues rows through ``core/outbox.py``'s rules into a real ``OutboxDb``, signs
-a real ``Account`` in to the mock and drains; the mock checks every signature and counts
-every lead, note and redemption it applied, so "exactly once" is the mock's own count.
+Each test queues rows through ``core/outbox_enqueue.py``'s rules into a real ``OutboxDb``,
+signs a real ``Account`` in to the mock and drains; the mock checks every signature and
+counts every lead, note and redemption it applied, so "exactly once" is the mock's own
+count.
 """
 
 import asyncio
