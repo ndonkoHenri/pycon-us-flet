@@ -34,7 +34,7 @@ name: Two offline leads sync exactly once
 - extendedWaitUntil:
     visible:
       id: scan.result
-      text: "(?s)Saved\\. Will sync\\.*MOCK0001.*"
+      text: "(?s)Saved\\. Will sync\\..*MOCK0001.*"
     timeout: 15000
 - runFlow:
     file: ../subflows/scan.yaml
@@ -43,7 +43,7 @@ name: Two offline leads sync exactly once
 - extendedWaitUntil:
     visible:
       id: scan.result
-      text: "(?s)Saved\\. Will sync\\.*MOCK0002.*"
+      text: "(?s)Saved\\. Will sync\\..*MOCK0002.*"
     timeout: 15000
 - pressKey: Enter
 - tapOn:

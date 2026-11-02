@@ -30,6 +30,7 @@ class Listener:
         """Resume the mock, preserving the same seed and captures."""
         if self.server is None:
             self.server = MockServer(("127.0.0.1", self.port), self.state)
+            self.port = self.server.server_port
             threading.Thread(target=self.server.serve_forever, daemon=True).start()
 
     def offline(self) -> None:
@@ -78,7 +79,7 @@ def main() -> None:
                         args.device,
                         "test",
                         "-e",
-                        f"MOCK_URL=http://{host}:{args.port}",
+                        f"MOCK_URL=http://{host}:{listener.port}",
                         "-e",
                         f"CONTROL_URL=http://127.0.0.1:{args.control_port}",
                         "maestro/journeys/offline_scans.yaml",
