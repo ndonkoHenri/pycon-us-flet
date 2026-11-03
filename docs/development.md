@@ -43,8 +43,8 @@
 | Refresh the bundled feed snapshot (from P0-17) | `uv run python tools/update_snapshot.py` | §8.3 |
 | Run the UI flows on an emulator or a simulator | `uv run flet test android -d emulator-5580 --tests-dir tests/ui -v` (or `ios -d <udid>`) | §5.7 |
 | Run the Maestro device journeys on a packaged build | `maestro --device emulator-5570 test --include-tags=journeys maestro` (or `--device <udid>`) | §5.9 |
-| Set up a second worktree of this repo | Clone the main checkout's `.flet-src` into it (`cp -cR`, never a link), then `uv sync --locked` | §5.8 |
-| Build, debug or test while another build may run (parallel agents) | Once: `mkdir -p build && { test -d build/pub-cache \|\| cp -cR ~/.pub-cache build/pub-cache; }`; then prefix each command with `PUB_CACHE=$PWD/build/pub-cache` | §5.8 |
+| Set up a worktree of this repo | `tools/setup_worktree.sh`, then §5.0 to a device | §5.8 |
+| Build, debug or test while another build may run (parallel agents) | Prefix each command with `PUB_CACHE=$PWD/build/pub-cache`, which `tools/setup_worktree.sh` made | §5.8 |
 | Upload a PR's screenshots; set a board status | `tools/pr_shots.sh <pr> <shots>.png`; `tools/board.sh <n> in-progress` (or `in-review`) | AGENTS.md |
 | Check the feature matrix after editing it (ids, vocabulary, counts; also run by `tests/test_check_matrix.py`) | `uv run python -m tools.check_matrix` (`--breakdown` for the fuller counts) | — |
 | Check the live public feed (what `feed-check.yml` runs; no weekly run while the repo is private, D-273) | `uv run python -m tools.check_feed`, or `gh workflow run feed-check.yml --ref main` | §7.3 |
@@ -380,6 +380,23 @@ def test_version_matches_pyproject():
 
 ## 5. Development loop
 
+### 5.0 The short path: a fresh worktree to the app on a device
+
+The Mac already has the tools (§5.1 if it doesn't), and the main checkout has `.flet-src` (§2.2). From the worktree's root:
+
+```bash
+tools/setup_worktree.sh
+PUB_CACHE=$PWD/build/pub-cache uv run flet build apk --arch arm64-v8a --yes
+adb -s <serial> install -r build/apk/pycon-us.apk
+adb -s <serial> shell am start -W -a android.intent.action.VIEW -d confcompanion://app/now
+```
+
+On iOS, the same with `LANG=en_US.UTF-8 PUB_CACHE=$PWD/build/pub-cache uv run flet build ios-simulator --yes`, then `xcrun simctl install <udid> build/ios-simulator/pycon-us.app` and `xcrun simctl launch <udid> io.github.ndonkohenri.confcompanion`.
+
+- Use a device of your own, never one another agent or the owner has open: an install replaces the app there (§5.5).
+- A build takes minutes (§5.8). For Python hot reload instead, see §5.2.
+- Drive it with Maestro (§5.9). Staff features need the mock (§6).
+
 ### 5.1 From a clean Mac
 
 This section is for a Mac with none of the tools. The timed run on a truly clean machine is #850 and hasn't happened, so **unverified** below means nobody has run that step on a Mac without the tool.
@@ -626,23 +643,11 @@ uv run flet test ios -d <udid> --tests-dir tests/ui -v -k "offline or switch_day
 - **Android: the same race, with a shorter window.** The plugin's Gradle tasks write `app.zip`, `stdlib.zip` and `sitepackages.zip` to `serious_python_android-<version>/android/src/main/assets/` and the native libraries to `src/main/jniLibs/<abi>/`, paths relative to the plugin's folder in the pub cache (`build.gradle.kts:151, 423-454`); the APK takes them when Gradle merges assets later in the same run. Two Gradle builds that overlap there can package each other's `app.zip`.
 - `flet debug` and `flet test` run the same pipeline (§5.3, §5.7). The companion client (§5.2) does not embed Python and is not affected.
 
-**The rule.** Every worktree of this repo has a Flet checkout of its own: an APFS clone of the main checkout's `.flet-src`, never a link to it. When another build may run on the Mac (agents in parallel, D-102), every `flet build`, `flet debug` and `flet test` in a worktree also uses a pub cache of its own under `build/`, another APFS clone. Pasting into zsh, run `setopt interactivecomments` first (§5.1):
+**The rule.** Every worktree of this repo has a Flet checkout of its own: an APFS clone of the main checkout's `.flet-src`, never a link to it. When another build may run on the Mac (agents in parallel, D-102), every `flet build`, `flet debug` and `flet test` in a worktree also uses a pub cache of its own under `build/`, another APFS clone.
+
+`tools/setup_worktree.sh` does both, once per worktree, and is safe to run again: it makes the clone (replacing a link, a pre-D-451 copy or a clone off the pin), runs `uv sync --locked`, clones the pub cache if `build/pub-cache` is gone, and turns on the pre-push hook. It only reads the main checkout's `.flet-src`, and stops if that is off the pin. Then prefix every build, debug and test command in the worktree:
 
 ```bash
-# Once per worktree, from its root (in the main checkout the Flet lines change nothing).
-# 1. Its own Flet checkout: a clone of the main checkout's .flet-src, without the clone's wheel build folder.
-# $main is the main checkout; the first test removes a link to the shared checkout; uv sync moves the editable
-# installs to the clone.
-main=$(dirname "$(git rev-parse --path-format=absolute --git-common-dir)")
-test -L .flet-src && rm .flet-src
-test -e .flet-src || { cp -cR "$main/.flet-src" .flet-src && rm -rf .flet-src/sdk/python/packages/flet/build; }
-uv sync --locked
-
-# 2. Its own pub cache, and again whenever build/pub-cache is gone: a clone of the shared cache.
-# The test keeps a second run from nesting a copy inside the first (see below).
-mkdir -p build && { test -d build/pub-cache || cp -cR ~/.pub-cache build/pub-cache; }
-
-# Then prefix every build, debug and test command in this worktree:
 PUB_CACHE=$PWD/build/pub-cache LANG=en_US.UTF-8 uv run flet build ios-simulator --yes
 PUB_CACHE=$PWD/build/pub-cache uv run flet debug android -d emulator-5580
 PUB_CACHE=$PWD/build/pub-cache uv run flet test ios -d <udid> --tests-dir tests/ui -v
@@ -652,13 +657,13 @@ PUB_CACHE=$PWD/build/pub-cache uv run flet test ios -d <udid> --tests-dir tests/
 - It took 2 s for the 178 MB checkout (8,400 files). It leaves out the `flet` package's `build/` folder, which the main checkout's own builds left there, for the reasons above.
 - The main checkout's `.flet-src` stays the source of truth at the pin, and nobody edits Flet's files in it or a clone (D-213). It is a plain clone with its own `.git` folder (D-451), so a worktree's APFS clone carries a `.git` of its own too, and a checkout there moves only that clone. The pin check (§2.2) still compares the clone's files: a clone copied before a bump keeps the old HEAD and files until it is replaced.
 - Before D-451 the main checkout's `.flet-src` was a `git worktree` of the owner's Flet repo, whose `.git` file each clone kept, so a checkout in a clone moved the owner's Flet worktree. A clone made from that setup still has the `.git` file (`test -f .flet-src/.git`): replace it, never run a git write in it.
-- After a pin bump (§2.2), replace the clone: `rm -rf .flet-src`, then the Flet lines again.
+- After a pin bump (§2.2), run `tools/setup_worktree.sh` again: it replaces the clone.
 - If the wheel step fails with `[Errno 17]` or `[Errno 66]` after an interrupted build, delete your clone's leftovers, `rm -rf .flet-src/sdk/python/packages/flet/build`, and build again. Never clean the main checkout's `.flet-src` from a worktree.
 - `rm -rf build` and `flet clean` leave the clone alone: it lives outside `build/`.
 
 **The pub cache clone.**
 - `cp -c` clones with `clonefile(2)` when both folders are on one APFS volume, and falls back to a plain copy otherwise (`man cp`). The clone shares its blocks with `~/.pub-cache` until one side changes. On the owner's Mac it took 6 s for the 1.0 GB cache (44,000 files), and the volume's used space grew by about 20 MB (metadata; other builds were writing at the same time). An empty `build/pub-cache` works too, but the first build then downloads every package again (9 to 10 minutes on a busy host, #176).
-- Keep the `test -d`: `cp -R` into a folder that already exists copies the source *inside* it, so a second bare `cp -cR` adds a nested `build/pub-cache/.pub-cache` and leaves the cache that `PUB_CACHE` names as it was. If a clone was interrupted, `rm -rf build/pub-cache` and run the line again.
+- The script tests for the folder first: `cp -R` into a folder that already exists copies the source *inside* it, so a second bare `cp -cR` adds a nested `build/pub-cache/.pub-cache` and leaves the cache that `PUB_CACHE` names as it was. If a clone was interrupted, `rm -rf build/pub-cache` and run the script again.
 - The clone carries whatever another build last staged in the plugin folders; your build replaces it in your copy only.
 - Keep the same `PUB_CACHE` for every command in the worktree: switching makes Flutter resolve the packages again. `build/` is git-ignored, so the clone goes with it: `rm -rf build` (§2.2), `flet clean` (`CLI/commands/clean.py:68`) and a build after a change of the bundled Python version (flet-cli wipes `build/` first, `CLI/commands/build_base.py:996`) all delete it. If `build/pub-cache` is missing, run the setup line again before the next build; otherwise that build quietly fills a new cache from the network (as the build that changes the Python version does anyway, since it empties `build/` itself).
 - On a Mac where only one build runs at a time, the shared `~/.pub-cache` is fine.
