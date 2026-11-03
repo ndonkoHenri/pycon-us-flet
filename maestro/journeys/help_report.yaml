@@ -7,7 +7,9 @@
 # action plus value, and its Copy is a stop of its own (help.copy.<kind>). 2026 lists
 # the email alone (no public hotline), so the flow copies the address; a year with a
 # phone row would add help.copy.tel. The copy is confirmed by the app's SnackBar on iOS
-# and on Android before 13; Android 13 and later confirms every copy itself (D-263).
+# and on Android before 13; Android 13 and later confirms every copy itself (D-263), so
+# there the flow only checks that no failure is said. It learns the level from
+# `-e ANDROID_API=<level>` (scripts/os_offers.js, #972).
 appId: io.github.ndonkohenri.confcompanion
 name: More, Help & safety, Report a concern first, copy the address
 tags:
@@ -49,11 +51,12 @@ onFlowComplete:
     id: help.copy.mailto
 
 # Copy the address.
+- runScript: ../scripts/os_offers.js
 - tapOn:
     id: help.copy.mailto
 - runFlow:
     when:
-      platform: iOS
+      true: ${!output.os.confirmsCopy}
     commands:
       - extendedWaitUntil:
           visible:

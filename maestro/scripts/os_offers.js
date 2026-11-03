@@ -11,6 +11,10 @@
 // - fieldHint: a text field's label and helper line reach the accessibility tree, so the
 //   flow can read them. iOS always; Android from API 28, where Flutter's bridge sets the
 //   node's hint text. Below it the field is an unnamed edit box (#952, #968).
+// - confirmsCopy: the OS shows its own "copied" confirmation, so the app's SnackBar is
+//   not on screen to check (D-263). Android from API 33 (Android 13, which added the
+//   clipboard preview). iOS and Android below 13 show nothing, so the app's SnackBar is
+//   the user's only confirmation and the flow asserts it (#972).
 //
 // The API level is `ANDROID_API`, which the runner passes with `-e ANDROID_API=<level>`
 // (maestro/README.md, "Android API levels"): a flow cannot run `adb`. It defaults to 36,
@@ -25,5 +29,6 @@ output.os = {
   notificationPrompt: !android || api >= 33,
   exactAlarmCard: android && api >= 34,
   fieldHint: !android || api >= 28,
+  confirmsCopy: android && api >= 33,
 };
 console.log("os offers: " + JSON.stringify(output.os));

@@ -5,7 +5,8 @@
 # them with the feed unreachable (start_offline.yaml). Each value is one node read with
 # its label ("Password, pyconLB2026"). The copy is confirmed by the app's SnackBar on
 # iOS and on Android before 13; Android 13 and later confirms every copy itself, so
-# there the flow only checks that no failure is said (D-263). That the clipboard holds
+# there the flow only checks that no failure is said (D-263); it learns the level from
+# `-e ANDROID_API=<level>` (scripts/os_offers.js, #972). That the clipboard holds
 # the password is read outside the flow: `xcrun simctl pbpaste <udid>` on a simulator.
 appId: io.github.ndonkohenri.confcompanion
 name: More, Wi-Fi, Copy password
@@ -45,11 +46,12 @@ onFlowComplete:
     text: "Password, pyconLB2026"
 
 # Copy password.
+- runScript: ../scripts/os_offers.js
 - tapOn:
     id: wifi.copy_password
 - runFlow:
     when:
-      platform: iOS
+      true: ${!output.os.confirmsCopy}
     commands:
       - extendedWaitUntil:
           visible:
