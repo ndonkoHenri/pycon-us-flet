@@ -5,7 +5,8 @@
 # 2. A typed code (Ada's) says "Lead captured" with her first name and offers Add note; a
 #    second code sent as a HID scanner does (no tap on the field) is captured too.
 # 3. Ada again, past the 4 s cooldown: "Already in your leads", with Open lead; still
-#    two leads. Text with no colon: "Not a badge code" with the text read, and Edit code (D-473).
+#    two leads. A URL, and text with no colon: "Not a badge code" with the text read, and
+#    Edit code (D-473, D-477).
 # 4. Back to More and in again: no consent page this time (asked once per account).
 #
 # Needs the mock running (maestro/README.md, "Staff flows and the mock"). The mock's seed
@@ -95,6 +96,22 @@ tags:
     timeout: 15000
 - assertVisible:
     id: lead.open_lead
+- assertNotVisible:
+    id: lead.add_note
+- assertVisible:
+    id: lead.leads
+    text: "Leads \\(2\\)"
+- runFlow:  # a URL has colons, and is still not a badge (#978, D-477): no lead for "https"
+    file: ../subflows/scan.yaml
+    env:
+      CODE: https://example.org/a:b
+- extendedWaitUntil:
+    visible:
+      id: scan.result
+      text: "(?s)Not a badge code\\nhttps://example.org/a:b\\n.*"
+    timeout: 15000
+- assertVisible:
+    id: scan.edit
 - assertNotVisible:
     id: lead.add_note
 - assertVisible:

@@ -162,6 +162,39 @@ async def test_a_scan_after_not_a_badge_code_is_read_alone(
     assert panel(shown) == "Checked in\nAda Lovelace\nScan 2"
 
 
+@pytest.mark.parametrize(
+    "text",
+    ["https://example.org/a:b", "BEGIN:VCARD\nFN:Ada Lovelace\nEND:VCARD"],
+)
+async def test_a_scanned_url_or_contact_card_is_not_a_badge_code(
+    show: Show, rig: Rig, text: str
+) -> None:
+    """A QR code that is a URL or a vCard has colons, yet says "Not a badge code" and reaches no handler (#978, D-477)."""
+    shown = await show()
+    await enter(shown, text)
+    assert rig.badges == []
+    assert entry(shown).value == ""  # cleared like every submit (D-473)
+    assert panel(shown).startswith(NOT_A_BADGE.word)
+    assert entry_title(text) in panel(shown)
+    button = shown.node("scan.edit").content  # and the text is one tap away
+    assert isinstance(button, ft.FilledTonalButton)
+    await shown.click(button)
+    await shown.settle()
+    assert entry(shown).value == text
+    assert not shown.nodes("scan.edit")
+
+
+@pytest.mark.parametrize("line", ["BEGIN:VCARD", "WIFI:T:WPA;S:net;P:secret;;"])
+async def test_the_first_line_of_a_contact_card_or_a_wifi_code_is_not_a_badge(
+    show: Show, rig: Rig, line: str
+) -> None:
+    """A HID scanner types a QR text one line per Enter into the one-line field: a vCard's first line and a Wi-Fi code reach no handler (#978, D-477)."""
+    shown = await show()
+    await enter(shown, line)
+    assert rig.badges == []
+    assert panel(shown).startswith(NOT_A_BADGE.word)
+
+
 async def test_edit_code_gives_the_text_back_to_correct_by_hand(
     show: Show, rig: Rig
 ) -> None:
