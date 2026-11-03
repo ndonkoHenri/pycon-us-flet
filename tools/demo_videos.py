@@ -11,6 +11,11 @@ Usage, from the repo's root (uv fetches the video readers, which nothing else ne
 each clip, trimmed, to ``--out``, then deletes the simulator and stops the mock. ``--build``
 builds the app first; without it the present build must hold this tree's Python.
 
+The app's fake clock starts at the launch and keeps running, so a clip that outlasts a minute
+shows "Now · 9:42" in the app. The status bar follows it: while a clip is filmed, the tool sets
+the status bar's time to the fake clock's minute each time that minute changes (``fake_minute()``),
+so the two agree in every frame. The app never freezes its clock for this (#1016).
+
 The Developer options never appear because nothing ever opens or unlocks them: each scene
 writes the fake clock and the mock's URL straight into the app's stored preferences, with no
 ``unlocked`` key, so neither More nor About this app has a Developer row (``prefs.developer``).
@@ -24,8 +29,10 @@ import plistlib
 import signal
 import subprocess
 import sys
+import threading
 import time
 from dataclasses import dataclass
+from datetime import datetime, timedelta
 from fractions import Fraction
 from itertools import pairwise
 from pathlib import Path
@@ -38,9 +45,14 @@ APP = ROOT / "build" / "ios-simulator" / "pycon-us.app"
 DEFAULT_OUT = Path.home() / "Movies" / "pycon-us-flet-demo"
 
 FAKE_NOW = "2026-05-15T09:41:00-07:00"
-"""Friday, four minutes before the keynote; it agrees with the status bar's 9:41."""
+"""Friday, four minutes before the keynote; the status bar starts at its 9:41."""
 
-STATUS_BAR = "--time 9:41 --batteryState charged --batteryLevel 100 --cellularBars 4 --wifiBars 3"
+STATUS_BAR = "--batteryState charged --batteryLevel 100 --cellularBars 4 --wifiBars 3"
+"""What the status bar shows besides its time, which ``fake_minute()`` supplies."""
+
+BOOT_LAG = 3.0
+"""Seconds from ``simctl launch`` returning to the app starting its fake clock: Python boots
+and the stored settings are read first (measured on an iPhone 17 simulator, #1016)."""
 
 FIRST_LAUNCH_SECONDS = 25.0
 """The warm-up launch stays up this long, so the live feed is cached before any take."""
@@ -98,6 +110,26 @@ CLIPS = (
         mock=True,
     ),
 )
+
+
+def fake_minute(elapsed: float) -> str:
+    """Return the fake clock's time as a status bar shows it, ``elapsed`` s after its start.
+
+    Args:
+        elapsed: Seconds since the app started its fake clock; below 0 reads as 0.
+    """
+    moment = datetime.fromisoformat(FAKE_NOW) + timedelta(seconds=max(elapsed, 0.0))
+    return f"{moment.hour}:{moment.minute:02d}"
+
+
+def seconds_to_next_minute(elapsed: float) -> float:
+    """Return how long, from ``elapsed``, until the fake clock's minute changes.
+
+    Args:
+        elapsed: Seconds since the app started its fake clock; below 0 reads as 0.
+    """
+    start = datetime.fromisoformat(FAKE_NOW)
+    return 60.0 - (start.second + max(elapsed, 0.0)) % 60.0
 
 
 def scene_prefs(mock_url: str | None) -> dict[str, Any]:
@@ -171,6 +203,33 @@ class Stage:
         """Keep the simulator's id and the mock's URL as this simulator reaches it."""
         self.udid = udid
         self.mock_url = mock_url
+        self.clock_started = time.monotonic()
+
+    def set_time(self, text: str) -> None:
+        """Show ``text`` as the status bar's time, with the rest as ``STATUS_BAR`` says."""
+        _simctl(
+            "status_bar", self.udid, "override", "--time", text, *STATUS_BAR.split()
+        )
+
+    def follow_clock(self, stop: threading.Event) -> None:
+        """Set the status bar's time to the fake clock's minute, and again at each change.
+
+        Runs until ``stop`` is set; a failed ``simctl`` call is told and the next minute
+        tries again, since a clip is worth finishing with a stale minute.
+        """
+        shown = None
+        while not stop.is_set():
+            elapsed = time.monotonic() - self.clock_started
+            minute = fake_minute(elapsed)
+            wait = seconds_to_next_minute(elapsed) + 0.05  # just after the change
+            if minute != shown:
+                try:
+                    self.set_time(minute)
+                    shown = minute
+                except subprocess.CalledProcessError as failure:
+                    print(f"status bar not set to {minute}: {failure}", flush=True)
+                    wait = 1.0
+            stop.wait(wait)
 
     def flow(self, name: str) -> None:
         """Run a flow of ``maestro/demo``; a failure stops the run."""
@@ -205,10 +264,13 @@ class Stage:
             "user/foreground/com.apple.cfprefsd.xpc.daemon",
         )
         _simctl("launch", self.udid, BUNDLE)
+        # The app's fake clock starts when its Python has booted, a moment after this.
+        self.clock_started = time.monotonic() + BOOT_LAG
         self.flow("subflows/ready.yaml")
 
     def take(self, clip: Clip, raw: Path) -> None:
         """Film the clip into ``raw``, with the app already on its first screen."""
+        self.set_time(fake_minute(time.monotonic() - self.clock_started))
         recorder = subprocess.Popen(
             [
                 "xcrun",
@@ -223,6 +285,9 @@ class Stage:
             stdout=subprocess.DEVNULL,
             stderr=subprocess.DEVNULL,
         )
+        stop = threading.Event()
+        follower = threading.Thread(target=self.follow_clock, args=(stop,), daemon=True)
+        follower.start()
         try:
             time.sleep(1.5)
             for index, flow in enumerate(clip.flows):
@@ -231,6 +296,8 @@ class Stage:
                 self.flow(flow)
             time.sleep(1.0)
         finally:
+            stop.set()
+            follower.join(timeout=10)
             recorder.send_signal(signal.SIGINT)  # finalises the file
             try:
                 recorder.wait(timeout=60)
@@ -438,10 +505,10 @@ def record(out: Path, names: list[str] | None, build: bool, model: str) -> None:
         _run(*mock, "stop", cwd=ROOT)  # clean: door check-ins live in the mock's memory
         _run(*mock, "start", cwd=ROOT)
         url = _run(*mock, "url", "ios", cwd=ROOT).splitlines()[-1].strip()
-        _simctl("status_bar", udid, "override", *STATUS_BAR.split())
         _simctl("ui", udid, "appearance", "light")
         _simctl("install", udid, str(APP))
         stage = Stage(udid, url)
+        stage.set_time(fake_minute(0))  # the clips' own followers take it from here
         stage.launch(None)
         stage.flow("subflows/warm_up.yaml")
         time.sleep(FIRST_LAUNCH_SECONDS)

@@ -97,3 +97,23 @@ def test_no_demo_flow_goes_near_the_developer_screen() -> None:
             assert "developer" not in lowered, line
             assert "about_app" not in lowered, line
             assert "about this app" not in lowered, line
+
+
+def test_the_status_bar_starts_at_the_clock_s_nine_forty_one() -> None:
+    """The first frame of a scene reads 9:41, which the stored fake clock says."""
+    assert demo_videos.fake_minute(0) == "9:41"
+    assert demo_videos.fake_minute(-5) == "9:41"  # before the clock starts
+
+
+def test_the_status_bar_follows_the_fake_clock_s_minute() -> None:
+    """A clip that outlasts a minute shows the minute the app's "Now" line shows."""
+    assert demo_videos.fake_minute(59.9) == "9:41"
+    assert demo_videos.fake_minute(60) == "9:42"
+    assert demo_videos.fake_minute(190) == "9:44"
+
+
+def test_the_next_change_is_the_seconds_left_in_the_minute() -> None:
+    """The follower wakes at each minute's end, not every second."""
+    assert demo_videos.seconds_to_next_minute(0) == 60
+    assert demo_videos.seconds_to_next_minute(45) == 15
+    assert demo_videos.seconds_to_next_minute(60) == 60
