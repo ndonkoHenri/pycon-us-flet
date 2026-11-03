@@ -716,7 +716,7 @@ Measured by hand at each phase exit, always on **release** builds (`flet build a
 2. Boot `pycon_pixel6a_api36` once (`-read-only -no-audio -no-boot-anim -no-snapshot`), install both, and set the app's scene. Stop Maestro's on-device driver before measuring (`am force-stop dev.mobile.maestro`, and `dev.mobile.maestro.test`), since it makes Flutter report a screen reader (F72).
 3. Run 10 cold starts of the reproducer (`s2spike://s2/tree/today/deferred`, up to its first `S2 acked` line), then the app's numbers, then 5 more of the reproducer. Discard the first start after each install. Each start is `am force-stop`, 2 s, `logcat -c`, `am start -W`, 6 s with no `adb` traffic, then one `logcat -d -v epoch`. Polling logcat during the start, as `drive_android.py`'s `cold` suite does, added about 70 ms to the reproducer here.
 4. The window counts when the reproducer's two medians agree within about 10 %. Then read the app against that reproducer. Whatever the reproducer also shows is not the app's. Record the reproducer's medians too: a ratio can't see what both builds share, such as a Flet regression.
-5. The cold start's baseline ratio is **about 1.4** (D-474), so a ratio above about 1.7 gets a look. The app's content line comes after the other days' render (D-156) and the reproducer's first `acked` before its own, so 1.4× is not the gap on screen. That gap reads 1.15× on a recording (§8.1). Only compare the two builds' recordings with each other: recording slows both starts.
+5. The cold start's baseline ratio on the content line is **about 1.4** (D-474), so a ratio above about 1.7 gets a look. The app's content line comes after the other days' render (D-156) and the reproducer's first `acked` before its own, so 1.4× is not the gap on screen, and a second render that changes moves the line alone. A recording settles it: that gap reads 1.15× (§8.1), net of the reproducer's slower launch. Only compare the two builds' recordings with each other: recording slows both starts.
 
 A throttled emulator still happens: during S2 it twice ran 3-4.4× slower for half an hour or more, some 20-30 minutes after the host's user went idle, with priority 4 (background) on every qemu thread (`ps -M -p <qemu pid>`). A throttle that starts or ends inside the window shows as two reproducer medians that disagree. One that lasts the whole window slows both builds, so its medians agree: there the reproducer's numbers against the last calibration say so, and the ratio is all the run can give. On 2026-11-02 the user had been idle for 39-47 minutes, most threads were at priority 31, and the medians agreed.
 
@@ -743,7 +743,7 @@ The numbers go into the phase status issue, and here too, next to the method, so
 What this says, and doesn't:
 - **Star tap:** under D-159's 16.7 ms. No bug.
 - **Flings:** the same as the reproducer's, so no app bug. About two vsyncs a frame is what this emulator and pin show even for the reproducer, so the emulator can no longer say much about jank in absolute terms. The eye test and the iPhone's numbers (#121) stay the check.
-- **Cold start:** 1.49× the reproducer's, over the 20 % (1,826 ms), so #860 has the split: `TotalTime` is equal, and about 426 of the 741 ms lie between `Feed processed` and `Content shown` (598 ms, against the reproducer's 172 ms from `main` to `acked`). The reproducer is not the whole app, so this is what the app's shell costs on top of a Schedule, not a measured regression between two builds.
+- **Cold start:** 1.49× the reproducer's, over the 20 % (1,826 ms), so #860 has the split (settled by D-474, below): `TotalTime` is equal, and about 426 of the 741 ms lie between `Feed processed` and `Content shown` (598 ms, against the reproducer's 172 ms from `main` to `acked`). The reproducer is not the whole app, so this is what the app's shell costs on top of a Schedule, not a measured regression between two builds.
 - **Python moved less than what runs around it.** In the reproducer, against S2: star tap 4 ms against 3, Python start → content 596 ms against 394, `START u0` → `py-start` 929 ms against 492.
 - Not measured: a screen recording of the first frame with rows (the content line stays a proxy), and the iPhone (#121).
 
@@ -824,6 +824,8 @@ Where the app's time goes, from a check-only build (never committed; its content
 - **Moving the content line ahead of the second render:** no screen gets faster, and the comparison with earlier runs breaks.
 - **`theme`'s 115 ms:** most of it is Flet loading its control modules on first use, which the reproducer pays too.
 - **Skipping scalar fields in Flet's walk over new controls (U282, #966, as a check-only monkeypatch):** the content line moved -64 and -169 ms in two pairs, and the first frame with rows did not move (1,954 ms with and without). A modest gain for Python, left to the owner.
+
+So the 1.15× is net of a head start: the app's Python starts about 185 ms before the reproducer's, for a reason not isolated. From Python's first line to the first round trip back, the app takes 1,020 ms and the reproducer 595 ms (+425 ms), which is the closer reading of what the shell adds.
 
 Not measured: the iPhone (#121). Host profile, for the row cost: 98 % of the two renders is under Flet's `get_added_controls()`, the app's row bodies 13 %, at about 24 controls a row.
 
