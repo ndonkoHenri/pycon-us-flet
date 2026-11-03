@@ -1,0 +1,9 @@
+# Hold the shot for a viewer to read: a wait for a text that never shows, as
+# journeys/coc_capture.yaml's pause. MS is how long, in milliseconds.
+appId: io.github.ndonkohenri.confcompanion
+---
+- extendedWaitUntil:
+    visible:
+      text: "A text that never shows"
+    timeout: ${MS}
+    optional: true

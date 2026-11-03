@@ -1,0 +1,11 @@
+# Part two: the same session at large text, then the Schedule and Now.
+appId: io.github.ndonkohenri.confcompanion
+---
+- runFlow: {file: subflows/pause.yaml, env: {MS: "2500"}}
+- tapOn: {text: Back}
+- runFlow: {file: subflows/pause.yaml, env: {MS: "2500"}}
+- swipe: {start: "50%,75%", end: "50%,45%", duration: 1400}
+- runFlow: {file: subflows/pause.yaml, env: {MS: "1800"}}
+- tapOn: {id: app.nav.now}
+- extendedWaitUntil: {visible: {id: now.title}, timeout: 15000}
+- runFlow: {file: subflows/pause.yaml, env: {MS: "2500"}}

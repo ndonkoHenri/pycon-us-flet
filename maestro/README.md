@@ -19,6 +19,7 @@ sheet. Where Maestro fits next to the `flet test` flows in `tests/ui/` is in
 | `regression/` | Trials repeated N times to compare two builds, tagged `regression` |
 | `subflows/` | Steps the flows share through `runFlow`; never run on their own, but for `open_link.yaml`, which `tests/ui/developer.py` runs on iOS (D-478) |
 | `scripts/` | JavaScript that a flow runs (`runScript`) |
+| `demo/` | What `tools/demo_videos.py` films: outside `config.yaml`, never a test ([below](#demo-videos)) |
 
 | Flow | Tags | What it checks |
 |---|---|---|
@@ -517,3 +518,27 @@ Both listeners close on success or failure. This is a host connection cut on bot
 platforms; real Android airplane mode and killing/relaunching with queued scans are
 #827's separate checks. `now_next.yaml` completes F6 alongside `star_undo.yaml`;
 `session_room_plan.yaml` is F7.
+
+## Demo videos
+
+`maestro/demo/` drives the short clips the owner shares with people outside the team.
+These flows are paced for a viewer, with pauses and slow swipes, and aren't in
+`config.yaml`. One command films them all on a new simulator, trims them and cleans up:
+
+```bash
+uv run --with av --with numpy --with pillow python -m tools.demo_videos record --build \
+  --out ~/Movies/pycon-us-flet-demo
+```
+
+`--clips <name> ...` retakes some, and without `--build` the present build must hold this
+tree's Python. **Read every clip before it is shared:** `... python -m tools.demo_videos
+sheets <clip> <folder>` saves its frames, two a second, on contact sheets, and prints dark
+frames and brief flashes. A dark clip's Settings and dark screens print as dark frames.
+
+The Developer options stay out of every frame because nothing opens or unlocks them. Each
+scene writes the fake clock (Friday 09:41, as the status bar says) and, for the staff clip,
+the mock's URL into the app's stored preferences with the app stopped, then restarts the
+simulator's preferences daemon, which otherwise serves the old values. With no `unlocked`
+key, neither More nor About this app has a Developer row. Off camera, a warm-up answers iOS's
+slide-to-type tip, and `subflows/staff_setup.yaml` signs in, since the sign-in page names the
+local mock. A session's star shows no primer, because the scene stores it as answered.

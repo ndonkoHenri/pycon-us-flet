@@ -1,0 +1,13 @@
+# Not filmed: the first launch on a new simulator. The first keyboard iOS shows brings its
+# slide-to-type tip over the keys, so it is answered here, off camera. A tap during the
+# first screen's arrival can be lost (#496), as on a busy host, so it is tapped until
+# Search shows, as get_started.yaml does.
+appId: io.github.ndonkohenri.confcompanion
+---
+- retry:
+    maxRetries: 3
+    commands:
+      - tapOn: {id: app.search, optional: true}
+      - extendedWaitUntil: {visible: {id: search.field}, timeout: 30000}
+- extendedWaitUntil: {visible: {text: Continue}, timeout: 10000, optional: true}
+- tapOn: {text: Continue, optional: true}
