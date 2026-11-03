@@ -50,8 +50,8 @@ sheet. Where Maestro fits next to the `flet test` flows in `tests/ui/` is in
 | `journeys/change_log.yaml` | feed_pair | P2 exit criterion 4's change log, from a served feed pair (#460): the old feed refreshed with no batch; session 123 saved; the pair swapped and refreshed: "1 saved session changed", Review, the saved move under "Affects My schedule" above "All changes" and the unsaved move (session 142), seen after 2 s on iOS, still new on Android until the list is left (a screen reader's rule, F72); My schedule's row and session detail show the change; Now has no Schedule changes card. Needs `tools.feed_pair` running ([below](#feed-pairs)) |
 | `journeys/calendar_export.yaml` | journeys, calendar | Session detail's Add to calendar (session 25), then My schedule's Export to calendar (.ics) with two saved sessions, each through the system's screens and back to the app (`subflows/calendar_handoff.yaml`): iOS's calendar sheet, the one event with its Alert "10 minutes before", Add, Done, Close; Android's save dialog and "Saved <file>.ics. Open it from the Files app…" (D-272, #458) |
 | `journeys/reminder_banner.yaml` | journeys, reminders | At Friday 14:38, saving a 2:45 PM session shows the Banner ("… starts in N min · Grand Ballroom B"); Back keeps it; Open lands on the session over My schedule and it goes; a second session's Banner goes with Dismiss (D-60, D-396, #458) |
-| `journeys/reminder_settings.yaml` | journeys, reminders | More › Settings › Reminders in a packaged build: session reminders off; on, the lead at 10, then 15, and on Android the Alarms & reminders card (never on iOS); after a relaunch still on at 15; My schedule › More options › Reminder settings opens Settings, and Back returns to My schedule; then off again (NOTIF-01, STORE-10, D-401, #449) |
-| `journeys/reminder_primer.yaml` | journeys, reminders | A fresh install launched with notifications `unset`: nothing asked at launch or on Welcome; the first star (Now, session 123) shows the reminders primer, which `PRIMER` answers (`allow` or `not_now`), then the OS prompt, which `OS_ANSWER` answers (`allow` or `deny`); the session stays saved, and a second star (Schedule, 30) shows no primer (D-61, D-395, #448). The other flows launch with every permission granted (`subflows/launch_fresh.yaml`), so no primer shows there on Android; on iOS it does ([below](#the-reminders-primer-on-ios)) |
+| `journeys/reminder_settings.yaml` | journeys, reminders | More › Settings › Reminders in a packaged build: session reminders off; on, the lead at 10, then 15, and the Alarms & reminders card on Android 14 and later (never on iOS, and not on an older Android, where the flow checks it is absent); after a relaunch still on at 15; My schedule › More options › Reminder settings opens Settings, and Back returns to My schedule; then off again (NOTIF-01, STORE-10, D-401, #449) |
+| `journeys/reminder_primer.yaml` | journeys, reminders | A fresh install launched with notifications `unset`: nothing asked at launch or on Welcome; the first star (Now, session 123) shows the reminders primer, which `PRIMER` answers (`allow` or `not_now`), then the OS prompt, which `OS_ANSWER` answers (`allow` or `deny`); the session stays saved, and a second star (Schedule, 30) shows no primer (D-61, D-395, #448). On Android below 13 the OS allows notifications already, so the flow checks the opposite: no primer and no prompt after the star, the session saved, and no Allow notifications card in Settings (`ANDROID_API`, [below](#android-api-levels); #953) The other flows launch with every permission granted (`subflows/launch_fresh.yaml`), so no primer shows there on Android; on iOS it does ([below](#the-reminders-primer-on-ios)) |
 | `journeys/rail_tabs.yaml` | tablet | On a tablet or a phone in landscape (`ORIENTATION`): each tab root through the rail by its name, with no bar; a session pushed from Now and About this app pushed from More show no rail; the filter sheet and an Undo SnackBar on the way; a screenshot of each to look at (SHELL-14, D-277, D-305, #461) |
 | `journeys/about_app.yaml` | journeys, tablet | More › About this app: Conference and Schedule's source and age (D-292); Licences › Python's text › Back › Back, one View each (D-296); Report a problem: the share sheet, dismissed with no line, or with `SHARE_FAILS=true` "Couldn't open the share sheet." (an iPad needed it until the pin `08b89cce5`, F115, F263) (INFO-03, INFO-04, #461) |
 | `journeys/theme_relaunch.yaml` | journeys, theme | More › Settings starts on System with High contrast following the device ("Follows your device setting", off); Dark and High contrast on; after a relaunch Dark is still chosen and the switch on with no subtitle; then High contrast off (following the device again) and System, so a second run starts the same way. The rows' states are read each platform's way (`subflows/theme_state.yaml`): Android's `checked`, iOS's `selected` radio rows and the switch's value "1" or "0" (THEME-01, STORE-08, D-286, #512) |
@@ -180,6 +180,34 @@ status issue and the PR, not here.
 
 Maestro does not drive a screen reader: for TalkBack, see
 [`docs/testing-and-quality.md`](../docs/testing-and-quality.md) §7.3.
+
+### Android API levels
+
+The packaged app runs on Android 7.0 (API 24) and later (D-12, D-106), and the OS differs
+from one level to the next in ways a flow can see. A flow cannot run `adb`, so it learns
+the level from `-e ANDROID_API=<level>`, which `scripts/os_offers.js` turns into what the
+OS offers. Read it from the device:
+
+```bash
+maestro --device emulator-5590 test \
+  -e ANDROID_API=$(adb -s emulator-5590 shell getprop ro.build.version.sdk | tr -d '\r') \
+  maestro/journeys/reminder_primer.yaml
+```
+
+It defaults to 36 and means nothing on iOS. Leaving it out on an older image therefore
+fails at the step that image lacks; it never skips a check. A flow that ran on an API 24
+image passed there; the rest were run on API 34 and later only.
+
+| Flow | Assumes | Below it |
+|---|---|---|
+| `reminder_primer` | API 33 (Android 13) for the primer and the OS prompt: the first Android with a notification permission to ask for (and iOS) | No primer or prompt is checked instead: nothing shown after the star, the session saved, no Allow notifications card in Settings (run on API 24, #953) |
+| `reminder_settings` | API 34 (Android 14) for the Alarms & reminders card: exact alarms are off for a fresh install from there | The card is checked absent (run on API 24; API 31 to 33 not run) |
+| `help_report`, `wifi_copy` | Android 13 confirms a copy itself; before it, the app's SnackBar does | They pass on API 24, but check the app's confirmation on iOS only, so not on Android below 13 (#972) |
+
+Every other flow has no per-level step. On API 24 these passed, in #816 or #953:
+`drill_back`, `star_undo`, `search_any_day`, `jump_to_now`, `expo_map_card`, `find_room`,
+`about_app`, `reminder_primer`, `reminder_settings`, `help_report`, `wifi_copy`,
+`coc_capture`, `lead_capture`, `door_check`. `swag_pickup` is #952.
 
 **Comparing two builds** (the fling after the sheet, at Maestro's pace): install `main`'s
 APK, run the regression flow, install the PR's APK, run it again with the same `TRIALS`,

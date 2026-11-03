@@ -5,9 +5,14 @@
 # notifications, so the session switch shows no primer (D-395); on the iOS simulator
 # E3 reads them as not allowed yet, so the switch shows the primer, which the flow
 # allows (#449's run: no OS prompt followed, and the card went).
+#
+# env: ANDROID_API, the emulator's API level (default 36; maestro/README.md, "Android API
+# levels"). The Alarms & reminders card below needs API 34 or later (scripts/os_offers.js):
+# an Android below that offers no card to show, and the flow checks it is not there.
 # - More › Settings: session reminders off, no lead, the three moments on.
-# - The switch on: the 5 · 10 · 15 min lead shows at 10; pick 15. On Android, where
-#   Alarms & reminders is off for a fresh install, its card shows; never on iOS. (On
+# - The switch on: the 5 · 10 · 15 min lead shows at 10; pick 15. On Android 14 and later,
+#   where Alarms & reminders is off for a fresh install, its card shows; never on iOS, nor
+#   on an Android where exact alarms need no grant (API 33 and below). (On
 #   an emulator where it was allowed, `pm clear` keeps it; reset it first with
 #   `adb shell cmd appops set --uid io.github.ndonkohenri.confcompanion SCHEDULE_EXACT_ALARM default`.)
 # - A relaunch: the switch still on, 15 still picked. A segment says it is picked as
@@ -23,6 +28,7 @@ tags:
   - reminders
 ---
 - runFlow: ../subflows/launch_fresh.yaml
+- runScript: ../scripts/os_offers.js
 - runFlow: ../subflows/theme_settings.yaml
 - scrollUntilVisible:
     element:
@@ -69,7 +75,7 @@ tags:
     id: settings.reminders.lead.15
 - runFlow:
     when:
-      platform: Android
+      true: ${output.os.exactAlarmCard}
     commands:
       - extendedWaitUntil:
           visible:
@@ -77,8 +83,9 @@ tags:
           timeout: 15000
 - runFlow:
     when:
-      platform: iOS
+      true: ${!output.os.exactAlarmCard}
     commands:
+      - waitForAnimationToEnd
       - assertNotVisible:
           id: settings.reminders.exact
 - takeScreenshot: reminders-02-on-15
