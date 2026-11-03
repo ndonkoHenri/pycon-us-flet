@@ -7,8 +7,16 @@
 # Saving a second session (The Bakery, 30, on the Schedule) shows no primer again.
 #
 # env (each has a default):
-#   PRIMER     the primer's answer: allow (default) or not_now
-#   OS_ANSWER  the OS prompt's answer after Allow: allow (default) or deny
+#   PRIMER       the primer's answer: allow (default) or not_now
+#   OS_ANSWER    the OS prompt's answer after Allow: allow (default) or deny
+#   ANDROID_API  the emulator's API level, `adb shell getprop ro.build.version.sdk`
+#                (default 36; maestro/README.md, "Android API levels")
+#
+# Android below 13 (API 33) has no notification permission to ask for: the OS allows
+# notifications already, so the app shows no primer and no OS prompt follows (#953,
+# scripts/os_offers.js). Such an image runs the "nothing to ask" branch instead, which
+# checks that: no primer after the star, the favourite saved, and Settings › Reminders
+# offering no Allow notifications card. PRIMER and OS_ANSWER do not apply there.
 #
 # After Allow and the OS's Allow, session reminders are on at 10 minutes: the app's log
 # says "Reminders: a plan of N applied" again (Developer › Share log), and Settings'
@@ -41,28 +49,50 @@ onFlowComplete:
 # Nothing was asked at launch, on Welcome or in Developer options.
 - assertNotVisible:
     id: reminder.primer
+- runScript: ../scripts/os_offers.js
 
-# The first star: the primer, over the screen, after the save.
+# The first star: the primer, over the screen, after the save, where the OS can still ask.
 - tapOn:
     id: now.favorite.123
-- extendedWaitUntil:
-    visible:
-      id: reminder.primer
-    timeout: 15000
-- assertVisible:
-    id: reminder.primer.not_now
-- tapOn:
-    id: reminder.primer.${PRIMER || 'allow'}
-- extendedWaitUntil:
-    notVisible:
-      id: reminder.primer
-    timeout: 10000
+- runFlow:
+    when:
+      true: ${output.os.notificationPrompt}
+    commands:
+      - extendedWaitUntil:
+          visible:
+            id: reminder.primer
+          timeout: 15000
+      - assertVisible:
+          id: reminder.primer.not_now
+      - tapOn:
+          id: reminder.primer.${PRIMER || 'allow'}
+      - extendedWaitUntil:
+          notVisible:
+            id: reminder.primer
+          timeout: 10000
+
+# Where the OS allows notifications already (Android below 13): nothing to ask. The
+# primer opens after an async status read, so wait until the save shows and the screen
+# settles before saying it did not come.
+- runFlow:
+    when:
+      true: ${!output.os.notificationPrompt}
+    commands:
+      - extendedWaitUntil:
+          visible:
+            id: now.next.session.123
+          timeout: 15000
+      - waitForAnimationToEnd
+      - assertNotVisible:
+          id: reminder.primer
+      - assertNotVisible:
+          text: "Allow"
 
 # Allow: the OS's prompt follows ("Allow" / "Don't allow" on Android, "Allow" /
 # "Don't Allow" on iOS), which the flow answers as OS_ANSWER says.
 - runFlow:
     when:
-      true: ${(PRIMER || 'allow') == 'allow'}
+      true: ${output.os.notificationPrompt && (PRIMER || 'allow') == 'allow'}
     commands:
       - extendedWaitUntil:
           visible:
@@ -113,3 +143,17 @@ onFlowComplete:
 - waitForAnimationToEnd
 - assertNotVisible:
     id: reminder.primer
+
+# Where the OS allows notifications already, Settings › Reminders has no Allow
+# notifications card either: the app read "allowed", which is why no primer came.
+- runFlow:
+    when:
+      true: ${!output.os.notificationPrompt}
+    commands:
+      - runFlow: ../subflows/theme_settings.yaml
+      - scrollUntilVisible:
+          element:
+            id: settings.reminders.sessions
+          direction: DOWN
+      - assertNotVisible:
+          id: settings.reminders.allow
