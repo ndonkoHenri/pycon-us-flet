@@ -17,7 +17,7 @@ sheet. Where Maestro fits next to the `flet test` flows in `tests/ui/` is in
 | `config.yaml` | The workspace: `maestro test maestro` runs `journeys/*` and `regression/*` |
 | `journeys/` | P1's exit journeys and later screens' journeys, tagged `journeys` (two also `smoke`) |
 | `regression/` | Trials repeated N times to compare two builds, tagged `regression` |
-| `subflows/` | Steps the flows share through `runFlow`; never run on their own |
+| `subflows/` | Steps the flows share through `runFlow`; never run on their own, but for `open_link.yaml`, which `tests/ui/developer.py` runs on iOS (D-478) |
 | `scripts/` | JavaScript that a flow runs (`runScript`) |
 
 | Flow | Tags | What it checks |
@@ -252,8 +252,9 @@ URL nothing answers at:
 
 ```bash
 mkdir -p build/no-logo-feed
-sed -E 's#https://(pycon-assets\.s3\.amazonaws\.com|s3\.dualstack\.us-east-2\.amazonaws\.com)/#http://127.0.0.1:9/#g' \
+sed -E 's#https://pycon-archive\.python\.org/#http://127.0.0.1:9/#g' \
   src/pycon_us/data/2026/conference.json > build/no-logo-feed/conference-2026.json
+grep -q '"logo_url":"http://127.0.0.1:9/' build/no-logo-feed/conference-2026.json  # else the logos' host moved: real logos load
 python3 -m http.server 8766 --bind 127.0.0.1 --directory build/no-logo-feed &
 maestro --device <udid> test --test-output-dir build/maestro/offline-logos \
   maestro/journeys/sponsors_offline_logos.yaml

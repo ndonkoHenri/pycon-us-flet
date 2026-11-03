@@ -11,6 +11,8 @@ import re
 import tomllib
 from pathlib import Path
 
+from tests.ui.developer import ABOUT_APP_LINK
+
 ROOT = Path(__file__).resolve().parent.parent
 OPEN_LINK = ROOT / "maestro" / "subflows" / "open_link.yaml"
 
@@ -40,6 +42,11 @@ def test_the_flow_s_default_link_is_the_app_s_scheme_and_host() -> None:
     A renamed scheme or host in ``pyproject.toml`` fails here, not on a device.
     """
     assert flow_default() == app_link()
+
+
+def test_the_ui_flows_about_app_link_is_the_app_s() -> None:
+    """D-478: the link ``flet test`` flows open uses ``[tool.flet.deep_linking]``."""
+    assert f"{app_link()}/more/app" == ABOUT_APP_LINK
 
 
 def test_the_default_link_has_no_trailing_slash() -> None:
