@@ -128,6 +128,19 @@ tags:
     timeout: 15000
 - assertVisible:
     id: scan.edit  # the text read is in the panel, not kept in the field (D-473)
+# A long paste shows its start and an ellipsis, and the panel says no more (#965).
+- runFlow:
+    file: ../subflows/scan.yaml
+    env:
+      CODE: "this-is-a-long-text-with-no-colon-a-pasted-sentence-or-a-url-that-goes-on-and-on-past-the-two-lines-the-panel-gives-it-and-ends-with-THE-END"
+- extendedWaitUntil:
+    visible:
+      id: scan.result
+      text: "(?s)Not a badge code\\nthis-is-a-long-text.*\u2026\\nCheck the code.*"
+    timeout: 15000
+- assertNotVisible:
+    id: scan.result
+    text: "(?s).*THE-END.*"
 - assertVisible:
     id: door.headcount
     text: "2 checked in for this session"

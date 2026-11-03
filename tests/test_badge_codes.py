@@ -10,7 +10,14 @@ import pytest
 from hypothesis import given
 from hypothesis import strategies as st
 
-from pycon_us.core.badges import COOLDOWN_SECONDS, Badge, Cooldown, parse_badge
+from pycon_us.core.badges import (
+    COOLDOWN_SECONDS,
+    ENTRY_TITLE_MAX,
+    Badge,
+    Cooldown,
+    entry_title,
+    parse_badge,
+)
 from tools.mock_api.badges import payload
 from tools.mock_api.state import MockState
 
@@ -97,3 +104,24 @@ def test_accept_never_says_yes_twice_within_the_cooldown(
         assert all(b - a >= COOLDOWN_SECONDS for a, b in pairwise(times))
     # And each code's first scan is always accepted.
     assert set(accepted) == {code for code, _ in scans}
+
+
+@pytest.mark.parametrize(
+    ("text", "title"),
+    [
+        ("MOCK0001", "MOCK0001"),
+        ("a" * ENTRY_TITLE_MAX, "a" * ENTRY_TITLE_MAX),
+        ("a" * (ENTRY_TITLE_MAX + 1), "a" * ENTRY_TITLE_MAX + "\u2026"),
+        ("BEGIN:VCARD\r\nFN:Ada\n\n  Lovelace", "BEGIN:VCARD FN:Ada Lovelace"),
+        ("word " * 40, ("word " * 12).rstrip() + "\u2026"),
+    ],
+)
+def test_entry_title_is_one_clipped_line_of_the_words(text: str, title: str) -> None:
+    """A refused entry's title keeps its words on one line and ends in an ellipsis past the cap (#965)."""
+    assert entry_title(text) == title
+
+
+@given(st.text())
+def test_entry_title_is_never_longer_than_the_cap_and_its_ellipsis(text: str) -> None:
+    """Whatever was pasted, the title is at most the cap plus its ellipsis (#965)."""
+    assert len(entry_title(text)) <= ENTRY_TITLE_MAX + 1

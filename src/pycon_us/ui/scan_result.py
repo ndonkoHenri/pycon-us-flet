@@ -125,6 +125,12 @@ def result_panel(
                 result.title,
                 theme_style=ft.TextThemeStyle.TITLE_MEDIUM,
                 color=label,
+                # A refused entry's text is whatever was scanned or pasted: two lines
+                # at most (#965). A name wraps whole, at any size (D-33).
+                max_lines=2 if result.entry else None,
+                overflow=(
+                    ft.TextOverflow.ELLIPSIS if result.entry else ft.TextOverflow.CLIP
+                ),
             )
         )
     if result.tags:

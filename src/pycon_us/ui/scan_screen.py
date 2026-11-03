@@ -17,9 +17,10 @@ accepted in the last 4 s is cleared without a word (a held code). A second submi
 the handler runs is dropped with its text, or the next scan would be typed after that
 text and read as one badge (D-471), and the line under the field says to scan it again.
 Text that is not a badge goes too, for the same reason (D-473): the panel says "Not a
-badge code" with the text it read, and its "Edit code" button gives the text back to be
-corrected by hand, so a scanner's next scan is its own badge and a typist still fixes a
-typo. The two are told apart by that tap, not by how fast the keys come.
+badge code" with the start of the text it read (a long one is clipped for the panel and
+for speech, #965), and its "Edit code" button gives the whole text back to be corrected
+by hand, so a scanner's next scan is its own badge and a typist still fixes a typo. The
+two are told apart by that tap, not by how fast the keys come.
 A handler can take a few seconds (the Lead scanner waits for its send, D-426): a
 result that comes after the screen is left, or while another View is on top of it,
 is dropped, so it never buzzes or speaks over another page.
@@ -60,6 +61,7 @@ from pycon_us.core.badges import (
     Badge,
     Cooldown,
     ScanResult,
+    entry_title,
     parse_badge,
 )
 from pycon_us.core.staff_tools import ToolKey, may_open
@@ -237,7 +239,7 @@ def ScanScreen(
             await query.clear()  # empties the field and puts the focus back in it
             if badge is None:  # what was read goes to the panel, not kept in the field
                 text = raw.strip()
-                await show(replace(NOT_A_BADGE, title=text, entry=text))
+                await show(replace(NOT_A_BADGE, title=entry_title(text), entry=text))
                 return
             if not cooldown.accept(badge.code, clock()):
                 return  # the same code again within 4 s: a held badge
