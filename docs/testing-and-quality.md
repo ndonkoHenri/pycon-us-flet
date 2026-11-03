@@ -716,10 +716,11 @@ Measured by hand at each phase exit, always on **release** builds (`flet build a
 2. Boot `pycon_pixel6a_api36` once (`-read-only -no-audio -no-boot-anim -no-snapshot`), install both, and set the app's scene. Stop Maestro's on-device driver before measuring (`am force-stop dev.mobile.maestro`, and `dev.mobile.maestro.test`), since it makes Flutter report a screen reader (F72).
 3. Run 10 cold starts of the reproducer (`s2spike://s2/tree/today/deferred`, up to its first `S2 acked` line), then the app's numbers, then 5 more of the reproducer. Discard the first start after each install. Each start is `am force-stop`, 2 s, `logcat -c`, `am start -W`, 6 s with no `adb` traffic, then one `logcat -d -v epoch`. Polling logcat during the start, as `drive_android.py`'s `cold` suite does, added about 70 ms to the reproducer here.
 4. The window counts when the reproducer's two medians agree within about 10 %. Then read the app against that reproducer. Whatever the reproducer also shows is not the app's. Record the reproducer's medians too: a ratio can't see what both builds share, such as a Flet regression.
+5. The cold start's baseline ratio is **about 1.4** (D-474), so a ratio above about 1.7 gets a look. The app's content line comes after the other days' render (D-156) and the reproducer's first `acked` before its own, so 1.4× is not the gap on screen. That gap reads 1.15× on a recording (§8.1). Only compare the two builds' recordings with each other: recording slows both starts.
 
 A throttled emulator still happens: during S2 it twice ran 3-4.4× slower for half an hour or more, some 20-30 minutes after the host's user went idle, with priority 4 (background) on every qemu thread (`ps -M -p <qemu pid>`). A throttle that starts or ends inside the window shows as two reproducer medians that disagree. One that lasts the whole window slows both builds, so its medians agree: there the reproducer's numbers against the last calibration say so, and the ratio is all the run can give. On 2026-11-02 the user had been idle for 39-47 minutes, most threads were at priority 31, and the medians agreed.
 
-Results go into the phase status issue (date, device or emulator image and host, OS, build, Flet pin). S1's reproducer (`docs/spikes/01-packaged-runtime/`) shows the logging, and its verdict the emulator baseline. A busy host moved S1's medians by about 25 %, so repeat a suspect run before filing. A regression over 20 % from the previous phase, on the iPhone or on the same emulator setup (there, the ratio of the app to the reproducer of its window, D-453), gets a `bug` + `area:quality` issue.
+Results go into the phase status issue (date, device or emulator image and host, OS, build, Flet pin). S1's reproducer (`docs/spikes/01-packaged-runtime/`) shows the logging, and its verdict the emulator baseline. A busy host moved S1's medians by about 25 %, so repeat a suspect run before filing. A regression over 20 % from the previous phase, on the iPhone or on the same emulator setup (there, the ratio of the app to the reproducer of its window, D-453, against D-474's baseline for the cold start), gets a `bug` + `area:quality` issue.
 
 ### 8.1 Phase-exit numbers
 
@@ -789,9 +790,42 @@ In particular, the app marker returns **after** the deferred other-day render; S
 ordering explains part of the proxy gap, without proving when the first rows became
 visible. Simply moving the marker would not make the UI faster. The imports and eager
 other-day rendering need a targeted follow-up, including a recording; no lazy-import
-change or new shell-cost allowance was made (D-110, D-453). #860 remains open. No Flet
+change or new shell-cost allowance was made (D-110, D-453). #860 stayed open then; the next
+run below settled it (D-474). No Flet
 defect was isolated, and the iPhone's release target remains unmeasured here. The
 dedicated emulator was shut down after the run.
+
+**Cold start settled, 2026-11-03 (#860, D-474): Android emulator.** Release arm64 APKs of `b343fed8` and S2 at pin `22a6dcb16`, on one boot of `pycon_pixel6a_api36` (`-port 5584`), with the scene and starts of the profile above (the first start of each group discarded). Host: M4, load 3-6, no other agent running, the owner's `iPhone 16` simulator booted idle.
+
+| Measure, medians (range), n = 10 unless noted | Reproducer | App | App ÷ reproducer |
+|---|---|---|---|
+| `TotalTime` | 825 ms (761-864) | 664 ms (562-737) | 0.80 |
+| Content line against first `acked` | 1,574 ms (1,461-1,661); after the app, 1,562 ms (1,490-1,645), n = 5 | 2,207 ms (2,099-2,476) | **1.40** |
+| The same, two later pairs on this boot | 1,506 ms; 1,570 ms; 1,545 ms (n = 10, 5, 5) | 2,199 ms (2,137-2,340); 2,226 ms (2,090-2,441) | 1.40-1.46 |
+| Other days done: content line against second `acked` | 1,785 ms (1,723-1,937) | 2,207 ms | 1.24 |
+| First frame with rows, recording | 1,680 ms (1,608-1,798); 1,693 ms (1,682-1,764), n = 5 | 1,937 ms (1,847-2,150); 1,954 ms (1,893-2,095) | **1.15** |
+
+The recording is `screenrecord --size 540x1200 --bit-rate 8000000`, started 1 s before `am start`, read frame by frame with PyAV: from the launch animation's first frame to the first frame with detail after the plain splash. A frame is about 33 ms. Both builds' frames were looked at and show rows. Recording slows both builds' log lines (reproducer 1,778 ms, app 2,525 ms).
+
+Where the app's time goes, from a check-only build (never committed; its content line read 2,146 ms, so the marks moved little), against the reproducer, in ms from `START u0`:
+
+| Step | App | Reproducer |
+|---|---|---|
+| Python's first line | 794 | 979 |
+| Imports | 451 (Flet 41, httpx 36, feed 32, services 68, theme 115, scaffold 44, Schedule 22, other routes 92) | 225 |
+| First line → `main` | 507 | 454, with its feed and views |
+| `bootstrap()` | 148 (feed 72, preferences 40, account 18, the rest 18) | none |
+| First render → effect | 177, 99 rows (#946's count) | 131, 111 rows |
+| Effect → first round trip back | 106, with the event loop free, so on Flutter's side | 10 |
+| Second render | 331, 180 rows (#946's count); the loop is held for about 340 ms | 163, 209 rows |
+
+**Kept:** nothing in the app's code. **Discarded:**
+- **Lazy screens:** at most the 92 ms of other routes, about 4 %. A normal start needs Now's among them, and a later tap would pay for the rest (D-110 stands).
+- **Moving the content line ahead of the second render:** no screen gets faster, and the comparison with earlier runs breaks.
+- **`theme`'s 115 ms:** most of it is Flet loading its control modules on first use, which the reproducer pays too.
+- **Skipping scalar fields in Flet's walk over new controls (U282, #966, as a check-only monkeypatch):** the content line moved -64 and -169 ms in two pairs, and the first frame with rows did not move (1,954 ms with and without). A modest gain for Python, left to the owner.
+
+Not measured: the iPhone (#121). Host profile, for the row cost: 98 % of the two renders is under Flet's `get_added_controls()`, the app's row bodies 13 %, at about 24 controls a row.
 
 **P1 exit, 2026-10-14 (#219, #110): Android emulator, not comparable.**
 - **Setup.** Release arm64 APKs of `main` (`flet build apk --arch arm64-v8a` with the worktree's pub cache; each APK's `app.zip` matched `build/python-app`), Flet pin `15854a0ac`. Run A used `ff8d43f`, run B `119858d` (#335, the filter sheet's chips, came in between). AVD `pycon_pixel6a_api36` (Android 16, Google APIs arm64, 1080 × 2400), on an instance of its own (`-read-only -no-snapshot-load`, a cold boot at 13:13). Host: Apple M4 (10 cores), macOS 27.0, with other agents' emulators and builds running. The fake clock was at Friday, May 15, 09:00 PT (Developer), on the cached 2026 feed, with every track shown ("Show all"). The default filter hides open spaces, so this is the full busiest day that S2 measured.
