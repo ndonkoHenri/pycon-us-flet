@@ -127,7 +127,7 @@ that date motivates us but never justifies cutting corners.
 - Add every PR to the Project: `gh pr create ... --project "PyCon US Flet"`.
 - **Checks run locally while the repo is private** (D-273): GitHub Actions run only by hand. The pre-push hook runs
   `tools/check.sh --fast` on every push that changes more than Markdown; run the full `tools/check.sh` before you
-  mark a PR ready and list it in the PR; the merge gate (`tools/gate.sh`) runs before every merge (below).
+  mark a PR ready and list it in the PR; the merge gate runs before every merge (`tools/merge.sh`, below).
 - **Screenshots** (D-162): `gh` can't upload images, so they go to the orphan branch `pr-assets`, one folder per PR,
   and the PR embeds them. Look at every image first: no tokens, personal data, notifications or real badges (it all
   stays in history and becomes public with the repo). Keep it to the images the PR needs, about 1 MB per PR.
@@ -155,14 +155,14 @@ that date motivates us but never justifies cutting corners.
 
 - **Agents merge their own PRs** (D-100). The owner watches and can step in at any time, but is never a blocker:
   don't wait for approval. Merge only when all of these hold:
-  1. **Checks pass on what will land.** The merge gate (`tools/gate.sh <pr>`, D-273) ran the full checks on the PR
-     merged onto the latest `main` and posted its result on the PR; if `main` moved since, or the PR got a new
-     push, run it again. Run it with `GATE_SIGNATURE='_Written by <agent name> (AI agent)._'`, so its comments are
-     signed (rule 6). To merge several PRs in a row, gate them together in merge order (`tools/gate.sh <pr> <pr>`);
-     after the merges, `main`'s tree must equal the tree it printed last, else run `tools/check.sh` on `main`. When
-     the repo is public, GitHub's `ci.yml` checks return: every check must be green on the PR's latest commit, and
-     missing, pending, skipped or cancelled checks don't count (the required checks are the `ci.yml` jobs listed
-     in `docs/development.md`).
+  1. **Checks pass on what will land.** `tools/merge.sh <pr>` (D-273) runs the merge gate, which puts the full checks
+     on the PR merged onto the latest `main` and posts the result on the PR, then merges only if the gate passed. Never
+     pipe the gate before a merge: that merged #868 after a failed gate. Run it with
+     `GATE_SIGNATURE='_Written by <agent name> (AI agent)._'`, so its comments are signed (rule 6). For several PRs in
+     a row, name them in merge order; it says when `main`'s tree isn't the gated tree, and then you run
+     `tools/check.sh` on `main`. When the repo is public, GitHub's `ci.yml` checks return: every check must be green on
+     the PR's latest commit, and missing, pending, skipped or cancelled checks don't count (the required checks are the
+     `ci.yml` jobs listed in `docs/development.md`).
   2. **The definition of done is met**, and you have re-read the whole final diff yourself.
   3. **A second opinion, when required.** It is required when the PR changes more than 400 lines (not counting
      lockfiles, fixtures, generated files or data snapshots), changes the architecture (module structure, state,
@@ -180,7 +180,7 @@ that date motivates us but never justifies cutting corners.
   5. **No unsettled `needs-decision` question** affects the PR.
 - **A Copilot review** is **paused while the repo is private** (D-273): it uses Actions minutes too, and its quota
   is used up. D-103 says when to request one and how to handle it; it never replaces the second opinion above.
-- Merge with `gh pr merge <n> --squash --delete-branch` (the PR title becomes the commit on `main`).
+- `tools/merge.sh` squash-merges and deletes the branch; the PR title becomes the commit on `main`.
 - The owner may comment, request changes or revert at any time. Feedback that arrives after a merge becomes a new
   issue, or a revert PR when something is broken.
 
