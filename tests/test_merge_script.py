@@ -50,7 +50,7 @@ class Sandbox:
             "#!/bin/sh\n"
             'echo "$*" >> "$GH_CALLS"\n'
             'if [ "$2" = merge ]; then exit "${GH_MERGE_STATUS:-0}"; fi\n'
-            'if [ "$4" = headRefOid ]; then echo head-of-$3; exit 0; fi\n'
+            'if [ "$5" = headRefOid ]; then echo head-of-$3; exit 0; fi\n'
             'cat "$GH_STATE"\n'
         )
         gh.chmod(0o755)
