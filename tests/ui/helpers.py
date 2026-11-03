@@ -295,8 +295,8 @@ async def start_app(t: RemoteTester) -> None:
 async def answer_primer_not_now(t: RemoteTester) -> None:
     """Answer the reminders primer with Not now, after a fresh install's first star (D-395).
 
-    A flow's device can always still ask, so the sheet always opens, over what the flow
-    taps next. Not now asks the OS nothing and leaves session reminders off. A tap while
+    The sheet opens only while the OS can still ask: a fresh install on Android 13 or later,
+    or on iOS, as ``flet test`` gives the flows' devices. It covers what the flow taps next. Not now asks the OS nothing and leaves session reminders off. A tap while
     the sheet slides in is lost, as a SnackBar's is (``tap_until()``), and a tap as it
     slides out finds the button disposed, so each look waits for the sheet to settle.
     """
