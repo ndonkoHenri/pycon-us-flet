@@ -1,0 +1,23 @@
+# Open a staff tool from More at any text size: TOOL is its name in more.staff.<tool>.
+appId: io.github.ndonkohenri.confcompanion
+---
+# Out of the last tool. On Android the first Back only closes the keyboard a scan left up.
+- repeat:
+    times: 3
+    while:
+      notVisible:
+        id: app.nav.more
+    commands:
+      - runFlow: ../subflows/back.yaml
+- runFlow:
+    file: ../subflows/tab.yaml
+    env:
+      TAB: more
+      NAME: "More.*Tab 5 of 5"
+- scrollUntilVisible:
+    element:
+      id: more.staff.${TOOL}
+    direction: DOWN
+    timeout: 120000
+- tapOn:
+    id: more.staff.${TOOL}

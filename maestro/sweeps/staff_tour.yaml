@@ -1,0 +1,161 @@
+# Walk the staff tools and take a screenshot of each state, for an accessibility sweep
+# (#828, #837). tools/sweep.py runs it once per text size and appearance, each after a
+# fresh sign_in.yaml, and a person reads the images: it asserts that each state is reached, and
+# nothing about its words, so a large text can't fail it on a line that wrapped. Scrolls
+# wait long, since at the largest text a row can be many screens down.
+#
+# It isn't a journey: `maestro test maestro` doesn't run it, and it keeps the app's data.
+# The mock's seed data only.
+appId: io.github.ndonkohenri.confcompanion
+name: Staff tools, a screenshot of each state
+tags:
+  - sweep
+---
+# Lead scanner: an account with lead retrieval lands on it (D-16), at its consent page
+# after a fresh sign-in, with the checkbox below the fold at the largest text.
+- stopApp
+- launchApp:
+    clearState: false
+    stopApp: true
+- scrollUntilVisible:
+    element:
+      id: lead.consent.check
+    direction: DOWN
+    timeout: 120000
+- takeScreenshot: lead-open
+- tapOn:
+    id: lead.consent.check
+- scrollUntilVisible:
+    element:
+      id: lead.consent.continue
+    direction: DOWN
+    timeout: 120000
+- tapOn:
+    id: lead.consent.continue
+- extendedWaitUntil:
+    visible:
+      id: scan.keyboard
+    timeout: 15000
+- tapOn:
+    id: scan.keyboard
+- runFlow:
+    file: ../subflows/scan.yaml
+    env:
+      CODE: "MOCK0001:v4l1d01"
+- extendedWaitUntil:
+    visible:
+      id: scan.result
+    timeout: 15000
+- takeScreenshot: lead-result
+
+# Door check: the session picker, then a check-in.
+- runFlow:
+    file: open_tool.yaml
+    env:
+      TOOL: door
+- scrollUntilVisible:
+    element:
+      id: door.category.1
+    direction: DOWN
+    timeout: 120000
+- takeScreenshot: door-picker
+- tapOn:
+    id: door.category.1
+# Swiped from the list: at the largest text the chips and the search field fill the top
+# of the screen, and a swipe that starts on them doesn't move it. Two swipes, since the
+# keyboard the last scan screen left up can cover the lower one. A row can be in the tree
+# just before it is on screen, so the pick is tried again.
+- retry:
+    maxRetries: 3
+    commands:
+      - repeat:
+          times: 40
+          while:
+            notVisible:
+              id: door.session.10
+          commands:
+            - swipe:
+                start: 50%, 88%
+                end: 50%, 70%
+                duration: 500
+            - swipe:
+                start: 50%, 59%
+                end: 50%, 45%
+                duration: 500
+      - tapOn:
+          id: door.session.10
+- extendedWaitUntil:
+    visible:
+      id: scan.keyboard
+    timeout: 30000
+- takeScreenshot: door-ready
+- tapOn:
+    id: scan.keyboard
+- runFlow:
+    file: ../subflows/scan.yaml
+    env:
+      CODE: "MOCK0001:v4l1d01"
+- extendedWaitUntil:
+    visible:
+      id: scan.result
+    timeout: 15000
+- takeScreenshot: door-result
+
+# Swag pickup: a category, then the hand-out sheet, cancelled.
+- runFlow:
+    file: open_tool.yaml
+    env:
+      TOOL: swag
+- runFlow:
+    file: find.yaml
+    env:
+      ID: swag.category.3
+- takeScreenshot: swag-open
+- tapOn:
+    id: swag.category.3
+- scrollUntilVisible:
+    element:
+      id: scan.keyboard
+    direction: DOWN
+    timeout: 120000
+- tapOn:
+    id: scan.keyboard
+- runFlow:
+    file: ../subflows/scan.yaml
+    env:
+      CODE: "MOCK0002:x"
+- extendedWaitUntil:
+    visible:
+      id: swag.cancel
+    timeout: 15000
+- takeScreenshot: swag-sheet
+- tapOn:
+    id: swag.cancel
+
+# CoC incident: the attendee list's line, then the review.
+- runFlow:
+    file: open_tool.yaml
+    env:
+      TOOL: coc
+- runFlow:
+    file: find.yaml
+    env:
+      ID: coc.directory.reload
+- takeScreenshot: coc-open
+- scrollUntilVisible:
+    element:
+      id: scan.keyboard
+    direction: DOWN
+    timeout: 120000
+- tapOn:
+    id: scan.keyboard
+- runFlow:
+    file: ../subflows/scan.yaml
+    env:
+      CODE: "MOCK0002:x"
+# The Record button, not the notes: at the largest text they're below the dialog's fold.
+- extendedWaitUntil:
+    visible:
+      id: coc.review.record
+    timeout: 15000
+- takeScreenshot: coc-review
