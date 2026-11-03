@@ -718,7 +718,7 @@ class GroupedListView(ft.LayoutControl):
 
 ### 5.9 U6: Android `<queries>` (only with E4; S)
 
-- **Landed** at the pin `a9ef26fdb` (#1005, [flet-dev/flet#7031](https://github.com/flet-dev/flet/pull/7031)), as `[tool.flet.android.queries]` with `packages`, `intents` and `providers` (`TPL/android/app/src/main/AndroidManifest.xml:102-113`). Nothing here uses it until E4.
+- **Landed** at the pin `a9ef26fdb` (#1005, [flet-dev/flet#7031](https://github.com/flet-dev/flet/pull/7031)), as `[tool.flet.android.queries]` with `packages`, `intents` and `providers` (`TPL/android/app/src/main/AndroidManifest.xml:102-114`). Nothing here uses it until E4.
 - **Asked for:** extra intents from pyproject:
 
 ```toml
