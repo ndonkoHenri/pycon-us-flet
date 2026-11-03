@@ -18,10 +18,12 @@ import pytest
 from pycon_us import capabilities
 from pycon_us.account import Account
 from pycon_us.core.badges import (
+    ENTRY_TITLE_MAX,
     NOT_A_BADGE,
     Badge,
     ScanOutcome,
     ScanResult,
+    entry_title,
 )
 from pycon_us.core.staff_tools import ToolKey
 from pycon_us.core.timefmt import seconds_ago
@@ -179,6 +181,60 @@ async def test_edit_code_gives_the_text_back_to_correct_by_hand(
     assert rig.badges == []
     await enter(shown, "MOCK0005:v4l1d05")  # the typist's fix, submitted as typed
     assert rig.badges == [Badge("MOCK0005", "v4l1d05", "v4l1d05")]
+
+
+async def test_a_long_refused_entry_is_clipped_on_the_panel_and_in_speech(
+    show: Show, rig: Rig
+) -> None:
+    """A 300-character paste shows two lines at most and is said clipped (#965)."""
+    shown = await show()
+    text = "example.org/" + "word-" * 60 + "THE-END"  # no colon: a badge has one
+    await enter(shown, text)
+    clipped = entry_title(text)
+    assert len(clipped) == ENTRY_TITLE_MAX + 1
+    assert panel(shown) == f"{replace(NOT_A_BADGE, title=clipped).spoken}\nScan 1"
+    assert "THE-END" not in panel(shown)
+    (title,) = (t for t in shown.find(ft.Text) if t.value == clipped)
+    assert title.max_lines == 2
+    assert title.overflow == ft.TextOverflow.ELLIPSIS
+
+
+async def test_edit_code_gives_back_the_whole_of_a_long_text(
+    show: Show, rig: Rig
+) -> None:
+    """The clip is for the panel: "Edit code" puts all 300 characters back in the field (#965)."""
+    shown = await show()
+    text = "x" * 300
+    await enter(shown, f" {text}\n")
+    button = shown.node("scan.edit").content
+    assert isinstance(button, ft.FilledTonalButton)
+    await shown.click(button)
+    await shown.settle()
+    assert entry(shown).value == text
+
+
+async def test_edit_code_keeps_the_newlines_the_title_collapses(
+    show: Show, rig: Rig
+) -> None:
+    """A multi-line paste shows on one line, and Edit code gives it back as it was (#965)."""
+    shown = await show()
+    text = "BEGIN-VCARD\nFN-Ada Lovelace\nEND-VCARD"  # no colon: a badge has one
+    await enter(shown, text)
+    assert "BEGIN-VCARD FN-Ada Lovelace END-VCARD" in panel(shown)
+    button = shown.node("scan.edit").content
+    assert isinstance(button, ft.FilledTonalButton)
+    await shown.click(button)
+    await shown.settle()
+    assert entry(shown).value == text
+
+
+async def test_a_name_is_not_capped_to_two_lines(show: Show, rig: Rig) -> None:
+    """Only a refused entry's title is capped: an attendee's name wraps whole at any size (D-33)."""
+    shown = await show()
+    await enter(shown, "MOCK0001:v1")
+    (title,) = (t for t in shown.find(ft.Text) if t.value == ACCEPTED.title)
+    assert title.max_lines is None
+    assert title.overflow == ft.TextOverflow.CLIP
 
 
 @pytest.mark.parametrize("text", ["", "   "])

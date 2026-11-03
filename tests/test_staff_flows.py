@@ -22,6 +22,7 @@ from pycon_us.core.badges import (
     Badge,
     ScanOutcome,
     ScanResult,
+    entry_title,
 )
 from pycon_us.core.check_in import AttendeeProducts, Category, Item, RedeemReply
 from pycon_us.core.outbox import Kind, Row
@@ -66,6 +67,12 @@ SWAG_CATEGORIES = tuple(
 
 FIELD_TEXT = "not-a-badge"
 """What the flows send as not a badge: the panel shows it as the title (D-473)."""
+
+LONG_TEXT = (
+    "this-is-a-long-text-with-no-colon-a-pasted-sentence-or-a-url-that-goes-on-and-on"
+    "-past-the-two-lines-the-panel-gives-it-and-ends-with-THE-END"
+)
+"""What ``door_check`` pastes after it: the panel shows its start and an ellipsis (#965)."""
 
 TEXT = re.compile(r'^[ -]*text: (?:"(.*)"|(.*?))(?:\s+#.*)?$', re.MULTILINE)
 """A ``text:`` line, quoted or bare, with or without a comment after it."""
@@ -266,6 +273,7 @@ def test_door_check_expects_the_app_s_words() -> None:
             panel(already(attendee(ADA))),
             panel(not_registered(MARGARET)),
             panel(replace(NOT_A_BADGE, title=FIELD_TEXT)),
+            panel(replace(NOT_A_BADGE, title=entry_title(LONG_TEXT))),
             chip_words(Staff()),
         ],
     )

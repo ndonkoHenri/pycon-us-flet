@@ -169,3 +169,25 @@ NOT_A_BADGE = ScanResult(
     ScanOutcome.INVALID, "Not a badge code", details=("Check the code and try again.",)
 )
 """The result of an entry ``parse_badge()`` refuses; the screen adds the text read (D-473)."""
+
+ENTRY_TITLE_MAX = 60
+"""The most characters of a refused entry the panel's title holds, and a screen reader
+says (#965): about two lines at normal text. ``ScanResult.entry`` keeps the whole."""
+
+
+def entry_title(text: str) -> str:
+    """Return a refused entry as the panel's title: one line of words, clipped to a cap.
+
+    A URL or a contact card from a HID scan, or a long paste, would otherwise fill the
+    panel and be read whole (#965). Whitespace, newlines included, collapses to single
+    spaces, and a text over ``ENTRY_TITLE_MAX`` characters ends in an ellipsis. The cut
+    counts code points, so it can split an emoji sequence or a flag: accepted, since
+    badge text is mostly ASCII and the whole text is one tap away (``Edit code``).
+
+    Args:
+        text: What the field held when it was refused.
+    """
+    words = " ".join(text.split())
+    if len(words) <= ENTRY_TITLE_MAX:
+        return words
+    return words[:ENTRY_TITLE_MAX].rstrip() + "\u2026"
