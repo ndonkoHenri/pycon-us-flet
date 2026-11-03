@@ -1,6 +1,6 @@
 """Set the scene of a UI flow from the Developer screen, as a person would (D-73, D-78).
 
-``open_developer()`` opens the screen through About this app, unlocking it there with 7
+``open_developer()`` opens the screen through About this app's link, unlocking it with 7
 taps on the version row the first time (D-187). ``fresh_start()`` sets the fake clock
 and the feed URL there, refreshes from that feed, and returns to Now, so a flow runs on
 a known moment and a recorded feed rather than on the live one (D-223).
@@ -10,6 +10,7 @@ testing-and-quality.md §5.2.
 """
 
 from datetime import timedelta
+from pathlib import Path
 
 from flet.testing.remote_tester import RemoteTester
 
@@ -17,14 +18,16 @@ from pycon_us.config import load_year
 from pycon_us.screens.about_app import UNLOCK_TAPS
 from pycon_us.ui.actions import refreshed
 from tests.ui.helpers import (
+    DEVICE,
+    PLATFORM,
+    adb,
     enter_text_id,
     open_tab,
+    run,
     start_app,
-    tap,
     tap_back_arrow,
     tap_id,
     tap_until,
-    wait_for,
     wait_for_id,
     wait_for_text,
     wait_for_tooltip,
@@ -42,6 +45,13 @@ NO_ANSWER = refreshed("offline")[0]
 """What Refresh now says when the feed did not answer, the app's own words."""
 
 
+ABOUT_APP_LINK = "confcompanion://app/more/app"
+"""About this app's deep link; the scheme and host are ``[tool.flet.deep_linking]``'s."""
+
+OPEN_LINK_FLOW = Path(__file__).parents[2] / "maestro" / "subflows" / "open_link.yaml"
+"""The Maestro flow that opens a link on iOS, and taps the simulator's Open prompt (F31)."""
+
+
 def before_conference() -> str:
     """Return 09:00 the day before the conference, as the fake clock field takes it.
 
@@ -53,25 +63,36 @@ def before_conference() -> str:
     return f"{day.isoformat()} 09:00"
 
 
+async def open_about_app() -> None:
+    """Open About this app by its deep link, from the host.
+
+    Its row is below the fold of the More root on every phone, the iPhone 17 Pro Max's
+    too, and a flow cannot scroll to it: ``RemoteTester`` has no drag (U35, #288), and
+    the test binding drops the device's own touches, so a host-side swipe doesn't reach
+    the app either. ``adb`` sends the link on Android, where Maestro reading the
+    accessibility tree would change what the app does (F72). ``simctl openurl`` asks
+    "Open in …?" (F31), so Maestro sends it on iOS.
+    """
+    if PLATFORM == "android":
+        intent = ("shell", "am", "start", "-a", "android.intent.action.VIEW")
+        await run(adb(), "-s", DEVICE, *intent, "-d", ABOUT_APP_LINK)
+    else:
+        route = ABOUT_APP_LINK.removeprefix("confcompanion://app")
+        env = ("-e", f"ROUTE={route}")
+        await run("maestro", "--device", DEVICE, "test", *env, str(OPEN_LINK_FLOW))
+
+
 async def open_developer(t: RemoteTester) -> None:
     """Open Developer options from a tab root, unlocking them first if they are locked.
 
-    More › About this app › the version row 7 times › Developer options, the row the
-    unlock adds there (``about_app.developer``); once unlocked, the taps are skipped.
-    Always through About, never the More list's own Developer options row, which
-    sits under About this app, at the list's foot: a flow cannot scroll (U35), and a
-    row half under the bottom bar is found but its tap lands on the bar. The View
-    under Developer is the More root, since the row navigates to ``/more/developer``.
+    More › About this app (``open_about_app()``) › the version row 7 times › Developer
+    options, the row the unlock adds there (``about_app.developer``); once unlocked, the
+    taps are skipped. The View under Developer is the More root, since the row navigates
+    to ``/more/developer``.
     """
     await wait_for_tooltip(t, "Back", gone=True)  # on a root, any pop to it finished
     await open_tab(t, "more")
-    about = await wait_for(
-        t,
-        lambda: t.find_by_semantics_identifier("more.app"),
-        "About this app (more.app), off screen on a short phone: a flow cannot "
-        "scroll (U35, D-223)",
-    )
-    await tap(t, about)
+    await open_about_app()
     await wait_for_id(t, "more.title", gone=True)  # About has covered the root
     if not (await t.find_by_semantics_identifier("about_app.developer")).count:
         for _ in range(UNLOCK_TAPS):

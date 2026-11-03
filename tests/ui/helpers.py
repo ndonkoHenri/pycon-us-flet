@@ -32,6 +32,9 @@ launch unpacks Python before it starts, slowly on a busy host's emulator."""
 RETAP_SECONDS = 1.0
 """How long ``tap_until`` waits for a tap's effect before it taps again."""
 
+SHEET_SETTLE = ft.Duration(seconds=2)
+"""Time for a sheet's slide on a slow debug build, in or out."""
+
 PLATFORM = os.environ.get("FLET_TEST_PLATFORM", "")
 """``android`` or ``ios``, set by ``flet test``."""
 
@@ -287,6 +290,27 @@ async def start_app(t: RemoteTester) -> None:
         lambda: t.find_by_semantics_identifier("now.title"),
         "Get started",
     )
+
+
+async def answer_primer_not_now(t: RemoteTester) -> None:
+    """Answer the reminders primer with Not now, after a fresh install's first star (D-395).
+
+    The sheet opens only while the OS can still ask: a fresh install on Android 13 or later,
+    or on iOS, as ``flet test`` gives the flows' devices. It covers what the flow taps next. Not now asks the OS nothing and leaves session reminders off. A tap while
+    the sheet slides in is lost, as a SnackBar's is (``tap_until()``), and a tap as it
+    slides out finds the button disposed, so each look waits for the sheet to settle.
+    """
+    await wait_for_id(t, "reminder.primer")
+    deadline = time.monotonic() + TIMEOUT
+    while True:
+        await t.pump(SHEET_SETTLE)
+        button = await t.find_by_semantics_identifier("reminder.primer.not_now")
+        if not button.count:
+            return
+        if time.monotonic() > deadline:
+            await screenshot_on_failure()
+            raise AssertionError(f"the primer's Not now: no effect after {TIMEOUT} s")
+        await t.tap(button.first)
 
 
 async def tap_back_arrow(t: RemoteTester) -> None:

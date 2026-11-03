@@ -21,6 +21,7 @@ from pycon_us.ui.semantics import semantics_key
 from pycon_us.ui.session_rows import is_notice
 from tests.ui.helpers import (
     STEP,
+    answer_primer_not_now,
     remote,
     screenshot,
     start_app,
@@ -84,6 +85,7 @@ async def test_snackbar_from_session_detail_shows_on_session_detail(
     # Star, then unstar: the removal's SnackBar is on this View, not the root's. The
     # star's tooltip is no finder target (a Tooltip object), so the add gets a moment.
     await tap_id(t, "session.favorite")
+    await answer_primer_not_now(t)
     await settle(t)
     await tap_id(t, "session.favorite")
     await wait_for_text(t, REMOVED)
