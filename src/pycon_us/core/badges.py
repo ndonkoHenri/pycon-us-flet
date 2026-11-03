@@ -46,9 +46,18 @@ CODE_SHAPE = re.compile(r"[A-Za-z0-9._~-]+")
 app puts the code unencoded into request paths, queries and storage keys, so the
 server's codes survive that; a code outside this set would need a one-line change."""
 
-_CONTROL = re.compile(r"[\x00-\x1f\x7f-\x9f]")
+_CONTROL = re.compile(r"[\x00-\x1f\x7f-\x9f\u2028\u2029]")
 """A newline or other control character: a contact card or a multi-line text, never a
 badge (D-477)."""
+
+QR_FORMATS = frozenset(
+    {"begin", "mecard", "matmsg", "wifi", "smsto", "sms", "tel", "mailto", "geo"}
+)
+"""The first word, in lower case, of the QR contents people scan that are not badges: a
+vCard or vCalendar (``BEGIN:``), MeCard, an email, Wi-Fi network (whose password would
+become the lead validator), SMS, phone or location. A HID scanner types a contact card
+one line per Enter, so its first line has no newline to catch. A short backstop, not a
+list of every scheme (D-477)."""
 
 
 def parse_badge(raw: str) -> Badge | None:
@@ -60,15 +69,16 @@ def parse_badge(raw: str) -> Badge | None:
 
     Returns:
         The badge, or None when it is not one (the screen says "Not a badge code"): no
-        ``:``; an access code that is empty or has a character outside ``CODE_SHAPE``;
-        a control character anywhere (a vCard); or ``//`` right after the first ``:``
-        (a URL, ``https://...``). Empty validators are kept as ``""``: the server
-        decides about them. A ``mailto:`` or ``tel:`` text still passes: it has a
-        badge's shape, and the server answers "not registered" (D-477).
+        ``:``; an access code that is empty, has a character outside ``CODE_SHAPE`` or
+        is one of ``QR_FORMATS`` (``BEGIN:VCARD``, ``WIFI:...``); a control character
+        anywhere (a vCard in one text); or ``//`` right after the first ``:`` (a URL,
+        ``https://...``). Empty validators are kept as ``""``: the server decides
+        about them. A URL scheme such as ``otpauth:`` still passes: it has a badge's
+        shape, and the server answers "not registered" (D-477).
     """
     text = raw.strip()
     code, colon, rest = text.partition(":")
-    if not colon or not CODE_SHAPE.fullmatch(code):
+    if not colon or not CODE_SHAPE.fullmatch(code) or code.lower() in QR_FORMATS:
         return None
     if rest.startswith("//") or _CONTROL.search(text):
         return None

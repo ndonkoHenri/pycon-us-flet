@@ -41,10 +41,10 @@ from tools.mock_api.state import MockState
         ("CODE:a/b=c+d%20", Badge("CODE", "a/b=c+d%20", "a/b=c+d%20")),
         ("CODE:x//y", Badge("CODE", "x//y", "x//y")),
         # Badge-shaped, so left to the server to call "Not registered" (D-477).
-        (
-            "mailto:ada@example.org",
-            Badge("mailto", "ada@example.org", "ada@example.org"),
-        ),
+        ("otpauth:totp", Badge("otpauth", "totp", "totp")),
+        # A format word only counts as the whole code.
+        ("WIFI1:x", Badge("WIFI1", "x", "x")),
+        ("BEGINNER:x", Badge("BEGINNER", "x", "x")),
     ],
 )
 def test_parse_badge_splits_as_ionic(raw: str, badge: Badge) -> None:
@@ -83,6 +83,27 @@ def test_parse_badge_refuses_a_url_and_a_contact_card(raw: str) -> None:
 @pytest.mark.parametrize(
     "raw",
     [
+        "BEGIN:VCARD",  # a HID scanner types a vCard one line per Enter
+        "begin:vcard",
+        "MECARD:N:Lovelace,Ada;;",
+        "MATMSG:TO:ada@example.org;SUB:Hi;BODY:Hi;;",
+        "WIFI:T:WPA;S:net;P:secret;;",
+        "SMSTO:+15551234:hello",
+        "sms:+15551234",
+        "tel:+15551234",
+        "mailto:ada@example.org",
+        "geo:37.78,-122.41",
+        "BEGIN:VCARD\u2028FN:Ada",
+    ],
+)
+def test_parse_badge_refuses_the_formats_a_qr_code_names_first(raw: str) -> None:
+    """A vCard line, a Wi-Fi network, a MeCard, an email, a phone number or a location is not a badge (D-477, #978)."""
+    assert parse_badge(raw) is None
+
+
+@pytest.mark.parametrize(
+    "raw",
+    [
         "MOCK 0001:v1",
         "MOCK/0001:v1",
         "MOCK?0001:v1",
@@ -92,7 +113,7 @@ def test_parse_badge_refuses_a_url_and_a_contact_card(raw: str) -> None:
         "MOCK@0001:v1",
         "M\u00d6CK0001:v1",
         "Total items:5",
-        "WIFI;T:WPA",
+        "WIFI;T:WPA",  # ';' is not in a code
     ],
 )
 def test_parse_badge_refuses_a_code_outside_the_url_unreserved_set(raw: str) -> None:
