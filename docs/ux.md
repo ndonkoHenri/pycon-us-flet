@@ -679,7 +679,7 @@ These exist only when a mock API base URL is set (D-51); the app never calls pri
 
 1. `AppBar`: tool name and context ("Door check · Decorators, Wed 9:00 AM"); a **sync chip** ("All synced" / "3 pending" / "Offline · 3 queued") opening the queue sheet; a torch `IconButton(FLASHLIGHT_OFF, selected_icon=FLASHLIGHT_ON)` with E1; a `KEYBOARD` button focusing manual entry.
 2. **Camera area** (`expand`): the E1 preview when `capabilities.SCANNER` is true, with a scan window, "Point the camera at the badge QR code" and a "Tap to resume" pause overlay. Without E1 (companion app, or before E1 is pinned): "This app can't scan with the camera yet. Type the badge code, or use a Bluetooth or USB scanner." and manual entry is primary.
-3. **Result panel:** `AnimatedSwitcher` in `Semantics(live_region=True)`: icon, outcome word, name or code, details, "12 s ago"; stays until the next scan, dims after 5 s. A tool may clear it after a while and when the app goes to the background (CoC: 15 s, #762).
+3. **Result panel:** `AnimatedSwitcher` (the old card leaves at once, `reverse_duration=0`, and the new one fades in alone: both in a stack showed the short "Ready to scan" through a taller result, #1014) in `Semantics(live_region=True)`: icon, outcome word, name or code, details, "12 s ago"; stays until the next scan, dims after 5 s. A tool may clear it after a while and when the app goes to the background (CoC: 15 s, #762).
 4. **Manual entry:** `TextField(label="Badge code", on_submit=...)` taking the full `code:validator` payload, which USB and Bluetooth HID scanners also type before Enter; focus returns to it, so hardware scanning is continuous.
 5. Tool actions ("Add note", "Change session") in `SafeArea`.
 

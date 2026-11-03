@@ -397,7 +397,10 @@ def ResultPanel(*, shown: Shown | None, clear_after: float | None = None) -> ft.
                     large_text=prefs.time_above,
                 ),
                 duration=prefs.motion_ms(SWITCH_MS),
-                reverse_duration=prefs.motion_ms(SWITCH_MS),
+                # The outgoing card goes at once: a switcher keeps both in a stack
+                # while it fades one out, and a short "Ready to scan" showed through
+                # the taller result, chips and all (#1014).
+                reverse_duration=0,
             ),
         )
     ]
