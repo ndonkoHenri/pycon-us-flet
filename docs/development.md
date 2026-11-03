@@ -35,6 +35,7 @@
 | Lint, type-check and test | `tools/check.sh` (`ci.yml`'s steps; `--fast` skips pytest), or one step, e.g. `uv run pytest` | §7 |
 | Gate PRs and merge them (D-100, D-273) | `tools/merge.sh <pr> [<pr>...]`, the PRs in merge order | §7 |
 | Start the mock API (from P3) | `uv run python -m tools.mock_api.server --host 0.0.0.0` | §6 |
+| Keep a mock on your checkout's own port | `uv run python -m tools.mock_api.own start`, `url android`, `stop` | §6 |
 | Build an APK for the emulator | `uv run flet build apk --arch arm64-v8a --build-number $(git rev-list --count HEAD)` (D-106) | §8.1 |
 | Build an AAB for Play | `uv run flet build aab --build-number $(git rev-list --count HEAD)` | §8.1 |
 | Build an IPA for TestFlight | `uv run flet build ipa --ios-export-method app-store-connect --build-number $(git rev-list --count HEAD)` | §8.2 |
@@ -763,6 +764,14 @@ The private-API features (sign-in, favourites sync, role flags and the four staf
 ```bash
 uv run python -m tools.mock_api.server                  # this machine, its simulators and emulators
 uv run python -m tools.mock_api.server --host 0.0.0.0   # also phones on the same Wi-Fi
+```
+
+With other agents about, keep a mock on your checkout's own port, which outlives the command, and stop it when done. A second `start` keeps the running mock and its state; `stop` then `start` is a clean slate. Server options follow `start`:
+
+```bash
+uv run python -m tools.mock_api.own start [--fault lost_response]   # prints MOCK_URL for each platform
+uv run python -m tools.mock_api.own url android                     # or ios
+uv run python -m tools.mock_api.own stop
 ```
 
 The options (`--host`, default `127.0.0.1`; `--port`, default `8000`; `--capture idempotent|non_idempotent`; the

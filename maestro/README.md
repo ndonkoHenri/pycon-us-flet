@@ -326,12 +326,16 @@ debug output's folder.
 
 The flows tagged `staff` drive the staff tools against the local mock
 ([`docs/development.md`](../docs/development.md) §6), with its seed and fake data only.
-Start it first and keep it running; a flow sets nothing up in it and needs no reset:
+Start it first and keep it running; a flow sets nothing up in it and needs no reset.
+Port 8000 is everyone's, so with other agents about, keep one on your checkout's own port:
 
 ```bash
-uv run python -m tools.mock_api.server
-maestro --device <id> test --include-tags=staff maestro
+uv run python -m tools.mock_api.own start     # prints -e MOCK_URL=... for each platform
+maestro --device <id> test -e MOCK_URL=$(uv run python -m tools.mock_api.own url android) --include-tags=staff maestro
+uv run python -m tools.mock_api.own stop
 ```
+
+Alone on the Mac, `uv run python -m tools.mock_api.server` on port 8000 needs no `MOCK_URL`.
 
 Each flow runs `subflows/launch_fresh.yaml`, then `subflows/sign_in_mock.yaml`, which
 sets Developer's Mock API URL and signs in with the flow's seed account
