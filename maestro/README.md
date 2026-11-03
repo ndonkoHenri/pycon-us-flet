@@ -318,7 +318,7 @@ against a mock that remembers:
 
 | Flow | Account | What a run leaves in the mock | A rerun |
 |---|---|---|---|
-| `coc_capture` | `coc@example.com` | Two more incidents | Passes; the counts it doesn't assert grow |
+| `coc_capture` | `coc@example.com` | Two more incidents, or more when a slow host makes part 3 start again (the 15 s clear outran its steps, #960) | Passes; the counts it doesn't assert grow |
 | `lead_capture` | `sponsor@example.com` | Ada's and Grace's leads for Example Corp | The same: a repeated capture answers the same and adds no lead |
 | `door_check` | `staff@example.com` | Product 10 redeemed for Ada and Linus | The same on screen: the door decides on the device, and the mock's "already redeemed" still syncs the row (D-441) |
 | `swag_pickup` | `staff@example.com` | Ada's shirts and bag redeemed, for good; Grace's sheet is only cancelled | **Checks less:** Ada has nothing left, so she shows "Already picked up" at once and the hand-out is skipped |

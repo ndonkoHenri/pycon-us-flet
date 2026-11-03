@@ -9,7 +9,8 @@
 #
 # Needs the mock running (maestro/README.md, "Staff flows and the mock"). The mock's seed
 # and fake data only.
-# Each run records two incidents in the mock's memory, so the counts grow run by run.
+# Each run records two incidents in the mock's memory, or more when a slow host makes
+# part 3 start again, so the counts grow run by run.
 appId: io.github.ndonkohenri.confcompanion
 name: CoC incident, clear after 15 s and in the background, email hidden
 tags:
@@ -84,40 +85,49 @@ tags:
     text: "Read .*"
 
 # 3. Find by name, Record, Show email; the background clears it.
-- tapOn:
-    id: coc.find
-- tapOn:
-    id: coc.search
-- inputText: mar test
-- extendedWaitUntil:
-    visible:
-      id: coc.search.row.0
-    timeout: 15000
-- tapOn:
-    id: coc.search.row.0
-- extendedWaitUntil:
-    visible:
-      id: coc.review.notes
-    timeout: 15000
-- tapOn:
-    id: coc.review.record
-- extendedWaitUntil:
-    visible:
-      id: scan.result
-      text: "(?s)Incident recorded.*Margaret Test.*"
-    timeout: 15000
-- assertNotVisible:
-    text: ".*margaret@example.com.*"
-- tapOn:
-    id: coc.show_email
-- extendedWaitUntil:
-    visible:
-      id: coc.email
-      text: Email margaret@example.com
-    timeout: 5000
-- assertVisible:
-    id: coc.show_email
-    text: Hide email
+#    The result clears 15 s after it shows, and on a busy host one step takes 2 to 10 s (a
+#    Record tap 8 s, a Show email tap 7 s, #960), so the steps from Record to the reveal
+#    can outrun it: a tap on a panel that has already cleared, or a "Hide email" that never
+#    comes. No order of steps fits every host, so these steps are one unit on one result:
+#    if the clear wins, the unit starts again and records a fresh one. A wrong reveal
+#    fails every try, so it still fails the flow.
+- retry:
+    maxRetries: 3
+    commands:
+      - tapOn:
+          id: coc.find
+      - tapOn:
+          id: coc.search
+      - inputText: mar test
+      - extendedWaitUntil:
+          visible:
+            id: coc.search.row.0
+          timeout: 15000
+      - tapOn:
+          id: coc.search.row.0
+      - extendedWaitUntil:
+          visible:
+            id: coc.review.notes
+          timeout: 15000
+      - tapOn:
+          id: coc.review.record
+      - extendedWaitUntil:
+          visible:
+            id: scan.result
+            text: "(?s)Incident recorded.*Margaret Test.*"
+          timeout: 15000
+      - assertNotVisible:
+          text: ".*margaret@example.com.*"
+      - tapOn:
+          id: coc.show_email
+      - extendedWaitUntil:
+          visible:
+            id: coc.email
+            text: Email margaret@example.com
+          timeout: 5000
+      - assertVisible:
+          id: coc.show_email
+          text: Hide email
 - pressKey: Home
 - launchApp:
     clearState: false
