@@ -44,7 +44,7 @@ from pycon_us.ui.scan_result import (
 )
 from pycon_us.ui.scan_screen import EDIT_CODE, SCAN_AGAIN, ResultPanel, ScanScreen
 from pycon_us.ui.scrolling import FULL_LIST_EXTENT
-from tests import scan_rig
+from tests import harness, scan_rig
 from tests.scan_rig import ACCEPTED, Rig, Show, enter, entry, panel, scan
 from tests.test_high_contrast import AAA_TEXT
 from tests.test_theme import AA_TEXT, contrast_ratio
@@ -400,6 +400,75 @@ async def test_the_field_is_built_however_far_down_the_large_text_pushes_it(
     shown = await show()
     (body,) = shown.find(ft.ListView)
     assert body.cache_extent == FULL_LIST_EXTENT
+
+
+def under(control: object) -> list[object]:
+    """``control`` and every control under it, in reading order."""
+    found = [control]
+    for child in (getattr(control, "content", None), *getattr(control, "controls", ())):
+        if child is not None:
+            found += under(child)
+    return found
+
+
+def body_order(shown: harness.Shown) -> list[str]:
+    """What the scan screen's body holds, top to bottom: field, result, camera, chip.
+
+    The result panel and the camera note are components, found by their function's
+    name; the field and the sync chip by their identifiers.
+    """
+    (body,) = shown.find(ft.ListView)
+    names = {"ResultPanel": "result", "CameraUnavailable": "camera"}
+    identifiers = {"scan.entry": "field", "staff.sync_chip": "chip"}
+    order: list[str] = []
+    for child in body.controls:
+        parts = under(child)
+        order += [
+            names[fn.__name__]
+            for part in parts
+            if (fn := getattr(part, "fn", None)) and fn.__name__ in names
+        ] + [
+            identifiers[part.identifier]
+            for part in parts
+            if isinstance(part, ft.Semantics) and part.identifier in identifiers
+        ][:1]
+    return order
+
+
+async def test_at_normal_text_the_result_is_above_the_field(show: Show) -> None:
+    """The order is the camera note, the result and then the field (ux.md §7.2)."""
+    shown = await show(prefs=Prefs(loaded=True, time_above=False))
+    assert body_order(shown) == ["camera", "result", "field"]
+
+
+async def test_at_large_text_the_field_and_the_result_come_first(show: Show) -> None:
+    """The field leads, so the keyboard scrolls nothing, then the result, then the rest (#955)."""
+    shown = await show(prefs=Prefs(loaded=True, time_above=True))
+    assert body_order(shown) == ["field", "result", "chip", "camera"]
+
+
+async def test_at_large_text_the_panel_puts_its_icon_above_its_words(
+    show: Show, rig: Rig
+) -> None:
+    """The words get the card's whole width: a Column of the icon and the words (#955)."""
+    shown = await show(prefs=Prefs(loaded=True, time_above=True))
+    await enter(shown, "MOCK0001:v1")
+    (card,) = [c for c in shown.find(ft.Container) if c.key == "1"]
+    assert isinstance(card.content, ft.Column)
+    icon, words = card.content.controls
+    assert isinstance(icon, ft.Icon) and isinstance(words, ft.Column)
+    assert not words.expand
+    assert icon.apply_text_scaling is False  # it would fill the screen at 3x
+
+
+async def test_at_normal_text_the_panel_keeps_its_icon_beside_its_words(
+    show: Show, rig: Rig
+) -> None:
+    """Below the large sizes the icon stays in a row beside the words."""
+    shown = await show(prefs=Prefs(loaded=True, time_above=False))
+    await enter(shown, "MOCK0001:v1")
+    (card,) = [c for c in shown.find(ft.Container) if c.key == "1"]
+    assert isinstance(card.content, ft.Row)
 
 
 @pytest.mark.parametrize(("age", "dimmed"), [(DIM_AFTER - 1, False), (DIM_AFTER, True)])

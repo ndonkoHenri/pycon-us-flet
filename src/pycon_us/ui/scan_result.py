@@ -13,6 +13,8 @@ clears it (#762), and dims after ``DIM_AFTER`` seconds: its fill gives way to th
 neutral one, so a new result stands out, while its icon and words stay; the line under
 it says how old it is, and when it clears.
 
+At large text the icon sits above the words instead of beside them (#955).
+
 A result's **tags** (Door check's dietary needs and allergy, DOOR-05) are chips under
 the name, in a row that wraps: a warning (an allergy) first, larger, with
 ``WARNING_AMBER`` and the card's colours swapped; the others outlined, with
@@ -88,7 +90,12 @@ def icon_color(outcome: ScanOutcome, label: ft.ColorValue) -> ft.ColorValue:
 
 
 def result_panel(
-    result: ScanResult | None, *, key: str, tokens: Tokens, dimmed: bool = False
+    result: ScanResult | None,
+    *,
+    key: str,
+    tokens: Tokens,
+    dimmed: bool = False,
+    large_text: bool = False,
 ) -> ft.Control:
     """Return the panel's card: icon, word, name or code and details.
 
@@ -102,6 +109,9 @@ def result_panel(
             brings in; the same key re-renders the card in place (a dimming).
         tokens: The scheme's tokens, for high contrast's edge.
         dimmed: The result is older than ``DIM_AFTER`` s.
+        large_text: The text is large for the width (``Prefs.time_above``): the icon
+            goes above the words, which then have the card's whole width, or an
+            allergy chip's "Allergy:" broke inside itself (#955).
     """
     if result is None:
         result = ScanResult(ScanOutcome.QUEUED, READY, details=(READY_BODY,))
@@ -139,20 +149,25 @@ def result_panel(
         ft.Text(line, theme_style=ft.TextThemeStyle.BODY_MEDIUM, color=label)
         for line in result.details
     ]
+    # Stacked above the words, the icon would take a third of the screen at the
+    # largest text if it grew with it: it keeps its own size there (#955).
+    mark = ft.Icon(
+        icon,
+        size=40 if large_text else 32,
+        color=icon_color(result.outcome, label),
+        apply_text_scaling=not large_text,
+    )
+    words = ft.Column(lines, spacing=2, tight=True, expand=not large_text)
     return ft.Container(
         key=key,
-        content=ft.Row(
-            [
-                ft.Icon(
-                    icon,
-                    size=32,
-                    color=icon_color(result.outcome, label),
-                    apply_text_scaling=True,
-                ),
-                ft.Column(lines, spacing=2, tight=True, expand=True),
-            ],
-            spacing=16,
-            vertical_alignment=ft.CrossAxisAlignment.START,
+        content=(
+            ft.Column([mark, words], spacing=8, tight=True)
+            if large_text
+            else ft.Row(
+                [mark, words],
+                spacing=16,
+                vertical_alignment=ft.CrossAxisAlignment.START,
+            )
         ),
         bgcolor=fill,
         padding=16,
