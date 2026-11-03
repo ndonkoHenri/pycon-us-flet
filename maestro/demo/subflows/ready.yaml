@@ -1,0 +1,7 @@
+# Not filmed. The app has just been launched: wait for a tab bar, whatever the first screen.
+appId: io.github.ndonkohenri.confcompanion
+---
+- extendedWaitUntil:
+    visible:
+      id: app.nav.more
+    timeout: 180000

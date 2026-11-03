@@ -1,0 +1,32 @@
+# Part one of the dark mode and large text clip: Settings › Dark, then Now and a
+# session. The tool then raises the text size on camera, and large_text.yaml follows.
+appId: io.github.ndonkohenri.confcompanion
+---
+- runFlow: {file: subflows/pause.yaml, env: {MS: "2000"}}
+- tapOn: {id: app.nav.more}
+- extendedWaitUntil: {visible: {id: more.title}, timeout: 15000}
+- runFlow: {file: subflows/pause.yaml, env: {MS: "1200"}}
+- assertNotVisible: {text: "Developer options"}
+- scrollUntilVisible:
+    element: {id: more.settings}
+    direction: DOWN
+    speed: 20
+- tapOn: {id: more.settings}
+- extendedWaitUntil: {visible: {id: settings.appearance.dark}, timeout: 15000}
+- runFlow: {file: subflows/pause.yaml, env: {MS: "1500"}}
+- tapOn: {id: settings.appearance.dark}
+- runFlow: {file: subflows/pause.yaml, env: {MS: "2200"}}
+- tapOn: {text: Back}
+- runFlow: {file: subflows/pause.yaml, env: {MS: "600"}}
+- tapOn: {id: app.nav.now}
+- extendedWaitUntil: {visible: {id: now.title}, timeout: 15000}
+- runFlow: {file: subflows/pause.yaml, env: {MS: "2500"}}
+- tapOn: {id: app.nav.schedule}
+- extendedWaitUntil: {visible: {id: schedule.day_tab.2}, timeout: 15000}
+- runFlow: {file: subflows/pause.yaml, env: {MS: "2500"}}
+- swipe: {start: "50%,75%", end: "50%,35%", duration: 1400}
+- runFlow: {file: subflows/pause.yaml, env: {MS: "1200"}}
+- extendedWaitUntil: {visible: {id: schedule.session.4}, timeout: 15000}
+- tapOn: {id: schedule.session.4}
+- extendedWaitUntil: {visible: {id: session.title}, timeout: 15000}
+- runFlow: {file: subflows/pause.yaml, env: {MS: "2500"}}

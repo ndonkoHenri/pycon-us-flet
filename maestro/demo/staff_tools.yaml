@@ -1,0 +1,69 @@
+# Lead scanner, door check, swag pickup and Code of Conduct against the local mock, with
+# its made-up attendees, signed in by subflows/staff_setup.yaml before the recording.
+# Each scan screen arrives with its field focused and the keyboard up, as a typist needs.
+appId: io.github.ndonkohenri.confcompanion
+---
+- runFlow: {file: subflows/pause.yaml, env: {MS: "2000"}}
+- assertNotVisible: {text: "Developer options"}
+- tapOn: {id: more.staff.lead}
+- extendedWaitUntil: {visible: {id: scan.result}, timeout: 15000}
+- runFlow: {file: subflows/pause.yaml, env: {MS: "800"}}
+- inputText: "MOCK0001:v4l1d01"
+- pressKey: Enter
+- extendedWaitUntil: {visible: {text: "(?s).*Lead captured.*"}, timeout: 15000}
+- runFlow: {file: subflows/pause.yaml, env: {MS: "2000"}}
+- tapOn: {text: Back}
+- extendedWaitUntil: {visible: {id: more.title}, timeout: 15000}
+- runFlow: {file: subflows/pause.yaml, env: {MS: "500"}}
+- tapOn: {id: more.staff.door}
+- extendedWaitUntil: {visible: {id: door.category.1}, timeout: 15000}
+- runFlow: {file: subflows/pause.yaml, env: {MS: "500"}}
+- tapOn: {id: door.category.1}
+- extendedWaitUntil: {visible: {id: door.session.10}, timeout: 15000}
+- runFlow: {file: subflows/pause.yaml, env: {MS: "500"}}
+- tapOn: {id: door.session.10}
+- extendedWaitUntil: {visible: {id: door.session_chip}, timeout: 15000}
+- extendedWaitUntil:
+    visible: {id: door.preload, text: "Ready, works offline, 2 attendees"}
+    timeout: 30000
+- runFlow: {file: subflows/pause.yaml, env: {MS: "800"}}
+- inputText: "MOCK0003:v4l1d03"
+- pressKey: Enter
+- extendedWaitUntil: {visible: {text: "(?s).*Checked in.*Linus Placeholder.*"}, timeout: 15000}
+- runFlow: {file: subflows/pause.yaml, env: {MS: "2200"}}
+- tapOn: {text: Back}
+- extendedWaitUntil: {visible: {id: more.title}, timeout: 15000}
+- runFlow: {file: subflows/pause.yaml, env: {MS: "500"}}
+- tapOn: {id: more.staff.swag}
+- extendedWaitUntil: {visible: {id: swag.category.3}, timeout: 15000}
+- runFlow: {file: subflows/pause.yaml, env: {MS: "500"}}
+- tapOn: {id: swag.category.3}
+- runFlow: {file: subflows/pause.yaml, env: {MS: "800"}}
+- inputText: "MOCK0002:v4l1d02"
+- pressKey: Enter
+- extendedWaitUntil: {visible: {id: swag.hand_out}, timeout: 15000}
+- runFlow: {file: subflows/pause.yaml, env: {MS: "1500"}}
+- tapOn: {id: swag.hand_out}
+- extendedWaitUntil: {visible: {text: "(?s).*Handed out.*"}, timeout: 15000}
+- runFlow: {file: subflows/pause.yaml, env: {MS: "2000"}}
+- tapOn: {text: Back}
+- extendedWaitUntil: {visible: {id: more.title}, timeout: 15000}
+- runFlow: {file: subflows/pause.yaml, env: {MS: "500"}}
+- tapOn: {id: more.staff.coc}
+- extendedWaitUntil: {visible: {id: coc.directory.reload}, timeout: 30000}
+- runFlow: {file: subflows/pause.yaml, env: {MS: "500"}}
+- tapOn: {id: coc.find}
+- extendedWaitUntil: {visible: {id: coc.search}, timeout: 15000}
+- runFlow: {file: subflows/pause.yaml, env: {MS: "500"}}
+- inputText: mar test
+- extendedWaitUntil: {visible: {id: coc.search.row.0}, timeout: 15000}
+- runFlow: {file: subflows/pause.yaml, env: {MS: "1000"}}
+- tapOn: {id: coc.search.row.0}
+- extendedWaitUntil: {visible: {id: coc.review.notes}, timeout: 15000}
+- runFlow: {file: subflows/pause.yaml, env: {MS: "1200"}}
+- tapOn: {id: coc.review.record}
+- extendedWaitUntil: {visible: {text: "(?s).*Incident recorded.*Margaret Test.*"}, timeout: 15000}
+- runFlow: {file: subflows/pause.yaml, env: {MS: "2500"}}
+- tapOn: {text: Back}
+- extendedWaitUntil: {visible: {id: more.title}, timeout: 15000}
+- runFlow: {file: subflows/pause.yaml, env: {MS: "1500"}}

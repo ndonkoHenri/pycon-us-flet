@@ -20,6 +20,7 @@ What's here, and when you'd reach for it. Run from the repo's root; each script'
 | `device.py` | Boot and shut down your own emulator or simulator; set its text, contrast and appearance |
 | `mock_api/own.py` | Keep a mock on your checkout's own port |
 | `mock_api/` | The mock API itself ([`README.md`](mock_api/README.md)) |
+| `demo_videos.py` | Film the demo clips (`maestro/demo/`) on a new simulator, and lay a clip's frames out to read |
 | `sweep.py` | Photograph the staff tools per text size and appearance, for a person to read |
 | `offline_scans.py` | Run the offline scans journey, with a mock whose listener can stop and keep its captures |
 | `feed_pair.py` | Serve a change-log feed pair for the change log's device check |

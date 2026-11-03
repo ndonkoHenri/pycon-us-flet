@@ -1,0 +1,60 @@
+# Search, a room on its floor plan, Sponsors, a sponsor's booth in the expo hall.
+appId: io.github.ndonkohenri.confcompanion
+---
+- runFlow: {file: subflows/pause.yaml, env: {MS: "2000"}}
+- tapOn: {id: app.search}
+- extendedWaitUntil: {visible: {id: search.field}, timeout: 15000}
+- runFlow: {file: subflows/pause.yaml, env: {MS: "800"}}
+- inputText: pathlib
+- extendedWaitUntil: {visible: {id: search.session.25}, timeout: 15000}
+- runFlow: {file: subflows/pause.yaml, env: {MS: "1500"}}
+- pressKey: Enter
+- runFlow: {file: subflows/pause.yaml, env: {MS: "800"}}
+- tapOn: {id: search.session.25}
+- extendedWaitUntil: {visible: {id: session.title}, timeout: 15000}
+- runFlow: {file: subflows/pause.yaml, env: {MS: "2000"}}
+- tapOn: {text: Back}
+- runFlow: {file: subflows/pause.yaml, env: {MS: "800"}}
+- tapOn: {text: Back}
+- extendedWaitUntil: {visible: {id: now.title}, timeout: 15000}
+- runFlow: {file: subflows/pause.yaml, env: {MS: "600"}}
+- tapOn: {id: app.nav.map}
+- extendedWaitUntil: {visible: {id: map.tab.rooms}, timeout: 15000}
+- runFlow: {file: subflows/pause.yaml, env: {MS: "1500"}}
+- scrollUntilVisible:
+    element: {id: map.room.room-103abc}
+    direction: DOWN
+    speed: 20
+- runFlow: {file: subflows/pause.yaml, env: {MS: "600"}}
+- tapOn: {id: map.room.room-103abc}
+- extendedWaitUntil: {visible: {id: room.location}, timeout: 15000}
+- runFlow: {file: subflows/pause.yaml, env: {MS: "1500"}}
+- tapOn: {id: room.location}
+- extendedWaitUntil: {visible: {id: plan.label}, timeout: 15000}
+- runFlow: {file: subflows/pause.yaml, env: {MS: "2500"}}
+- tapOn: {id: plan.zoom_in}
+- runFlow: {file: subflows/pause.yaml, env: {MS: "2000"}}
+- tapOn: {text: Back}
+- runFlow: {file: subflows/pause.yaml, env: {MS: "500"}}
+- tapOn: {text: Back}
+- runFlow: {file: subflows/pause.yaml, env: {MS: "500"}}
+- tapOn: {id: app.nav.more}
+- extendedWaitUntil: {visible: {id: more.title}, timeout: 15000}
+- runFlow: {file: subflows/pause.yaml, env: {MS: "1000"}}
+- assertNotVisible: {text: "Developer options"}
+- scrollUntilVisible:
+    element: {id: more.sponsors}
+    direction: DOWN
+    speed: 20
+- tapOn: {id: more.sponsors}
+- extendedWaitUntil: {visible: {id: "sponsors\\.sponsor\\..*"}, timeout: 20000}
+- runFlow: {file: subflows/pause.yaml, env: {MS: "2500"}}
+- swipe: {start: "50%,75%", end: "50%,45%", duration: 1400}
+- runFlow: {file: subflows/pause.yaml, env: {MS: "1200"}}
+- extendedWaitUntil: {visible: {id: sponsors.sponsor.bloomberg}, timeout: 15000}
+- tapOn: {id: sponsors.sponsor.bloomberg}
+- extendedWaitUntil: {visible: {id: sponsor.title}, timeout: 15000}
+- runFlow: {file: subflows/pause.yaml, env: {MS: "2000"}}
+- tapOn: {id: sponsor.find_booth}
+- extendedWaitUntil: {visible: {id: expo.card}, timeout: 15000}
+- runFlow: {file: subflows/pause.yaml, env: {MS: "3000"}}

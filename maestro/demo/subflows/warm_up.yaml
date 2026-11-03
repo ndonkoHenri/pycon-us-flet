@@ -1,0 +1,8 @@
+# Not filmed: the first launch on a new simulator. The first keyboard iOS shows brings its
+# slide-to-type tip over the keys, so it is answered here, off camera.
+appId: io.github.ndonkohenri.confcompanion
+---
+- tapOn: {id: app.search}
+- extendedWaitUntil: {visible: {id: search.field}, timeout: 15000}
+- extendedWaitUntil: {visible: {text: Continue}, timeout: 10000, optional: true}
+- tapOn: {text: Continue, optional: true}
