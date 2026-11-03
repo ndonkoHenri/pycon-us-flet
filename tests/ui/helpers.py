@@ -34,7 +34,7 @@ RETAP_SECONDS = 1.0
 """How long ``tap_until`` waits for a tap's effect before it taps again."""
 
 SHEET_SETTLE = ft.Duration(seconds=2)
-"""Time for a sheet's slide on a slow debug build, in or out."""
+"""Time for a sheet's slide or a day tab's on a slow debug build, in or out."""
 
 PLATFORM = os.environ.get("FLET_TEST_PLATFORM", "")
 """``android`` or ``ios``, set by ``flet test``."""

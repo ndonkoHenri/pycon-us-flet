@@ -19,6 +19,7 @@ from pycon_us.ui.semantics import semantics_key
 from tests.ui.developer import before_conference, fresh_start
 from tests.ui.helpers import (
     PLATFORM,
+    SHEET_SETTLE,
     open_tab,
     press_system_back,
     remote,
@@ -74,6 +75,7 @@ async def test_drill_back_one_step(flet_app: ftt.FletTestApp, feed_url: str) -> 
     # Schedule › the day › the session.
     await open_tab(t, "schedule")
     await tap_id(t, f"schedule.day_tab.{day}")
+    await t.pump(SHEET_SETTLE)  # a tap while the new day slides in only stops it
     await tap_id(t, row_id("schedule", first))
     await wait_for_id(t, "schedule.title", gone=True)  # the push has finished
     await shows_session(t, first)
