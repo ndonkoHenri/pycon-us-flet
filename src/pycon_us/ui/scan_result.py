@@ -64,7 +64,7 @@ ICONS: dict[ScanOutcome, ft.IconData] = {
 """Each outcome's icon (ux.md §7.2)."""
 
 READY = "Ready to scan"
-READY_BODY = "Scan a badge, or type its code below."
+READY_BODY = "Scan a badge, or type its code."
 """What the panel says before the first scan."""
 
 

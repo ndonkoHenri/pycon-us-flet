@@ -412,14 +412,18 @@ def under(control: object) -> list[object]:
 
 
 def body_order(shown: harness.Shown) -> list[str]:
-    """What the scan screen's body holds, top to bottom: field, result, camera, chip.
+    """What the scan screen's body holds, top to bottom: field, result, buttons, rest.
 
     The result panel and the camera note are components, found by their function's
     name; the field and the sync chip by their identifiers.
     """
     (body,) = shown.find(ft.ListView)
     names = {"ResultPanel": "result", "CameraUnavailable": "camera"}
-    identifiers = {"scan.entry": "field", "staff.sync_chip": "chip"}
+    identifiers = {
+        "scan.entry": "field",
+        "scan.edit": "edit",
+        "staff.sync_chip": "chip",
+    }
     order: list[str] = []
     for child in body.controls:
         parts = under(child)
@@ -445,6 +449,31 @@ async def test_at_large_text_the_field_and_the_result_come_first(show: Show) -> 
     """The field leads, so the keyboard scrolls nothing, then the result, then the rest (#955)."""
     shown = await show(prefs=Prefs(loaded=True, time_above=True))
     assert body_order(shown) == ["field", "result", "chip", "camera"]
+
+
+async def test_at_large_text_the_result_s_buttons_follow_it_before_the_rest(
+    show: Show, rig: Rig
+) -> None:
+    """The "Edit code" button sits under the result, ahead of the chip and camera note (#955)."""
+    shown = await show(prefs=Prefs(loaded=True, time_above=True))
+    await enter(shown, "NOCOLON")
+    assert body_order(shown) == ["field", "result", "edit", "chip", "camera"]
+
+
+async def test_the_field_is_the_same_control_when_the_text_size_flips_the_order(
+    show: Show, rig: Rig
+) -> None:
+    """A size change while the screen is open moves the field without rebuilding it.
+
+    A rebuilt field loses the focus, and a HID scanner's next scan goes nowhere.
+    """
+    prefs = Prefs(loaded=True, time_above=False)
+    shown = await show(prefs=prefs)
+    field_id = entry(shown)._i  # the client's id: kept while the control is kept
+    prefs.time_above = True
+    await shown.settle()
+    assert body_order(shown)[0] == "field"
+    assert entry(shown)._i == field_id
 
 
 async def test_at_large_text_the_panel_puts_its_icon_above_its_words(

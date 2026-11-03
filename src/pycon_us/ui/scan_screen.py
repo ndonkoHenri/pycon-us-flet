@@ -148,8 +148,10 @@ def ScanScreen(
         source: The tool's ``__name__``, for View source (D-461).
         on_badge: Turns a badge into the result to show; awaited one at a time.
         context: A line under the bar, e.g. "Decorators, Wed 9:00 AM", or a control
-            in its place: the Lead scanner's "For: Example Corp" chip (LEAD-06).
-        actions: The tool's own buttons, under the field ("Add note").
+            in its place: the Lead scanner's "For: Example Corp" chip (LEAD-06). At
+            large text it follows the result and its buttons (D-475).
+        actions: The tool's own buttons, under the field ("Add note"); at large text
+            under the result, which follows the field (D-475).
         paused: Why scanning is paused, under the field ("Paused while the note
             is open"), while one of the tool's dialogs or sheets is open: submits
             are dropped with their text (D-471). None scans.
@@ -285,7 +287,11 @@ def ScanScreen(
         )
     if not capabilities.SCANNER:  # the E1 preview takes this place (#726)
         status.append(padded(CameraUnavailable()))
+    # Keyed, or the body's children are matched by position: when the text size flips
+    # the order while the screen is open, the field would be rebuilt and lose its
+    # focus, and a HID scanner's next scan would go nowhere.
     panel = padded(ResultPanel(shown=shown, clear_after=clears_in))
+    panel.key = "scan.panel"
     field = padded(
         named(
             "scan.entry",
@@ -309,6 +315,7 @@ def ScanScreen(
             ),
         )
     )
+    field.key = "scan.field"
     result_note_line = [padded(note)] if note is not None else []
     buttons = [padded(action) for action in [*for_result, *(actions or ())]]
     if prefs.time_above:
