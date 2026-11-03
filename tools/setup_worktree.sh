@@ -59,4 +59,10 @@ fi
 
 git config core.hooksPath .githooks
 
+# Without the pin's exact Flutter in ~/flutter, flet-cli quietly takes any of its minor on PATH (#1004).
+flutter=$(sed -n 's/.*"flutter": *"\([^"]*\)".*/\1/p' .flet-src/.fvmrc 2> /dev/null || true)
+if [[ -n $flutter && ! -x $HOME/flutter/$flutter/bin/flutter ]]; then
+    say "no ~/flutter/$flutter, so builds may use another Flutter: see docs/development.md §2.2, step 2"
+fi
+
 say "ready at Flet $(cut -c1-9 .flet-ref). Prefix each build, debug and test command with PUB_CACHE=$root/build/pub-cache"
