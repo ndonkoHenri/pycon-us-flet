@@ -569,6 +569,22 @@ Notes:
 
 ### 5.5 Devices, emulators and logs
 
+**Your own device.** `tools/device.py` boots one and shuts it down, and refuses the owner's (`emulator-5554`, AVD `pycon_lowram_api34`, the `iPhone 16` simulator). `up` prints only the serial or udid, so a script can keep it.
+
+```bash
+uv run python -m tools.device up android --port 5594          # --no-animations for flet test flows, --avd for another AVD
+uv run python -m tools.device up ios --name Claude-123-iPhone-17
+uv run python -m tools.device prefs <device> --text 200 --bold --contrast --dark   # --text is 100, 200 or max
+uv run python -m tools.device prefs <device> --reset
+uv run python -m tools.device down <device>                   # --delete also deletes a simulator
+```
+
+**This Mac's limits**, learned from runs that died:
+- **Memory comes first, and emulators fill it.** With 13 workflows and about 12 devices (2026-10-21), swap reached 39 of 40 GB and load about 900; with three emulators up, Android's system server died under its watchdog and APK installs hung. Boot one emulator and one simulator at a time, and shut them down when done.
+- **The Mac sleeps when idle.** Keep it awake for a long run, `caffeinate -i <command>`. A run that stops overnight often just slept.
+- **Emulator timing isn't reliable here.** qemu threads drop to background priority behind other windows, and load stays high while other agents run. Don't measure while builds run; compare within one window (`testing-and-quality.md` §8), and repeat timing-sensitive UI checks instead of trusting one pass.
+- **Device work runs long.** Set a time budget before a device matrix: one ran 11 hours (2026-10-20).
+
 **The device set (D-102, D-107).** Work happens on Android emulators and iOS simulators first. The build reference devices are the AVD `pycon_pixel6a_api36` (Pixel 6a profile, 4 GB RAM, Android 16 API 36, Google APIs arm64; `emulator-5554` when it is the only one running) and an **iPhone 17** simulator on **iOS 26.5**. On the owner's Mac the iPhone 16 family exists only on the iOS 18.6 runtime, so use the iPhone 17 family (iPhone 17, 17 Pro, 17 Pro Max, 17e) on iOS 26.5. Also available: the AVDs `Pixel_9_Pro_XL_API_35` (Google Play, API 35) and `flet_probe_api34` (Google APIs, API 34; TalkBack is preinstalled), and an iPad Pro simulator for the tablet layout. **The tablet AVD** is `pycon_tablet_api36` (#461): the Pixel Tablet profile (2560 x 1600 px at 320 dpi, 1280 x 800 dp; its natural orientation is landscape) on `pycon_pixel6a_api36`'s system image, made with `echo no | avdmanager create avd -n pycon_tablet_api36 -k "system-images;android-36;google_apis;arm64-v8a" -d pixel_tablet`, then `hw.ramSize=4096M` and `disk.dataPartition.size=6G` in its `config.ini` (the profile's defaults are 1536 MB and 800 MB). Boot it once without `-read-only` so the first boot writes its data, shut it down, and from then on boot it with `-read-only` like the others. Rotations: Android counts from the natural orientation, so on this tablet `adb shell settings put system user_rotation 1` (or Maestro's `LANDSCAPE_LEFT`) shows it in portrait. An AVD whose system image is missing fails with "Cannot find AVD system path"; install the image named by `image.sysdir.1` in its `config.ini`, e.g. `sdkmanager "system-images;android-35;google_apis_playstore;arm64-v8a"`. The owner's iPhone is used only for checks that need hardware or a release build: release-build performance, the camera, notification delivery, TestFlight installs, VoiceOver, and the release build's exit journeys at phase exits. There is no Android phone; emulator timings are a relative regression signal only ([`testing-and-quality.md`](testing-and-quality.md) §8).
 
 | Task | Command |
@@ -601,18 +617,13 @@ Use the 2026 feed with a fake clock inside 2026-05-13..19 to exercise Now and Ju
 The flows in `tests/ui/` run on an emulator or a simulator, never in CI (`addopts` keeps them out of `uv run pytest`, D-84). The strategy, the helpers and the list of flows are in [`testing-and-quality.md`](testing-and-quality.md) §5.
 
 ```bash
-# Android: an emulator of your own (D-102), its animations off (testing-and-quality.md §5.2)
-~/Library/Android/sdk/emulator/emulator -avd flet_probe_api34 -read-only -no-audio -no-boot-anim -port 5580 &
-for s in window_animation_scale transition_animation_scale animator_duration_scale; do
-  adb -s emulator-5580 shell settings put global $s 0
-done
-# The AVD has a hardware keyboard: keep the on-screen one down, over the rows a flow taps (D-223)
-adb -s emulator-5580 shell settings put secure show_ime_with_hard_keyboard 0
+# Android: an emulator of your own (D-102), its animations off and its on-screen keyboard down (D-223;
+# testing-and-quality.md §5.2)
+uv run python -m tools.device up android --avd flet_probe_api36 --port 5580 --no-animations
 uv run flet test android -d emulator-5580 --tests-dir tests/ui -v
 
 # iOS: a booted iPhone 17 Pro Max simulator on iOS 26.5 of your own (D-107, D-223)
-xcrun simctl create "<issue>-iphone17promax" "iPhone 17 Pro Max" com.apple.CoreSimulator.SimRuntime.iOS-26-5
-xcrun simctl boot <udid>
+uv run python -m tools.device up ios --name "<issue>-iphone17promax" --model "iPhone 17 Pro Max"
 LANG=en_US.UTF-8 uv run flet test ios -d <udid> --tests-dir tests/ui -v
 
 # One flow, or the P1 flows F1-F5 only (testing-and-quality.md §5.4)

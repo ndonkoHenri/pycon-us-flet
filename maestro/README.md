@@ -280,10 +280,8 @@ scan screen opens scrolled to its badge field, so what heads the screen is above
 a flow scrolls UP to it (#828).
 
 ```bash
-# iOS: Bold Text is Settings › Accessibility › Display & Text Size › Bold Text, or, before a
-# relaunch: xcrun simctl spawn <udid> defaults write com.apple.Accessibility EnhancedTextLegibilityEnabled -bool true
-xcrun simctl ui <udid> content_size accessibility-extra-extra-extra-large   # or accessibility-large, about 200 %
-# Android: adb -s emulator-5570 shell settings put system font_scale 2.0
+# Sets Android's and iOS's largest text and Bold Text (development.md §5.5); relaunch the app on iOS for Bold Text.
+uv run python -m tools.device prefs <device> --text max --bold
 maestro --device <udid> test --test-output-dir build/maestro/large-text maestro/journeys/sponsors_large_text.yaml
 ```
 
