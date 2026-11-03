@@ -202,12 +202,13 @@ image passed there; the rest were run on API 34 and later only.
 |---|---|---|
 | `reminder_primer` | API 33 (Android 13) for the primer and the OS prompt: the first Android with a notification permission to ask for (and iOS) | No primer or prompt is checked instead: nothing shown after the star, the session saved, no Allow notifications card in Settings (run on API 24, #953) |
 | `reminder_settings` | API 34 (Android 14) for the Alarms & reminders card: exact alarms are off for a fresh install from there | The card is checked absent (run on API 24; API 31 to 33 not run) |
+| `swag_pickup` | API 28 (Android 9) for a text field's label and helper line ("Choose what to hand out") to be in the accessibility tree: Flutter's Android bridge gives a field no name below it (#952, #968) | The helper line is not asserted; the category chips' selected state is, which the flow checks on every level (run on API 24) |
 | `help_report`, `wifi_copy` | Android 13 confirms a copy itself; before it, the app's SnackBar does | They pass on API 24, but check the app's confirmation on iOS only, so not on Android below 13 (#972) |
 
 Every other flow has no per-level step. On API 24 these passed, in #816 or #953:
 `drill_back`, `star_undo`, `search_any_day`, `jump_to_now`, `expo_map_card`, `find_room`,
 `about_app`, `reminder_primer`, `reminder_settings`, `help_report`, `wifi_copy`,
-`coc_capture`, `lead_capture`, `door_check`. `swag_pickup` is #952.
+`coc_capture`, `lead_capture`, `door_check`, `swag_pickup`.
 
 **Comparing two builds** (the fling after the sheet, at Maestro's pace): install `main`'s
 APK, run the regression flow, install the PR's APK, run it again with the same `TRIALS`,

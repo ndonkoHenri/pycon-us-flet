@@ -9,6 +9,11 @@
 # 4. Ada again, past the 4 s cooldown: "Already picked up". Margaret bought nothing:
 #    "Nothing to pick up". Text with no colon: "Not a badge code" with the text read, and Edit code (D-473).
 #
+# env: ANDROID_API, the emulator's API level (default 36; maestro/README.md, "Android API
+# levels"). Below API 28 Flutter's Android bridge gives a text field no name, so the
+# field's helper line "Choose what to hand out" is not in the accessibility tree
+# (#952, #968): there the flow reads the category chips' own selected state instead.
+#
 # Needs the mock running (maestro/README.md, "Staff flows and the mock"). The mock's seed
 # and fake data only.
 # The first run on a running mock redeems Ada's shirts and bag, for good: only a restart
@@ -21,6 +26,7 @@ tags:
   - swag
 ---
 - runFlow: ../subflows/launch_fresh.yaml
+- runScript: ../scripts/os_offers.js
 - runFlow:
     file: ../subflows/sign_in_mock.yaml
     env:
@@ -42,16 +48,35 @@ tags:
     visible:
       id: swag.category.3
     timeout: 15000
+- runFlow:
+    when:
+      true: ${output.os.fieldHint}
+    commands:
+      - assertVisible:
+          text: "(?s).*Choose what to hand out.*"
 - assertVisible:
-    text: "(?s).*Choose what to hand out.*"
+    id: swag.category.3
+    selected: false
 - tapOn:
     id: swag.category.3
 - tapOn:
     id: swag.category.4
 - extendedWaitUntil:
-    notVisible:
-      text: "(?s).*Choose what to hand out.*"
+    visible:
+      id: swag.category.4
+      selected: true
     timeout: 5000
+- assertVisible:
+    id: swag.category.3
+    selected: true
+- runFlow:
+    when:
+      true: ${output.os.fieldHint}
+    commands:
+      - extendedWaitUntil:
+          notVisible:
+            text: "(?s).*Choose what to hand out.*"
+          timeout: 5000
 
 # 2. Manual entry opens the sheet; Cancel records nothing.
 - tapOn:
