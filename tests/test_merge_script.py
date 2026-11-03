@@ -50,6 +50,7 @@ class Sandbox:
             "#!/bin/sh\n"
             'echo "$*" >> "$GH_CALLS"\n'
             'if [ "$2" = merge ]; then exit "${GH_MERGE_STATUS:-0}"; fi\n'
+            'if [ "$4" = headRefOid ]; then echo head-of-$3; exit 0; fi\n'
             'cat "$GH_STATE"\n'
         )
         gh.chmod(0o755)
@@ -75,7 +76,9 @@ class Sandbox:
         _git(self.repo, "fetch", "-q", "origin", "main")
         return _git(self.repo, "rev-parse", "FETCH_HEAD^{tree}")
 
-    def run(self, *prs: str, **env: str) -> subprocess.CompletedProcess[str]:
+    def run(
+        self, *prs: str, timeout: float = 30, **env: str
+    ) -> subprocess.CompletedProcess[str]:
         """Run the script on ``prs``, with ``env`` over the sandbox's environment."""
         return subprocess.run(
             ["tools/merge.sh", *prs],
@@ -84,7 +87,7 @@ class Sandbox:
             env=self.env | env,
             capture_output=True,
             text=True,
-            timeout=30,
+            timeout=timeout,
         )
 
     def merges(self) -> list[str]:
@@ -145,18 +148,64 @@ def test_other_tree_says_to_check_main(sandbox: Sandbox) -> None:
     assert "tools/check.sh" in done.stderr
 
 
+def test_merge_names_the_head_read_before_the_gate(sandbox: Sandbox) -> None:
+    """Each merge is tied to its PR's head, so a later push can't land ungated."""
+    sandbox.gate(0, sandbox.main_tree())
+    assert sandbox.run("7").returncode == 0
+    assert "--match-head-commit head-of-7" in sandbox.calls.read_text()
+
+
+def test_gate_with_no_tree_merges_nothing(sandbox: Sandbox) -> None:
+    """A gate that exits 0 but names no tree isn't a pass."""
+    sandbox.gate(0)
+    assert sandbox.run("7").returncode == 1
+    assert sandbox.merges() == []
+
+
+def test_bad_pr_number_is_a_usage_error(sandbox: Sandbox) -> None:
+    """A PR that isn't a number exits 2 before the lock and the gate."""
+    sandbox.gate(0, sandbox.main_tree())
+    assert sandbox.run("foo").returncode == 2
+    assert not sandbox.lock.is_symlink()
+
+
 def test_dead_runs_lock_is_taken(sandbox: Sandbox) -> None:
     """A lock left by a process that is gone doesn't block, and the run removes its own."""
-    sandbox.lock.mkdir()
-    (sandbox.lock / "pid").write_text("999999\n")
+    dead = subprocess.Popen(["true"])
+    dead.wait()
+    sandbox.lock.symlink_to(str(dead.pid))
     sandbox.gate(1)
     done = sandbox.run("7")
     assert "dead run" in done.stderr
     assert done.returncode == 1
-    assert not sandbox.lock.exists()
+    assert not sandbox.lock.is_symlink()
+
+
+def test_live_holder_blocks_the_gate(sandbox: Sandbox) -> None:
+    """A lock whose holder is alive makes the run wait, without gating or merging."""
+    holder = subprocess.Popen(["sleep", "30"])
+    try:
+        sandbox.lock.symlink_to(str(holder.pid))
+        sandbox.gate(0, sandbox.main_tree())
+        with pytest.raises(subprocess.TimeoutExpired):
+            sandbox.run("7", timeout=2)
+        assert sandbox.merges() == []
+        assert sandbox.lock.is_symlink()
+    finally:
+        holder.kill()
+        holder.wait()
+
+
+def test_exit_leaves_another_runs_lock(sandbox: Sandbox) -> None:
+    """A run removes only its own lock: one now holding another pid stays."""
+    path = sandbox.repo / "tools" / "gate.sh"
+    path.write_text(f'#!/bin/sh\nln -sfn 1 "{sandbox.lock}"\nexit 1\n')
+    path.chmod(0o755)
+    assert sandbox.run("7").returncode == 1
+    assert sandbox.lock.is_symlink()
 
 
 def test_no_arguments_is_a_usage_error(sandbox: Sandbox) -> None:
     """No PR exits 2, as the gate does, before taking the lock."""
     assert sandbox.run().returncode == 2
-    assert not sandbox.lock.exists()
+    assert not sandbox.lock.is_symlink()

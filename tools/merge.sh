@@ -18,40 +18,71 @@ if [[ $# -eq 0 || $1 == -h || $1 == --help ]]; then
     exit 0
 fi
 
+for pr in "$@"; do
+    if [[ ! $pr =~ ^[1-9][0-9]*$ ]]; then
+        say "not a PR number: $pr"
+        exit 2
+    fi
+done
+
 # One run at a time on this Mac: a merge moves main, which voids a gate running beside it. Not in $TMPDIR, which macOS
-# sweeps. A lock whose holder is gone doesn't count; a run killed outright can't remove its own.
+# sweeps. The lock is a symlink to its holder's pid, since making one is atomic and carries the pid with it. A run
+# killed outright can't remove its own, so a lock whose holder is gone doesn't count. The rename lets only one waiter
+# take a dead lock; one that took a newer holder's lock by a late rename puts it back.
 lock=${MERGE_LOCK:-$HOME/Library/Caches/pycon-merge.lock}
 mkdir -p "$(dirname "$lock")"
-until mkdir "$lock" 2> /dev/null; do
-    holder=$(cat "$lock/pid" 2> /dev/null || true)
+until ln -s "$$" "$lock" 2> /dev/null; do
+    holder=$(readlink "$lock" || true)
     if [[ -n $holder ]] && ! kill -0 "$holder" 2> /dev/null; then
-        say "removing the lock of a dead run ($holder)"
-        rm -rf "$lock"
+        if mv "$lock" "$lock.$$" 2> /dev/null; then
+            if [[ $(readlink "$lock.$$") == "$holder" ]]; then
+                say "removed the lock of a dead run ($holder)"
+                rm -f "$lock.$$"
+            else
+                mv "$lock.$$" "$lock"
+            fi
+        fi
         continue
     fi
-    say "waiting for another run (${holder:-starting})"
+    say "waiting for another run (${holder:-starting}; lock: $lock)"
     sleep 10
 done
-echo $$ > "$lock/pid"
-trap 'rm -rf "$lock"' EXIT
+trap '[[ $(readlink "$lock") == "$$" ]] && rm -f "$lock"' EXIT
 
-if ! tree=$("$(dirname "$0")/gate.sh" "$@"); then
+# Read before the gate, so a push during or after it stops the merge instead of landing ungated.
+heads=()
+for pr in "$@"; do
+    head=$(gh pr view "$pr" --json headRefOid --jq .headRefOid)
+    if [[ -z $head ]]; then
+        say "can't read #$pr's head: nothing merged"
+        exit 1
+    fi
+    heads+=("$head")
+done
+
+if ! tree=$("$(dirname "$0")/gate.sh" "$@") || [[ -z $tree ]]; then
     say "the gate failed: nothing merged"
     exit 1
 fi
 
+i=0
 for pr in "$@"; do
     # The state decides, not gh's status: --delete-branch fails after the merge when the branch is checked out here.
-    gh pr merge "$pr" --squash --delete-branch || say "gh pr merge $pr said no; checking its state"
+    gh pr merge "$pr" --squash --delete-branch --match-head-commit "${heads[$i]}" ||
+        say "gh pr merge $pr said no; checking its state"
     state=$(gh pr view "$pr" --json state --jq .state)
     if [[ $state != MERGED ]]; then
-        say "#$pr is $state, not merged: the PRs after it were left alone"
+        say "#$pr is ${state:-unknown}, not merged (a new push needs a new gate): the PRs after it were left alone"
         exit 3
     fi
     say "#$pr merged"
+    i=$((i + 1))
 done
 
-git fetch -q origin main
+if ! git fetch -q origin main; then
+    say "can't fetch main to compare its tree: run tools/check.sh on main"
+    exit 3
+fi
 if [[ $(git rev-parse 'FETCH_HEAD^{tree}') != "$tree" ]]; then
     say "main's tree differs from the gated tree (main moved?): run tools/check.sh on main"
     exit 3

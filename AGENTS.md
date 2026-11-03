@@ -155,7 +155,7 @@ that date motivates us but never justifies cutting corners.
 
 - **Agents merge their own PRs** (D-100). The owner watches and can step in at any time, but is never a blocker:
   don't wait for approval. Merge only when all of these hold:
-  1. **Checks pass on what will land.** `tools/merge.sh <pr>` (D-273) runs the merge gate, which puts the full checks
+  1. **Checks pass on what will land.** `tools/merge.sh <pr>` (D-273) runs the merge gate, which runs the full checks
      on the PR merged onto the latest `main` and posts the result on the PR, then merges only if the gate passed. Never
      pipe the gate before a merge: that merged #868 after a failed gate. Run it with
      `GATE_SIGNATURE='_Written by <agent name> (AI agent)._'`, so its comments are signed (rule 6). For several PRs in
