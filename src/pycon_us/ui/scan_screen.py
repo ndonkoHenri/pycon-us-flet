@@ -148,8 +148,10 @@ def ScanScreen(
         source: The tool's ``__name__``, for View source (D-461).
         on_badge: Turns a badge into the result to show; awaited one at a time.
         context: A line under the bar, e.g. "Decorators, Wed 9:00 AM", or a control
-            in its place: the Lead scanner's "For: Example Corp" chip (LEAD-06).
-        actions: The tool's own buttons, under the field ("Add note").
+            in its place: the Lead scanner's "For: Example Corp" chip (LEAD-06). At
+            large text it follows the result and its buttons (D-475).
+        actions: The tool's own buttons, under the field ("Add note"); at large text
+            under the result, which follows the field (D-475).
         paused: Why scanning is paused, under the field ("Paused while the note
             is open"), while one of the tool's dialogs or sheets is open: submits
             are dropped with their text (D-471). None scans.
@@ -270,11 +272,11 @@ def ScanScreen(
     )
     # At large text the chip leaves the bar for the body, where its words wrap and
     # the title keeps its room (#752).
-    body: list[ft.Control] = [padded(chip)] if prefs.time_above else []
+    status: list[ft.Control] = [padded(chip)] if prefs.time_above else []
     if isinstance(context, ft.Control):
-        body.append(padded(context))
+        status.append(padded(context))
     elif context:
-        body.append(
+        status.append(
             padded(
                 ft.Text(
                     context,
@@ -284,36 +286,46 @@ def ScanScreen(
             )
         )
     if not capabilities.SCANNER:  # the E1 preview takes this place (#726)
-        body.append(padded(CameraUnavailable()))
-    body += [
-        padded(ResultPanel(shown=shown, clear_after=clears_in)),
-        *([padded(note)] if note is not None else []),
-        padded(
-            named(
-                "scan.entry",
-                ft.TextField(
-                    ref=query.ref,
-                    value=query.value,
-                    on_change=query.changed,
-                    on_submit=submit,
-                    label=ENTRY_LABEL,
-                    autofocus=True,  # a HID scanner types into it from the start
-                    autocorrect=False,
-                    enable_suggestions=False,
-                    capitalization=ft.TextCapitalization.NONE,
-                    # Android's Enter then keeps the focus and the keyboard; iOS's
-                    # still takes the focus, so the refocus calls stay (F274, U254).
-                    text_input_action=ft.TextInputAction.UNSPECIFIED,
-                    # Never off, unlike a SearchField's (D-330): Flutter applies it
-                    # a frame after the patch, so the focus asked for on Back would
-                    # come first and be dropped (F288, D-438).
-                    helper=why_paused or (ft.Text(SCAN_AGAIN) if too_soon else None),
-                ),
-            )
-        ),
-        *(padded(action) for action in for_result),
-        *(padded(action) for action in actions or ()),
-    ]
+        status.append(padded(CameraUnavailable()))
+    # Keyed, or the body's children are matched by position: when the text size flips
+    # the order while the screen is open, the field would be rebuilt and lose its
+    # focus, and a HID scanner's next scan would go nowhere.
+    panel = padded(ResultPanel(shown=shown, clear_after=clears_in))
+    panel.key = "scan.panel"
+    field = padded(
+        named(
+            "scan.entry",
+            ft.TextField(
+                ref=query.ref,
+                value=query.value,
+                on_change=query.changed,
+                on_submit=submit,
+                label=ENTRY_LABEL,
+                autofocus=True,  # a HID scanner types into it from the start
+                autocorrect=False,
+                enable_suggestions=False,
+                capitalization=ft.TextCapitalization.NONE,
+                # Android's Enter then keeps the focus and the keyboard; iOS's
+                # still takes the focus, so the refocus calls stay (F274, U254).
+                text_input_action=ft.TextInputAction.UNSPECIFIED,
+                # Never off, unlike a SearchField's (D-330): Flutter applies it
+                # a frame after the patch, so the focus asked for on Back would
+                # come first and be dropped (F288, D-438).
+                helper=why_paused or (ft.Text(SCAN_AGAIN) if too_soon else None),
+            ),
+        )
+    )
+    field.key = "scan.field"
+    result_note_line = [padded(note)] if note is not None else []
+    buttons = [padded(action) for action in [*for_result, *(actions or ())]]
+    if prefs.time_above:
+        # The field and the result first (D-475): the keyboard scrolls a focused field
+        # into view, and below the chip, the context and the camera note it sat four
+        # screens down, so the screen opened at its end and the result's heading was
+        # above the bar (#955). The rest follows, a scroll away.
+        body = [field, panel, *result_note_line, *buttons, *status]
+    else:
+        body = [*status, panel, *result_note_line, field, *buttons]
     return AppScaffold(
         title=title,
         source=source,
@@ -382,6 +394,7 @@ def ResultPanel(*, shown: Shown | None, clear_after: float | None = None) -> ft.
                     key=str(serial),
                     tokens=tokens,
                     dimmed=age >= DIM_AFTER,
+                    large_text=prefs.time_above,
                 ),
                 duration=prefs.motion_ms(SWITCH_MS),
                 reverse_duration=prefs.motion_ms(SWITCH_MS),
