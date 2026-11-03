@@ -5,7 +5,7 @@ queue sheet:
 
 - a level-1 heading "Find attendee" with Close (``coc.search.close``);
 - "Search by name" (``coc.search``), focused as it opens, pinned above the rows;
-- before typing, "Type a name to search the attendee directory."; no match, "No
+- before typing, "Type a name to search the attendee list."; no match, "No
   attendees match “x”" with Clear search; otherwise a live line ("3 attendees", or
   "Showing 25. Refine your search." past the cap, ``coc.search.more``) and the rows,
   one stop each (``coc.search.row.<index>``, never the access code): the name,
@@ -41,7 +41,7 @@ from pycon_us.ui.staff_picker import CLEAR_SEARCH, ROW_PADDING, no_match
 FIND = "Find by name"
 TITLE = "Find attendee"
 SEARCH_LABEL = "Search by name"
-BEFORE = "Type a name to search the attendee directory."
+BEFORE = "Type a name to search the attendee list."
 MORE = f"Showing {LIMIT}. Refine your search."
 PREFIX = "coc.search"
 """The sheet's identifiers' start (decisions §M)."""
@@ -262,7 +262,7 @@ def find_button(reason: str | None, on_click: Callable[[], object]) -> ft.Contro
     """Return "Find by name", under the badge field; disabled while ``reason`` holds.
 
     A disabled button's tooltip is not read, so its name says why (#759's words:
-    "Loading attendee directory…", "CoC capture needs a connection").
+    "Loading attendee list…", "CoC capture needs a connection").
 
     Args:
         reason: Why the search can't open now, or None.
