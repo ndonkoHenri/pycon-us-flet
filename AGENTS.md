@@ -131,25 +131,8 @@ that date motivates us but never justifies cutting corners.
 - **Screenshots** (D-162): `gh` can't upload images, so they go to the orphan branch `pr-assets`, one folder per PR,
   and the PR embeds them. Look at every image first: no tokens, personal data, notifications or real badges (it all
   stays in history and becomes public with the repo). Keep it to the images the PR needs, about 1 MB per PR.
-  Upload through the GitHub contents API (D-168), which needs no checkout and works from any worktree. Use
-  URL-safe file names (letters, digits, `-`). The subshell stops at the first failure, so nothing stale is uploaded:
-  ```sh
-  ( set -euo pipefail
-    repo=ndonkoHenri/pycon-us-flet; pr=<pr>; dir=$(mktemp -d <your-scratch>/shots.XXXXXX)
-    for f in <shots>.png; do
-      name=$(basename "$f"); cp "$f" "$dir/$name"; sips -Z 1000 "$dir/$name" > /dev/null
-      base64 -i "$dir/$name" | tr -d '\n' > "$dir/$name.b64"
-      # An existing file needs its current blob sha (re-uploading after a timeout, or replacing an image).
-      # For a new file the lookup fails and prints the 404 body on stdout, so its output is dropped.
-      sha=$(gh api "repos/$repo/contents/$pr/$name?ref=pr-assets" --jq .sha 2>/dev/null) || sha=""
-      gh api -X PUT "repos/$repo/contents/$pr/$name" -f branch=pr-assets -f message="Add $name for #$pr" \
-        -F content=@"$dir/$name.b64" ${sha:+-f} ${sha:+sha=$sha} --jq .content.path
-    done )
-  ```
-  Each upload is its own commit on `pr-assets`; never force-push it. If a call fails, look before retrying: the file may
-  already be there. Then write
-  `![Android, light](https://github.com/ndonkoHenri/pycon-us-flet/blob/pr-assets/<pr>/<file>.png?raw=true)` in the PR
-  body or a comment: it shows in the browser for signed-in users who can see the repo.
+  `tools/pr_shots.sh <pr> <shots>.png` uploads them (D-168, from any worktree) and prints the Markdown for the PR body
+  or a comment, which shows in the browser for signed-in users who can see the repo. Never force-push `pr-assets`.
 
 ### Reviews and merging
 
@@ -210,26 +193,8 @@ that date motivates us but never justifies cutting corners.
   or PR, so it's on the board at once. It can fail with "Content already exists in this project" when the auto-add
   wins the race; the issue or PR is created anyway, so don't retry it: drop the flag or use `gh project item-add`.
 - **Set two statuses yourself**, on the issue and on its PR: In progress when you start, and In review when the
-  PR is ready (no workflow sets In review). `gh` needs the `project` scope (`gh auth refresh -s project`). The
-  ids below are stable; if the Project is ever rebuilt, look them up again with the first two commands.
-
-  ```sh
-  gh project view 2 --owner ndonkoHenri --format json --jq .id   # project id
-  gh project field-list 2 --owner ndonkoHenri --format json \
-    --jq '.fields[] | select(.name == "Status") | {id, options}'   # Status field id and option ids
-  # The item id of an issue or PR (adds it to the Project if it isn't there yet):
-  item=$(gh project item-add 2 --owner ndonkoHenri --format json --jq .id \
-    --url https://github.com/ndonkoHenri/pycon-us-flet/issues/<n>)   # or .../pull/<n>
-  gh project item-edit --project-id PVT_kwHOBeZJHs4BmmHp --id "$item" \
-    --field-id PVTSSF_lAHOBeZJHs4BmmHpzhlOeUE --single-select-option-id <option id>
-  ```
-
-  | Status | Option id |
-  |---|---|
-  | Todo | `876879f0` |
-  | In progress | `921d2845` |
-  | In review | `0361c618` |
-  | Done | `40195126` |
+  PR is ready (no workflow sets In review): `tools/board.sh <n> in-progress`, `tools/board.sh <n> in-review`. `gh`
+  needs the `project` scope (`gh auth refresh -s project`).
 - Each phase has a pinned status issue (`P0 status`, ...). Post a short weekly update there: done, next, blocked,
   decisions needed.
 
