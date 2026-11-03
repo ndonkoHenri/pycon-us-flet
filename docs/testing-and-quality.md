@@ -665,7 +665,7 @@ def test_declared_colour_pairs_are_readable(dark, high_contrast):
   `accessibility-focused`, `state-description` and `hint`). Name your own emulator's serial, never another agent's.
   Like `uiautomator dump`, it makes Flutter report a screen reader (F72). Its parsing is tested on a recorded dump
   (`tests/test_a11y_tree.py`).
-- **200 % text.** Once per phase exit, the P1+ flows run with the largest text: Android `adb shell settings put system font_scale 2.0`; iOS `xcrun simctl ui <udid> content_size accessibility-extra-extra-extra-large`. A Flutter overflow error fails the run (§5.1). Confirm in the first such run that overflow is reported this way.
+- **200 % text.** Once per phase exit, the P1+ flows run with the largest text: `uv run python -m tools.device prefs <device> --text max --bold` (Android's largest is 200 %; `--contrast` and `--dark` for the other modes, `--reset` after, and iOS reads Bold Text at launch). A Flutter overflow error fails the run (§5.1). Confirm in the first such run that overflow is reported this way.
 - **Reduced motion.** Flows run with animations disabled (§5.2), exercising the reduced-motion path.
 
 ### 7.3 Manual, at every phase exit
