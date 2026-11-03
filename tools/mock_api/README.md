@@ -311,6 +311,8 @@ uv run python -m tools.mock_api.server                  # this machine, its simu
 uv run python -m tools.mock_api.server --host 0.0.0.0   # also phones on the same Wi-Fi
 ```
 
+Beside other agents, `uv run python -m tools.mock_api.own start` keeps one on your checkout's own port ([`docs/development.md`](../../docs/development.md) §6).
+
 | Option | Default | What it does |
 |---|---|---|
 | `--host` | `127.0.0.1` | The IPv4 address to listen on. The default serves only this machine, which the iOS simulator and the Android emulator (`10.0.2.2`) reach too; `0.0.0.0` also serves the LAN. Nothing listens on a public interface unless asked. |
