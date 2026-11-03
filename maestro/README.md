@@ -469,6 +469,13 @@ Each step's screenshot (`rail-01-now` … `about-04-share`) lands in the run's
 content widths (D-305) and the sheets. Android saves them as shown; iOS saves a
 landscape screen in portrait, so turn it a quarter clockwise to read it.
 
+**On iOS, give `rail_tabs` a fresh boot.** A simulator that had run the rest of the
+flows for about 90 minutes stopped turning: Maestro read the device as landscape while
+the app stayed laid out in portrait, so everything below 402 pt left the tree and
+`get_started.yaml` failed on Welcome with Get started on screen. It failed 3 of 3 there,
+and with a build from an older Flet pin too; after a reboot of that simulator, or on a
+new one, it passed 3 of 3 (#1005). `xcrun simctl shutdown` then `boot` before this flow.
+
 What the flows met on the way, now handled in the shared subflows:
 - On an iPad in landscape the keyboard covers the middle of the screen, where a scroll
   swipes: `set_scene.yaml` closes it after the fake clock, or the feed URL stayed out
