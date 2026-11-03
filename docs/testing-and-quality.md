@@ -698,6 +698,14 @@ Measured by hand at each phase exit, always on **release** builds (`flet build a
 | Star tap, search keystroke and day switch latency | median handler → patch within one frame (16 ms) for star taps and keystrokes on the busiest day on the emulator (day switches recorded); the iPhone's numbers recorded (D-159) | D-159: the app's `<action>-in` / `patched` log lines for Python's share, and a screen recording for the screen (the keystroke's character, the tab indicator, or for a star a keystroke at the start that maps the video clock onto the log). `docs/spikes/02-day-list/drive_android.py` runs it. Baseline: star and keystroke 3 ms, day switch 2 ms (S2); at the current pin the reproducer's star reads 4 ms (§8.1) |
 | App size | recorded, not gated | APK and AAB size; download size with `bundletool get-size total`; IPA size from TestFlight |
 
+**Reading a recording.** Record, then `tools/frames.py` gives each colour change at a pixel, or each change in a region, and can save those frames (#860, #880). It finds colours and first frames; S2's `drive_android.py` keeps the star, search and day latencies.
+
+```bash
+adb -s <serial> shell screenrecord --size 540x1200 --bit-rate 8000000 /sdcard/rec.mp4   # Ctrl-C ends it; then adb pull
+xcrun simctl io <udid> recordVideo --codec=h264 rec.mp4                                 # Ctrl-C ends it
+uv run --no-project --with av --with numpy --with pillow python -m tools.frames rec.mp4 --point 270,600 --dump build/frames
+```
+
 **Calibrate every emulator run in its own window (D-453).** Fixed numbers can't say whether the emulator is slow or the app grew: on a quiet host in 2026-11, S2's reproducer itself read 1.9× D-112's `TotalTime` and 1.7× S2's cold start. So the reproducer runs beside the app, at the same pin and on the same boot:
 
 1. Build first, then boot. Build the app's release APK, and the reproducer in a throwaway copy under `build/` (the app's pub cache and `.flet-src`, development.md §5.8). The copy needs `src/assets` as well as `src/pycon_us`, since `config.load_year()` checks the map plans' images; the spike's own notes predate that.
