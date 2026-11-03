@@ -8,6 +8,7 @@ with ``pump()`` until a finder matches (or stops matching), and flows tap by fin
 """
 
 import asyncio
+import contextlib
 import os
 import shutil
 import time
@@ -17,7 +18,7 @@ from pathlib import Path
 import flet as ft
 import flet.testing as ftt
 from flet.testing import Finder
-from flet.testing.remote_tester import RemoteTester
+from flet.testing.remote_tester import RemoteTester, RemoteTesterError
 
 STEP = ft.Duration(milliseconds=100)
 """How long each poll lets the app run before looking again."""
@@ -296,9 +297,12 @@ async def answer_primer_not_now(t: RemoteTester) -> None:
     """Answer the reminders primer with Not now, after a fresh install's first star (D-395).
 
     The sheet opens only while the OS can still ask: a fresh install on Android 13 or later,
-    or on iOS, as ``flet test`` gives the flows' devices. It covers what the flow taps next. Not now asks the OS nothing and leaves session reminders off. A tap while
-    the sheet slides in is lost, as a SnackBar's is (``tap_until()``), and a tap as it
-    slides out finds the button disposed, so each look waits for the sheet to settle.
+    or on iOS, as ``flet test`` gives the flows' devices. It covers what the flow taps
+    next. Not now asks the OS nothing and leaves session reminders off.
+
+    A tap while the sheet slides in is lost, as a SnackBar's is (``tap_until()``), so the
+    tap repeats until the sheet has gone. The button can go between the look and a repeated
+    tap, which then fails with nothing to tap, so only the next look decides.
     """
     await wait_for_id(t, "reminder.primer")
     deadline = time.monotonic() + TIMEOUT
@@ -310,7 +314,8 @@ async def answer_primer_not_now(t: RemoteTester) -> None:
         if time.monotonic() > deadline:
             await screenshot_on_failure()
             raise AssertionError(f"the primer's Not now: no effect after {TIMEOUT} s")
-        await t.tap(button.first)
+        with contextlib.suppress(RemoteTesterError):
+            await t.tap(button.first)
 
 
 async def tap_back_arrow(t: RemoteTester) -> None:
