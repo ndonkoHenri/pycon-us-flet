@@ -128,7 +128,8 @@ tags:
     timeout: 15000
 - assertVisible:
     id: scan.edit  # the text read is in the panel, not kept in the field (D-473)
-# A long paste shows its start and an ellipsis, and the panel says no more (#965).
+# A long paste shows its start and an ellipsis, and the panel says no more (#965): the
+# lower-case run before the ellipsis cannot hold THE-END, where the text finishes.
 - runFlow:
     file: ../subflows/scan.yaml
     env:
@@ -136,11 +137,8 @@ tags:
 - extendedWaitUntil:
     visible:
       id: scan.result
-      text: "(?s)Not a badge code\\nthis-is-a-long-text.*\u2026\\nCheck the code.*"
+      text: "(?s)Not a badge code\\nthis-is-a-long-text[a-z-]*…\\nCheck the code.*"
     timeout: 15000
-- assertNotVisible:
-    id: scan.result
-    text: "(?s).*THE-END.*"
 - assertVisible:
     id: door.headcount
     text: "2 checked in for this session"
