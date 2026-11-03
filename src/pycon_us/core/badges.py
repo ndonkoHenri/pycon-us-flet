@@ -7,12 +7,15 @@ the access code is segment 0; Door check and Swag pickup send segment 1 as
 ``badge_validator``; the Lead scanner sends the **last** segment; CoC sends the code
 only. ``Cooldown`` accepts one result per code every 4 s, since a held code is reported
 about 3.6 times a second (D-293). Both are pure: the caller passes the time in.
+``parse_badge()`` refuses what cannot be a badge, a URL or a contact card from a QR
+code that is not one (D-477).
 ``ScanResult`` is what a tool's handler returns for the scan screen's result panel
 (LEAD-01, LEAD-09; ``ui/scan_screen.py``), data only: the panel picks the colour and
 icon from its ``ScanOutcome``, and draws its ``Tag`` list (Door check's dietary needs
 and allergy, DOOR-05) as chips.
 """
 
+import re
 from dataclasses import dataclass, field
 from enum import StrEnum
 
@@ -38,20 +41,36 @@ class Badge:
     lead_validator: str
 
 
+CODE_SHAPE = re.compile(r"[A-Za-z0-9._~-]+")
+"""What an access code is made of: the URL-unreserved characters (D-477). The original
+app puts the code unencoded into request paths, queries and storage keys, so the
+server's codes survive that; a code outside this set would need a one-line change."""
+
+_CONTROL = re.compile(r"[\x00-\x1f\x7f-\x9f]")
+"""A newline or other control character: a contact card or a multi-line text, never a
+badge (D-477)."""
+
+
 def parse_badge(raw: str) -> Badge | None:
-    """Read a badge payload as Ionic's pages split it (LEAD-03).
+    """Read a badge payload as Ionic's pages split it (LEAD-03), refusing non-badges.
 
     Args:
         raw: What the scanner or the manual field gave; surrounding whitespace (a HID
             scanner's trailing newline) is ignored.
 
     Returns:
-        The badge, or None when it is not one: no ``:``, or an empty access code (the
-        screen says "Not a badge code"). Empty validators are kept as ``""``: the
-        server decides about them.
+        The badge, or None when it is not one (the screen says "Not a badge code"): no
+        ``:``; an access code that is empty or has a character outside ``CODE_SHAPE``;
+        a control character anywhere (a vCard); or ``//`` right after the first ``:``
+        (a URL, ``https://...``). Empty validators are kept as ``""``: the server
+        decides about them. A ``mailto:`` or ``tel:`` text still passes: it has a
+        badge's shape, and the server answers "not registered" (D-477).
     """
-    code, colon, rest = raw.strip().partition(":")
-    if not colon or not code:
+    text = raw.strip()
+    code, colon, rest = text.partition(":")
+    if not colon or not CODE_SHAPE.fullmatch(code):
+        return None
+    if rest.startswith("//") or _CONTROL.search(text):
         return None
     segments = rest.split(":")
     return Badge(code, segments[0], segments[-1])

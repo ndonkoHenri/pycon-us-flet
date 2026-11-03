@@ -32,6 +32,19 @@ from tools.mock_api.state import MockState
         ("CODE:", Badge("CODE", "", "")),
         ("CODE::last", Badge("CODE", "", "last")),
         ("CODE:first:", Badge("CODE", "first", "")),
+        # The shapes a badge may carry beyond the mock's (D-477): dots, dashes, case.
+        ("SIM12345:SIMULATED", Badge("SIM12345", "SIMULATED", "SIMULATED")),
+        ("a1.B2_c3~d-4:x", Badge("a1.B2_c3~d-4", "x", "x")),
+        # What D-471 says the field must not join, and `parse_badge()` still reads.
+        ("MOCK0002:v2MOCK0003:v3", Badge("MOCK0002", "v2MOCK0003", "v3")),
+        # A validator may hold anything but a control character or a leading "//".
+        ("CODE:a/b=c+d%20", Badge("CODE", "a/b=c+d%20", "a/b=c+d%20")),
+        ("CODE:x//y", Badge("CODE", "x//y", "x//y")),
+        # Badge-shaped, so left to the server to call "Not registered" (D-477).
+        (
+            "mailto:ada@example.org",
+            Badge("mailto", "ada@example.org", "ada@example.org"),
+        ),
     ],
 )
 def test_parse_badge_splits_as_ionic(raw: str, badge: Badge) -> None:
@@ -43,6 +56,59 @@ def test_parse_badge_splits_as_ionic(raw: str, badge: Badge) -> None:
 def test_parse_badge_refuses_what_is_not_a_badge(raw: str) -> None:
     """No colon or an empty access code is not a badge ("Not a badge code")."""
     assert parse_badge(raw) is None
+
+
+@pytest.mark.parametrize(
+    "raw",
+    [
+        "https://example.org/a",
+        "https://example.org/a:b",
+        "http://localhost:8080/x",
+        "ftp://host/file",
+        "file:///etc/hosts",
+        "CODE://v",
+        "BEGIN:VCARD\nFN:Ada",
+        "BEGIN:VCARD\r\nFN:Ada\r\nEND:VCARD",
+        "MOCK0001:v4l1d01\nMOCK0002:v4l1d02",
+        "CODE:val\x00ue",
+        "CODE:val\x1bue",
+        "CODE:va\x85lue",
+    ],
+)
+def test_parse_badge_refuses_a_url_and_a_contact_card(raw: str) -> None:
+    """A URL ("//" after the first colon) or any control character is not a badge (D-477, #978)."""
+    assert parse_badge(raw) is None
+
+
+@pytest.mark.parametrize(
+    "raw",
+    [
+        "MOCK 0001:v1",
+        "MOCK/0001:v1",
+        "MOCK?0001:v1",
+        "MOCK&0001:v1",
+        "MOCK#0001:v1",
+        "MOCK%200001:v1",
+        "MOCK@0001:v1",
+        "M\u00d6CK0001:v1",
+        "Total items:5",
+        "WIFI;T:WPA",
+    ],
+)
+def test_parse_badge_refuses_a_code_outside_the_url_unreserved_set(raw: str) -> None:
+    """An access code of anything but letters, digits and ``._~-`` is not a badge (D-477, #978)."""
+    assert parse_badge(raw) is None
+
+
+@given(
+    st.from_regex(r"[A-Za-z0-9._~-]{1,20}", fullmatch=True),
+    st.text(alphabet="vV01:-_ "),
+)
+def test_parse_badge_accepts_any_code_of_the_set(code: str, rest: str) -> None:
+    """Whatever validators follow, a code of the set with no "//" or control character is read."""
+    badge = parse_badge(f"{code}:{rest}")
+    assert badge is not None
+    assert badge.code == code
 
 
 def test_the_parts_are_what_the_mock_api_checks() -> None:
