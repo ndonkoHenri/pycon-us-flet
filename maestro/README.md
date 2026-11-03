@@ -425,6 +425,16 @@ fails under `tools/check.sh`. A new `text:` in those flows needs its words there
   mid-field, so it taps and erases twice. A tap on a moving list only stops it: wait for
   the animation, and tap again if the state didn't change (`my_schedule_overlap.yaml`).
 
+## The staff sweep
+
+`maestro/sweeps/` isn't part of the workspace: `maestro test maestro` doesn't run it. It photographs each staff tool's states for a person to read (#828, #837), asserting that each state is reached and nothing about its words. `tools/sweep.py` starts your own mock, then for each mode signs in afresh at the default text size, sets the device and runs the tour:
+
+```bash
+uv run python -m tools.sweep --device <id> --modes default max dark contrast dark-contrast max-dark-contrast
+```
+
+Images land in `build/sweep/<mode>/`, under each run's `takeScreenshot/`. A mode that fails doesn't stop the rest, and the device goes back to its defaults. It clears the app's data, so use a device of your own. It leaves your mock running: `uv run python -m tools.mock_api.own stop` ends it.
+
 ## Tablets and landscape (#461)
 
 `rail_tabs` and `about_app` (tag `tablet`) run on a tablet in both orientations and on

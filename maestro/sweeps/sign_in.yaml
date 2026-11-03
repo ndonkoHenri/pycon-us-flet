@@ -1,0 +1,14 @@
+# The first step of each staff sweep mode (tools/sweep.py): a fresh install signed in at the default
+# text size, as all@example.com, whose account has every staff tool. At the largest text
+# the flows can't set their scene (maestro/README.md, "Large text").
+appId: io.github.ndonkohenri.confcompanion
+name: Sign in for the staff sweep
+tags:
+  - sweep
+---
+- runFlow: ../subflows/launch_fresh.yaml
+- runFlow:
+    file: ../subflows/sign_in_mock.yaml
+    env:
+      EMAIL: all@example.com
+      PASSWORD: mock-all

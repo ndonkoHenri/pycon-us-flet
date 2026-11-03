@@ -46,6 +46,7 @@
 | Set up a worktree of this repo | `tools/setup_worktree.sh`, then §5.0 to a device | §5.8 |
 | Build, debug or test while another build may run (parallel agents) | Prefix each command with `PUB_CACHE=$PWD/build/pub-cache`, which `tools/setup_worktree.sh` made | §5.8 |
 | Upload a PR's screenshots; set a board status | `tools/pr_shots.sh <pr> <shots>.png`; `tools/board.sh <n> in-progress` (or `in-review`) | AGENTS.md |
+| Photograph the staff tools per text size and appearance | `uv run python -m tools.sweep --device <id> --modes default max` | `maestro/README.md` |
 | Check the feature matrix after editing it (ids, vocabulary, counts; also run by `tests/test_check_matrix.py`) | `uv run python -m tools.check_matrix` (`--breakdown` for the fuller counts) | — |
 | Check the live public feed (what `feed-check.yml` runs; no weekly run while the repo is private, D-273) | `uv run python -m tools.check_feed`, or `gh workflow run feed-check.yml --ref main` | §7.3 |
 

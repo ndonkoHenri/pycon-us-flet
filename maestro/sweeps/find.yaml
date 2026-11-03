@@ -1,0 +1,16 @@
+# Bring ID into view on a scan screen, whichever way it lies: at large text the screen
+# leads with its badge field and what headed it sits below (D-475), and it can open
+# scrolled to that field (#828).
+appId: io.github.ndonkohenri.confcompanion
+---
+- scrollUntilVisible:
+    element:
+      id: ${ID}
+    direction: DOWN
+    timeout: 30000
+    optional: true
+- scrollUntilVisible:
+    element:
+      id: ${ID}
+    direction: UP
+    timeout: 60000
