@@ -68,6 +68,9 @@ SWAG_CATEGORIES = tuple(
 FIELD_TEXT = "not-a-badge"
 """What the flows send as not a badge: the panel shows it as the title (D-473)."""
 
+URL_TEXT = "https://example.org/a:b"
+"""A URL the Lead flow sends: it has colons and is still not a badge (D-477)."""
+
 LONG_TEXT = (
     "this-is-a-long-text-with-no-colon-a-pasted-sentence-or-a-url-that-goes-on-and-on"
     "-past-the-two-lines-the-panel-gives-it-and-ends-with-THE-END"
@@ -249,6 +252,7 @@ def test_lead_capture_expects_the_app_s_words() -> None:
             panel(named(ScanOutcome.ACCEPTED, CAPTURED, lead_row(ADA))),
             panel(named(ScanOutcome.ACCEPTED, CAPTURED, lead_row(GRACE))),
             panel(named(ScanOutcome.DUPLICATE, ALREADY, lead_row(ADA))),
+            panel(replace(NOT_A_BADGE, title=URL_TEXT)),
             panel(replace(NOT_A_BADGE, title=FIELD_TEXT)),
             FIELD_TEXT,
         ],
