@@ -8,6 +8,9 @@
 //   to new installs by default); iOS has no such card. Below 31 nothing needs a grant
 //   (`exact_allowed()` is true). API 31 to 33 grant it by default; those images were not
 //   run (docs/development.md, "The OS floors").
+// - fieldHint: a text field's label and helper line reach the accessibility tree, so the
+//   flow can read them. iOS always; Android from API 28, where Flutter's bridge sets the
+//   node's hint text. Below it the field is an unnamed edit box (#952, #968).
 //
 // The API level is `ANDROID_API`, which the runner passes with `-e ANDROID_API=<level>`
 // (maestro/README.md, "Android API levels"): a flow cannot run `adb`. It defaults to 36,
@@ -21,5 +24,6 @@ output.os = {
   api: api,
   notificationPrompt: !android || api >= 33,
   exactAlarmCard: android && api >= 34,
+  fieldHint: !android || api >= 28,
 };
 console.log("os offers: " + JSON.stringify(output.os));
