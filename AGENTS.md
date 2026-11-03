@@ -26,7 +26,9 @@ that date motivates us but never justifies cutting corners.
    [`docs/development.md`](docs/development.md), [`docs/testing-and-quality.md`](docs/testing-and-quality.md).
 4. [`docs/feature-matrix.md`](docs/feature-matrix.md) for what a feature id means and its gotchas;
    [`docs/roadmap.md`](docs/roadmap.md) for the phases. GitHub issues are the live task list.
-5. `docs/research/` holds the raw analysis of the original app. `excluded/` holds a read-only clone of it
+5. [`tools/README.md`](tools/README.md) lists the scripts, for setup, devices, merging and measuring: check it before
+   writing a throwaway one.
+6. `docs/research/` holds the raw analysis of the original app. `excluded/` holds a read-only clone of it
    (gitignored); read it, never edit it.
 
 ## Principles

@@ -28,7 +28,7 @@ conference data until the 2027 feed is published.
 - **P0 Foundations and P1 Attendee core** are done.
 - **P2 Conference companion** is built; what remains is mainly its exit checks on devices, and pull to refresh, which
   waits on a fix in Flet.
-- **P3 Accounts & staff tools** is built against the mock; what remains is its exit checks, and the scanner's camera
+- **P3 Accounts & staff tools** is built against the mock, at version 0.4.0. What remains is the scanner's camera
   preview, which waits on a barcode-scanner extension for Flet. Until then, badge codes are typed in.
 - **P4 Showcase** is what comes next: the performance pass, the accessibility audit, a View source action on each
   screen, the 2027 data and the licence and trademark review. The repository is private for now, and making it public
