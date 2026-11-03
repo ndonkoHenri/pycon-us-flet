@@ -3,11 +3,14 @@
 import json
 from pathlib import Path
 
-from pycon_us.dev_options import DEV_UNLOCKED
+from pycon_us.dev_options import DEV_FAKE_NOW, DEV_MOCK_API_URL, DEV_UNLOCKED
+from pycon_us.reminder_settings import ReminderSettings
+from pycon_us.services.pref_keys import DEV, ONBOARDED, REMINDERS
 from tools import demo_videos
 from tools.demo_videos import (
     CLIPS,
     FLOWS,
+    _output_times,
     merged_prefs,
     scene_prefs,
     still_cuts,
@@ -19,16 +22,26 @@ MAESTRO = Path(demo_videos.__file__).resolve().parents[1] / "maestro"
 def test_a_scene_never_stores_the_developer_unlock() -> None:
     """Locked, neither More nor About this app has a Developer row, in any scene."""
     for mock_url in (None, "http://localhost:8100"):
-        dev = json.loads(scene_prefs(mock_url)["flutter.pycon.dev"])
+        dev = json.loads(scene_prefs(mock_url)[f"flutter.{DEV.key}"])
         assert DEV_UNLOCKED not in dev
 
 
 def test_only_the_staff_scene_stores_the_mock_s_url() -> None:
     """A scene with no mock shows no sign-in row; its clock is set either way."""
-    assert "mock_api_url" not in json.loads(scene_prefs(None)["flutter.pycon.dev"])
-    dev = json.loads(scene_prefs("http://localhost:8100")["flutter.pycon.dev"])
-    assert dev["mock_api_url"] == "http://localhost:8100"
-    assert dev["fake_now"] == demo_videos.FAKE_NOW
+    plain = json.loads(scene_prefs(None)[f"flutter.{DEV.key}"])
+    assert DEV_MOCK_API_URL not in plain
+    assert plain[DEV_FAKE_NOW] == demo_videos.FAKE_NOW
+    dev = json.loads(scene_prefs("http://localhost:8100")[f"flutter.{DEV.key}"])
+    assert dev[DEV_MOCK_API_URL] == "http://localhost:8100"
+    assert dev[DEV_FAKE_NOW] == demo_videos.FAKE_NOW
+
+
+def test_a_scene_s_keys_and_values_are_the_ones_the_app_reads() -> None:
+    """A renamed preference fails here, rather than filming Welcome or the real clock."""
+    scene = scene_prefs(None)
+    assert set(scene) == {f"flutter.{p.key}" for p in (ONBOARDED, REMINDERS, DEV)}
+    stored = json.loads(scene[f"flutter.{REMINDERS.key}"])
+    assert ReminderSettings.from_stored(stored).primer == "not_now"
 
 
 def test_a_scene_replaces_the_app_s_keys_and_keeps_the_os_s() -> None:
@@ -55,7 +68,18 @@ def test_every_clip_s_flows_exist_and_stay_out_of_the_test_workspace() -> None:
     for clip in CLIPS:
         for name in (*clip.flows, *([clip.setup] if clip.setup else [])):
             assert (FLOWS / name).is_file()
-    assert "demo" not in (MAESTRO / "config.yaml").read_text()
+    config = (MAESTRO / "config.yaml").read_text()
+    globs = [line for line in config.splitlines() if line.startswith("  - ")]
+    assert globs and not any("demo" in line for line in globs)
+
+
+def test_each_clip_frame_shows_the_recording_s_time_in_order() -> None:
+    """The kept stretches run one after another at the clip's frame rate, nothing doubled."""
+    times = _output_times([(1.0, 1.1), (5.0, 5.1)])
+    rate = demo_videos.OUTPUT_FPS
+    assert times == [1.0 + i / rate for i in range(3)] + [
+        5.0 + i / rate for i in range(3)
+    ]
 
 
 def test_the_staff_clip_says_mock_data_in_its_name() -> None:
@@ -64,9 +88,12 @@ def test_the_staff_clip_says_mock_data_in_its_name() -> None:
 
 
 def test_no_demo_flow_goes_near_the_developer_screen() -> None:
-    """No flow opens it or taps its rows: a frame of it would reach people outside."""
+    """Only a check that it's absent may name it: a frame would reach people outside."""
     for flow in FLOWS.rglob("*.yaml"):
-        text = flow.read_text()
-        assert "open_developer" not in text
-        assert "developer." not in text
-        assert "about_app" not in text
+        for line in flow.read_text().splitlines():
+            if line.lstrip().startswith("#") or "assertNotVisible" in line:
+                continue
+            lowered = line.lower()
+            assert "developer" not in lowered, line
+            assert "about_app" not in lowered, line
+            assert "about this app" not in lowered, line

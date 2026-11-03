@@ -7,7 +7,7 @@ Usage, from the repo's root (uv fetches the video readers, which nothing else ne
     uv run --with av --with numpy --with pillow python -m tools.demo_videos sheets CLIP DIR
         [--fps 2]
 
-``record`` makes a simulator of its own and a clean mock, films ``maestro/demo/`` and writes
+``record`` makes a simulator of its own and restarts this checkout's mock, clean, then films ``maestro/demo/`` and writes
 each clip, trimmed, to ``--out``, then deletes the simulator and stops the mock. ``--build``
 builds the app first; without it the present build must hold this tree's Python.
 
@@ -161,7 +161,7 @@ def _simctl(*args: str) -> str:
 
 
 class FlowFailed(Exception):
-    """A flow failed, so its clip wasn't made; the message holds the end of its output."""
+    """A flow failed; the message holds the end of its output."""
 
 
 class Stage:
@@ -232,8 +232,12 @@ class Stage:
             time.sleep(1.0)
         finally:
             recorder.send_signal(signal.SIGINT)  # finalises the file
-            recorder.wait(timeout=60)
-            _simctl("ui", self.udid, "content_size", "large")
+            try:
+                recorder.wait(timeout=60)
+            except subprocess.TimeoutExpired:
+                recorder.kill()
+            finally:
+                _simctl("ui", self.udid, "content_size", "large")
 
 
 def _gray(frame: Any) -> Any:
@@ -260,7 +264,9 @@ def _changes(raw: Path) -> tuple[list[float], float]:
             if last is not None and np.mean(np.abs(gray - last) > 16) > 0.0001:
                 changes.append(end)
             last = gray
-    return changes, end
+        # The file can outlast its last frame, which then holds to the end.
+        whole = (video.duration or 0) / av.time_base
+    return changes, max(end, whole)
 
 
 def render(raw: Path, out: Path) -> float:
@@ -427,12 +433,10 @@ def record(out: Path, names: list[str] | None, build: bool, model: str) -> None:
     name = f"demo-videos-{os.getpid()}"
     device = (python, "-m", "tools.device")
     mock = (python, "-m", "tools.mock_api.own")
-    udid = _run(*device, "up", "ios", "--name", name, "--model", model, cwd=ROOT)
-    _run(
-        *mock, "stop", cwd=ROOT
-    )  # a clean slate: door check-ins live in the mock's memory
-    _run(*mock, "start", cwd=ROOT)
     try:
+        udid = _run(*device, "up", "ios", "--name", name, "--model", model, cwd=ROOT)
+        _run(*mock, "stop", cwd=ROOT)  # clean: door check-ins live in the mock's memory
+        _run(*mock, "start", cwd=ROOT)
         url = _run(*mock, "url", "ios", cwd=ROOT).splitlines()[-1].strip()
         _simctl("status_bar", udid, "override", *STATUS_BAR.split())
         _simctl("ui", udid, "appearance", "light")
@@ -449,18 +453,24 @@ def record(out: Path, names: list[str] | None, build: bool, model: str) -> None:
                 time.sleep(SETTLE_SECONDS)
                 raw = raws / f"{clip.name}.mp4"
                 stage.take(clip, raw)
-            except FlowFailed as failure:
+                final = out / f"{clip.name}.mp4"
+                seconds = render(raw, final)
+            except (
+                FlowFailed,
+                subprocess.CalledProcessError,
+                OSError,
+                ValueError,
+            ) as failure:
+                # A flow, simctl or the video's reader; the other clips can still be made.
                 failed.append(clip.name)
-                print(f"{clip.name} failed in {failure}", flush=True)
+                print(f"{clip.name} failed: {failure}", flush=True)
                 continue
-            final = out / f"{clip.name}.mp4"
-            seconds = render(raw, final)
-            print(
-                f"{final}: {seconds:.1f} s, {final.stat().st_size >> 20} MB", flush=True
-            )
+            size = final.stat().st_size >> 20
+            print(f"{final}: {seconds:.1f} s, {size} MB", flush=True)
     finally:
-        _run(*mock, "stop", cwd=ROOT)
-        _run(*device, "down", udid, "--delete", cwd=ROOT)
+        # By name, which also finds a simulator whose boot failed. Neither step may skip the other.
+        for command in ((*mock, "stop"), (*device, "down", name, "--delete")):
+            subprocess.run(command, check=False, cwd=ROOT)
     if failed:
         sys.exit(f"demo_videos: not made: {failed}")
 
