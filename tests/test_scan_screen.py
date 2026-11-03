@@ -188,12 +188,12 @@ async def test_a_long_refused_entry_is_clipped_on_the_panel_and_in_speech(
 ) -> None:
     """A 300-character paste shows two lines at most and is said clipped (#965)."""
     shown = await show()
-    text = "example.org/" + "word-" * 60  # no colon: a badge has one
+    text = "example.org/" + "word-" * 60 + "THE-END"  # no colon: a badge has one
     await enter(shown, text)
     clipped = entry_title(text)
     assert len(clipped) == ENTRY_TITLE_MAX + 1
     assert panel(shown) == f"{replace(NOT_A_BADGE, title=clipped).spoken}\nScan 1"
-    assert text not in panel(shown)
+    assert "THE-END" not in panel(shown)
     (title,) = (t for t in shown.find(ft.Text) if t.value == clipped)
     assert title.max_lines == 2
     assert title.overflow == ft.TextOverflow.ELLIPSIS
@@ -206,6 +206,21 @@ async def test_edit_code_gives_back_the_whole_of_a_long_text(
     shown = await show()
     text = "x" * 300
     await enter(shown, f" {text}\n")
+    button = shown.node("scan.edit").content
+    assert isinstance(button, ft.FilledTonalButton)
+    await shown.click(button)
+    await shown.settle()
+    assert entry(shown).value == text
+
+
+async def test_edit_code_keeps_the_newlines_the_title_collapses(
+    show: Show, rig: Rig
+) -> None:
+    """A multi-line paste shows on one line, and Edit code gives it back as it was (#965)."""
+    shown = await show()
+    text = "BEGIN-VCARD\nFN-Ada Lovelace\nEND-VCARD"  # no colon: a badge has one
+    await enter(shown, text)
+    assert "BEGIN-VCARD FN-Ada Lovelace END-VCARD" in panel(shown)
     button = shown.node("scan.edit").content
     assert isinstance(button, ft.FilledTonalButton)
     await shown.click(button)

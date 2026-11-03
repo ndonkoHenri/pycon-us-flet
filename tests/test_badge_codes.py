@@ -124,4 +124,6 @@ def test_entry_title_is_one_clipped_line_of_the_words(text: str, title: str) -> 
 @given(st.text())
 def test_entry_title_is_never_longer_than_the_cap_and_its_ellipsis(text: str) -> None:
     """Whatever was pasted, the title is at most the cap plus its ellipsis (#965)."""
-    assert len(entry_title(text)) <= ENTRY_TITLE_MAX + 1
+    title = entry_title(text)
+    assert len(title) <= ENTRY_TITLE_MAX + 1
+    assert bool(title) == bool(text.strip())  # an entry to edit always has a title

@@ -180,7 +180,9 @@ def entry_title(text: str) -> str:
 
     A URL or a contact card from a HID scan, or a long paste, would otherwise fill the
     panel and be read whole (#965). Whitespace, newlines included, collapses to single
-    spaces, and a text over ``ENTRY_TITLE_MAX`` characters ends in an ellipsis.
+    spaces, and a text over ``ENTRY_TITLE_MAX`` characters ends in an ellipsis. The cut
+    counts code points, so it can split an emoji sequence or a flag: accepted, since
+    badge text is mostly ASCII and the whole text is one tap away (``Edit code``).
 
     Args:
         text: What the field held when it was refused.
