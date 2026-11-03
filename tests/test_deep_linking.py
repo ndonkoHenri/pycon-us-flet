@@ -1,13 +1,15 @@
 """Guard D-269: Android and iOS builds register the app's link scheme and host.
 
-The build template registers a link only when both ``scheme`` and ``host`` resolve
-(``AndroidManifest.xml`` and ``Info.plist`` in Flet's build template), so these tests run
-flet-cli's own resolver at the pin over ``pyproject.toml``, as ``flet build`` does.
+Flet's build template registers a link once ``scheme`` resolves, but our links are
+``<scheme>://<host>/<route path>`` (D-269), so these tests want both: they run flet-cli's own
+resolver at the pin over ``pyproject.toml``, as ``flet build`` does.
 """
 
 import re
 import tomllib
+from argparse import Namespace
 from pathlib import Path
+from typing import NoReturn
 
 import pytest
 from flet_cli.commands.build_base import BaseBuildCommand
@@ -25,6 +27,16 @@ HOST = re.compile(rf"{HOST_LABEL}(?:\.{HOST_LABEL})*")
 TAKEN_SCHEMES = {"http", "https", "file"}
 
 
+class Resolver(BaseBuildCommand):
+    """flet-cli's build command for its resolver alone, whose stop becomes an error to read."""
+
+    def cleanup(
+        self, exit_code: int, message: object = None, no_border: bool = False
+    ) -> NoReturn:
+        """Raise what flet-cli would stop the build with, instead of ending the test."""
+        raise ValueError(message)
+
+
 def resolve(project_dir: Path, platform: str) -> tuple[object, object]:
     """Return the ``(scheme, host)`` that ``flet build`` would use for ``platform``.
 
@@ -34,15 +46,17 @@ def resolve(project_dir: Path, platform: str) -> tuple[object, object]:
 
     Returns:
         The resolved scheme and host, each ``None`` when it is not configured.
+
+    Raises:
+        ValueError: flet-cli would stop the build, as for a host with no scheme.
     """
     # No parser and no __init__: only the resolver runs, as flet-cli's own tests do.
-    command = BaseBuildCommand.__new__(BaseBuildCommand)
+    command = Resolver.__new__(Resolver)
     command.get_pyproject = load_pyproject_toml(project_dir)
     command.package_platform = platform
-    return (
-        command.get_deep_linking_setting("scheme"),
-        command.get_deep_linking_setting("host"),
-    )
+    command.options = Namespace(deep_linking_scheme=None, deep_linking_host=None)
+    link = command.get_deep_linking()
+    return link["scheme"], link["host"]
 
 
 def link_problems(project_dir: Path) -> list[str]:
@@ -56,7 +70,11 @@ def link_problems(project_dir: Path) -> list[str]:
     """
     problems = []
     for platform in PLATFORMS:
-        scheme, host = resolve(project_dir, platform)
+        try:
+            scheme, host = resolve(project_dir, platform)
+        except ValueError as stop:
+            problems.append(f"{platform}: scheme: flet build stops: {stop}")
+            continue
         if not (isinstance(scheme, str) and SCHEME.fullmatch(scheme)):
             problems.append(f"{platform}: scheme {scheme!r} is no lowercase URL scheme")
         elif scheme in TAKEN_SCHEMES:

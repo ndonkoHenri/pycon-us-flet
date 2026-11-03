@@ -78,6 +78,16 @@ class Sandbox:
             text=True,
         )
 
+    def commit_fvmrc(self, flutter: str) -> None:
+        """Make the pin ask for ``flutter``, moving ``.flet-ref`` in both checkouts."""
+        flet = self.main / ".flet-src"
+        (flet / ".fvmrc").write_text(f'{{\n  "flutter": "{flutter}"\n}}\n')
+        _git(flet, "add", ".fvmrc")
+        _git(flet, "commit", "-qm", "fvmrc")
+        self.pin = _git(flet, "rev-parse", "HEAD")
+        (self.main / ".flet-ref").write_text(self.pin + "\n")
+        (self.tree / ".flet-ref").write_text(self.pin + "\n")
+
     def head(self) -> str:
         """Return the HEAD of the worktree's ``.flet-src``."""
         return _git(self.tree / ".flet-src", "rev-parse", "HEAD")
@@ -98,6 +108,26 @@ def test_fresh_worktree_gets_everything(sandbox: Sandbox) -> None:
     assert "sync --locked" in sandbox.uv_log.read_text()
     assert (sandbox.tree / "build" / "pub-cache" / "marker").exists()
     assert _git(sandbox.tree, "config", "core.hooksPath") == ".githooks"
+
+
+def test_missing_flutter_of_the_pin_is_said(sandbox: Sandbox) -> None:
+    """A pin whose Flutter isn't in ``~/flutter`` gets a warning, and the setup still ends well."""
+    sandbox.commit_fvmrc("3.47.9")
+    done = sandbox.run()
+    assert done.returncode == 0, done.stderr
+    assert "no ~/flutter/3.47.9" in done.stderr
+
+
+def test_flutter_of_the_pin_in_home_says_nothing(sandbox: Sandbox) -> None:
+    """With the pin's Flutter in ``~/flutter`` there is nothing to warn about."""
+    sandbox.commit_fvmrc("3.47.9")
+    flutter = Path(sandbox.env["HOME"]) / "flutter" / "3.47.9" / "bin" / "flutter"
+    flutter.parent.mkdir(parents=True)
+    flutter.write_text("#!/bin/sh\n")
+    flutter.chmod(0o755)
+    done = sandbox.run()
+    assert done.returncode == 0, done.stderr
+    assert "~/flutter" not in done.stderr
 
 
 def test_second_run_changes_nothing(sandbox: Sandbox) -> None:
