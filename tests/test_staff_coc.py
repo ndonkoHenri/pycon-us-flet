@@ -235,7 +235,7 @@ async def test_only_a_coc_account_with_a_mock_url_reaches_it(
 async def test_it_loads_then_counts_the_mock_s_attendees(
     show: Show, switch: Switch
 ) -> None:
-    """A ring and "Loading attendee directory…", then "4 attendees" with Reload."""
+    """A ring and "Loading attendee list…", then "4 attendees" with Reload."""
     switch.gate = asyncio.Event()
     shown = await show(settle=False)
     await shown.settle()
@@ -248,7 +248,7 @@ async def test_it_loads_then_counts_the_mock_s_attendees(
     assert status(shown) == "4 attendees"
     assert not shown.find(ft.ProgressRing)
     reload = button(shown, "coc.directory.reload")
-    assert reload.tooltip == "Reload attendee directory" and not reload.disabled
+    assert reload.tooltip == "Reload attendee list" and not reload.disabled
     assert helper(shown) is None  # scanning
     assert shown.memory.staff_tool == ToolKey.COC  # Now's card's next tool (D-421)
 

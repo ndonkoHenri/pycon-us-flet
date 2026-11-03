@@ -11,7 +11,7 @@ and Now list it (``BUILT_TOOLS``, #760).
 kept in ``CocTool``'s state only: never in a store, never in storage, never in a log
 (D-56, D-72). It goes when the screen unmounts (leaving the tool, a sign-out, losing
 the flag), and Reload fetches it again (D-432). A status line above the camera area
-says where it is: "Loading attendee directory…" with a ring, "2,431 attendees" with
+says where it is: "Loading attendee list…" with a ring, "2,431 attendees" with
 Reload (``coc.directory.reload``), "Couldn't load the attendee list" with Retry
 (``coc.directory.retry``), or "Not available for this account" on a 403. The line is
 a live region (on iOS, an announcement), so the count and the error are said once.
@@ -75,10 +75,10 @@ from pycon_us.ui.semantics import announce, named
 TITLE = next(tool.title for tool in TOOLS if tool.key is ToolKey.COC)
 """The app bar's title, "CoC incident", as the staff entry points name it."""
 
-LOADING = "Loading attendee directory…"
+LOADING = "Loading attendee list…"
 NOT_LOADED = "Couldn't load the attendee list"
 RETRY = "Retry"
-RELOAD = "Reload attendee directory"
+RELOAD = "Reload attendee list"
 OFFLINE = "CoC capture needs a connection"
 """Why scanning is paused, and Retry and Reload disabled, while offline (D-56)."""
 
@@ -243,7 +243,7 @@ def find_reason(directory: Directory, words: str, online: bool) -> str | None:
 
 
 def status_words(directory: Directory) -> str:
-    """Return the status line's words: "Loading attendee directory…", "2,431 attendees".
+    """Return the status line's words: "Loading attendee list…", "2,431 attendees".
 
     Args:
         directory: Where the fetch is.
