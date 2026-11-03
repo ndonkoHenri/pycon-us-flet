@@ -150,8 +150,10 @@ async def test_one_worker_sends_while_signed_in_and_none_after_sign_out(
     for _ in range(3):  # kicks never start a second loop
         svc.kick_sync()
     await rig.sign_out()
-    await until(lambda: not workers())
-    assert rig.staff.synced == 0
+    # The supervisor clears Staff in the loop turn after the worker's task ends, so the
+    # task's end alone does not mean it has run: wait for both, which are the contract
+    # (#957: a loaded host landed the check between the two in 88 of 4,000 runs).
+    await until(lambda: not workers() and rig.staff.synced == 0)
     assert len(rig.state.leads) == 1  # sent once (its first try refused for the skew)
     await rig.sign_in("all")
     await until(lambda: len(workers()) == 1)
