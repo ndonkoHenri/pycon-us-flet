@@ -703,10 +703,87 @@ def test_declared_colour_pairs_are_readable(dark, high_contrast):
   | P1 | Search → favourite → session detail (exit criterion 4); Now → your next session → room; change day and apply a filter |
   | P2 | Find a room on the map's list view; copy the Wi-Fi password; review a schedule change. These are #462's three, as run on 2026-10-30. Turning on reminders, with the permission primer, is a fourth check outside the exit's three, heard once on the emulator (#815) |
   | P3 | Sign in with autofill; manual badge entry → outcome announced; open the sync queue and retry a failed row |
-  | P4 | Every screen, once |
+  | P4 | Every screen, once (§7.4) |
 
 - **Tools.** Accessibility Scanner on Android (48 dp targets, contrast of seeded roles as rendered); Xcode's Accessibility Inspector on the simulator; a proposed "Show semantics" Developer switch setting `page.show_semantics_debugger` (exists in `BasePage`).
 - **System settings.** Bold Text (iOS), high contrast where the OS reports it (iOS, Android 34+; re-read on resume, D-23), "Remove animations".
+
+### 7.4 The P4 audit's results (#837)
+
+Every screen once, on 2026-11-04. **A machine "heard" this, not a person.** TalkBack's spoken words were read from logcat one swipe at a time (§7.3): that gives what it says and in what order, and nothing about how it sounds or how it feels to use. What that leaves for a person is at the end of this section.
+
+- **Android:** `pycon_pixel6a_api36`, Android 16 (API 36), `-read-only`, release arm64 APK, version 0.4.0 (1), at `e9d330d9` for the first passes. The bugs' fixes were heard or seen at their own builds, then the merged `f40c5833` for the reveal button. TalkBack ran with the scene of `maestro/subflows/set_scene.yaml` (fake clock Friday 2026-05-15 14:10, feed offline), signed in to the mock as `all@example.com`.
+- **iOS:** iPhone 17 simulator, iOS 26.5, `ios-simulator` build, Larger Text at its largest with Bold Text, on the live feed's clock (no fake clock, so "PyCon US 2026 is over").
+- **Flet:** `1.1.0.dev4`.
+- **Modes:** "Schemes" is light, dark and both high-contrast schemes, each photographed. The emulator ran with animations off (`--no-animations`), so all of it is the reduced-motion path. The 200 % column has bold on.
+- **The images were looked at**, at about a quarter of full size for the schemes. A small contrast fault could pass that way; `tests/test_high_contrast.py` and §7.1 cover the declared pairs.
+
+"ok" means nothing to fix was found; a `#n` is the bug, closed unless the list below says it's open.
+
+| Screen | TalkBack: order, names, roles, states | 200 % | Schemes | iOS largest |
+|---|---|---|---|---|
+| Welcome | ok, "Get started" last | not photographed | not photographed | not photographed |
+| Now | ok; status spoken first (#1102) | ok | ok | ok |
+| Schedule | ok; a clipped row's star (#1101) | Now button, below | ok | ok |
+| My schedule, saved; empty heard only | ok | ok | ok | ok |
+| Map: Rooms, Floor plans, Expo, Job fair | ok; a screen reader gets Expo's List | ok | ok | ok |
+| More | ok | ok | ok | ok |
+| Search; results heard only | ok | ok | ok | ok; its hint ends in "…" |
+| Session detail | ok, title a heading | ok | ok | ok |
+| Speaker, and not found | ok | ok | ok | ok |
+| Room | ok | ok | ok | ok |
+| Floor plan, and from a room | ok; the image and zoom buttons named | ok | ok | ok |
+| Expo hall's plan and booth card | ok; booths in reading order | ok | ok | #1091, #1100 |
+| Job fair plan | ok; tables named | ok | ok | ok |
+| Sponsor | #1085 | ok | ok | ok |
+| Speakers | ok | ok | ok | ok |
+| Tracks, a track | ok | ok | ok | ok |
+| Keynotes, Open spaces, Lightning talks | ok | ok | ok | ok |
+| Sprints, Sponsors | ok | ok | ok | ok |
+| Settings | ok, radios and switches say their state | ok | ok | ok |
+| About this app | ok | ok | ok | #1095 |
+| Licences, a licence | ok | ok; a wide line scrolls | ok | ok |
+| Developer options | ok | ok | ok | ok |
+| Wi-Fi | ok | ok | ok | ok |
+| Job listings | ok | ok | ok | #1100 |
+| Help & safety, Venue & hours | ok | ok | ok | ok |
+| About PyCon US, About the PSF, Social media | ok | ok | ok | ok |
+| Account | ok | ok | ok | #1093 |
+| Sign in | #1087 | ok | ok | ok |
+| Lead consent, scanner | ok | #1103 | ok | ok |
+| Leads, sponsor picker, Schedule changes' empty state | ok | not photographed | not photographed | not photographed |
+| Door check, session picker | ok | #1103 | ok | ok |
+| Swag pickup | ok | ok | ok | ok |
+| CoC incident | ok | ok | ok | ok |
+| Page not found, empty states | #1083 | ok | ok | ok |
+
+| Flow | Heard |
+|---|---|
+| Filter, lead note, hand-out, queue and CoC search sheets | #1058, #1074 |
+| Reminders primer | #963, not heard again here |
+| Star on and off, Undo | "Added to My schedule", "Removed from My schedule"; #1099 |
+| Day change, overflow menu | "selected", then "Popup menu", "Dismiss menu", the item: Flutter's first stop, below |
+| Scan outcome | "Lead captured", "Ada", "MOCK0001", "Scan 1" |
+| Sync queue's pass | "Syncing · 1 pending…", then "All synced…" |
+| Fold | "Recently confirmed (1)", "Expanded" |
+| Sign-out dialog | #1089 |
+| Date picker | Flutter's words: "Friday, May 15, 2026", "Fake clock date" |
+| CoC review dialog | "Grace Sample", "Badge: Grace S.", "1 incident on record", "What happened?", Cancel, Record incident |
+
+**Bugs.** Fixed: #1058 (D-485), #1074, #1083, #1085, #1087, #1089, #1091, #1093, #1095, #1103. Open: #1099 (a kept SnackBar is read on every screen), #1100 (long words in narrow tiles at iOS's largest text), #1101 (a clipped row's star), #1102 (the status strip spoken as each screen opens, `design`).
+
+**Judged again.**
+- **"My schedule"'s wrap and its star (D-167) stands.** Tried on the iOS simulator: `label_text_style` at 11 sp with no letter spacing still wraps at Flutter's 1.3x clamp on an iPhone 17, and shrinks all five labels at 100 %. Only a label control or a one-word label can fix it; the second is the owner's choice in D-167.
+- **The Now button (D-204) stands.** It covers a row's text at every size while it shows, as any M3 floating button does, and a scroll moves the row out from under it. `FAB_CLEARANCE` lets the list's end clear it, seen at 200 % with bold.
+- **The door picker's keyboard wasn't reproduced.** Six rounds from a scan screen with its keyboard up to the picker through `door.session_chip`, at iOS's largest text, and the tour's move from the Lead scanner to the picker: the keyboard went down each time.
+
+**Residual upstream gaps,** each with its interim in place: #605 (a toggle's state read before it changes), #230 (links aren't called links), #187 (`Semantics` hints), #317 (a tooltip as a node of its own), #753 (`announce_message` on iOS under VoiceOver), #163 (identifiers and labels on the bar's destinations), #1098 (`TextField`'s reveal icon). A popup menu's first stop, "Dismiss menu", is Flutter's, and Flet gives Python no handle on it (U89).
+
+**Not covered.** Accessibility Scanner wasn't installed: targets were read from the tree's bounds instead (nothing under 48 dp but rows cut by the list's edge, and the expo plan's booths, which have a List), and seeded contrast rests on the images. TalkBack ran at 100 % text in light only. A landscape phone and a tablet. Of the sheets and dialogs, only hand-out and CoC review were photographed in each scheme and at large text. iOS at the largest text only, not its schemes. Change log's review with a real batch, which needs a feed pair (§9.2); its empty state was heard. A recording to tell a sheet's reduced motion from its full motion was inconclusive: both showed one change in the frames read, so reduced motion rests on the tests and on seeing no motion. VoiceOver is #838.
+
+**What this leaves for a person.** Whether the order makes sense read aloud at speed, whether a stop's words are too many or too few, how often a repeated phrase becomes tiresome (#1102), and whether a real finger finds the targets. Gestures here came from the emulator's console, with TalkBack's reading controls and heading navigation not used: headings were read from the tree. Nobody has listened to this: the owner's iPhone and any Android phone should get a real pass with a screen reader user before P4's exit.
+
+**Driving it, what's new since §7.3.** Set `pref_log_level` with TalkBack force-stopped, or it writes its preferences back over the line. Console touches wake Gboard's "Try out your stylus" over the app: `settings put secure stylus_handwriting_enabled 0` stops it. A silent stop after the last control is the traversal's end, not a node.
 
 ## 8. Performance (D-80, D-102)
 
