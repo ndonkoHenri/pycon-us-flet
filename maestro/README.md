@@ -555,3 +555,8 @@ tool sets the status bar's time to the clock's minute each time that minute chan
 (`fake_minute()`; `BOOT_LAG` is the seconds the app takes to start its clock after the launch), so
 a long clip's "Now · 9:42" never sits under a status bar that still says 9:41. Nothing in the app
 freezes its clock for the camera (#1016).
+
+A clip with a setup (the staff clip signs in first, which takes minutes) would begin long after
+9:41, so the tool launches the app again after the setup with only the clock stored anew
+(`restart_clock()`, `subflows/staff_ready.yaml`), and stores every clock `CLOCK_LEAD` seconds early,
+so the clip's first frame reads 9:41:00 within a few seconds.

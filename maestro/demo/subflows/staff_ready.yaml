@@ -1,0 +1,16 @@
+# Not filmed. The staff clip's app has been launched again to restart its fake clock
+# (tools/demo_videos.py's restart_clock): it reopens where it was left, which can be the
+# Lead scanner, so wait for that or More, and go Back to More.
+appId: io.github.ndonkohenri.confcompanion
+---
+- extendedWaitUntil:
+    visible:
+      text: "Lead scanner|More"
+    timeout: 180000
+- runFlow:
+    when:
+      visible:
+        id: scan.result
+    commands:
+      - tapOn: {text: Back}
+- extendedWaitUntil: {visible: {id: more.title}, timeout: 15000}

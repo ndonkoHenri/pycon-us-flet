@@ -45,10 +45,15 @@ APP = ROOT / "build" / "ios-simulator" / "pycon-us.app"
 DEFAULT_OUT = Path.home() / "Movies" / "pycon-us-flet-demo"
 
 FAKE_NOW = "2026-05-15T09:41:00-07:00"
-"""Friday, four minutes before the keynote; the status bar starts at its 9:41."""
+"""Friday, four minutes before the keynote: the moment a clip's first frame shows."""
 
 STATUS_BAR = "--batteryState charged --batteryLevel 100 --cellularBars 4 --wifiBars 3"
 """What the status bar shows besides its time, which ``fake_minute()`` supplies."""
+
+CLOCK_LEAD = 10.0
+"""Seconds from the app starting its fake clock to a clip's first frame: the ready flow, the
+settle and the take's opening. The stored clock starts this long before ``FAKE_NOW``, so the
+clip begins on it (measured on an iPhone 17 simulator, #1016)."""
 
 BOOT_LAG = 3.0
 """Seconds from ``simctl launch`` returning to the app starting its fake clock: Python boots
@@ -112,27 +117,38 @@ CLIPS = (
 )
 
 
-def fake_minute(elapsed: float) -> str:
+def fake_start(lead: float = 0.0) -> datetime:
+    """Return the instant the stored fake clock starts at, ``lead`` s before ``FAKE_NOW``.
+
+    Args:
+        lead: Seconds the app's clock runs before the clip's first frame.
+    """
+    return datetime.fromisoformat(FAKE_NOW) - timedelta(seconds=lead)
+
+
+def fake_minute(elapsed: float, lead: float = 0.0) -> str:
     """Return the fake clock's time as a status bar shows it, ``elapsed`` s after its start.
 
     Args:
         elapsed: Seconds since the app started its fake clock; below 0 reads as 0.
+        lead: The lead the clock was stored with (``fake_start()``).
     """
-    moment = datetime.fromisoformat(FAKE_NOW) + timedelta(seconds=max(elapsed, 0.0))
+    moment = fake_start(lead) + timedelta(seconds=max(elapsed, 0.0))
     return f"{moment.hour}:{moment.minute:02d}"
 
 
-def seconds_to_next_minute(elapsed: float) -> float:
+def seconds_to_next_minute(elapsed: float, lead: float = 0.0) -> float:
     """Return how long, from ``elapsed``, until the fake clock's minute changes.
 
     Args:
         elapsed: Seconds since the app started its fake clock; below 0 reads as 0.
+        lead: The lead the clock was stored with (``fake_start()``).
     """
-    start = datetime.fromisoformat(FAKE_NOW)
-    return 60.0 - (start.second + max(elapsed, 0.0)) % 60.0
+    seconds = fake_start(lead).second + max(elapsed, 0.0)
+    return 60.0 - seconds % 60.0
 
 
-def scene_prefs(mock_url: str | None) -> dict[str, Any]:
+def scene_prefs(mock_url: str | None, lead: float = 0.0) -> dict[str, Any]:
     """Return a scene's stored preferences, keyed as SharedPreferences writes them.
 
     Welcome is already seen, the reminders primer already answered, and the Developer
@@ -140,8 +156,11 @@ def scene_prefs(mock_url: str | None) -> dict[str, Any]:
 
     Args:
         mock_url: The mock API's URL, or None when the clip's scene has no private API.
+        lead: Seconds the clock runs before the first frame: it starts that early.
     """
-    dev = {"fake_now": FAKE_NOW} | ({"mock_api_url": mock_url} if mock_url else {})
+    dev = {"fake_now": fake_start(lead).isoformat()} | (
+        {"mock_api_url": mock_url} if mock_url else {}
+    )
     return {
         "flutter.pycon.onboarded": True,
         "flutter.pycon.reminders": json.dumps({"primer": "not_now"}),
@@ -220,8 +239,10 @@ class Stage:
         shown = None
         while not stop.is_set():
             elapsed = time.monotonic() - self.clock_started
-            minute = fake_minute(elapsed)
-            wait = seconds_to_next_minute(elapsed) + 0.05  # just after the change
+            minute = fake_minute(elapsed, CLOCK_LEAD)
+            wait = (
+                seconds_to_next_minute(elapsed, CLOCK_LEAD) + 0.05
+            )  # just after the change
             if minute != shown:
                 try:
                     self.set_time(minute)
@@ -243,6 +264,30 @@ class Stage:
 
     def launch(self, clip: Clip | None) -> None:
         """Start the app afresh on the clip's scene; never records."""
+        self._store(
+            scene_prefs(self.mock_url if clip and clip.mock else None, CLOCK_LEAD)
+        )
+        self._start()
+
+    def restart_clock(self, clip: Clip) -> None:
+        """Start the app again with only its fake clock stored anew, never recording.
+
+        After a clip's setup, which can take minutes: the clock has run on since the
+        launch, and the clip must begin on ``FAKE_NOW``. What the setup stored, such as
+        the staff sign-in, stays.
+        """
+        scene = scene_prefs(self.mock_url if clip.mock else None, CLOCK_LEAD)
+        key = "flutter.pycon.dev"
+        self._store({key: scene[key]}, replace_all=False)
+        self._start("subflows/staff_ready.yaml")
+
+    def _store(self, scene: dict[str, Any], *, replace_all: bool = True) -> None:
+        """Stop the app and write ``scene`` into its stored preferences.
+
+        Args:
+            scene: The keys to store, as ``scene_prefs()`` has them.
+            replace_all: Replace every app key, as a fresh scene does; else only these.
+        """
         subprocess.run(
             ["xcrun", "simctl", "terminate", self.udid, BUNDLE],
             check=False,
@@ -252,8 +297,8 @@ class Stage:
         path = data / "Library" / "Preferences" / f"{BUNDLE}.plist"
         path.parent.mkdir(parents=True, exist_ok=True)
         stored = plistlib.loads(path.read_bytes()) if path.exists() else {}
-        scene = scene_prefs(self.mock_url if clip and clip.mock else None)
-        path.write_bytes(plistlib.dumps(merged_prefs(stored, scene)))
+        merged = merged_prefs(stored, scene) if replace_all else stored | scene
+        path.write_bytes(plistlib.dumps(merged))
         # The daemon holds the old values; restarted, it reads the file again.
         _simctl(
             "spawn",
@@ -263,14 +308,17 @@ class Stage:
             "-k",
             "user/foreground/com.apple.cfprefsd.xpc.daemon",
         )
+
+    def _start(self, ready: str = "subflows/ready.yaml") -> None:
+        """Launch the app and wait for its first screen, as the flow ``ready`` says."""
         _simctl("launch", self.udid, BUNDLE)
         # The app's fake clock starts when its Python has booted, a moment after this.
         self.clock_started = time.monotonic() + BOOT_LAG
-        self.flow("subflows/ready.yaml")
+        self.flow(ready)
 
     def take(self, clip: Clip, raw: Path) -> None:
         """Film the clip into ``raw``, with the app already on its first screen."""
-        self.set_time(fake_minute(time.monotonic() - self.clock_started))
+        self.set_time(fake_minute(time.monotonic() - self.clock_started, CLOCK_LEAD))
         recorder = subprocess.Popen(
             [
                 "xcrun",
@@ -508,7 +556,9 @@ def record(out: Path, names: list[str] | None, build: bool, model: str) -> None:
         _simctl("ui", udid, "appearance", "light")
         _simctl("install", udid, str(APP))
         stage = Stage(udid, url)
-        stage.set_time(fake_minute(0))  # the clips' own followers take it from here
+        stage.set_time(
+            fake_minute(CLOCK_LEAD, CLOCK_LEAD)
+        )  # the clips' own followers take it from here
         stage.launch(None)
         stage.flow("subflows/warm_up.yaml")
         time.sleep(FIRST_LAUNCH_SECONDS)
@@ -517,6 +567,7 @@ def record(out: Path, names: list[str] | None, build: bool, model: str) -> None:
                 stage.launch(clip)
                 if clip.setup:
                     stage.flow(clip.setup)
+                    stage.restart_clock(clip)
                 time.sleep(SETTLE_SECONDS)
                 raw = raws / f"{clip.name}.mp4"
                 stage.take(clip, raw)
