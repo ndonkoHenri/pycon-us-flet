@@ -197,6 +197,7 @@ def use_track_filter(
             on_close=close_sheet,
             on_tracks_page=what_they_mean,
             reduce_motion=prefs.reduce_motion,
+            screen_reader=prefs.screen_reader,
             high_contrast=tokens.high_contrast,
         )
         if is_open and tracks

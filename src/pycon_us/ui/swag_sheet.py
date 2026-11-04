@@ -1,9 +1,9 @@
 """The hand-out sheet: what a Swag pickup scan can take, pre-ticked, one tap away (#769).
 
 ux.md §7.3 (SHIRT-03, SHIRT-04; O-7). Ionic's Redeem Products modal made staff tick
-each item and reported in a toast; here a modal `BottomSheet` with a drag handle,
-everything scrolling together so Hand out stays in reach at 200 % text, as the lead
-note sheet (`ui/lead_note_sheet.py`):
+each item and reported in a toast; here a modal `BottomSheet` with a drag handle
+(none with a screen reader on, D-485), everything scrolling together so Hand out
+stays in reach at 200 % text, as the lead note sheet (`ui/lead_note_sheet.py`):
 
 - a level-1 heading "Hand out to Ada Example";
 - per category, alphabetically, a level-2 heading and a `Checkbox` row per item,
@@ -105,6 +105,7 @@ def swag_sheet(
     *,
     high_contrast: bool = False,
     reduce_motion: bool = False,
+    screen_reader: bool = False,
 ) -> ft.BottomSheet:
     """Return the hand-out sheet for `handing` (ux.md §7.3).
 
@@ -113,6 +114,7 @@ def swag_sheet(
         actions: The handlers.
         high_contrast: HC is on screen: a 1 dp `outline` edge draws the sheet.
         reduce_motion: The sheet appears without its slide (D-34, D-173).
+        screen_reader: A screen reader is on: no drag handle or scrim to stop on (D-485).
     """
     body: list[ft.Control] = [heading(f"Hand out to {handing.offer.name}", 1)]
     for category, group in handing.offer.products.items_by_category:
@@ -143,7 +145,10 @@ def swag_sheet(
     )
     return ft.BottomSheet(
         ft.Container(  # 16 dp gutters (ux.md §3.6), clear of the home bar
-            padding=ft.Padding.only(left=16, right=16, bottom=16),
+            # No handle above the title with a screen reader on: the top is its own.
+            padding=ft.Padding.only(
+                left=16, right=16, bottom=16, top=16 if screen_reader else 0
+            ),
             content=ft.Column(
                 body,
                 spacing=0,
@@ -152,10 +157,11 @@ def swag_sheet(
                 horizontal_alignment=ft.CrossAxisAlignment.STRETCH,
             ),
         ),
-        show_drag_handle=True,
+        show_drag_handle=not screen_reader,
         scrollable=True,  # up to the screen's height: Hand out stays in reach at 200 %
         use_safe_area=True,
-        dismissible=not handing.sending,  # read only as it opens, at the pin (#782)
+        # Read only as it opens, at the pin (#782).
+        dismissible=not handing.sending and not screen_reader,
         shape=hc_sheet_shape(high_contrast),
         on_dismiss=lambda _: actions.dismissed(handing.opening),
         animation_style=ft.AnimationStyle.no_animation() if reduce_motion else None,
@@ -334,6 +340,7 @@ def use_swag_sheet() -> SwagSheet:
             SheetActions(toggle, hand_out, cancel, dismissed),
             high_contrast=tokens.high_contrast,
             reduce_motion=prefs.reduce_motion,
+            screen_reader=prefs.screen_reader,
         )
         if handing is not None
         else None
