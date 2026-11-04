@@ -48,9 +48,9 @@ def main(page: ft.Page) -> None:
     page.title = APP_NAME
     if (
         sys.platform == "linux"
-    ):  # S9 only (#363): a phone-sized window; this branch never merges
+    ):  # S9 only (#363): a phone-wide window tall enough for rows a flow cannot scroll to; this branch never merges
         page.window.width = 412
-        page.window.height = 915
+        page.window.height = 1400
 
     @report_errors
     def on_view_pop(e: ft.ViewPopEvent) -> None:

@@ -27,6 +27,7 @@ from tests.ui.helpers import (
     start_app,
     tap_back_arrow,
     tap_id,
+    tap_text,
     tap_until,
     wait_for_id,
     wait_for_text,
@@ -92,7 +93,12 @@ async def open_developer(t: RemoteTester) -> None:
     """
     await wait_for_tooltip(t, "Back", gone=True)  # on a root, any pop to it finished
     await open_tab(t, "more")
-    await open_about_app()
+    if (
+        PLATFORM == "linux"
+    ):  # S9 only: no deep link to send here, and a tall window has the row on screen
+        await tap_text(t, "About this app")
+    else:
+        await open_about_app()
     await wait_for_id(t, "more.title", gone=True)  # About has covered the root
     if not (await t.find_by_semantics_identifier("about_app.developer")).count:
         for _ in range(UNLOCK_TAPS):

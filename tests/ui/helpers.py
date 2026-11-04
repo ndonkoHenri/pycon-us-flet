@@ -304,6 +304,10 @@ async def answer_primer_not_now(t: RemoteTester) -> None:
     tap repeats until the sheet has gone. The button can go between the look and a repeated
     tap, which then fails with nothing to tap, so only the next look decides.
     """
+    if (
+        PLATFORM == "linux"
+    ):  # S9 only: no notification permission to ask for, so no primer
+        return
     await wait_for_id(t, "reminder.primer")
     deadline = time.monotonic() + TIMEOUT
     while True:

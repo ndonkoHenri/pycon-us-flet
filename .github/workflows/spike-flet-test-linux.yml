@@ -53,7 +53,7 @@ jobs:
         env:
           FLET_CLI_NO_RICH_OUTPUT: "1"
         run: |
-          xvfb-run -a -s "-screen 0 1280x1024x24" dbus-run-session -- bash -c '
+          xvfb-run -a -s "-screen 0 1280x1600x24" dbus-run-session -- bash -c '
             echo -n "" | gnome-keyring-daemon --unlock --components=secrets
             dunst &
             uv run flet test linux --tests-dir tests/ui --yes -v
