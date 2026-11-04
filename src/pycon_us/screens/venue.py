@@ -115,7 +115,13 @@ def venue_blocks(
     blocks: list[ft.Control] = []
     if info.address:
         blocks.append(address_card(svc, info))
-    note = zone_note(now, zone, info.time_zone_name, now.astimezone().utcoffset())
+    note = zone_note(
+        now,
+        zone,
+        info.time_zone_name,
+        now.astimezone().utcoffset(),
+        times_on=info.first_day,  # the hours below are the conference's
+    )
     if note is not None:
         blocks.append(zone_line(note))
     statuses: Mapping[str, HoursStatus] = (

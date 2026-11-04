@@ -324,6 +324,19 @@ def test_the_zone_row_shows_only_while_the_device_s_zone_differs(
     assert row.on_click is None  # nothing to change: read, not tapped
 
 
+def test_read_in_winter_the_zone_row_names_the_conference_s_zone(
+    render: Callable[[], ft.Column], machine_tz: str
+) -> None:
+    """D-500: the app's times are May's, so the row says PDT in November too."""
+    clock.start_fake_clock(DURING.replace(month=11, day=4))
+    row = zone_row(render())
+    if machine_tz == "America/Los_Angeles":
+        assert row is None
+        return
+    assert row is not None
+    assert row.title == "Times are Pacific Time (PDT)"
+
+
 # ------------------------------------------------------------------ Schedule changes
 
 TALK = "142"

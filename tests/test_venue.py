@@ -243,7 +243,9 @@ async def test_the_zone_note_shows_while_the_device_s_zone_differs(
     show: Show, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """D-240: with the device on another offset, a line says the hours' zone."""
-    monkeypatch.setattr(screen, "zone_note", lambda *_: "Times are Pacific Time (PDT)")
+    monkeypatch.setattr(
+        screen, "zone_note", lambda *_, **__: "Times are Pacific Time (PDT)"
+    )
     page = await show()
     note = page.node("venue.zone_note")
     assert cast(ft.Text, note.content).value == "Times are Pacific Time (PDT)"

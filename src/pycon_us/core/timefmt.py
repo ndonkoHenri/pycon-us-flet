@@ -8,7 +8,7 @@ device locale or on `strftime` flags. Naive datetimes are refused: they have no 
 """
 
 from dataclasses import dataclass
-from datetime import UTC, date, datetime, timedelta, tzinfo
+from datetime import UTC, date, datetime, time, timedelta, tzinfo
 
 _WEEKDAYS = (
     "Monday",
@@ -257,9 +257,17 @@ def time_status(
 
 
 def zone_note(
-    now: datetime, zone: tzinfo, zone_name: str, device_offset: timedelta | None
+    now: datetime,
+    zone: tzinfo,
+    zone_name: str,
+    device_offset: timedelta | None,
+    *,
+    times_on: date | None = None,
 ) -> str | None:
     """Return a note such as "Times are Pacific Time (PDT)" when the device's clock differs.
+
+    Whether it shows follows the device's clock at `now`; the abbreviation is that of the
+    times it stands above (D-500), so May's sessions never read PST in winter.
 
     Args:
         now: The current instant.
@@ -267,6 +275,7 @@ def zone_note(
         zone_name: Its display name from the year data, e.g. "Pacific Time".
         device_offset: The device's UTC offset at `now`; the UI passes
             `now.astimezone().utcoffset()`.
+        times_on: The date of the times on screen; None when they are at `now`.
 
     Returns:
         The note, or None when the device shows the same wall-clock time as the conference.
@@ -274,6 +283,8 @@ def zone_note(
     local = _local(now, zone)
     if local.utcoffset() == device_offset:
         return None
+    if times_on is not None:
+        local = datetime.combine(times_on, time(12), tzinfo=zone)  # past any DST change
     return f"Times are {zone_name} ({local.tzname()})"
 
 
