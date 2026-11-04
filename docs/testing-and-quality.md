@@ -546,7 +546,7 @@ run (§5.1), which Maestro does not see. Neither checks screen-reader speech (D-
 | `lead_capture` | staff, lead | Against the mock: consent once per account, then captured, already in your leads and not a badge, by typed and HID-style entry (LEAD-01, LEAD-04, #825) |
 | `door_check` | staff, door | Against the mock: the session picker, then checked in, already checked in, not registered and not a badge, by typed and HID-style entry (DOOR-04, #825) |
 | `swag_pickup` | staff, swag | Against the mock: the hand-out sheet and its Cancel, the hand-out on a mock just started (mandatory with `-e HAND_OUT=required`), already picked up, nothing to pick up and not a badge, by typed and HID-style entry (SHIRT-02, #825) |
-| `fling_after_sheet` | regression | A fling 0.8 to 1.0 s after "Show N sessions" ends within three rows of where a control fling ends (its rows, not merely its slot), `TRIALS` times. Maestro's pace: it does not reach #346's row D window (0.33 to 0.6 s) |
+| `fling_after_sheet` | regression | A fling 0.8 to 1.0 s after "Show N sessions" ends within three rows of where a control fling ends (its rows, not merely its slot), or at most half lose their velocity, as the emulator's flings also do with no sheet (#1012), `TRIALS` times. Maestro's pace: it does not reach #346's row D window (0.33 to 0.6 s) |
 
 **The scene.** Each flow starts fresh (`clearState`) and offline: airplane mode on
 Android, then Developer options set as §5.2 does by hand, with the fake clock at Friday

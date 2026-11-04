@@ -141,10 +141,31 @@ def test_the_trials_add_up_and_count_what_was_lost() -> None:
     output, _ = run_script("record_fling.js", trial(rows_at(END)))
     output, _ = run_script("record_fling.js", {**output, "topRows": rows_at(0)})
     output, logged = run_script("record_fling.js", {**output, "topRows": [REST]})
-    assert output["counts"] == {"moved": 1, "short": 1, "none": 1, "invalid": 0}
+    assert output["counts"] == {
+        "moved": 1,
+        "dragged": 0,
+        "short": 1,
+        "none": 1,
+        "invalid": 0,
+    }
     assert output["lost"] == 2
-    assert output["summary"] == "1 moved, 1 short, 1 none, 0 invalid, of 3"
+    assert output["dragged"] == 0
+    assert output["summary"] == "1 moved, 0 dragged, 1 short, 1 none, 0 invalid, of 3"
     assert logged[0].startswith("fling 3: none")
+
+
+def test_a_trial_that_ends_where_the_drag_did_lost_its_velocity() -> None:
+    """A trial near the slow swipe's rows is "dragged": not a loss, but counted apart (#1012)."""
+    drag = rows_at(0)
+    assert kind_of(drag, dragRows=drag) == "dragged"
+    output, _ = run_script("record_fling.js", trial(drag, dragRows=drag))
+    assert output["dragged"] == 1
+    assert output["lost"] == 0
+
+
+def test_a_full_fling_near_the_drag_is_still_moved() -> None:
+    """Being near a control comes first: it ran in full, wherever a drag would end."""
+    assert kind_of(rows_at(END), dragRows=rows_at(END)) == "moved"
 
 
 # ------------------------------------------------------------------ record_control.js
@@ -178,6 +199,18 @@ def test_a_control_from_another_rest_fails() -> None:
     output = control(rows_at(END))
     output = control(rows_at(END), output, rest="Talk. S. 12:30 to 1:00 PM, Room 2.")
     assert output["controlsOk"] is False
+
+
+def test_a_control_that_lost_its_velocity_is_dropped() -> None:
+    """One that ends where the slow swipe did measures nothing, and is not kept (#1012)."""
+    drag = rows_at(0)
+    kept = control(rows_at(END), {"dragRows": drag})
+    dropped, logged = run_script(
+        "record_control.js", {**kept, "restRow": REST, "topRows": drag}
+    )
+    assert len(dropped["controls"]) == 1
+    assert dropped["controlsOk"] is True
+    assert logged[0].startswith("control dropped")
 
 
 def test_a_control_with_no_row_read_fails() -> None:
