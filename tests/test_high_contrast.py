@@ -16,14 +16,12 @@ from pycon_us import theme
 from pycon_us.theme_hc import HC_DARK, HC_LIGHT
 from tests.flet_dart import flet_dart_file
 from tests.theme_helpers import (
+    AAA_TEXT,
     FLET_THEME_DART,
     NEUTRAL_RAMP,
     contrast_ratio,
     hex_role,
 )
-
-AAA_TEXT = 7.0
-"""High contrast's text minimum (D-23, D-33)."""
 
 NON_TEXT = 3.0
 """WCAG 1.4.11's minimum for a boundary, such as an outline."""
