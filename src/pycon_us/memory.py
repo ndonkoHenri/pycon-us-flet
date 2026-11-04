@@ -8,8 +8,12 @@ It is plain, not a store: writing it re-renders nothing, and it has no context o
 from dataclasses import dataclass, field, fields
 from datetime import date
 from random import Random
+from typing import TYPE_CHECKING
 
 from pycon_us.core.list_place import Place
+
+if TYPE_CHECKING:
+    from pycon_us.screens.schedule_now import Landing
 
 
 @dataclass
@@ -37,6 +41,10 @@ class ViewMemory:
         jumped_on: The conference day on which the Schedule last jumped to now: it
             jumps by itself on the first display of each today in this process, and
             not again that day, a "Now" tap included (D-18, D-155, D-204).
+        schedule_landing: Where the last jump to now left today's list; each scroll end
+            of that list is measured against it, across a second display (D-499).
+        schedule_at_landing: The list was near that landing when its last scroll ended,
+            so a second display, put back there, needs no "Now" button (D-499).
         search_query: What is typed in the search field; an opener clears it, so
             each search starts empty (D-193).
         search_scope: The search's scope, one of `core.search.SCOPES`, for a Search
@@ -86,6 +94,8 @@ class ViewMemory:
     schedule_places: dict[date, Place] = field(default_factory=dict)
     schedule_basis: tuple[float, float, bool] | None = None
     jumped_on: date | None = None
+    schedule_landing: Landing | None = None
+    schedule_at_landing: bool = False
     search_query: str = ""
     search_scope: str = "all"
     map_tab: str = "rooms"

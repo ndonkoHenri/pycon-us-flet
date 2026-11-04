@@ -161,7 +161,7 @@ def Schedule() -> ft.View:
         if asked:
             set_said("")  # the same words again are a change only after a silence
         else:
-            signals.landing = None
+            memory.schedule_landing = None
             set_in_view(PENDING)
         # The clock's place: the landing's render lays the line out at it too.
         at = clock.now()
@@ -178,7 +178,8 @@ def Schedule() -> ft.View:
         # "landed" recorded the offset at its scroll end; "still" left it as it was.
         pixels = memory.schedule_offsets.get(current, 0.0)
         landing = Landing(current, target, conference.version, excluded, pixels)
-        signals.landing = landing
+        memory.schedule_landing = landing
+        memory.schedule_at_landing = True
         set_in_view(landing)
         # The user's own tap: a screen reader hears where the list went, since the
         # tab switch and the scroll are silent. The first display's jump is not asked.
@@ -205,8 +206,9 @@ def Schedule() -> ft.View:
         if shown is None:  # no data yet: the first display is the render that has it
             return
         jumps = jumps_by_itself(shown, current, today_slots, memory)
-        if not jumps:
-            set_in_view(None)
+        if not jumps:  # a second display is put back where it was (D-499)
+            landing = memory.schedule_landing
+            set_in_view(landing if memory.schedule_at_landing else None)
         # A round trip: Flutter has applied the first render's patch (D-155, D-156).
         await svc.storage.get(THEME)
         set_rest(True)
@@ -281,11 +283,11 @@ def Schedule() -> ft.View:
             return
         memory.schedule_offsets[day] = e.pixels
         signals.ended.set()
-        landing = signals.landing
+        landing = memory.schedule_landing
         if landing is not None and landing.day == day:
-            set_in_view(
-                landing if landing.near(e.pixels, e.viewport_dimension) else None
-            )
+            near = landing.near(e.pixels, e.viewport_dimension)
+            memory.schedule_at_landing = near
+            set_in_view(landing if near else None)
 
     on_scroll = ft.use_callback(scrolled, [])
 
