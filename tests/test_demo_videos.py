@@ -97,3 +97,35 @@ def test_no_demo_flow_goes_near_the_developer_screen() -> None:
             assert "developer" not in lowered, line
             assert "about_app" not in lowered, line
             assert "about this app" not in lowered, line
+
+
+def test_the_status_bar_starts_at_the_clock_s_nine_forty_one() -> None:
+    """The first frame of a scene reads 9:41, which the stored fake clock says."""
+    assert demo_videos.fake_minute(0) == "9:41"
+    assert demo_videos.fake_minute(-5) == "9:41"  # before the clock starts
+
+
+def test_the_status_bar_follows_the_fake_clock_s_minute() -> None:
+    """A clip that outlasts a minute shows the minute the app's "Now" line shows."""
+    assert demo_videos.fake_minute(59.9) == "9:41"
+    assert demo_videos.fake_minute(60) == "9:42"
+    assert demo_videos.fake_minute(190) == "9:44"
+
+
+def test_the_next_change_is_the_seconds_left_in_the_minute() -> None:
+    """The follower wakes at each minute's end, not every second."""
+    assert demo_videos.seconds_to_next_minute(0) == 60
+    assert demo_videos.seconds_to_next_minute(45) == 15
+    assert demo_videos.seconds_to_next_minute(60) == 60
+
+
+def test_the_stored_clock_starts_early_so_the_clip_begins_on_nine_forty_one() -> None:
+    """With the lead stored, the clock reads 9:41:00 as the first frame is filmed."""
+    lead = demo_videos.CLOCK_LEAD
+    dev = json.loads(scene_prefs(None, lead)[f"flutter.{DEV.key}"])
+    assert dev[DEV_FAKE_NOW] != demo_videos.FAKE_NOW
+    assert demo_videos.fake_start(lead).isoformat() == dev[DEV_FAKE_NOW]
+    assert demo_videos.fake_minute(0, lead) == "9:40"  # the app has just started
+    assert demo_videos.fake_minute(lead, lead) == "9:41"
+    assert demo_videos.fake_minute(lead + 59, lead) == "9:41"
+    assert demo_videos.seconds_to_next_minute(lead, lead) == 60

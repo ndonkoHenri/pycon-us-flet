@@ -543,9 +543,20 @@ sheets <clip> <folder>` saves its frames, two a second, on contact sheets, and p
 frames and brief flashes. A dark clip's Settings and dark screens print as dark frames.
 
 The Developer options stay out of every frame because nothing opens or unlocks them. Each
-scene writes the fake clock (Friday 09:41, as the status bar says) and, for the staff clip,
+scene writes the fake clock (Friday 09:41) and, for the staff clip,
 the mock's URL into the app's stored preferences with the app stopped, then restarts the
 simulator's preferences daemon, which otherwise serves the old values. With no `unlocked`
 key, neither More nor About this app has a Developer row. Off camera, a warm-up answers iOS's
 slide-to-type tip, and `subflows/staff_setup.yaml` signs in, since the sign-in page names the
 local mock. A session's star shows no primer, because the scene stores it as answered.
+
+The fake clock runs on from the launch, so the status bar follows it: while a clip is filmed the
+tool sets the status bar's time to the clock's minute each time that minute changes
+(`fake_minute()`; `BOOT_LAG` is the seconds the app takes to start its clock after the launch), so
+a long clip's "Now · 9:42" never sits under a status bar that still says 9:41. Nothing in the app
+freezes its clock for the camera (#1016).
+
+A clip with a setup (the staff clip signs in first, which takes minutes) would begin long after
+9:41, so the tool launches the app again after the setup with only the clock stored anew
+(`restart_clock()`, `subflows/staff_ready.yaml`), and stores every clock `CLOCK_LEAD` seconds early,
+so the clip's first frame reads 9:41:00 within a few seconds.
