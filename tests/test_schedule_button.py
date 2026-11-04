@@ -195,6 +195,30 @@ async def test_the_button_hides_within_half_a_screen_of_where_the_jump_landed(
     assert schedule.fab is None
 
 
+async def test_a_second_display_at_the_landing_keeps_the_button_hidden(
+    shown: Callable[[], Awaitable[Shown]],
+) -> None:
+    """Another tab and back puts the list back at now, so no "Now" shows (D-499, #1079)."""
+    await shown()
+    second = await shown()
+    assert second.keyed() == []  # put back, not moved
+    assert second.fab is None
+    await second.scroll_end(FRIDAY, 3000.0)
+    assert second.fab is not None  # the landing was kept: a scroll away still counts
+
+
+async def test_a_second_display_scrolled_away_offers_the_button(
+    shown: Callable[[], Awaitable[Shown]],
+) -> None:
+    """Left away from the landing, the list comes back there, and "Now" still shows."""
+    first = await shown()
+    await first.scroll_end(FRIDAY, 3000.0)
+    second = await shown()
+    assert second.fab is not None
+    await second.scroll_end(FRIDAY, 4000.0)
+    assert second.fab is None
+
+
 async def test_the_button_waits_for_the_first_jump_on_a_list_already_in_place(
     shown: Callable[..., Awaitable[Shown]],
     monkeypatch: pytest.MonkeyPatch,

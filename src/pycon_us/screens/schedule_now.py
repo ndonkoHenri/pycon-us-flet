@@ -202,13 +202,10 @@ class Signals:
         ended: Set when the shown list's scroll ends (`jump_to_key()`).
         settled: Set when `Tabs` reports a day, which it does once a switch has
             finished sliding, the one asked for from Python included.
-        landing: Where the last jump left today's list; each scroll end of that list
-            is measured against it.
     """
 
     ended: asyncio.Event = field(default_factory=asyncio.Event)
     settled: asyncio.Event = field(default_factory=asyncio.Event)
-    landing: Landing | None = None
 
 
 def jumps_by_itself(
