@@ -235,7 +235,7 @@ def test_data_dir_raises_when_it_cannot_be_created(
     """D-120's one exception: a data directory that cannot exist is a broken install."""
     (tmp_path / "taken").write_bytes(b"")
     monkeypatch.setenv("FLET_APP_STORAGE_DATA", str(tmp_path / "taken"))
-    with pytest.raises(OSError):
+    with pytest.raises(OSError, match="taken"):
         data_files.data_dir()
 
 

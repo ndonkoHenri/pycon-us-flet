@@ -185,11 +185,15 @@ async def test_a_failed_call_moves_no_focus(
 ) -> None:
     """An exception from the call passes through, and nothing is focused."""
     opener = mounted(page, ft.IconButton(ft.Icons.SHARE))
-    with pytest.raises(RuntimeError):
+
+    async def failing_call() -> None:
         async with focus_back(svc, opener):
             svc.presence.leave()
             svc.presence.come_back()
             raise RuntimeError("no activity")
+
+    with pytest.raises(RuntimeError):
+        await failing_call()
     assert focused == []
 
 

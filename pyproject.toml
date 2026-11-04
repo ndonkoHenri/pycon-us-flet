@@ -132,6 +132,7 @@ extend-select = [
     "A",      # builtins: a name that shadows one
     "N",      # PEP 8 naming
     "ARG",    # unused arguments
+    "PT",     # pytest style: raises() blocks of one statement, match=, parametrize names
     "ASYNC",  # async functions: blocking calls and busy waits
     "RUF",    # ruff's own: unused noqa, a task nobody holds, regex patterns that are not raw
     "PIE",    # misc. clutter: unneeded pass, range start, dict spread
@@ -147,6 +148,7 @@ extend-select = [
 ]
 
 ignore = [
+    "PT018",  # one `assert a and b` per check reads better than two asserts here: 575 tests would churn for no bug found
     "ASYNC109", # an async helper that takes a `timeout` budget as its API; asyncio.timeout() inside would hide it from callers
     "N802",   # the Flet idiom: an `@ft.component` function is named like the control it returns, in CamelCase
     "RUF001", # ambiguous Unicode in strings, docstrings and comments: the text is deliberately typographic (… – × ’)

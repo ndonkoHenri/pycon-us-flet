@@ -7,7 +7,7 @@ from pycon_us.ui.coc_review_dialog import Review, record_button
 
 
 @pytest.mark.parametrize(
-    "sending,maybe_sent", [(False, False), (False, True), (True, False)]
+    ("sending", "maybe_sent"), [(False, False), (False, True), (True, False)]
 )
 def test_record_action_reserves_space_around_wrapped_labels(
     sending: bool, maybe_sent: bool
