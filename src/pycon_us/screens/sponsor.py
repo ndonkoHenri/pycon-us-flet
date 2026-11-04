@@ -166,12 +166,19 @@ def intro(
             centred=True,
             selectable=True,
         ),
-        _centred(f"{sponsor.level} sponsor", color=ft.Colors.ON_SURFACE_VARIANT),
+        # A node of its own: a plain line became the column's own label, which TalkBack
+        # read before the name, the heading inside it (#1085).
+        ft.Semantics(
+            container=True,
+            content=_centred(
+                f"{sponsor.level} sponsor", color=ft.Colors.ON_SURFACE_VARIANT
+            ),
+        ),
     ]
     hall = bool(svc.year.map.booths)  # no hall, no Find booth: none is dead
     facts = facts_line(sponsor, hall=hall)
     if facts is not None:
-        lines.append(_centred(facts))
+        lines.append(ft.Semantics(container=True, content=_centred(facts)))
     places: list[ft.Control] = []
     if sponsor.booth and hall:
         places.append(find_booth_button(sponsor.booth, view_path))
