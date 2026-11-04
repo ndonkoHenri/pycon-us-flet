@@ -107,6 +107,7 @@ def note_sheet(
     high_contrast: bool = False,
     reduce_motion: bool = False,
     screen_reader: bool = False,
+    large_text: bool = False,
 ) -> ft.BottomSheet:
     """Return the note sheet for `editing` (ux.md §7.3).
 
@@ -118,6 +119,7 @@ def note_sheet(
         high_contrast: HC is on screen: a 1 dp `outline` edge draws the sheet.
         reduce_motion: The sheet appears without its slide (D-34, D-173).
         screen_reader: A screen reader is on: no drag handle or scrim to stop on (D-485).
+        large_text: The text is large for the width (`Prefs.time_above`).
     """
     draft = editing.draft
     body: list[ft.Control] = [heading(title_of(editing), 1)]
@@ -128,7 +130,7 @@ def note_sheet(
         body.append(note(line, identifier="lead.note.sponsor"))
     body += [
         heading("Interest", 2),
-        interest_button(draft.interest, actions.interest),
+        interest_button(draft.interest, actions.interest, large_text=large_text),
         heading("Follow-up", 2),
         ft.Row(
             [
@@ -307,6 +309,7 @@ def use_note_sheet(*, owner: str) -> NoteSheet:
             high_contrast=tokens.high_contrast,
             reduce_motion=prefs.reduce_motion,
             screen_reader=prefs.screen_reader,
+            large_text=prefs.time_above,
         )
         if editing is not None
         else None
