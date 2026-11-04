@@ -1,6 +1,6 @@
 # PyCon US Mobile (Ionic 8 / Angular 17 / Capacitor 7) — Inventory of the "Info pages, Notifications, Live Update & Native/Project Config" slice
 
-Source checkout: `/Users/ndonkohenri/PycharmProjects/flet-dev/others/pycon-us/excluded/pycon-us-mobile` (shallow clone, single commit `2aa6df8 fix: Sprints link for correct url (#315)`, remote `https://github.com/PyCon/pycon-us-mobile`).
+Source checkout: `excluded/pycon-us-mobile` (shallow clone, single commit `2aa6df8 fix: Sprints link for correct url (#315)`, remote `https://github.com/PyCon/pycon-us-mobile`).
 
 This document is a *description of what exists*, written for someone who will rebuild the slice in Flet without reading the HTML/TS. It does not propose Flet solutions; where something is likely to be painful to port it says "looks hard to port because …".
 

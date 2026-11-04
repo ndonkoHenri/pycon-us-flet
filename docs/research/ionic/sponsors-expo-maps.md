@@ -1,6 +1,6 @@
 # Ionic inventory — Sponsors, Expo Hall & Maps slice
 
-Source tree: `/Users/ndonkohenri/PycharmProjects/flet-dev/others/pycon-us/excluded/pycon-us-mobile/src/app/`
+Source tree: `excluded/pycon-us-mobile/src/app/`
 Stack: Ionic 8.4 / Angular 17.3 / Capacitor 7, `@ciag/ngx-pinch-zoom` 13.3.0 (pinned exact).
 This document describes the *existing Ionic behaviour only*; it proposes no Flet design.
 

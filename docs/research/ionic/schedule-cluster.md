@@ -1,6 +1,6 @@
 # PyCon US Mobile (Ionic 8 / Angular 17 / Capacitor 7) — Schedule cluster inventory
 
-Source root: `/Users/ndonkohenri/PycharmProjects/flet-dev/others/pycon-us/excluded/pycon-us-mobile/src/app`
+Source root: `excluded/pycon-us-mobile/src/app`
 
 Slice covered (every `.ts`, `.html`, `.scss` read in full):
 

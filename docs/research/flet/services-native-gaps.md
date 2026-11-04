@@ -1,9 +1,9 @@
 # PyCon US mobile → Flet: native capabilities, services and gaps
 
 Scope: every Capacitor / native plugin used by
-`/Users/ndonkohenri/PycharmProjects/flet-dev/others/pycon-us/excluded/pycon-us-mobile`
+`excluded/pycon-us-mobile`
 (Ionic 8 / Angular 17 / Capacitor 7, `package.json` version 26.0.0), mapped to what the
-local Flet monorepo (`/Users/ndonkohenri/PycharmProjects/flet-dev/flet`, main @ `7688de3`,
+local Flet monorepo (`<flet checkout>`, main @ `7688de3`,
 1.1.0-dev) can do today. Every Flet class/method/property named below was read from the
 local source; pub.dev facts were fetched on 2026-10-11. Anything not found locally is
 marked **GAP**.

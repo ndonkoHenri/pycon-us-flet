@@ -1,12 +1,12 @@
 # PyCon US mobile (Ionic 8 / Angular 17 / Capacitor 7) -> Flet 1.1.0-dev: UI control map
 
-Source of truth for Flet: local monorepo `/Users/ndonkohenri/PycharmProjects/flet-dev/flet`
+Source of truth for Flet: local monorepo `<flet checkout>`
 (HEAD `7688de3`, "1.1.0" section at top of `CHANGELOG.md`). Every class, property and
 method named below was read from the Python SDK at
 `sdk/python/packages/flet/src/flet/` (abbreviated `SDK/` below) or from an extension
 package under `sdk/python/packages/flet-*`. Anything not found there is marked **GAP**.
 
-Ionic app: `/Users/ndonkohenri/PycharmProjects/flet-dev/others/pycon-us/excluded/pycon-us-mobile/src/app`
+Ionic app: `excluded/pycon-us-mobile/src/app`
 (abbreviated `APP/`).
 
 Status legend: **exists** = direct control with the needed props/events; **partial** = can
