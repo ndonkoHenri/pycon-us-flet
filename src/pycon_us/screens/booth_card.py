@@ -177,7 +177,10 @@ def BoothCard(
                         f"{SCREEN}.card.details",
                         ft.FilledTonalButton(DETAILS, on_click=details),
                     )
-                ]
+                ],
+                # A plain row lets the button run past the card at the largest text;
+                # a wrapping one bounds it, so its label wraps (#1091).
+                wrap=True,
             )
         )
     elif item.sponsors:

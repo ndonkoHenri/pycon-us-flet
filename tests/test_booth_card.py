@@ -255,3 +255,18 @@ async def test_back_from_sponsor_details_keeps_the_booth_and_card(
     assert str(shown.node(f"{expo.SCREEN}.card").label).startswith(
         "Booth 613, Bloomberg"
     )
+
+
+async def test_sponsor_details_wraps_rather_than_overflowing(render: Render) -> None:
+    """Its row bounds the button, so the label wraps at iOS's largest text (#1091)."""
+    shown = await render(reduce_motion=True)
+    await shown.lay_out()
+    await shown.tap("613")
+    details = shown.node(f"{expo.SCREEN}.card.details")
+    # `named()` puts a `MergeSemantics` around its node.
+    (row,) = [
+        c
+        for c in shown.find(ft.Row)
+        if any(getattr(child, "content", None) is details for child in c.controls)
+    ]
+    assert row.wrap
