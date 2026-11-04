@@ -911,6 +911,22 @@ run below settled it (D-474). No Flet
 defect was isolated, and the iPhone's release target remains unmeasured here. The
 dedicated emulator was shut down after the run.
 
+**Performance pass, 2026-11-05 (#836): Android emulator numbers, not a D-80 target met on hardware.** Release arm64 APKs of `main` at `f26a1cae` (build 503) and S2's reproducer, Flet 1.1.0.dev4, Flutter 3.47.9, on one boot of `pycon_pixel6a_api36` (Android 16, `BE2A.250530.026.F3`, emulator 37.2.12.0, `-read-only -no-audio -no-boot-anim -no-snapshot -port 5584`). Scene as in the profile above: the bundled 2026 feed cached from a local server, then the server stopped; fake Friday 09:00, every track shown. Host: M4, 00:28-00:39, load 2-5, swap 2.6 of 4.1 GB, qemu at nice 5 with most threads at priority 31, and a person at the Mac (idle 0 to 1 min).
+
+| Measure, medians (range) | Reproducer | App | App ÷ reproducer |
+|---|---|---|---|
+| Content line against first `acked`, n = 10 | 1,333.5 ms (1,256-1,380); after the app, 1,379 ms (1,296-1,522), n = 5 | 2,108.5 ms (2,030-2,244); again 2,104 ms (1,992-2,476) | **1.53-1.58** |
+| `TotalTime`, n = 10 | 594 ms (555-684); 624 ms (559-739), n = 5 | 633.5 ms (581-689) | 1.02-1.07 |
+| Feed processing at start, n = 10 | | 71 ms (63-103) | |
+| Star tap, handler → patch, 12 taps on Friday | 4 ms (3-5), one row each | 11 ms (9-13), one row each but the first, whose count of 181 holds the start's bodies | |
+| Flinging Friday, 12 flings | 633 frames, 288 over 25 ms (45.5 %), worst 59.6 ms, median 23.4 ms | 641 frames, 324 over 25 ms (50.5 %), worst 75.7 ms, median 25.9 ms | |
+| Release APK, arm64 | 59.9 MB (59,859,877 bytes) | 61.1 MB (61,148,395 bytes) | not gated |
+
+- **The precondition.** D-453's holds: the reproducer's medians agree within 3.4 %. #339's first half holds too (processing within 20 % of 66 ms); its `TotalTime` half can't, as §8 says, since the reproducer itself reads 594 ms against D-112's 426.
+- **A window thrown out.** 00:17-00:24 read a reproducer of 1,494 then 1,669 ms and an app of 2,333 and 2,527 ms, with starts up to 7,559 ms. A `dart` process that wasn't this run's took about 200 % CPU at 00:24, so that window fails D-453. Nothing there is compared.
+- **Against the recorded numbers: no regression past the thresholds.** The ratio is above D-474's 1.4 but under §8's 1.7 and the 20 % line (1.68), and the rise is the reproducer's: it is 15 % faster than on 2026-11-03 (1,574 ms), while the app is 4 % faster (2,207 ms). Star tap is unchanged and under D-159's 16.7 ms. Flings improved on both, and the app stays near the reproducer, so this emulator still can't speak to jank in absolute terms. The APK is the same size as P1's later runs.
+- **Not measured:** a recording of the first frame with rows, which the ratio didn't call for; the AAB and download sizes; first launch; the iPhone (#121) and a borrowed phone (#841).
+
 **Cold start settled, 2026-11-03 (#860, D-474): Android emulator.** Release arm64 APKs of `b343fed8` and S2 at pin `22a6dcb16`, on one boot of `pycon_pixel6a_api36` (`-port 5584`), with the scene and starts of the profile above (the first start of each group discarded). Host: M4, load 3-6, no other agent running, the owner's `iPhone 16` simulator booted idle.
 
 | Measure, medians (range), n = 10 unless noted | Reproducer | App | App ÷ reproducer |
