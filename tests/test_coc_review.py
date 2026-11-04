@@ -1,7 +1,7 @@
 """Tests for the CoC review, `ui/coc_review.py` and its dialog, on the CoC tool (#760).
 
 The tool runs in a real Flet session over the mock's transport, as in
-`tests/test_staff_coc.py`, whose fixtures these share. A scan opens the review and
+`tests/test_staff_coc.py`; the session and the dialog's helpers are `tests/coc_rig.py`'s. A scan opens the review and
 the scan screen awaits it, so each test starts the scan as a task, works the dialog
 as Flutter reports it (the field's text, then the event), then awaits the scan.
 Record sends exactly one forced incident (D-430); Cancel and Back send none; errors
@@ -11,13 +11,10 @@ same (D-434); and the notes never reach a log (D-72).
 
 import asyncio
 import logging
-import time
-from collections.abc import Iterator
-from typing import Any, cast
+from typing import cast
 
 import flet as ft
 import pytest
-from flet.utils.object_model import patch_dataclass
 
 from pycon_us.core.badges import ScanOutcome
 from pycon_us.prefs import Prefs
@@ -33,29 +30,39 @@ from pycon_us.ui.coc_review_dialog import (
 )
 from pycon_us.ui.scan_result import fill_of
 from pycon_us.ui.scan_screen import NOT_AVAILABLE
-from tests import test_staff_coc
+from tests import coc_rig
+from tests.coc_rig import (
+    ATTENDEES,
+    Show,
+    Switch,
+    badge_field,
+    coc,
+    dialog,
+    enter,
+    helper,
+    in_dialog,
+    nodes,
+    tap,
+    texts,
+    type_notes,
+)
 from tests.fakes import MemorySemantics
 from tests.harness import Shown
 from tests.scan_rig import panel
-from tests.test_high_contrast import AAA_TEXT
-from tests.test_staff_coc import ATTENDEES, Show, Switch, coc
-from tests.theme_helpers import AA_TEXT, NEUTRAL_RAMP, contrast_ratio
+from tests.theme_helpers import AA_TEXT, AAA_TEXT, NEUTRAL_RAMP, contrast_ratio
 from tools.mock_api.state import MockState
-from tools.mock_api.transport import mock_transport
 
-show, switch, stored = test_staff_coc.show, test_staff_coc.switch, test_staff_coc.stored
+show, switch, stored, mock, focused = (
+    coc_rig.show,
+    coc_rig.switch,
+    coc_rig.stored,
+    coc_rig.mock,
+    coc_rig.focused,
+)
 
 CAPTURE = "/2026/api/v1/mask_violations/capture/"
 GRACE = "MOCK0002:x"
 NOTES = "Hall B, 10:05: shouted at a volunteer"
-
-
-@pytest.fixture
-def mock(switch: Switch) -> MockState:
-    """The mock's state behind `switch`, so a test reads its incidents and faults."""
-    state = MockState.from_seed(now=time.time)
-    switch.inner = mock_transport(state)
-    return state
 
 
 @pytest.fixture
@@ -64,81 +71,6 @@ def clock(monkeypatch: pytest.MonkeyPatch) -> list[float]:
     now = [100.0]
     monkeypatch.setattr(scan_screen, "clock", lambda: now[0])
     return now
-
-
-@pytest.fixture
-def focused(monkeypatch: pytest.MonkeyPatch) -> list[int]:
-    """Counts the badge field's focus calls (the dialog's field is never focused)."""
-    calls = [0]
-
-    async def focus(_: ft.TextField) -> None:
-        calls[0] += 1
-
-    monkeypatch.setattr(ft.TextField, "focus", focus)
-    return calls
-
-
-def helper(shown: Shown) -> str | None:
-    """The badge field's line: why scanning is paused, or None."""
-    return cast(str | None, badge_field(shown).helper)
-
-
-def badge_field(shown: Shown) -> ft.TextField:
-    """The scan screen's badge code field (the closed dialog's field stays in the page)."""
-    return cast(ft.TextField, shown.node("scan.entry").content)
-
-
-async def enter(shown: Shown, text: str) -> None:
-    """Type `text` in the badge field as Flutter reports it, then press Enter."""
-    field = badge_field(shown)
-    shown.session.apply_patch(field._i, {"value": text})
-    await shown.event(field, "change", text)
-    await shown.event(field, "submit", text)
-
-
-def dialog(shown: Shown) -> ft.AlertDialog | None:
-    """The open review dialog, or None."""
-    dialogs = shown.session.page._dialogs.controls  # pyright: ignore[reportPrivateUsage]
-    found = [d for d in dialogs if isinstance(d, ft.AlertDialog) and d.open]
-    assert len(found) <= 1
-    return found[0] if found else None
-
-
-def walk(control: Any) -> Iterator[Any]:
-    """Every control under `control`: its title, content, controls and actions."""
-    yield control
-    for name in ("title", "content"):
-        child = getattr(control, name, None)
-        if isinstance(child, ft.BaseControl):
-            yield from walk(child)
-    for name in ("controls", "actions"):
-        for child in getattr(control, name, None) or ():
-            if isinstance(child, ft.BaseControl):
-                yield from walk(child)
-
-
-def nodes(shown: Shown, identifier: str) -> list[ft.Semantics]:
-    """The open dialog's semantics nodes named `identifier`."""
-    current = dialog(shown)
-    assert current is not None
-    return [
-        c
-        for c in walk(current)
-        if isinstance(c, ft.Semantics) and c.identifier == identifier
-    ]
-
-
-def in_dialog(shown: Shown, identifier: str) -> Any:
-    """The control under the open dialog's semantics node `identifier`."""
-    (node,) = nodes(shown, identifier)
-    return node.content
-
-
-def texts(shown: Shown) -> list[str]:
-    """Every text in the open dialog."""
-    current = dialog(shown)
-    assert current is not None
-    return [str(c.value) for c in walk(current) if isinstance(c, ft.Text)]
 
 
 def record_button(shown: Shown) -> ft.FilledButton:
@@ -169,18 +101,6 @@ async def scan(shown: Shown, text: str = GRACE) -> asyncio.Task[None]:
         if task.done() or dialog(shown) is not None:
             break
     return task
-
-
-async def type_notes(shown: Shown, text: str) -> None:
-    """Type the notes, as Flutter reports them."""
-    field = in_dialog(shown, "coc.review.notes")
-    patch_dataclass(field, {"value": text})
-    await shown.event(field, "change", text)
-
-
-async def tap(shown: Shown, identifier: str) -> None:
-    """Tap the dialog's button `identifier`."""
-    await shown.click(in_dialog(shown, identifier))
 
 
 async def start(shown: Shown, identifier: str) -> asyncio.Task[None]:
@@ -453,7 +373,7 @@ async def test_the_problem_is_announced_where_there_are_no_live_regions(
     def announcing(**kw):
         return Prefs(announcements=True, **kw)
 
-    monkeypatch.setattr(test_staff_coc, "Prefs", announcing)
+    monkeypatch.setattr(coc_rig, "Prefs", announcing)
     shown = await show()
     task = await scan(shown)
     mock.faults.inject("connect")

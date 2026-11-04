@@ -10,14 +10,18 @@ read to TalkBack and VoiceOver is checked on devices (the PR).
 
 import asyncio
 from dataclasses import replace
+from datetime import UTC, datetime, time, timedelta
 from pathlib import Path
 from typing import Any, cast
+from zoneinfo import ZoneInfo
 
 import flet as ft
 import httpx
 
+from pycon_us import clock
 from pycon_us.core.jobs import sponsor_of
 from pycon_us.core.sprints import needs_more
+from pycon_us.core.timefmt import today
 from pycon_us.locations import parent_of
 from pycon_us.screens import jobs as screen
 from pycon_us.services import api
@@ -26,7 +30,18 @@ from pycon_us.state import Conference
 from tests import jobs_view, strip
 from tests.fakes import MemoryPrefs
 from tests.feeds import recorded
-from tests.jobs_view import CARD, DATA, VIEW, YEAR, listing, role_ids, toggle_of
+from tests.jobs_view import (
+    AFTER,
+    CARD,
+    DATA,
+    DURING,
+    VIEW,
+    YEAR,
+    listing,
+    role_ids,
+    toggle_of,
+)
+from tests.trees import descendants
 
 show, sleeps = jobs_view.show, jobs_view.sleeps  # the fixtures, under these names
 network, finished = strip.network, strip.finished
@@ -147,6 +162,99 @@ async def test_a_placeholder_says_no_roles(show: Any) -> None:
     shown = await show(Conference(data=data, source="bundled", version=1))
     assert screen.NO_ROLES in shown.texts()
     assert shown.find(ft.Markdown) == []
+
+
+# ------------------------------------------------------------------ the closed line
+
+CLOSED = "These roles were listed for PyCon US 2026, and some have closed."
+"""What the page says once the conference is over (#869)."""
+
+
+def test_the_closed_line_starts_the_day_after_the_last_day() -> None:
+    """The conference's last day, the sprints' too, says nothing; the next day speaks."""
+    info = YEAR.conference
+    assert screen.closed_line(info, info.first_day - timedelta(days=30)) is None
+    assert screen.closed_line(info, info.first_day) is None
+    assert screen.closed_line(info, info.last_day) is None
+    assert screen.closed_line(info, info.last_day + timedelta(days=1)) == CLOSED
+    assert screen.closed_line(info, info.last_day + timedelta(days=200)) == CLOSED
+
+
+def test_the_closed_line_counts_the_conference_s_days_not_the_device_s() -> None:
+    """Midnight at the venue ends the conference: a UTC or another zone's date doesn't."""
+    info = YEAR.conference
+    midnight = datetime.combine(
+        info.last_day + timedelta(days=1), time(0, 0), tzinfo=info.zone
+    )
+    for zone in (UTC, ZoneInfo("Asia/Tokyo"), info.zone):
+        before = (midnight - timedelta(minutes=1)).astimezone(zone)
+        at = midnight.astimezone(zone)
+        assert screen.closed_line(info, today(before, info.zone)) is None
+        assert screen.closed_line(info, today(at, info.zone)) == CLOSED
+
+
+async def test_a_render_after_the_clock_crosses_midnight_adds_the_line(
+    show: Any, sleeps: Any
+) -> None:
+    """Nothing is cached: the next render, a filter's, reads the clock again (D-482)."""
+    shown = await show(now=DURING)
+    assert shown.nodes("jobs.closed") == []
+    clock.set_test_now(AFTER)
+    await jobs_view.type_into(shown, "temporal")
+    await jobs_view.pause(shown, sleeps)
+    assert CLOSED in shown.texts()
+
+
+async def test_during_the_conference_the_page_says_nothing_of_closed_roles(
+    show: Any,
+) -> None:
+    """Its last evening, in conference time (the zone, not the device's), is still on."""
+    evening = YEAR.conference.last_day
+    late = DURING.replace(year=evening.year, month=evening.month, day=evening.day)
+    for now in (DURING, late.replace(hour=23, minute=59)):
+        shown = await show(now=now)
+        assert shown.nodes("jobs.closed") == []
+        assert CLOSED not in shown.texts()
+
+
+async def test_after_the_conference_one_line_heads_the_list(show: Any) -> None:
+    """The line is the list's first item, above the job fair's card and the cards."""
+    shown = await show(now=AFTER)
+    assert shown.texts().count(CLOSED) == 1
+    note = shown.node("jobs.closed")
+    plan = shown.node("jobs.job_fair.location")
+    (listed,) = shown.find(ft.ListView)
+    first, second = listed.controls[:2]
+    assert note in descendants(first)
+    parents: list[ft.BaseControl] = []
+    at = plan.parent
+    while at is not None:  # the card is a component: walk up from its node
+        parents.append(at)
+        at = at.parent
+    assert second in parents  # the job fair's card follows the line
+    assert len(shown.nodes(CARD)) == 13  # the links and cards stay
+
+
+async def test_the_closed_line_stays_under_a_filter_and_a_miss(
+    show: Any, sleeps: Any
+) -> None:
+    """The cards that stay are as stale as the ones filtered out: the line is not."""
+    shown = await show(now=AFTER)
+    await jobs_view.type_into(shown, "temporal")
+    await jobs_view.pause(shown, sleeps)
+    assert len(shown.nodes(CARD)) == 1
+    assert CLOSED in shown.texts()
+    await jobs_view.type_into(shown, "zzzz")
+    await jobs_view.pause(shown, sleeps)
+    assert shown.nodes(CARD) == [] and CLOSED in shown.texts()
+
+
+async def test_a_year_without_listings_has_no_closed_line(show: Any) -> None:
+    """Nothing is listed, so nothing may have closed: the empty state speaks alone."""
+    data = replace(DATA, job_listings=())
+    shown = await show(Conference(data=data, source="bundled", version=1), now=AFTER)
+    assert shown.nodes("jobs.closed") == []
+    assert "No job listings yet" in shown.texts()
 
 
 # ------------------------------------------------------------------ the filter

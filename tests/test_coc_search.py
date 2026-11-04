@@ -1,7 +1,7 @@
 """Tests for the CoC name search, `ui/coc_search.py` and its sheet (#761; MASK-02, MASK-03).
 
 The tool runs in a real Flet session over the mock's transport, as in
-`tests/test_staff_coc.py`, whose fixtures these share. Find by name is disabled with
+`tests/test_staff_coc.py`; the session and the dialog's helpers are `tests/coc_rig.py`'s. Find by name is disabled with
 its reason until the directory has loaded and while offline; it opens a sheet that
 pauses scanning; typing finds rows (every folded word, D-46; at most 25); a row's tap
 opens the review dialog of `tests/test_coc_review.py`, whose Record reaches the panel
@@ -23,23 +23,31 @@ from pycon_us.screens.staff_coc import LOADING, OFFLINE, REVIEW_OPEN, find_reaso
 from pycon_us.ui import coc_search
 from pycon_us.ui.coc_search import SEARCH_OPEN
 from pycon_us.ui.coc_search_sheet import BEFORE, FIND, MORE, TITLE, phrase
-from tests import test_coc_review, test_staff_coc
-from tests.harness import Shown
-from tests.scan_rig import panel
-from tests.test_coc_review import (
+from tests import coc_rig
+from tests.coc_rig import (
+    ATTENDEES,
+    Show,
+    Switch,
     badge_field,
     dialog,
     enter,
     helper,
+    seeded_mock,
     tap,
     texts,
     type_notes,
     walk,
 )
-from tests.test_staff_coc import ATTENDEES, Show, Switch, seeded_mock
+from tests.harness import Shown
+from tests.scan_rig import panel
 
-show, switch, stored = test_staff_coc.show, test_staff_coc.switch, test_staff_coc.stored
-mock, focused = test_coc_review.mock, test_coc_review.focused
+show, switch, stored, mock, focused = (
+    coc_rig.show,
+    coc_rig.switch,
+    coc_rig.stored,
+    coc_rig.mock,
+    coc_rig.focused,
+)
 
 NOTES = "Hall B: shouted at a volunteer"
 
