@@ -17,7 +17,7 @@ import flet as ft
 from pycon_us.change_log import ChangeLog
 from pycon_us.core.change_views import now_card_text
 from pycon_us.locations import drill_href
-from pycon_us.ui.rows import LinkTile
+from pycon_us.ui.link_tile import LinkTile
 
 IDENTIFIER = "now.changes"
 """The card's one node (decisions §M)."""

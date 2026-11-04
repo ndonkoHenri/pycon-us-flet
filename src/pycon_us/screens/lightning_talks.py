@@ -37,8 +37,8 @@ from pycon_us.ui.buttons import ICON_PADDING
 from pycon_us.ui.day_groups import DayGroup
 from pycon_us.ui.favorite import use_favorite_toggle
 from pycon_us.ui.fold import FoldTile, expand_style
+from pycon_us.ui.link_tile import LinkTile
 from pycon_us.ui.links import OPENS_IN, LinkKind, external, open_link
-from pycon_us.ui.rows import LinkTile
 from pycon_us.ui.scaffold import AppScaffold
 from pycon_us.ui.session_rows import changes_of, use_recent_changes, use_session_views
 from pycon_us.ui.states import EmptyState, NoDataState

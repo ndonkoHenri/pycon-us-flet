@@ -25,7 +25,7 @@ from pycon_us.memory import ViewMemory
 from pycon_us.screens import settings_data
 from pycon_us.screens.settings import RADIO_WIDTH
 from pycon_us.screens.settings_data import DataSection
-from pycon_us.services import Services, api
+from pycon_us.services import Services, api, feed_api
 from pycon_us.services.storage import Storage
 from pycon_us.state import Conference
 from pycon_us.theme import LIGHT_TOKENS
@@ -59,7 +59,7 @@ def offline(monkeypatch: pytest.MonkeyPatch) -> None:
     async def fetch(url: str, **_: Any) -> bytes:
         raise api.NetworkError("ConnectError: offline")
 
-    monkeypatch.setattr(api, "fetch_feed", fetch)
+    monkeypatch.setattr(feed_api, "fetch_feed", fetch)
 
 
 @pytest.fixture
@@ -69,7 +69,7 @@ def online(monkeypatch: pytest.MonkeyPatch) -> None:
     async def serve(url: str, **_: Any) -> bytes:
         return recorded(2026)
 
-    monkeypatch.setattr(api, "fetch_feed", serve)
+    monkeypatch.setattr(feed_api, "fetch_feed", serve)
 
 
 @pytest.fixture
@@ -273,7 +273,7 @@ async def test_refresh_now_in_airplane_mode_keeps_the_schedule_and_the_cache(
         return recorded(2026)
 
     with monkeypatch.context() as patch:  # online once, to save a cache
-        patch.setattr(api, "fetch_feed", serve)
+        patch.setattr(feed_api, "fetch_feed", serve)
         await tap_refresh(render)
     assert svc.storage.feed_path.exists()
     cached = svc.storage.feed_path.read_bytes()
@@ -295,7 +295,7 @@ async def test_refresh_now_is_disabled_with_a_ring_while_its_refresh_runs(
         await release.wait()
         return recorded(2026)
 
-    monkeypatch.setattr(api, "fetch_feed", hold)
+    monkeypatch.setattr(feed_api, "fetch_feed", hold)
     asked = asyncio.create_task(tap_refresh(render))
     for _ in range(10):  # until the refresh it asked for has started
         await asyncio.sleep(0)

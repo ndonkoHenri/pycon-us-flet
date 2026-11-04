@@ -6,7 +6,8 @@ Every response comes from an `httpx.MockTransport`, never the network.
 import httpx
 import pytest
 
-from pycon_us.services.api import FEED_TIMEOUT, ApiError, NetworkError, fetch_feed
+from pycon_us.services.api import ApiError, NetworkError
+from pycon_us.services.feed_api import FEED_TIMEOUT, fetch_feed
 
 URL = "https://us.pycon.org/2026/schedule/conference.json"
 

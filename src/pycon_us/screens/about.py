@@ -25,7 +25,7 @@ from pycon_us.prefs import use_prefs
 from pycon_us.screens.now_header import spoken
 from pycon_us.services import use_services
 from pycon_us.ui.info_page import GUTTER, FeedBlock
-from pycon_us.ui.rows import LinkTile
+from pycon_us.ui.link_tile import LinkTile
 from pycon_us.ui.scaffold import AppScaffold, SectionHeader
 from pycon_us.ui.widths import READING, sides, use_margin
 

@@ -8,7 +8,7 @@ star is a separate stop (D-33). A list owner also reads the sessions changed in 
 24 h (`use_recent_changes()`) and hands each list only its own (`changes_of()`), so a
 recorded batch re-renders only the lists and rows it touches (D-153, D-315). The lines under a row's title are
 `ui.row_lines`'s, the gutter beside the rows is `ui.time_gutter`, the other rows
-are `ui.rows`'s (ux.md §3.9, D-184, D-200, D-227).
+are `ui.rows`'s (speakers) and `ui.link_tile`'s (links) (ux.md §3.9, D-184, D-200, D-227).
 """
 
 from collections.abc import Iterable, Mapping, Sequence

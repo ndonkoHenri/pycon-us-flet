@@ -32,7 +32,7 @@ from pycon_us.core.timefmt import (
     zone_note,
 )
 from pycon_us.core.timeline import Slot
-from pycon_us.ui.rows import SUBTITLED_TOP, LinkTile
+from pycon_us.ui.link_tile import SUBTITLED_TOP, LinkTile
 from pycon_us.ui.scaffold import SectionHeader
 
 GOLD = "#FFD779"

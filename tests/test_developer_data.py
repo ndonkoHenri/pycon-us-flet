@@ -25,7 +25,7 @@ from pycon_us.screens.developer_ui import (
     confirmation,
     snapshot_day,
 )
-from pycon_us.services import Services, api
+from pycon_us.services import Services, feed_api
 from pycon_us.staff import Staff
 from pycon_us.state import Conference
 from pycon_us.ui.actions import KEPT, refreshed
@@ -185,7 +185,7 @@ async def test_refresh_now_asks_for_a_refresh_and_says_how_it_ended(
     async def serve(url: str, **_: Any) -> bytes:
         return recorded(2026)
 
-    monkeypatch.setattr(api, "fetch_feed", serve)
+    monkeypatch.setattr(feed_api, "fetch_feed", serve)
     await tap(render, "developer.refresh_now")
     assert conference.source == "network"
     assert outcome(render()) == "Schedule updated from the feed."
@@ -212,7 +212,7 @@ async def test_refresh_now_is_disabled_while_an_asked_for_refresh_runs(
         await release.wait()
         return recorded(2026)
 
-    monkeypatch.setattr(api, "fetch_feed", hold)
+    monkeypatch.setattr(feed_api, "fetch_feed", hold)
     conference.start_refresh(svc.storage, svc.year)  # quiet: the row stays enabled
     await asyncio.sleep(0)
     assert row(render(), "developer.refresh_now").disabled is False
@@ -244,7 +244,7 @@ async def test_a_reset_during_an_asked_for_refresh_ends_the_tap_without_an_outco
         await release.wait()
         return recorded(2026)
 
-    monkeypatch.setattr(api, "fetch_feed", hold)
+    monkeypatch.setattr(feed_api, "fetch_feed", hold)
     asked = asyncio.create_task(tap(render, "developer.refresh_now"))
     await asyncio.sleep(0)
     async with asyncio.timeout(5):

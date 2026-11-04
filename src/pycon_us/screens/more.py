@@ -27,8 +27,9 @@ from pycon_us.prefs import use_prefs
 from pycon_us.screens.staff_entry import staff_section
 from pycon_us.services import use_services
 from pycon_us.staff import use_staff
+from pycon_us.ui.link_tile import LinkTile
 from pycon_us.ui.navigation import use_scroll_to_top
-from pycon_us.ui.rows import AVATAR_RADIUS, LinkTile
+from pycon_us.ui.rows import AVATAR_RADIUS
 from pycon_us.ui.scaffold import AppScaffold, SectionHeader, search_button
 from pycon_us.ui.widths import LIST, sides, use_margin
 from pycon_us.year_map import EXPO_PLAN

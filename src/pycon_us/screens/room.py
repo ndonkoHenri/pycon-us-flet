@@ -45,8 +45,8 @@ from pycon_us.state import use_conference
 from pycon_us.theme import use_tokens
 from pycon_us.ui.day_tabs import TAB_MS, day_tab
 from pycon_us.ui.favorite import use_favorite_toggle
+from pycon_us.ui.link_tile import LinkTile
 from pycon_us.ui.location_card import room_card
-from pycon_us.ui.rows import LinkTile
 from pycon_us.ui.scaffold import AppScaffold, SectionHeader
 from pycon_us.ui.scrolling import JUMP_MS, jump_to_key
 from pycon_us.ui.session_rows import use_recent_changes, use_session_views

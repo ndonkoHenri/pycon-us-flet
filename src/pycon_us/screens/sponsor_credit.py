@@ -17,8 +17,8 @@ from pycon_us.core.models import Sponsor
 from pycon_us.core.sponsors import sponsor_by_slug
 from pycon_us.locations import drill_href
 from pycon_us.state import use_conference
+from pycon_us.ui.link_tile import LinkTile
 from pycon_us.ui.logos import logo_tile
-from pycon_us.ui.rows import LinkTile
 from pycon_us.year_info import SponsorCredit
 
 LOGO = 40

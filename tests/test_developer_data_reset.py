@@ -28,7 +28,7 @@ from pycon_us.screens.developer_data import (
 from pycon_us.screens.developer_ui import (
     reset_losses,
 )
-from pycon_us.services import Services, api, changes_file, errors
+from pycon_us.services import Services, api, changes_file, errors, feed_api
 from pycon_us.services.pref_keys import ACCOUNT
 from pycon_us.staff import Staff
 from pycon_us.state import Conference
@@ -386,7 +386,7 @@ async def test_reset_cancels_a_refresh_from_a_developer_feed_before_it_caches_it
         await release.wait()
         return recorded(2026)
 
-    monkeypatch.setattr(api, "fetch_feed", hold)
+    monkeypatch.setattr(feed_api, "fetch_feed", hold)
     await conference.set_feed_url(DEV_FEED, svc.storage)
     running = conference.start_refresh(svc.storage, svc.year)
     await asyncio.sleep(0)
