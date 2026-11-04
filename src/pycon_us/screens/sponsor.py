@@ -120,7 +120,7 @@ def SponsorDetail(sponsor_slug: str) -> ft.View:
     if sponsor.description.strip():
         items.append(SectionHeader("About", level=2))
         items.append(about(sponsor.description))
-    items.extend(open_roles(data, sponsor, svc))
+    items.extend(open_roles(data, sponsor, svc, large_text=prefs.time_above))
     body = ft.ListView(items, expand=True, padding=sides(margin, bottom=24))
     # The heading in the intro names the page, so the app bar's title stays empty.
     return AppScaffold(title="", source=__name__, body=body)
@@ -317,7 +317,7 @@ def about(description: str) -> ft.Control:
 
 
 def open_roles(
-    data: ConferenceData, sponsor: Sponsor, svc: Services
+    data: ConferenceData, sponsor: Sponsor, svc: Services, *, large_text: bool = False
 ) -> list[ft.Control]:
     """Return the Open roles section, or nothing when the sponsor lists none.
 
@@ -329,6 +329,8 @@ def open_roles(
         data: The processed feed.
         sponsor: The sponsor.
         svc: The session's services, for a Markdown listing's links.
+        large_text: The text is large for the width (`Prefs.time_above`): a role's title
+            takes the row's width, as on Job listings, so words stay whole (D-497).
     """
     rows: list[ft.Control] = []
     for listing in listings_of(data, sponsor):
@@ -340,6 +342,7 @@ def open_roles(
                     role.url,
                     icon=ft.Icons.WORK_OUTLINE,
                     identifier=f"{SCREEN}.role.{first + index}",
+                    stacked=large_text,
                 )
                 for index, role in enumerate(listing.roles)
             )

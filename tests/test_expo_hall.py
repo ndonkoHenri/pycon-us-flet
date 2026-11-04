@@ -134,6 +134,7 @@ async def render(
         reduce_motion: bool = False,
         memory: ViewMemory | None = None,
         data: bool = True,
+        prefs: Prefs | None = None,
     ) -> ExpoShown:
         def make(*args: Any, **kwargs: Any) -> ExpoShown:
             return ExpoShown(*args, viewer=viewer, sleeps=sleeps, **kwargs)
@@ -152,7 +153,7 @@ async def render(
                 tmp_path=tmp_path,
                 monkeypatch=monkeypatch,
                 view_path="/map",
-                prefs=Prefs(loaded=True, reduce_motion=reduce_motion),
+                prefs=prefs or Prefs(loaded=True, reduce_motion=reduce_motion),
                 memory=memory,
                 route="/map?tab=expo",
                 kind=make,

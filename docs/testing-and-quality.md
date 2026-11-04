@@ -733,7 +733,7 @@ Every screen once, on 2026-11-04. **A machine "heard" this, not a person.** Talk
 | Speaker, and not found | ok | ok | ok | ok |
 | Room | ok | ok | ok | ok |
 | Floor plan, and from a room | ok; the image and zoom buttons named | ok | ok | ok |
-| Expo hall's plan and booth card | ok; booths in reading order | ok | ok | #1091, #1100 |
+| Expo hall's plan and booth card | ok; booths in reading order | ok | ok | #1091, #1100, since fixed (D-497) |
 | Job fair plan | ok; tables named | ok | ok | ok |
 | Sponsor | #1085 | ok | ok | ok |
 | Speakers | ok | ok | ok | ok |
@@ -745,7 +745,7 @@ Every screen once, on 2026-11-04. **A machine "heard" this, not a person.** Talk
 | Licences, a licence | ok | ok; a wide line scrolls | ok | ok |
 | Developer options | ok | ok | ok | ok |
 | Wi-Fi | ok | ok | ok | ok |
-| Job listings | ok | ok | ok | #1100 |
+| Job listings | ok | ok | ok | #1100, since fixed (D-497) |
 | Help & safety, Venue & hours | ok | ok | ok | ok |
 | About PyCon US, About the PSF, Social media | ok | ok | ok | ok |
 | Account | ok | ok | ok | #1093 |
@@ -770,7 +770,7 @@ Every screen once, on 2026-11-04. **A machine "heard" this, not a person.** Talk
 | Date picker | Flutter's words: "Friday, May 15, 2026", "Fake clock date" |
 | CoC review dialog | "Grace Sample", "Badge: Grace S.", "1 incident on record", "What happened?", Cancel, Record incident |
 
-**Bugs.** Fixed: #1058 (D-485), #1074, #1083, #1085, #1087, #1089, #1091, #1093, #1095, #1099 (D-496), #1103. Open: #1100 (long words in narrow tiles at iOS's largest text), #1101 (a clipped row's star), #1102 (the status strip spoken as each screen opens, `design`).
+**Bugs.** Fixed: #1058 (D-485), #1074, #1083, #1085, #1087, #1089, #1091, #1093, #1095, #1099 (D-496), #1100 (D-497), #1103. Open: #1101 (a clipped row's star), #1102 (the status strip spoken as each screen opens, `design`).
 
 **Judged again.**
 - **"My schedule"'s wrap and its star (D-167) stands.** Tried on the iOS simulator: `label_text_style` at 11 sp with no letter spacing still wraps at Flutter's 1.3x clamp on an iPhone 17, and shrinks all five labels at 100 %. Only a label control or a one-word label can fix it; the second is the owner's choice in D-167.

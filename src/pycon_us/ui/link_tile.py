@@ -39,6 +39,7 @@ def LinkTile(
     identifier: str | None = None,
     app: bool = False,
     copy_identifier: str | None = None,
+    stacked: bool = False,
 ) -> ft.Control:
     """Return a row that opens `target` by the link rule: a page or a link.
 
@@ -70,6 +71,11 @@ def LinkTile(
         app: A web address opens in the app that handles it: a social profile, a map.
         copy_identifier: The Copy button's identifier, where the screen names it
             otherwise than `<identifier>.copy` (Help & safety's `help.copy.<kind>`).
+        stacked: A link whose words matter more than its icons, at large text
+            (`Prefs.time_above`): no leading icon, and the `OPEN_IN_NEW` icon under the
+            title rather than beside it, so a long word stays whole (D-497). The node
+            reads as before, title then "Opens in browser". Ignored on a row with a
+            `subtitle`, or with no such icon (a page, a phone, an email).
 
     Raises:
         ValueError: `target` is not a link the app opens (`link_kind()`).
@@ -84,6 +90,7 @@ def LinkTile(
             subtitle=subtitle,
             identifier=identifier,
             copy_identifier=copy_identifier,
+            stacked=stacked,
         )
     page = ft.context.page
 
@@ -108,6 +115,7 @@ def _ExternalLinkTile(
     subtitle: str | ft.Control | None,
     identifier: str | None,
     copy_identifier: str | None = None,
+    stacked: bool = False,
 ) -> ft.Control:
     """The external form of `LinkTile`: a link that leaves the app, maybe with Copy."""
     svc = use_services()
@@ -124,6 +132,9 @@ def _ExternalLinkTile(
     trailing = None
     if opens_in is not None:
         trailing = ft.Icon(ft.Icons.OPEN_IN_NEW, semantics_label=opens_in)
+    if stacked and trailing is not None and subtitle is None:
+        # At the words' start: a ListTile's subtitle would centre a bare icon.
+        icon, subtitle, trailing = None, ft.Row([trailing]), None
     row = ft.MergeSemantics(
         content=ft.Semantics(
             identifier=identifier,

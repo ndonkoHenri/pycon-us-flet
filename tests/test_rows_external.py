@@ -52,6 +52,25 @@ def test_an_external_row_is_a_link_whose_icon_says_where_it_opens(
     assert trailing.semantics_label == heard
 
 
+def test_a_stacked_row_keeps_its_words_and_its_icon_under_the_title(
+    page: FakePage,
+) -> None:
+    """At large text the title gets the width; the node still says where it opens (D-497)."""
+    row = LinkTile("Roles", WEB, icon=ft.Icons.WORK_OUTLINE, stacked=True)
+    tile = tile_of(row)
+    assert tile.leading is None and tile.trailing is None
+    (icon,) = cast(ft.Row, tile.subtitle).controls
+    assert cast(ft.Icon, icon).semantics_label == "Opens in browser"
+
+
+def test_stacked_leaves_a_row_with_a_subtitle_or_no_link_icon_as_it_is(
+    page: FakePage,
+) -> None:
+    """A phone row keeps its number: `stacked` only moves a link's icon (D-497)."""
+    row = LinkTile("Call", "tel:+15551234", subtitle="+1 555 1234", stacked=True)
+    assert tile_of(row).subtitle == "+1 555 1234"
+
+
 async def test_a_web_row_opens_in_the_in_app_browser(
     page: FakePage, svc: Services
 ) -> None:

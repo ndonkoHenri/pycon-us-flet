@@ -270,3 +270,14 @@ async def test_sponsor_details_wraps_rather_than_overflowing(render: Render) -> 
         if any(getattr(child, "content", None) is details for child in c.controls)
     ]
     assert row.wrap
+
+
+@pytest.mark.parametrize("large_text", [False, True])
+async def test_at_large_text_the_head_s_words_go_under_its_logo(
+    render: Render, large_text: bool
+) -> None:
+    """Beside a logo and Close, "Bloomberg" broke inside itself at iOS's largest text (D-497)."""
+    shown = await render(prefs=Prefs(loaded=True, time_above=large_text))
+    await shown.lay_out()
+    await shown.tap("613")
+    assert isinstance(card(shown).content, ft.Column if large_text else ft.Row)

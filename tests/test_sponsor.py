@@ -19,6 +19,7 @@ from pycon_us.config import load_year
 from pycon_us.core.jobs import listings_of
 from pycon_us.core.models import Sponsor
 from pycon_us.core.sponsors import sponsor_by_slug
+from pycon_us.prefs import Prefs
 from pycon_us.screens import sponsor as screen
 from pycon_us.state import Conference
 from pycon_us.ui.buttons import ICON_PADDING
@@ -53,7 +54,11 @@ async def show(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> AsyncIterator
     """
     async with AsyncExitStack() as stack:
 
-        async def render(slug: str, conference: Conference | None = None) -> Shown:
+        async def render(
+            slug: str,
+            conference: Conference | None = None,
+            prefs: Prefs | None = None,
+        ) -> Shown:
             return await stack.enter_async_context(
                 showing(
                     lambda: screen.SponsorDetail(slug),
@@ -64,6 +69,7 @@ async def show(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> AsyncIterator
                     tmp_path=tmp_path,
                     monkeypatch=monkeypatch,
                     view_path=VIEW_PATH,
+                    prefs=prefs,
                 )
             )
 
@@ -352,3 +358,12 @@ async def test_the_level_is_a_node_of_its_own_after_the_name(show: Show) -> None
         for node in shown.find(ft.Semantics)
         if node.container and isinstance(node.content, ft.Text)
     ] == ["Visionary sponsor"]
+
+
+async def test_at_large_text_a_role_s_title_gets_the_row_s_width(show: Show) -> None:
+    """As on Job listings: both of its icons leave its side, so words stay whole (D-497)."""
+    shown = await show("bloomberg", prefs=Prefs(loaded=True, time_above=True))
+    first = shown.node(f"{ROLE}0")
+    (tile,) = [t for t in shown.find(ft.ListTile) if first in _ancestors(t)]
+    assert tile.leading is None and tile.trailing is None
+    assert tile.subtitle is not None
