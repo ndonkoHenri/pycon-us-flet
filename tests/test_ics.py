@@ -276,7 +276,7 @@ def test_bad_arguments_are_refused() -> None:
     with pytest.raises(ValueError, match="at least one session"):
         calendar_file([], year=2026, now=NOW)
     with pytest.raises(ValueError, match="aware"):
-        calendar_file([session], year=2026, now=datetime(2026, 5, 1))  # noqa: DTZ001
+        calendar_file([session], year=2026, now=datetime(2026, 5, 1))  # noqa: DTZ001 (naive on purpose: the call must refuse it)
     with pytest.raises(ValueError, match="negative"):
         calendar_file(
             [session], year=2026, now=NOW.astimezone(UTC), alarm=timedelta(minutes=-1)
