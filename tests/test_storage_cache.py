@@ -75,7 +75,7 @@ async def test_a_written_feed_reads_back_byte_for_byte_with_its_save_time(
     cached = await store.read_feed()
     assert cached is not None
     assert cached.raw == raw
-    assert cached.saved_at == os.stat(tmp_path / "feed-2026.json").st_mtime
+    assert cached.saved_at == (tmp_path / "feed-2026.json").stat().st_mtime
 
 
 async def test_the_cache_file_is_named_after_the_year(

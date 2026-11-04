@@ -125,6 +125,9 @@ extend-select = [
     "DTZ",    # no naive datetimes (D-43)
     "E",      # pycodestyle errors; E501 at 120 columns, the length the prose already keeps
     "W",      # pycodestyle warnings
+    "C4",     # comprehensions: no needless list() or dict() around one
+    "PTH",    # pathlib over os.path and open()
+    "PERF",   # performance: a loop that is one extend() or comprehension
     "PIE",    # misc. clutter: unneeded pass, range start, dict spread
     "RET",    # return statements: no else after return, no unneeded variable
     "LOG",    # logging: use of the logging module itself
@@ -145,7 +148,7 @@ ignore = [
 max-line-length = 120             # code is formatted at ruff's 88; docstrings and comments run to 120
 
 [tool.ruff.lint.per-file-ignores]
-"docs/spikes/**" = ["E402", "E501"]   # frozen spike scripts: sys.path set up before their imports; one long line
+"docs/spikes/**" = ["E402", "E501", "PTH", "PERF"]   # frozen spike scripts: sys.path set up before their imports; one long line
 
 [tool.ruff.lint.pydocstyle]
 convention = "google"

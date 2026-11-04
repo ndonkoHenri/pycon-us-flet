@@ -125,7 +125,7 @@ def test_a_row_reads_as_its_booth_name_and_level() -> None:
     assert expo_list.row_line(pybeach) == "Booth 726 \N{MIDDLE DOT} Community"
     assert expo_list.row_phrase(psf) == "Booth 407, Python Software Foundation"
     assert expo_list.row_line(psf) == "Booth 407"
-    (bare, *_) = [r for r in list_rows(placed_booths(None, YEAR.map.booths))]
+    (bare, *_) = list(list_rows(placed_booths(None, YEAR.map.booths)))
     assert (expo_list.row_phrase(bare), expo_list.row_line(bare)) == ("Booth 112", "")
 
 

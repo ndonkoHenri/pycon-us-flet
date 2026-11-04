@@ -162,12 +162,14 @@ def serial_setup(serial: str, animations: bool) -> list[list[str]]:
     shell = ["adb", "-s", serial, "shell", "settings", "put"]
     commands = [[*shell, "secure", "show_ime_with_hard_keyboard", "0"]]
     if not animations:
-        for scale in (
-            "window_animation_scale",
-            "transition_animation_scale",
-            "animator_duration_scale",
-        ):
-            commands.append([*shell, "global", scale, "0"])
+        commands.extend(
+            [*shell, "global", scale, "0"]
+            for scale in (
+                "window_animation_scale",
+                "transition_animation_scale",
+                "animator_duration_scale",
+            )
+        )
     return commands
 
 
