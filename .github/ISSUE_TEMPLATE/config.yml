@@ -1,2 +1,7 @@
 # Blank issues stay allowed for chores and anything the templates don't fit (AGENTS.md › Issues).
 blank_issues_enabled: true
+# Security reports go through GitHub's private vulnerability reporting, not a public issue (SECURITY.md).
+contact_links:
+  - name: Report a security vulnerability
+    url: https://github.com/ndonkoHenri/pycon-us-flet/security/advisories/new
+    about: Privately, so nothing is public before a fix. See SECURITY.md.

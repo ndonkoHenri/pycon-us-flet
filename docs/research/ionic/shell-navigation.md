@@ -1,6 +1,6 @@
 # PyCon US Mobile (Ionic 8 / Angular 17 / Capacitor 7) — Inventory: App Shell, Navigation & Theming
 
-Source checkout: `/Users/ndonkohenri/PycharmProjects/flet-dev/others/pycon-us/excluded/pycon-us-mobile`
+Source checkout: `excluded/pycon-us-mobile`
 Upstream: `https://github.com/PyCon/pycon-us-mobile` (single squashed commit `2aa6df8 fix: Sprints link for correct url (#315)`).
 README note from the maintainers: "This will be the last year this codebase exists as is. We are losing support of critical features needed from Ionic so we will be rewriting it for 2027."
 
