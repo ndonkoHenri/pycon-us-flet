@@ -33,7 +33,7 @@ from tests.room_view import (
     Scroll,
     highlighted,
 )
-from tests.test_theme import contrast_ratio
+from tests.theme_helpers import contrast_ratio
 from tests.trees import descendants
 
 render = room_view.render

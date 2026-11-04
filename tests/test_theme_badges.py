@@ -12,7 +12,7 @@ import pytest
 
 from pycon_us import config, theme
 from pycon_us.theme_badges import BadgeColors
-from tests.test_theme import (
+from tests.theme_helpers import (
     AA_TEXT,
     NEUTRAL_SURFACES,
     TEXT_TOKENS,

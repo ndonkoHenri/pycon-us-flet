@@ -26,7 +26,7 @@ from tests.fakes import MemoryClipboard
 from tests.feeds import processed
 from tests.harness import Shown, showing
 from tests.sessions import text_of
-from tests.test_theme import contrast_ratio, hex_role, scheme
+from tests.theme_helpers import contrast_ratio, hex_role, scheme
 
 PACIFIC = ZoneInfo("America/Los_Angeles")
 THURSDAY_10AM = datetime(2026, 5, 14, 10, 0, tzinfo=PACIFIC)

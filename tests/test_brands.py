@@ -11,7 +11,7 @@ import flet as ft
 import pytest
 
 from pycon_us.ui import brands
-from tests.test_theme import contrast_ratio, resolved
+from tests.theme_helpers import contrast_ratio, resolved
 
 NON_TEXT = 3.0
 """WCAG 1.4.11's ratio for a graphic against what it sits on."""

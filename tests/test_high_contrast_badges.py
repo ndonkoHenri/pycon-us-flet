@@ -18,7 +18,7 @@ from pycon_us.theme_hc import HC_DARK, HC_LIGHT
 from pycon_us.ui.badges import TrackBadge
 from tests.fake_page import FakePage
 from tests.test_high_contrast import AAA_TEXT, SURFACES, hc_scheme
-from tests.test_theme import (
+from tests.theme_helpers import (
     TEXT_TOKENS,
     badges,
     contrast_ratio,
