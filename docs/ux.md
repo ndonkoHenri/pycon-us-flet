@@ -327,6 +327,8 @@ No blocking loaders (SCHED-28 dropped); never a full-screen error while data exi
 
 ### 4.2 Freshness and refresh (D-32, D-39, D-40)
 
+The strip is a live region only for 5 s after its line changes, so a screen reader hears a change and not every screen that opens with it; its words are a stop either way (D-498).
+
 - Sources: bundled snapshot, then durable cache, then network; the best local copy renders at once.
 - Refresh on start; on resume (from any screen) and every 15 min while Now or Schedule is visible, each once the last refresh began 15 min ago or more, whatever its outcome (so an offline phone retries every 15 min, D-175); on Refresh. The automatic ones are quiet: they never change the strip's line, icon or button; on a strip that already shows, only its 2 dp bar runs, and over fresh data nothing shows; Refresh shows "Updating the schedule…", also when it joins a quiet one (D-181). Time-dependent views recompute every 60 s while visible and in the foreground: the strip's age keeps up, and the strip appears when the data turns stale.
 - Pull-to-refresh (U1, D-449): the Schedule's day lists (one indicator around the day pages; a day swipe never pulls), Sprints' and Job listings' lists are under `ft.RefreshIndicator` (`ui/scrolling.py`'s `pullable()`). A pull runs the refresh the strip's Refresh runs and joins one already running, so it sends no second request; Flutter's spinner turns until it ends, and the strip says "Updating the schedule…" as for its button. Offline it ends with the strip's "Offline · …" line and no other error. The strip keeps Refresh, the accessible way: no screen reader makes the gesture (§9).

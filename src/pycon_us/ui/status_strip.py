@@ -10,11 +10,14 @@ D-240). The strip ticks every `TICK_SECONDS` while it shows (D-40, D-175), and
 `use_minute()` is that tick as a hook, for any other view that depends on
 `clock.now()`, such as the Map's "Now:" lines (D-188). `current_minute()` is the
 ticking effects' state (D-200); they need no cleanup, since Flet cancels a running
-`async def` setup on unmount (F2, D-387).
+`async def` setup on unmount (F2, D-387). The strip is a live region only for
+`SAID_SECONDS` after its line changes, so opening a screen or coming back to one doesn't
+speak it, and its words stay a stop (D-498).
 `schedule_line()` says where the schedule on screen came from and its age, for the
 pages that say it whether or not it is fresh (D-292).
 """
 
+import asyncio
 from collections.abc import Awaitable, Callable
 from dataclasses import dataclass
 from datetime import datetime, tzinfo
@@ -130,6 +133,10 @@ UPDATING = "Updating the schedule…"
 TICK_SECONDS = 60
 """How often a shown strip reads the clock again: its age, and fresh turning stale (D-40)."""
 
+SAID_SECONDS = 5.0
+"""How long the strip stays a live region after its line changes (D-498): TalkBack's read
+of the new words starts in that time, and Back later doesn't speak them again."""
+
 
 @dataclass(frozen=True)
 class Strip:
@@ -145,12 +152,14 @@ class Strip:
         line: `strip_line()`'s words; None hides the strip (fresh data).
         refreshing: Any refresh runs, a quiet one too (D-181): the bar shows.
         on_refresh: What Refresh does; the same callable for the strip's life.
+        live: The line has just changed, so the strip is a live region (D-498).
     """
 
     status: Status
     line: str | None
     refreshing: bool
     on_refresh: Callable[[], Awaitable[None]]
+    live: bool = False
 
 
 def use_refresh() -> Callable[[], Awaitable[None]]:
@@ -167,6 +176,31 @@ def use_refresh() -> Callable[[], Awaitable[None]]:
         await conference.refresh(svc.storage, svc.year, closed=svc.closed)
 
     return ft.use_callback(refresh, [conference, svc])
+
+
+def use_just_changed(line: str | None) -> bool:
+    """Return whether `line` changed in the last `SAID_SECONDS`, not at mount (D-498).
+
+    A live region speaks as it appears, on a screen that opens with it and on Back to
+    one, as well as when its words change (#1102). True from the render with the new
+    words, since a region made live after they changed would say nothing.
+
+    Args:
+        line: The words to watch, kept by the caller's component across renders.
+    """
+    seen = ft.use_ref(line)
+    live, set_live = ft.use_state(False)
+
+    @report_errors
+    async def settle() -> None:
+        if line != seen.current:
+            seen.current = line
+            set_live(True)
+            await asyncio.sleep(SAID_SECONDS)
+            set_live(False)
+
+    ft.use_effect(settle, [line])
+    return live or line != seen.current
 
 
 def use_strip(*, auto_refresh: bool = False) -> Strip:
@@ -193,6 +227,7 @@ def use_strip(*, auto_refresh: bool = False) -> Strip:
     line = strip_line(
         status, conference.fetched_at, clock.now(), info.zone, use_24h=use_24h
     )
+    live = use_just_changed(line)
 
     @report_errors
     def tick() -> None:
@@ -206,7 +241,7 @@ def use_strip(*, auto_refresh: bool = False) -> Strip:
 
     ft.use_effect(keep_up, [auto_refresh])
 
-    return Strip(status, line, conference.refreshing, use_refresh())
+    return Strip(status, line, conference.refreshing, use_refresh(), live)
 
 
 @ft.component
@@ -226,10 +261,12 @@ def strip_view(strip: Strip, tokens: Tokens) -> ft.Control:
     """Return the status strip that `strip` describes; no hooks (D-32, D-146).
 
     Shown while a refresh the user asked for runs, when the data is stale, and after a
-    failed refresh; hidden when fresh. A live region, so a screen reader announces each
-    change. An automatic refresh is quiet (D-181): the line, its icon and the button
-    stay as they were, and only the 2 dp bar runs, so the strip stays hidden over fresh
-    data and the live region changes only when the outcome does.
+    failed refresh; hidden when fresh. A live region while its line has just changed
+    (`Strip.live`), so a screen reader announces each change and not each screen that
+    opens with it (D-498); its words are a stop either way. An automatic refresh is quiet
+    (D-181): the line, its icon and the button stay as they were, and only the 2 dp bar
+    runs, so the strip stays hidden over fresh data and the live region changes only when
+    the outcome does.
 
     Args:
         strip: What it shows (`use_strip()`).
@@ -298,7 +335,7 @@ def strip_view(strip: Strip, tokens: Tokens) -> ft.Control:
     return ft.Semantics(
         identifier="app.status",
         container=True,
-        live_region=True,
+        live_region=strip.live,
         visible=strip.line is not None,
         content=ft.Container(
             bgcolor=ft.Colors.SURFACE_CONTAINER_HIGH,
