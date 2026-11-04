@@ -8,7 +8,7 @@ looks, and what TalkBack and VoiceOver say, are checked on devices (the PR).
 
 import dataclasses
 from collections.abc import AsyncIterator, Awaitable, Callable
-from contextlib import AsyncExitStack
+from contextlib import AsyncExitStack, asynccontextmanager
 from pathlib import Path
 from typing import Any, cast
 
@@ -376,3 +376,83 @@ async def test_a_pushed_hall_keeps_its_zoom_across_the_list(
         assert (viewer.scale, viewer.x, viewer.y) == pytest.approx(
             (3.0, -300.0, -150.0)
         )
+
+
+# ------------------------------------------------------------------ the app bar
+
+
+@asynccontextmanager
+async def pushed_hall(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    route: str = "/map/plan/expo",
+    memory: ViewMemory | None = None,
+) -> AsyncIterator[ListShown]:
+    """Open `…/plan/expo` at `route` as the harness's pushed View."""
+    async with harness.showing(
+        plan.ExpoPlan,
+        plan,
+        year=YEAR,
+        conference=Conference(data=DATA, source="bundled", version=1),
+        tmp_path=tmp_path,
+        monkeypatch=monkeypatch,
+        view_path="/map/plan/expo",
+        prefs=Prefs(loaded=True, reduce_motion=True),
+        memory=memory,
+        route=route,
+        kind=ListShown,
+    ) as shown:
+        yield shown
+
+
+async def test_the_pushed_hall_s_bar_is_still_on_the_map_only(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """The booth card scrolls inside the Map, so its bar stays; the List scrolls the page.
+
+    Flutter's `AppBar` takes the card's scroll for the page's and tints the bar
+    (#962, F297): the Map's bar is still, the List's tints as every list's does.
+    """
+    FakeViewer().install(monkeypatch)
+    async with pushed_hall(tmp_path, monkeypatch) as shown:
+        assert shown.still_bars[-1] is True
+        await shown.show(expo_pane.LIST_VIEW)
+        assert shown.still_bars[-1] is False
+        await shown.show(expo_pane.MAP)
+        assert shown.still_bars[-1] is True
+
+
+async def test_a_link_off_the_plan_opens_the_list_with_a_tinting_bar(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Booth 139 is not on the plan, so the List shows though the memory says Map."""
+    FakeViewer().install(monkeypatch)
+    memory = ViewMemory(expo_view=expo_pane.MAP)
+    route = "/map/plan/expo?booth=139"
+    async with pushed_hall(tmp_path, monkeypatch, route, memory) as shown:
+        assert shown.switch.selected == [expo_pane.LIST_VIEW]
+        assert shown.still_bars[-1] is False
+
+
+async def test_the_map_tab_s_bar_is_still_on_the_expo_map_only(
+    render: Render,
+) -> None:
+    """The Map tab's Expo pane has the same card: still on its Map, not on its List."""
+    shown = await render()
+    assert shown.still_bars[-1] is True
+    await shown.show(expo_pane.LIST_VIEW)
+    assert shown.still_bars[-1] is False
+    await shown.show(expo_pane.MAP)
+    assert shown.still_bars[-1] is True
+
+
+async def test_the_map_tab_s_other_panes_keep_a_tinting_bar(render: Render) -> None:
+    """Rooms scrolls the page under the bar, even after the Expo's Map was shown."""
+    shown = await render()
+    assert shown.still_bars[-1] is True
+    (tabs,) = shown.find(ft.Tabs)
+    shown.session.apply_patch(tabs._i, {"selected_index": 0})
+    await shown.session.dispatch_event(tabs._i, "change", 0)
+    await shown.settle()
+    assert shown.memory.map_tab != "expo"
+    assert shown.still_bars[-1] is False

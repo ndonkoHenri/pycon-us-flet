@@ -25,7 +25,7 @@ import flet as ft
 from pycon_us.locations import is_top_view, query_of
 from pycon_us.memory import ViewMemory
 from pycon_us.prefs import use_prefs
-from pycon_us.screens.expo_pane import ExpoPane
+from pycon_us.screens.expo_pane import ExpoPane, use_still_bar
 from pycon_us.screens.map_job_fair import JOB_FAIR, JobFairPane
 from pycon_us.screens.map_plans import FLOOR_PLANS, floor_plans, plans_pane
 from pycon_us.screens.map_rooms import ROOMS, SCREEN, RoomsPane
@@ -125,6 +125,7 @@ def Map() -> ft.View:
     memory = svc.memory
     _, set_switches = ft.use_state(0)  # a pick re-renders; the memory holds the pane
     seen = ft.use_ref("")
+    expo_still, on_expo_view = use_still_bar()
     # Each route once, so a pane the user picks is not undone by the same query; a
     # route, since the floor viewer's way out pops it onto the Map (`?tab=`).
     if page.route != seen.current:
@@ -170,7 +171,11 @@ def Map() -> ft.View:
         )
     elif tab == EXPO:
         # Keyed, so Flet never migrates another pane's state into it (F130).
-        pane = ExpoPane(EXPO, key=EXPO)  # pyright: ignore[reportCallIssue]
+        pane = ExpoPane(
+            EXPO,
+            on_view=on_expo_view,
+            key=EXPO,  # pyright: ignore[reportCallIssue]
+        )
     elif tab == JOB_FAIR:
         pane = JobFairPane(list_ref, scrolled)
     else:
@@ -197,6 +202,9 @@ def Map() -> ft.View:
         actions=actions,
         body=body,
         on_retap=retap,
+        # The hall's booth card scrolls under the bar; every other pane is the page's
+        # own scroll, which tints it (D-370, F297).
+        still_bar=tab == EXPO and expo_still,
     )
 
 
