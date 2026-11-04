@@ -1,0 +1,47 @@
+# The README's screenshots: six screens on a live Friday, one run per platform and
+# appearance (`tools/readme_shots.py` stores the fake clock, sets the appearance and the
+# status bar, and runs this). Not a test; the shots land in the run's takeScreenshot/
+# folder, named by their order and screen.
+#
+# Two overlapping sessions and two more are saved first, so Now has "Your next session"
+# and My schedule has rows that say what they overlap.
+appId: io.github.ndonkohenri.confcompanion
+---
+- extendedWaitUntil: {visible: {id: app.nav.more}, timeout: 180000}
+- extendedWaitUntil: {visible: {id: now.favorite.4}, timeout: 30000}
+- tapOn: {id: now.favorite.4}
+- tapOn: {id: now.favorite.15}
+- extendedWaitUntil: {visible: {id: now.next.session.4}, timeout: 15000}
+- takeScreenshot: 1-now
+
+- tapOn: {id: app.nav.schedule}
+- extendedWaitUntil: {visible: {id: schedule.day_tab.2}, timeout: 15000}
+# The list scrolls itself to the now slot; hold until it has stopped.
+- extendedWaitUntil: {visible: {text: "A text that never shows"}, timeout: 3000, optional: true}
+- takeScreenshot: 2-schedule
+- scrollUntilVisible: {element: {id: schedule.favorite.70}, direction: DOWN}
+- tapOn: {id: schedule.favorite.70}
+- scrollUntilVisible: {element: {id: schedule.favorite.143}, direction: DOWN}
+- tapOn: {id: schedule.favorite.143}
+
+# A session, then its room on the floor plan with the room marked.
+- tapOn: {id: app.nav.now}
+- tapOn: {id: now.session.4}
+- extendedWaitUntil: {visible: {id: session.title}, timeout: 15000}
+- takeScreenshot: 3-session
+- scrollUntilVisible: {element: {id: session.location}, direction: DOWN}
+- tapOn: {id: session.location}
+- extendedWaitUntil: {visible: {id: plan.label}, timeout: 15000}
+- takeScreenshot: 4-floor-plan
+- runFlow: ../subflows/back.yaml
+- extendedWaitUntil: {visible: {id: session.location}, timeout: 15000}
+- runFlow: ../subflows/back.yaml
+
+- tapOn: {id: app.nav.my_schedule}
+- extendedWaitUntil: {visible: {id: my_schedule.session.4}, timeout: 15000}
+- takeScreenshot: 5-my-schedule
+
+- tapOn: {id: app.nav.more}
+- extendedWaitUntil: {visible: {id: more.title}, timeout: 15000}
+- assertNotVisible: {text: "Developer options"}
+- takeScreenshot: 6-more
