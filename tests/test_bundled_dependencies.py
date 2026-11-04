@@ -63,9 +63,50 @@ def test_an_undeclared_import_is_reported_by_name() -> None:
     assert undeclared_imports(sources, declared=set()) == {"leftpad"}
 
 
+def is_flet(name: str) -> bool:
+    """Say whether `name` is a package of the Flet family."""
+    return name == "flet" or name.startswith("flet-")
+
+
+def checkout_names(tool: dict, bundled: set[str]) -> set[str]:
+    """Return the Flet packages a temporary source build truly takes from a checkout.
+
+    uv's table serves the host. A package that reaches phones needs `flet build`'s table too,
+    or pip would resolve it from PyPI (`docs/development.md` §2.2).
+
+    Args:
+        tool: The `[tool]` table of `pyproject.toml`.
+        bundled: The names in `[project].dependencies`.
+
+    Returns:
+        The names the pin tests allow to go unpinned.
+    """
+    sources = set(tool.get("uv", {}).get("sources", {}))
+    for_phones = set(tool.get("flet", {}).get("dev_packages", {}))
+    return {
+        name
+        for name in sources
+        if is_flet(name) and (name not in bundled or name in for_phones)
+    }
+
+
 def from_a_flet_checkout() -> set[str]:
-    """What a temporary source build of Flet takes from a checkout (development.md §2.2)."""
-    return set(read_pyproject()["tool"].get("uv", {}).get("sources", {}))
+    """What a temporary source build of Flet takes from a checkout, by `pyproject.toml`."""
+    bundled = {requirement.name for requirement in bundled_requirements()}
+    return checkout_names(read_pyproject()["tool"], bundled)
+
+
+def test_a_bundled_package_needs_both_tables_to_go_unpinned() -> None:
+    """A uv source alone doesn't excuse a package that reaches phones; a host tool needs only it."""
+    tool: dict = {
+        "uv": {"sources": {"flet-notifications": {}, "flet-cli": {}, "httpx": {}}}
+    }
+    assert checkout_names(tool, {"flet-notifications", "httpx"}) == {"flet-cli"}
+    tool["flet"] = {"dev_packages": {"flet-notifications": "path"}}
+    assert checkout_names(tool, {"flet-notifications", "httpx"}) == {
+        "flet-cli",
+        "flet-notifications",
+    }
 
 
 def test_every_bundled_package_is_pinned_exactly() -> None:
@@ -81,7 +122,7 @@ def family_versions(requirements: list[Requirement]) -> dict[str, set[str]]:
     """Return each Flet package's pinned versions; a requirement with no `==` gives `""`."""
     versions: dict[str, set[str]] = {}
     for requirement in requirements:
-        if requirement.name == "flet" or requirement.name.startswith("flet-"):
+        if is_flet(requirement.name):
             pins = [s.version for s in requirement.specifier if s.operator == "=="]
             versions.setdefault(requirement.name, set()).update(pins or [""])
     return versions
@@ -126,7 +167,5 @@ def test_uv_lock_holds_the_family_at_that_version() -> None:
     wanted = family_versions(bundled_requirements())["flet"]
     for package in lock["package"]:
         name = package["name"]
-        if (
-            name == "flet" or name.startswith("flet-")
-        ) and name not in from_a_flet_checkout():
+        if is_flet(name) and name not in from_a_flet_checkout():
             assert {package.get("version")} == wanted, name
