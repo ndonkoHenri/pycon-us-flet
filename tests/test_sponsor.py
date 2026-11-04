@@ -342,3 +342,13 @@ def _ancestors(control: ft.BaseControl) -> list[ft.BaseControl]:
         found.append(node)
         node = node.parent
     return found
+
+
+async def test_the_level_is_a_node_of_its_own_after_the_name(show: Show) -> None:
+    """The line under the title isn't the column's label, read before the title (#1085)."""
+    shown = await show("bloomberg")
+    assert [
+        node.content.value
+        for node in shown.find(ft.Semantics)
+        if node.container and isinstance(node.content, ft.Text)
+    ] == ["Visionary sponsor"]
