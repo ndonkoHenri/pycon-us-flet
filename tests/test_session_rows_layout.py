@@ -28,7 +28,7 @@ from tests.row_sessions import (
     YEAR,
     Rendered,
 )
-from tests.test_theme import NEUTRAL_RAMP, contrast_ratio
+from tests.theme_helpers import NEUTRAL_RAMP, contrast_ratio
 
 # The harness's fixture, under this module's name, where pytest looks it up.
 rendered = row_sessions.rendered

@@ -13,7 +13,7 @@ from pycon_us.core.badges import ScanOutcome, ScanResult, Tag
 from pycon_us.theme import LIGHT_TOKENS
 from pycon_us.ui.scan_result import fill_of, result_panel, tag_colors, tag_row
 from tests.test_high_contrast import AAA_TEXT, hc_scheme
-from tests.test_theme import AA_TEXT, NEUTRAL_RAMP, contrast_ratio, hex_role
+from tests.theme_helpers import AA_TEXT, NEUTRAL_RAMP, contrast_ratio, hex_role
 
 ALLERGY = Tag("Allergy: peanuts", warning=True)
 VEGETARIAN = Tag("Vegetarian")

@@ -30,7 +30,7 @@ from pycon_us.screens.now_header import (
 )
 from tests import now_view
 from tests.now_view import INFO, PACIFIC, _walk, may
-from tests.test_theme import contrast_ratio
+from tests.theme_helpers import contrast_ratio
 
 data = now_view.data
 

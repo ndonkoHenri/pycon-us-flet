@@ -35,7 +35,7 @@ from tests import chrome
 from tests.chrome import view_at
 from tests.fake_page import FakePage, Hooks
 from tests.sessions import find, rendering, settle
-from tests.test_theme import contrast_ratio
+from tests.theme_helpers import contrast_ratio
 from tests.trees import descendants
 
 year, svc, page, conference, hooks = (

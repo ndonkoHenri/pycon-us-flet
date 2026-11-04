@@ -43,7 +43,7 @@ from tests.fakes import (
     MemoryPrefs,
     MemorySemantics,
 )
-from tests.test_theme import contrast_ratio
+from tests.theme_helpers import contrast_ratio
 from tests.trees import descendants, only, texts
 
 

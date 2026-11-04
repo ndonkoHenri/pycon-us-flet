@@ -48,7 +48,7 @@ from pycon_us.ui.tool_controls import tool_button
 from tests import harness, scan_rig
 from tests.scan_rig import ACCEPTED, Rig, Show, enter, entry, panel, scan
 from tests.test_high_contrast import AAA_TEXT
-from tests.test_theme import AA_TEXT, contrast_ratio
+from tests.theme_helpers import AA_TEXT, contrast_ratio
 
 rig, show, timer = scan_rig.rig, scan_rig.show, scan_rig.timer
 

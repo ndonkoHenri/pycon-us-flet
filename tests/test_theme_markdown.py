@@ -1,7 +1,7 @@
 """Tests for the Markdown style sheet: its colours, fonts, headings and rule.
 
 D-116, D-152, D-197. The contrast helpers and `resolved()` are
-`tests/test_theme.py`'s.
+`tests/theme_helpers.py`'s.
 """
 
 import dataclasses
@@ -11,7 +11,7 @@ import flet as ft
 import pytest
 
 from pycon_us import theme_markdown
-from tests.test_theme import AA_TEXT, contrast_ratio, resolved
+from tests.theme_helpers import AA_TEXT, contrast_ratio, resolved
 
 
 def test_every_markdown_text_style_names_a_checked_colour() -> None:
