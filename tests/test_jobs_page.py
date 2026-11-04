@@ -17,12 +17,15 @@ from zoneinfo import ZoneInfo
 
 import flet as ft
 import httpx
+import pytest
 
 from pycon_us import clock
 from pycon_us.core.jobs import sponsor_of
 from pycon_us.core.sprints import needs_more
 from pycon_us.core.timefmt import today
 from pycon_us.locations import parent_of
+from pycon_us.prefs import Prefs
+from pycon_us.screens import job_card
 from pycon_us.screens import jobs as screen
 from pycon_us.services import api
 from pycon_us.services.storage import Storage
@@ -119,6 +122,24 @@ async def test_a_role_is_a_link_to_the_in_app_browser(show: Any) -> None:
     ]
 
 
+@pytest.mark.parametrize("large_text", [False, True])
+async def test_at_large_text_words_get_the_whole_width(
+    show: Any, large_text: bool
+) -> None:
+    """A role's title gets the row's width and a header stacks: words stay whole (D-497).
+
+    "Infrastructure" and "Bloomberg" broke inside themselves at iOS's largest text.
+    """
+    shown = await show(prefs=Prefs(loaded=True, time_above=large_text))
+    node = shown.node(f"jobs.role.{listing('Hudson River Trading').id}.0")
+    (tile,) = [t for t in shown.find(ft.ListTile) if _under(t, node)]
+    assert (tile.leading is None) is large_text
+    assert (tile.trailing is None) is large_text
+    assert (tile.subtitle is not None) is large_text  # the link's icon, under the title
+    head = shown.nodes(CARD)[0]
+    assert isinstance(head.content, ft.Column if large_text else ft.Row)
+
+
 async def test_the_header_pushes_the_sponsor_on_this_page(show: Any) -> None:
     """D-17: `/more/jobs/sponsor/<slug>`, whose Back returns to the list."""
     shown = await show()
@@ -160,7 +181,7 @@ async def test_a_placeholder_says_no_roles(show: Any) -> None:
     """OpenEDG's "N/A": its header, then "No roles listed", no Markdown."""
     data = replace(DATA, job_listings=(listing("OpenEDG Python Institute"),))
     shown = await show(Conference(data=data, source="bundled", version=1))
-    assert screen.NO_ROLES in shown.texts()
+    assert job_card.NO_ROLES in shown.texts()
     assert shown.find(ft.Markdown) == []
 
 

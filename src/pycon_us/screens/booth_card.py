@@ -146,6 +146,7 @@ def BoothCard(
     hiring: str,
     view_path: str,
     body_box: float | None,
+    large_text: bool = False,
     on_close: Callable[[], None],
     on_body_size: OnBodySize,
 ) -> ft.Control:
@@ -159,10 +160,12 @@ def BoothCard(
         view_path: The hall's View path, on top of which a sponsor is pushed.
         body_box: The height of the box the card's body scrolls in; None while it
             fits in half the pane.
+        large_text: The text is large for the width (`Prefs.time_above`): the head's
+            words go under its logo, so they wrap between words (D-497).
         on_close: `ExpoHall`'s handler that clears the selection.
         on_body_size: `ExpoHall`'s handler for the body's measured size.
     """
-    parts: list[ft.Control] = [_head(item, hiring)]
+    parts: list[ft.Control] = [_head(item, hiring, large_text=large_text)]
     if len(item.sponsors) == 1:
         target = drill_href(view_path, "sponsor", item.sponsors[0].slug)
 
@@ -219,8 +222,12 @@ def BoothCard(
     )
 
 
-def _head(item: ExpoBooth, hiring: str) -> ft.Control:
-    """The card's head: the logo or place icon, the title and its lines; one node."""
+def _head(item: ExpoBooth, hiring: str, *, large_text: bool) -> ft.Control:
+    """The card's head: the logo or place icon, the title and its lines; one node.
+
+    Beside the logo, or at large text under it, where the column beside a logo and Close
+    is narrower than a long name in one word (D-497).
+    """
     title, line = card_title(item)
     texts: list[ft.Control] = [
         ft.Text(title, theme_style=ft.TextThemeStyle.TITLE_MEDIUM)
@@ -240,17 +247,23 @@ def _head(item: ExpoBooth, hiring: str) -> ft.Control:
         lead.append(logo_tile(sponsor.name, sponsor.logo_url, size=LEAD))
     elif not item.sponsors:
         lead.append(place_tile())
+    words = ft.Column(texts, spacing=2, tight=True, expand=not large_text)
+    content: ft.Control = (
+        ft.Column([*lead, words], spacing=12, tight=True)
+        if large_text
+        else ft.Row(
+            [*lead, words],
+            spacing=16,
+            vertical_alignment=ft.CrossAxisAlignment.CENTER,
+        )
+    )
     return ft.Semantics(
         label=card_phrase(item, hiring),
         identifier=f"{SCREEN}.card",
         container=True,
         live_region=True,  # a new selection is said, as the card changes in place
         exclude_semantics=True,  # the phrase replaces the texts
-        content=ft.Row(
-            [*lead, ft.Column(texts, spacing=2, tight=True, expand=True)],
-            spacing=16,
-            vertical_alignment=ft.CrossAxisAlignment.CENTER,
-        ),
+        content=content,
     )
 
 
