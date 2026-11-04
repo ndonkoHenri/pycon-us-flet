@@ -29,6 +29,13 @@ Sponsors list does (ux.md §4.1); a feed without listings says "No job listings 
 plan's card (`job_fair_card()`, SPON-10, D-254) pushes the floor viewer at
 `/more/jobs/plan/job-fair`: the tables where the listings' sponsors meet people.
 
+Once the conference is over (`info.last_day` has passed, as Welcome's thanks and Now's
+"See you next year" count it), one line heads the list, above that card: "These roles
+were listed for PyCon US 2026, and some have closed." The listings are the feed's
+snapshot, whose role links go stale (27 of 44 returned 404 six months on, #869) and
+which the app never edits or checks (D-135); the links stay, and the page says
+what it cannot know (D-481). During the conference it says nothing new.
+
 **The filter** (SPON-07): the pinned `SearchField` "Filter jobs" the Speakers and
 Sprints lists use (D-189), under the strip, keeps the listings whose text holds every
 word, in the sponsor's name, the role titles or the visible text, never the markup
@@ -44,13 +51,17 @@ Schedule's head does (D-345): pinned, they took half the screen at the largest s
 """
 
 import asyncio
+from datetime import date
 
 import flet as ft
 
+from pycon_us import clock
+from pycon_us.config import ConferenceInfo
 from pycon_us.core.html_md import to_text
 from pycon_us.core.jobs import filter_listings, sponsor_of
 from pycon_us.core.models import JobListing
 from pycon_us.core.sprints import needs_more
+from pycon_us.core.timefmt import today
 from pycon_us.locations import drill_href
 from pycon_us.prefs import use_prefs
 from pycon_us.services import use_services
@@ -156,6 +167,10 @@ def Jobs() -> ft.View:
             pinned.append(
                 found_count(count_line(len(found)), identifier=f"{SCREEN}.count")
             )
+        info = svc.year.conference
+        closed = closed_line(info, today(clock.now(), info.zone))
+        if closed is not None:
+            items.append(closed_note(closed))
         # The plan heads the list whatever the filter keeps: it is where they all are.
         plan = job_fair_card(svc.year.map, identifier=f"{SCREEN}.job_fair.location")
         if plan is not None:
@@ -203,6 +218,41 @@ def Jobs() -> ft.View:
             expand=True,
             # The field takes the screen's width; a Column would size it to its own.
             horizontal_alignment=ft.CrossAxisAlignment.STRETCH,
+        ),
+    )
+
+
+def closed_line(info: ConferenceInfo, day: date) -> str | None:
+    """Return the line over the listings once the conference is over, else None.
+
+    The roles' links come from a snapshot of the feed that nobody re-checks, so after
+    the last day (`info.last_day`, the sprints') the page says that some may have
+    closed (#869, D-481).
+
+    Args:
+        info: The year's facts: its name and its last day.
+        day: Today in the conference's zone (`timefmt.today()`).
+    """
+    if day <= info.last_day:
+        return None
+    return f"These roles were listed for {info.name}, and some have closed."
+
+
+def closed_note(line: str) -> ft.Control:
+    """Return the closed line as the list's first row, a muted paragraph (`jobs.closed`).
+
+    Args:
+        line: `closed_line()`'s words.
+    """
+    return ft.Semantics(
+        identifier=f"{SCREEN}.closed",
+        content=ft.Container(
+            ft.Text(
+                line,
+                theme_style=ft.TextThemeStyle.BODY_MEDIUM,
+                color=ft.Colors.ON_SURFACE_VARIANT,
+            ),
+            padding=ft.Padding.only(left=16, right=16, top=8, bottom=2),
         ),
     )
 

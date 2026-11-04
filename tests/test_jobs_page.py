@@ -10,6 +10,7 @@ read to TalkBack and VoiceOver is checked on devices (the PR).
 
 import asyncio
 from dataclasses import replace
+from datetime import timedelta
 from pathlib import Path
 from typing import Any, cast
 
@@ -26,7 +27,18 @@ from pycon_us.state import Conference
 from tests import jobs_view, strip
 from tests.fakes import MemoryPrefs
 from tests.feeds import recorded
-from tests.jobs_view import CARD, DATA, VIEW, YEAR, listing, role_ids, toggle_of
+from tests.jobs_view import (
+    AFTER,
+    CARD,
+    DATA,
+    DURING,
+    VIEW,
+    YEAR,
+    listing,
+    role_ids,
+    toggle_of,
+)
+from tests.trees import descendants
 
 show, sleeps = jobs_view.show, jobs_view.sleeps  # the fixtures, under these names
 network, finished = strip.network, strip.finished
@@ -147,6 +159,74 @@ async def test_a_placeholder_says_no_roles(show: Any) -> None:
     shown = await show(Conference(data=data, source="bundled", version=1))
     assert screen.NO_ROLES in shown.texts()
     assert shown.find(ft.Markdown) == []
+
+
+# ------------------------------------------------------------------ the closed line
+
+CLOSED = "These roles were listed for PyCon US 2026, and some have closed."
+"""What the page says once the conference is over (#869)."""
+
+
+def test_the_closed_line_starts_the_day_after_the_last_day() -> None:
+    """The conference's last day, the sprints' too, says nothing; the next day speaks."""
+    info = YEAR.conference
+    assert screen.closed_line(info, info.first_day - timedelta(days=30)) is None
+    assert screen.closed_line(info, info.first_day) is None
+    assert screen.closed_line(info, info.last_day) is None
+    assert screen.closed_line(info, info.last_day + timedelta(days=1)) == CLOSED
+    assert screen.closed_line(info, info.last_day + timedelta(days=200)) == CLOSED
+
+
+async def test_during_the_conference_the_page_says_nothing_of_closed_roles(
+    show: Any,
+) -> None:
+    """Its last evening, in conference time (the zone, not the device's), is still on."""
+    evening = YEAR.conference.last_day
+    late = DURING.replace(year=evening.year, month=evening.month, day=evening.day)
+    for now in (DURING, late.replace(hour=23, minute=59)):
+        shown = await show(now=now)
+        assert shown.nodes("jobs.closed") == []
+        assert CLOSED not in shown.texts()
+
+
+async def test_after_the_conference_one_line_heads_the_list(show: Any) -> None:
+    """The line is the list's first item, above the job fair's card and the cards."""
+    shown = await show(now=AFTER)
+    assert shown.texts().count(CLOSED) == 1
+    note = shown.node("jobs.closed")
+    plan = shown.node("jobs.job_fair.location")
+    (listed,) = shown.find(ft.ListView)
+    first, second = listed.controls[:2]
+    assert note in descendants(first)
+    parents: list[ft.BaseControl] = []
+    at = plan.parent
+    while at is not None:  # the card is a component: walk up from its node
+        parents.append(at)
+        at = at.parent
+    assert second in parents  # the job fair's card follows the line
+    assert len(shown.nodes(CARD)) == 13  # the links and cards stay
+
+
+async def test_the_closed_line_stays_under_a_filter_and_a_miss(
+    show: Any, sleeps: Any
+) -> None:
+    """The cards that stay are as stale as the ones filtered out: the line is not."""
+    shown = await show(now=AFTER)
+    await jobs_view.type_into(shown, "temporal")
+    await jobs_view.pause(shown, sleeps)
+    assert len(shown.nodes(CARD)) == 1
+    assert CLOSED in shown.texts()
+    await jobs_view.type_into(shown, "zzzz")
+    await jobs_view.pause(shown, sleeps)
+    assert shown.nodes(CARD) == [] and CLOSED in shown.texts()
+
+
+async def test_a_year_without_listings_has_no_closed_line(show: Any) -> None:
+    """Nothing is listed, so nothing may have closed: the empty state speaks alone."""
+    data = replace(DATA, job_listings=())
+    shown = await show(Conference(data=data, source="bundled", version=1), now=AFTER)
+    assert shown.nodes("jobs.closed") == []
+    assert "No job listings yet" in shown.texts()
 
 
 # ------------------------------------------------------------------ the filter
