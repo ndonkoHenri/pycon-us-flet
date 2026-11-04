@@ -58,7 +58,7 @@ It lists all **263** features catalogued from the Ionic app ([`research/feature-
 | U71 | Open a local file in the app that handles its type (Android `ACTION_VIEW` with a granted content URI; #487) | upstream, small (D-272's Android interim until then) |
 | `flet-dev/flet#6953` | Deep-link config fallback: the common `[tool.flet.deep_linking]` table on Android and iOS | merged into `flet-1.1.0` (2026-10-11), in the pin since `68a4b326c`; our one table relies on it (D-269) |
 
-Specs, interims and priorities for E and U items: [flet-gaps-and-extensions.md](flet-gaps-and-extensions.md) and D-97, D-98. The status above says whether a piece is in the pinned Flet (`.flet-ref`): a row that depends on one that isn't describes what ships without it.
+Specs, interims and priorities for E and U items: [flet-gaps-and-extensions.md](flet-gaps-and-extensions.md) and D-97, D-98. The status above says whether a piece is in our Flet (`pyproject.toml`): a row that depends on one that isn't describes what ships without it.
 
 **Labels.** Each section lists the GitHub `area:` labels (D-90) its rows map to, most common first.
 

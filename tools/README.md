@@ -6,7 +6,7 @@ What's here, and when you'd reach for it. Run from the repo's root; each script'
 
 | Tool | When |
 |---|---|
-| `setup_worktree.sh` | A fresh worktree: Flet clone, venv, pub cache, hook (`docs/development.md` §5.8) |
+| `setup_worktree.sh` | A fresh worktree: venv, pub cache, hook (`docs/development.md` §5.8) |
 | `check.sh` | The checks: `--fast` before a push, in full before a PR is ready |
 | `merge.sh` | Gate a PR and merge it. Don't pipe the gate yourself (AGENTS.md) |
 | `gate.sh` | The gate alone: what `merge.sh` runs |

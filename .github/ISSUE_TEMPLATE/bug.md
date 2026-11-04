@@ -23,7 +23,7 @@ The branch is `bug/<issue>-<slug>`. See AGENTS.md › Issues.
 ## Environment
 
 - **Commit:** <!-- `git rev-parse --short HEAD` -->
-- **Flet pin:** <!-- contents of `.flet-ref` -->
+- **Flet:** <!-- `uv run flet --version` -->
 - **Device:** <!-- Android emulator / iOS simulator / phone, OS version; light or dark; text scale -->
 
 ## Evidence

@@ -13,7 +13,7 @@ checklist holds. Add `--project "PyCon US Flet"`, the issue's type and area labe
 <!--
 Commands you ran and what you saw: the full `tools/check.sh` (D-273; `uv sync --locked`, `ruff check`,
 `ruff format --check`, `pyright`, `pytest --hypothesis-profile=ci`), plus anything specific. Devices (Android
-emulator, iOS simulator, phone) and the Flet pin (`.flet-ref`). Never claim a check you didn't run.
+emulator, iOS simulator, phone) and the Flet version (`uv run flet --version`). Never claim a check you didn't run.
 -->
 
 ## Screenshots

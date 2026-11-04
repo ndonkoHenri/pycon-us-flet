@@ -1,52 +1,15 @@
 #!/usr/bin/env bash
-# Get this checkout ready to test and build: its own Flet checkout at the pin, the venv, its own pub cache and the
-# pre-push hook (docs/development.md §5.8; D-219, D-176, D-451). Safe to run again, and after a pin bump.
+# Get this checkout ready to test and build: the venv, its own pub cache and the pre-push hook
+# (docs/development.md §5.8; D-176). Safe to run again, and after a Flet bump.
 #
 # Usage: tools/setup_worktree.sh
-# In a worktree, a .flet-src that is a link, a pre-D-451 copy (a .git file) or off the pin is replaced by a new clone of
-# the main checkout's. The main checkout's own .flet-src is only ever read: if it is off the pin, this stops and says so.
 set -euo pipefail
 
 say() {
     echo "setup_worktree.sh: $*" >&2
 }
 
-root=$(git rev-parse --show-toplevel)
-cd "$root"
-main=$(dirname "$(git rev-parse --path-format=absolute --git-common-dir)")
-pin=$(cat .flet-ref)
-
-# True when .flet-src is a clone of its own at the pin, in its files too: a copy can keep a HEAD its files have left.
-at_pin() {
-    [[ ! -L .flet-src && -d .flet-src/.git ]] &&
-        [[ $(git -C .flet-src rev-parse HEAD 2> /dev/null) == "$pin" ]] &&
-        git --no-optional-locks -C .flet-src diff --quiet HEAD
-}
-
-if [[ $root == "$(cd "$main" && pwd -P)" ]]; then
-    if ! at_pin; then
-        say "this is the main checkout and .flet-src isn't a clone at $pin: see docs/development.md §2.2"
-        exit 1
-    fi
-elif ! at_pin; then
-    if [[ -e .flet-src || -L .flet-src ]]; then
-        say "replacing .flet-src: it isn't a clone at the pin"
-        rm -rf .flet-src
-    fi
-    if [[ ! -d $main/.flet-src/.git || -L $main/.flet-src ]]; then
-        say "$main/.flet-src isn't a clone with its own .git folder: see docs/development.md §2.2"
-        exit 1
-    fi
-    say "cloning the main checkout's .flet-src"
-    cp -cR "$main/.flet-src" .flet-src
-    rm -rf .flet-src/sdk/python/packages/flet/build  # the main checkout's builds left it (§5.8)
-    if ! at_pin; then
-        say "the main checkout's .flet-src is at $(git -C .flet-src rev-parse HEAD), not the pin $pin."
-        say "Whoever merged the bump moves it (docs/development.md §2.2). Not moving it from here."
-        rm -rf .flet-src
-        exit 1
-    fi
-fi
+cd "$(git rev-parse --show-toplevel)"
 
 uv sync --locked -q
 
@@ -54,15 +17,18 @@ uv sync --locked -q
 mkdir -p build
 if [[ ! -d build/pub-cache ]]; then
     say "cloning the pub cache"
-    cp -cR "$HOME/.pub-cache" build/pub-cache
+    if ! cp -cR "$HOME/.pub-cache" build/pub-cache 2> /dev/null; then  # -c is APFS's; Linux's cp has none
+        rm -rf build/pub-cache
+        cp -R "$HOME/.pub-cache" build/pub-cache
+    fi
 fi
 
 git config core.hooksPath .githooks
 
-# Without the pin's exact Flutter in ~/flutter, flet-cli quietly takes any of its minor on PATH (#1004).
-flutter=$(sed -n 's/.*"flutter": *"\([^"]*\)".*/\1/p' .flet-src/.fvmrc 2> /dev/null || true)
-if [[ -n $flutter && ! -x $HOME/flutter/$flutter/bin/flutter ]]; then
-    say "no ~/flutter/$flutter, so builds may use another Flutter: see docs/development.md §2.2, step 2"
+# Without Flet's exact Flutter in ~/flutter, flet-cli quietly takes any of its minor on PATH (#1006).
+read -r flet flutter < <(uv run --locked python -c 'from flet import version as v; print(v.flet_version, v.flutter_version)')
+if [[ ! -x $HOME/flutter/$flutter/bin/flutter ]]; then
+    say "no ~/flutter/$flutter, so builds may use another Flutter: see docs/development.md §2.2"
 fi
 
-say "ready at Flet $(cut -c1-9 .flet-ref). Prefix each build, debug and test command with PUB_CACHE=$root/build/pub-cache"
+say "ready at Flet $flet. Prefix each build, debug and test command with PUB_CACHE=$PWD/build/pub-cache"

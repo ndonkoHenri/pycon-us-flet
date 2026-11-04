@@ -141,7 +141,8 @@ Reminder taps (E3) reuse the same paths, so a notification and a link both land 
 | Below Android 15 a packaged app is drawn under the status bar but not under the navigation bar: Android enforces edge-to-edge only from API 35, and the template's `MainActivity` is a bare `FlutterFragmentActivity` (`TPL/android/app/src/main/kotlin/{{ cookiecutter.kotlin_dir }}/MainActivity.kt`), so a transparent bar shows the window background, which a live dark-mode switch leaves in the old mode (F26, D-151, [#140](https://github.com/ndonkoHenri/pycon-us-flet/issues/140)) | The navigation bar takes the `NavigationBar`'s colour (`theme.py`'s `overlay_style()`, D-151), which Android 15 and later ignore | `enableEdgeToEdge()` in the template on every API level, once its effect on existing apps' insets is checked; then the bar goes back to transparent |
 | Five `ft.Semantics` properties reach Flutter under names the Dart control never reads, so they do nothing: `on_tap` (its event is `tap`; Dart asks for `click`), `hint_text` (`hint`), `on_tap_hint_text` (`on_tap_hint`), `textfield` (`text_field`) and `focus` (`focused`) (`DART/controls/semantics.dart:31-55`, `FLET/controls/core/semantics.py`; [#187](https://github.com/ndonkoHenri/pycon-us-flet/issues/187)) | Nothing relies on them: a row keeps the tap action of the control under its label (`MergeSemantics`, #81), and a link's `OPEN_IN_NEW` icon says "Opens in browser" inside the merged node (#83) | One name on each side; Dart reading the Python names keeps the Python API |
 | Flutter's Android bridge gives a text field no name below API 28: `BaseRoleConfigurator.configureLabelAndValue()` passes its label and hint only to `setHintText()`, behind `SDK_INT >= API_28` (`engine/.../io/flutter/view/BaseRoleConfigurator.java:355-359` in Flutter 3.47.8), and sets no content description on a text field, so on Android 7.0 to 8.1 every field of the app (Search, the staff tools' Badge code field, sign-in) reaches TalkBack as an unnamed edit box and its helper line ("Choose what to hand out") is not in the tree; seen with `uiautomator dump` on API 24, TalkBack itself not run, and flutter/flutter#194112 reports it (U283, #952, [#968](https://github.com/ndonkoHenri/pycon-us-flet/issues/968)) | None in the code: a label-only node beside each field would read the name twice from API 28, and needs the API level first. The scan screens' result panel (a live region) and Swag's named category chips still speak. `swag_pickup` asserts the helper line from API 28 and the chips' own state below it (`maestro/scripts/os_offers.js`) | Export the label on API 26 and later through `setHintText()`, the AndroidX compat path on 24 and 25, or the content description (flutter/flutter#194112) |
-| `flet build` uses another patch of Flutter without a word: `find_flutter_batch()` falls back to the `flutter` on `PATH`, and `flutter_version_valid()` compares only major and minor (`CLI/commands/flutter_base.py:252-280, 482-494`), so every build at `.fvmrc` 3.47.8 ran on fvm's 3.47.7 (U284, #1004, [#1006](https://github.com/ndonkoHenri/pycon-us-flet/issues/1006)) | The pin's version in `~/flutter` ([`development.md`](development.md) §2.2, step 2); `tools/setup_worktree.sh` says when it's missing | A line in `flet build`'s and `flet test`'s output when the patch differs |
+| Two `flet build`s starting at once with no cached template for their version can fail: `get_cached_template_zip()` downloads to one fixed `flet-build-template.zip.tmp`, so the second `os.replace` raises `FileNotFoundError` (`CLI/utils/template_cache.py:35-42`; two processes on one empty cache: 3 failures in 12 calls; U286, #1027) | After a bump, build once before parallel builds, or try again ([`development.md`](development.md) §2.2) | A temporary file of the process's own in that folder (`tempfile.mkstemp`) |
+| `flet build` uses another patch of Flutter without a word: `find_flutter_batch()` falls back to the `flutter` on `PATH`, and `flutter_version_valid()` compares only major and minor (`CLI/commands/flutter_base.py:252-280, 482-494`), so every build asking for 3.47.8 ran on fvm's 3.47.7 (U284, #1004, [#1006](https://github.com/ndonkoHenri/pycon-us-flet/issues/1006)) | Flet's Flutter in `~/flutter` ([`development.md`](development.md) §2.2, step 3); `tools/setup_worktree.sh` says when it's missing | A line in `flet build`'s and `flet test`'s output when the patch differs |
 
 ---
 
@@ -187,21 +188,11 @@ Rules:
 
 ### 2.3 Developing against an unreleased piece (D-81, F18)
 
-Until 1.1.0 is on PyPI, the app builds against the monorepo at a pinned commit: the git-ignored `.flet-src` checkout at the SHA in `.flet-ref` ([`development.md`](development.md) §2.2). A first-party extension from the monorepo is taken from that same checkout, never from a live working copy, so development and `flet build` use the matching Python and Dart code. List it in `[project].dependencies`, then add one line to each of the two **existing** tables in `pyproject.toml`:
+The app takes Flet from PyPI at one exact prerelease until 1.1.0 is out, so a piece is available once it's in a prerelease ([`development.md`](development.md) §2.2, D-479). A first-party extension from the monorepo is listed in `[project].dependencies` at the family's version, and its Dart package comes in its wheel. Moving the version is its own PR (D-92).
 
-```toml
-[tool.uv.sources]   # existing table: the development venv
-flet-notifications = { path = ".flet-src/sdk/python/packages/flet-notifications", editable = true }
+A piece that isn't in a prerelease yet takes the temporary route of §2.2, "When we need a fix that isn't released", and only with a release in sight.
 
-[tool.flet.dev_packages]   # existing table: what flet build bundles
-"flet-notifications" = ".flet-src/sdk/python/packages/flet-notifications"
-```
-
-- `dev_packages` only rewrites names already listed in the dependencies (`CLI/build_base.py:2716-2741`), and relative paths resolve against the project root. A missing path is passed through as `name @ path`, which pip rejects.
-- Without both lines, uv and the build would resolve the unrelated PyPI `flet-notifications` 0.1.0 (§6), not Flet's (#6999 took that name at the pin `08b89cce5`).
-- Never add a second `dev_packages` key under `[tool.flet]`: the table already exists, and TOML forbids defining it twice.
-
-flet-cli run from a source checkout already uses the local build template and overrides the Dart `flet` package with the monorepo path (F18). Moving the pin is its own PR (D-92).
+- Listed without its version, `flet-notifications` would resolve to the unrelated PyPI `flet-notifications` 0.1.x (§6), not Flet's (#6999 took that name at `08b89cce5`; pip and uv skip prereleases unless the requirement names one).
 
 ### 2.4 Generic upgrade steps (every item)
 

@@ -30,13 +30,6 @@ esac
 cd "$(git rev-parse --show-toplevel)"
 export UV_LOCKED=1  # every uv command fails if uv.lock does not match pyproject.toml, as in ci.yml
 
-# uv sync needs the Flet checkout at the pin until Flet 1.1.0 is on PyPI (D-81).
-if [ ! -d .flet-src ]; then
-    echo "check.sh: .flet-src is missing in $PWD: uv sync needs the Flet checkout at the pin (.flet-ref)." >&2
-    echo "check.sh: set it up as docs/development.md §2.2 says (a worktree of this repo: §5.8)." >&2
-    exit 1
-fi
-
 if [ "$fast" = 1 ]; then total=4; else total=5; fi
 n=0
 

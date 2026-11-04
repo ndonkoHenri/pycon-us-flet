@@ -1,7 +1,7 @@
-"""Tests for `tools/setup_worktree.sh`: a worktree gets its own Flet clone at the pin (#981).
+"""Tests for `tools/setup_worktree.sh`: a worktree gets its venv, pub cache and hook (D-176).
 
-Each test runs the real script in a sandbox: a main checkout with a small `.flet-src` git repo,
-a linked worktree of it, its own `$HOME` and pub cache, and a stand-in `uv`.
+Each test runs the real script in a sandbox: a checkout with a linked worktree, its own `$HOME`
+and pub cache, and a stand-in `uv` that says which Flet and Flutter the venv holds.
 """
 
 import os
@@ -27,22 +27,14 @@ def _git(cwd: Path, *args: str) -> str:
 
 
 class Sandbox:
-    """A main checkout, its worktree and the environment the script runs in."""
+    """A checkout, its worktree and the environment the script runs in."""
 
     def __init__(self, root: Path) -> None:
-        """Build the checkouts, with `.flet-src` at a pin committed in `.flet-ref`."""
+        """Build the checkouts, with a stand-in `uv` whose venv holds Flutter 3.47.9."""
         root = root.resolve()
         self.main = root / "main"
         self.main.mkdir()
-        flet = self.main / ".flet-src"
-        flet.mkdir()
-        _git(flet, "init", "-q")
-        (flet / "file").write_text("flet\n")
-        _git(flet, "add", "file")
-        _git(flet, "commit", "-qm", "flet")
-        self.pin = _git(flet, "rev-parse", "HEAD")
-        (self.main / ".flet-ref").write_text(self.pin + "\n")
-        (self.main / ".gitignore").write_text(".flet-src\nbuild\n")
+        (self.main / ".gitignore").write_text("build\n")
         (self.main / "tools").mkdir()
         shutil.copy(SCRIPT, self.main / "tools" / "setup_worktree.sh")
         _git(self.main, "init", "-q")
@@ -57,7 +49,10 @@ class Sandbox:
         bin_dir.mkdir()
         self.uv_log = root / "uv-calls"
         uv = bin_dir / "uv"
-        uv.write_text('#!/bin/sh\necho "$*" >> "$UV_LOG"\n')
+        uv.write_text(
+            '#!/bin/sh\necho "$*" >> "$UV_LOG"\n'
+            'case "$1" in run) echo "1.1.0.dev4 3.47.9" ;; esac\n'
+        )
         uv.chmod(0o755)
         self.env = {
             "PATH": f"{bin_dir}{os.pathsep}{os.environ['PATH']}",
@@ -78,20 +73,6 @@ class Sandbox:
             text=True,
         )
 
-    def commit_fvmrc(self, flutter: str) -> None:
-        """Make the pin ask for `flutter`, moving `.flet-ref` in both checkouts."""
-        flet = self.main / ".flet-src"
-        (flet / ".fvmrc").write_text(f'{{\n  "flutter": "{flutter}"\n}}\n')
-        _git(flet, "add", ".fvmrc")
-        _git(flet, "commit", "-qm", "fvmrc")
-        self.pin = _git(flet, "rev-parse", "HEAD")
-        (self.main / ".flet-ref").write_text(self.pin + "\n")
-        (self.tree / ".flet-ref").write_text(self.pin + "\n")
-
-    def head(self) -> str:
-        """Return the HEAD of the worktree's `.flet-src`."""
-        return _git(self.tree / ".flet-src", "rev-parse", "HEAD")
-
 
 @pytest.fixture
 def sandbox(tmp_path: Path) -> Sandbox:
@@ -100,27 +81,39 @@ def sandbox(tmp_path: Path) -> Sandbox:
 
 
 def test_fresh_worktree_gets_everything(sandbox: Sandbox) -> None:
-    """A fresh worktree ends with its own clone at the pin, the venv, a pub cache and the hook."""
+    """A fresh worktree ends with the venv, a pub cache of its own and the hook."""
     done = sandbox.run()
     assert done.returncode == 0, done.stderr
-    assert sandbox.head() == sandbox.pin
-    assert (sandbox.tree / ".flet-src" / ".git").is_dir()
-    assert "sync --locked" in sandbox.uv_log.read_text()
-    assert (sandbox.tree / "build" / "pub-cache" / "marker").exists()
+    assert "sync --locked -q" in sandbox.uv_log.read_text()
+    assert (sandbox.tree / "build" / "pub-cache" / "marker").is_file()
     assert _git(sandbox.tree, "config", "core.hooksPath") == ".githooks"
+    assert "ready at Flet 1.1.0.dev4" in done.stderr
 
 
-def test_missing_flutter_of_the_pin_is_said(sandbox: Sandbox) -> None:
-    """A pin whose Flutter isn't in `~/flutter` gets a warning, and the setup still ends well."""
-    sandbox.commit_fvmrc("3.47.9")
+def test_no_flet_checkout_is_made_or_needed(sandbox: Sandbox) -> None:
+    """The setup ends well with no Flet clone anywhere, and doesn't make one."""
+    assert sandbox.run().returncode == 0
+    assert not (sandbox.tree / ".flet-src").exists()
+
+
+def test_a_flet_clone_left_behind_is_left_alone(sandbox: Sandbox) -> None:
+    """An optional clone for reading Flet's source isn't touched: it's someone's own."""
+    clone = sandbox.tree / ".flet-src" / "file"
+    clone.parent.mkdir()
+    clone.write_text("reading\n")
+    assert sandbox.run().returncode == 0
+    assert clone.read_text() == "reading\n"
+
+
+def test_missing_flutter_is_said(sandbox: Sandbox) -> None:
+    """A Flet whose Flutter isn't in `~/flutter` gets a warning, and the setup still ends well."""
     done = sandbox.run()
     assert done.returncode == 0, done.stderr
     assert "no ~/flutter/3.47.9" in done.stderr
 
 
-def test_flutter_of_the_pin_in_home_says_nothing(sandbox: Sandbox) -> None:
-    """With the pin's Flutter in `~/flutter` there is nothing to warn about."""
-    sandbox.commit_fvmrc("3.47.9")
+def test_flutter_in_home_says_nothing(sandbox: Sandbox) -> None:
+    """With Flet's Flutter in `~/flutter` there is nothing to warn about."""
     flutter = Path(sandbox.env["HOME"]) / "flutter" / "3.47.9" / "bin" / "flutter"
     flutter.parent.mkdir(parents=True)
     flutter.write_text("#!/bin/sh\n")
@@ -131,57 +124,15 @@ def test_flutter_of_the_pin_in_home_says_nothing(sandbox: Sandbox) -> None:
 
 
 def test_second_run_changes_nothing(sandbox: Sandbox) -> None:
-    """A second run keeps the clone and doesn't nest a pub cache in the first."""
+    """A second run doesn't nest a pub cache in the first."""
     assert sandbox.run().returncode == 0
-    keep = sandbox.tree / ".flet-src" / "kept-by-the-clone"
-    keep.write_text("untracked\n")
-    assert sandbox.run().returncode == 0
-    assert keep.exists()
+    done = sandbox.run()
+    assert done.returncode == 0, done.stderr
     assert not (sandbox.tree / "build" / "pub-cache" / ".pub-cache").exists()
 
 
-def test_link_is_replaced_and_its_target_kept(sandbox: Sandbox) -> None:
-    """A link to the main checkout's `.flet-src` goes; the main checkout's stays as it was."""
-    (sandbox.tree / ".flet-src").symlink_to(sandbox.main / ".flet-src")
-    assert sandbox.run().returncode == 0
-    assert not (sandbox.tree / ".flet-src").is_symlink()
-    assert (sandbox.main / ".flet-src" / "file").exists()
-
-
-def test_git_file_copy_is_replaced(sandbox: Sandbox) -> None:
-    """A pre-D-451 copy, whose `.git` is a file, is replaced without running git in it."""
-    stale = sandbox.tree / ".flet-src"
-    stale.mkdir()
-    (stale / ".git").write_text("gitdir: /nowhere\n")
-    assert sandbox.run().returncode == 0
-    assert (stale / ".git").is_dir()
-
-
-def test_edited_clone_is_replaced(sandbox: Sandbox) -> None:
-    """A clone whose tracked files left the pin is replaced, since its HEAD alone would pass."""
-    assert sandbox.run().returncode == 0
-    (sandbox.tree / ".flet-src" / "file").write_text("edited\n")
-    assert sandbox.run().returncode == 0
-    assert (sandbox.tree / ".flet-src" / "file").read_text() == "flet\n"
-
-
-def test_main_off_the_pin_stops_and_moves_nothing(sandbox: Sandbox) -> None:
-    """A main checkout off the pin stops the run, leaves no clone and isn't moved."""
-    flet = sandbox.main / ".flet-src"
-    (flet / "file").write_text("newer\n")
-    _git(flet, "commit", "-qam", "newer")
-    moved = _git(flet, "rev-parse", "HEAD")
-    done = sandbox.run()
-    assert done.returncode == 1
-    assert "not the pin" in done.stderr
-    assert not (sandbox.tree / ".flet-src").exists()
-    assert _git(flet, "rev-parse", "HEAD") == moved
-
-
-def test_main_checkout_is_checked_not_replaced(sandbox: Sandbox) -> None:
-    """In the main checkout an off-pin `.flet-src` stops the run and stays in place."""
-    flet = sandbox.main / ".flet-src"
-    (flet / "file").write_text("edited\n")
+def test_main_checkout_works_too(sandbox: Sandbox) -> None:
+    """The script does the same in the main checkout."""
     done = sandbox.run(sandbox.main)
-    assert done.returncode == 1
-    assert (flet / "file").read_text() == "edited\n"
+    assert done.returncode == 0, done.stderr
+    assert (sandbox.main / "build" / "pub-cache" / "marker").is_file()

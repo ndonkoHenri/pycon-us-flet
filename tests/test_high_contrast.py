@@ -14,6 +14,7 @@ import pytest
 
 from pycon_us import theme
 from pycon_us.theme_hc import HC_DARK, HC_LIGHT
+from tests.flet_dart import flet_dart_file
 from tests.test_theme import (
     FLET_THEME_DART,
     NEUTRAL_RAMP,
@@ -109,15 +110,12 @@ def test_every_role_is_set_by_hand(dark: bool) -> None:
         hex_role(color_scheme, role)
 
 
-@pytest.mark.skipif(
-    not FLET_THEME_DART.exists(), reason="needs the pinned Flet checkout (.flet-src)"
-)
 def test_flet_applies_every_role_it_declares() -> None:
     """Flet's Dart side reads every `ColorScheme` role, so none set here is lost (F9).
 
-    `parseColorScheme` in `utils/theme.dart` at the `.flet-ref` pin.
+    `parseColorScheme` in `utils/theme.dart` in our Flet.
     """
-    source = FLET_THEME_DART.read_text()
+    source = flet_dart_file(FLET_THEME_DART).read_text()
     body = source[source.index("ColorScheme? parseColorScheme(") :]
     body = body[: body.index("\n}\n")]
     parsed = set(re.findall(r'value\["(\w+)"\]', body))

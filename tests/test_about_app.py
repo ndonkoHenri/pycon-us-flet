@@ -13,6 +13,7 @@ from typing import Any, cast
 
 import flet as ft
 import pytest
+from flet.version import flet_version
 
 import pycon_us
 from pycon_us import prefs as prefs_module
@@ -53,7 +54,7 @@ def test_the_page_says_which_build_this_is(
     assert [(title, tile.subtitle) for title, tile in rows.items()] == [
         ("Version", pycon_us.__version__),
         ("Python", platform.python_version()),
-        ("Flet", "source build"),  # while the source pin lasts (development.md §2.2)
+        ("Flet", flet_version),
         ("Licences", None),
     ]
 
