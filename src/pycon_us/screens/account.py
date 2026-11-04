@@ -329,7 +329,14 @@ def access_chip(label: str, icon: ft.IconData) -> ft.Control:
                 ft.Icon(
                     icon, size=18, color=ft.Colors.PRIMARY, apply_text_scaling=True
                 ),
-                ft.Text(label, theme_style=ft.TextThemeStyle.LABEL_LARGE),
+                # Loose, so a label too long for the line wraps inside the chip at the
+                # largest text rather than overflowing it (#1093).
+                ft.Text(
+                    label,
+                    theme_style=ft.TextThemeStyle.LABEL_LARGE,
+                    expand=True,
+                    expand_loose=True,
+                ),
             ],
             spacing=8,
             tight=True,

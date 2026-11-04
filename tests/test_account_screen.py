@@ -14,7 +14,7 @@ from contextlib import AsyncExitStack
 from dataclasses import replace
 from functools import partial
 from pathlib import Path
-from typing import cast
+from typing import Any, cast
 
 import flet as ft
 import pytest
@@ -33,6 +33,7 @@ from pycon_us.screens.account import (
     SYNCED,
     WAITING,
     AccountPage,
+    access_chip,
     access_of,
 )
 from pycon_us.screens.account_sign_out import (
@@ -566,3 +567,10 @@ async def test_sync_now_as_a_pass_starts_still_kicks_the_next(
     assert [row.status for row in db.rows(account.owner, tuple(Status)) or []] == [
         Status.PENDING
     ]
+
+
+def test_a_chip_s_label_wraps_rather_than_overflowing() -> None:
+    """A loose label stays inside its chip at iOS's largest text (#1093)."""
+    chip: Any = access_chip("Code of Conduct", ft.Icons.SHIELD_OUTLINED)
+    label = chip.content.controls[1]
+    assert label.expand and label.expand_loose
