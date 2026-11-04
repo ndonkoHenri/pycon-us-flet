@@ -11,7 +11,7 @@ dependencies = [                      # bundled into the app by flet build: pin 
     "flet-permission-handler==1.1.0.dev4", # permission status and settings (D-61)
     "flet-secure-storage==1.1.0.dev4", # the mock API key and secret (D-49)
     "httpx==0.28.1",                  # the app imports it: without this, phones get what pip finds that day (D-470)
-    "tzdata==2026.5",                 # zoneinfo data on phones (D-43)
+    "tzdata==2026.6",                 # zoneinfo data on phones (D-43)
 ]
 
 [build-system]                        # uv sync installs pycon_us (src/pycon_us) editable on the host
