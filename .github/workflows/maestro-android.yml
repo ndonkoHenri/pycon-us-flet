@@ -9,10 +9,11 @@ on:
 permissions:
   contents: read
 
-# A new run for the same ref cancels the older one: a run takes many minutes of the monthly allowance.
+# One run at a time per ref, and a running one is never cancelled: a new one replaces only a pending one, so on a busy
+# main each run still finishes and the latest push gets one.
 concurrency:
   group: maestro-android-${{ github.ref }}
-  cancel-in-progress: true
+  cancel-in-progress: false
 
 env:
   UV_LOCKED: "1"            # every uv command fails if uv.lock does not match pyproject.toml
