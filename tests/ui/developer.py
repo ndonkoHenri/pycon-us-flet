@@ -12,11 +12,13 @@ testing-and-quality.md §5.2.
 from datetime import timedelta
 from pathlib import Path
 
+from flet.testing import Finder
 from flet.testing.remote_tester import RemoteTester
 
 from pycon_us.config import load_year
 from pycon_us.screens.about_app import UNLOCK_TAPS
 from pycon_us.ui.actions import refreshed
+from pycon_us.ui.status_strip import UPDATING
 from tests.ui.helpers import (
     DEVICE,
     PLATFORM,
@@ -126,7 +128,13 @@ async def reopen_developer(t: RemoteTester) -> None:
 
 
 async def refresh_now(t: RemoteTester, outcome: str | None = None) -> None:
-    """Tap Developer's Refresh now and wait until it says how the refresh ended.
+    """Tap Developer's Refresh now until it starts, and wait until it says how it ended.
+
+    A tap can be lost: while the View slides in, the row's centre can lie off the screen
+    (#1111), so one tap would leave a flow waiting for words that never come. So the tap
+    is repeated until the row says it is refreshing, or the outcome line shows, for a
+    refresh too quick to see. A second tap changes nothing: the row is disabled while
+    it runs, and the outcome ends the tapping.
 
     The line under the Data rows (`developer.data_outcome`) is hidden from the tap
     until the refresh ends, but a Refresh now on a screen that already says something
@@ -138,7 +146,17 @@ async def refresh_now(t: RemoteTester, outcome: str | None = None) -> None:
         outcome: The words to wait for; None for any outcome, e.g. when it depends on
             the device's network.
     """
-    await tap_id(t, "developer.refresh_now")
+
+    async def started() -> Finder:
+        said = await t.find_by_semantics_identifier("developer.data_outcome")
+        return said if said.count else await t.find_by_text(UPDATING)
+
+    await tap_until(
+        t,
+        lambda: t.find_by_semantics_identifier("developer.refresh_now"),
+        started,
+        "Refresh now",
+    )
     if outcome is None:
         await wait_for_id(t, "developer.data_outcome", timeout=REFRESH_TIMEOUT)
     else:
