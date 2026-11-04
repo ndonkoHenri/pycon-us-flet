@@ -845,7 +845,7 @@ Check the current numbers in Settings › Billing; these were the terms at the t
 Conventions in every workflow:
 - `permissions: contents: read`.
 - `persist-credentials: false` on checkouts.
-- Third-party actions pinned to a full commit SHA, with the version as a comment. The pins were checked against their release tags on 2026-10-11 (annotated tags followed to the commit): `actions/checkout` v6.0.3 is `df4cb1c069e1874edd31b4311f1884172cec0e10`, `astral-sh/setup-uv` v8.3.2 is `11f9893b081a58869d3b5fccaea48c9e9e46f990`; checked on 2026-10-12, `actions/upload-artifact` v7.0.1 is `043fb46d1a93c77aae656e7c1c64a875d1fc6a0a`.
+- Third-party actions pinned to a full commit SHA, with the version as a comment. The pins were checked against their release tags on 2026-11-04 (annotated tags followed to the commit): `actions/checkout` v7.0.1 is `3d3c42e5aac5ba805825da76410c181273ba90b1`, `astral-sh/setup-uv` v10.3.3 is `68559e99cc807c1eb7e9238fd43a15bba460eec2`, `actions/upload-artifact` v7.0.2 is `cf430e030ddbb5b0abf93d22962f4752f3646cd9`.
 - actionlint and zizmor (`uvx zizmor --persona=pedantic .github/workflows/`) are clean on every workflow change.
 - `pull_request`, never `pull_request_target`.
 - `UV_LOCKED=1`, so every `uv` command fails if `uv.lock` is stale.
