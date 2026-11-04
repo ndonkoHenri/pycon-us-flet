@@ -1,5 +1,6 @@
 """The decision record stays whole: one row per id, every citation resolves, every amendment is marked."""
 
+import os
 import re
 from collections import Counter
 from pathlib import Path
@@ -10,6 +11,9 @@ GAPS = "docs/flet-gaps-and-extensions.md"
 DECISION_ROW = r"^\| (D-\d+) \|"
 FACT_ROW = r"^\| (F\d+) \|"
 TOP_LEVEL_DOCS = [*ROOT.glob("*.md"), *(ROOT / "docs").glob("*.md")]
+# Folders that hold no Markdown of ours: the Ionic checkout, build output and installed packages. So are the hidden
+# ones (git's own, virtual environments, caches, the Flet checkout), except `.github`.
+NOT_OURS = {"excluded", "build", "node_modules"}
 
 # Ruff's rule names, which a noqa or a testing doc cites and which look like fact ids.
 RUFF_RULES = {"F401", "F811"}
@@ -34,6 +38,20 @@ def _amended(row: str) -> list[str]:
     # A ``)`` in a code span, as in `build_tile()`, isn't the end of the clause.
     clauses = AMENDS.findall(CODE_SPAN.sub("", row))
     return [amended for clause in clauses for amended in re.findall(r"D-\d+", clause)]
+
+
+def _all_docs() -> list[Path]:
+    """Return every Markdown file of the repository, the README of a tool or a spike and a GitHub template included."""
+    docs = []
+    for folder, subfolders, files in os.walk(ROOT):
+        # Pruned while walking, so Flet's checkout (`.flet-src`) is never entered.
+        subfolders[:] = [
+            name
+            for name in subfolders
+            if name not in NOT_OURS and (name == ".github" or not name.startswith("."))
+        ]
+        docs += [Path(folder, name) for name in files if name.endswith(".md")]
+    return docs
 
 
 def _anchors(path: Path) -> set[str]:
@@ -100,11 +118,11 @@ def test_every_cited_id_resolves() -> None:
     assert not unresolved, sorted(unresolved)
 
 
-def test_relative_links_and_anchors_in_the_top_level_docs_resolve() -> None:
-    """Each relative link in the root's and ``docs/``'s Markdown leads to a file and, if it names one, a heading."""
+def test_relative_links_and_anchors_in_every_doc_resolve() -> None:
+    """Each relative link in the repository's Markdown leads to a file and, if it names one, a heading."""
     broken = [
         f"{doc.relative_to(ROOT)}: {target}"
-        for doc in TOP_LEVEL_DOCS
+        for doc in _all_docs()
         for target in LINK.findall(CODE_SPAN.sub("", FENCE.sub("", doc.read_text())))
         if _broken_link(doc, target)
     ]

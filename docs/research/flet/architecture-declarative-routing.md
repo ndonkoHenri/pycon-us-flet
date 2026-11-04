@@ -1,11 +1,11 @@
 # PyCon US mobile → Flet 1.1 (declarative) — architecture, routing, state, theming, testing
 
 Source of truth used for every API below: the local monorepo at
-`/Users/ndonkohenri/PycharmProjects/flet-dev/flet` (main, 1.1.0-dev). Paths are abbreviated:
+`<flet checkout>` (main, 1.1.0-dev). Paths are abbreviated:
 
 - `SDK` = `sdk/python/packages/flet/src/flet`
 - `EXT` = `sdk/python/packages`
-- `IONIC` = `/Users/ndonkohenri/PycharmProjects/flet-dev/others/pycon-us/excluded/pycon-us-mobile/src/app`
+- `IONIC` = `excluded/pycon-us-mobile/src/app`
 
 Everything marked **GAP** was searched for and is not in the local source.
 

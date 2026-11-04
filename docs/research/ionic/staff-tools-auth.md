@@ -1,6 +1,6 @@
 # PyCon US mobile (Ionic 8 / Angular 17 / Capacitor 7) — inventory of the **Staff tools & auth** slice
 
-Source checkout: `/Users/ndonkohenri/PycharmProjects/flet-dev/others/pycon-us/excluded/pycon-us-mobile`, single squashed commit `2aa6df8` ("fix: Sprints link for correct url (#315)", 2026-05-18). There is no older history to consult.
+Source checkout: `excluded/pycon-us-mobile`, single squashed commit `2aa6df8` ("fix: Sprints link for correct url (#315)", 2026-05-18). There is no older history to consult.
 
 Files read completely for this report:
 
