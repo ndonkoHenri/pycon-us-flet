@@ -399,6 +399,34 @@ async def test_a_star_still_mounted_is_left_to_flutter(
     assert focused == []
 
 
+async def test_a_sighted_user_can_drag_or_tap_outside(shown: Rendered) -> None:
+    """Without a screen reader the sheet keeps its handle and its tap outside (D-395)."""
+    await shown.tap_star(row_sessions.TALK)
+    sheet = primer(shown)
+    assert sheet.show_drag_handle
+    assert sheet.dismissible
+
+
+async def test_a_screen_reader_meets_the_question_first(shown: Rendered) -> None:
+    """With a screen reader on, no handle or scrim comes before the question (D-484, #963).
+
+    Their `Dismiss` button and `Scrim` node were TalkBack's first two stops. The
+    buttons stay, in their order, and a dismissal by Back still answers "not now".
+    """
+    shown.prefs.screen_reader = True
+    await shown.tap_star(row_sessions.TALK)
+    sheet = primer(shown)
+    assert not sheet.show_drag_handle
+    assert not sheet.dismissible
+    assert [
+        control.identifier
+        for control in descendants(sheet)
+        if isinstance(control, ft.Semantics) and control.identifier
+    ] == ["reminder.primer", "reminder.primer.not_now", "reminder.primer.allow"]
+    await shown.event(sheet, "dismiss", None)
+    assert (await stored(shown)).primer == "not_now"
+
+
 async def test_a_sheet_taller_than_the_screen_scrolls_to_its_buttons(
     shown: Rendered,
 ) -> None:

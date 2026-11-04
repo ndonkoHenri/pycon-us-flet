@@ -16,6 +16,10 @@ card is the place (#449). The primer is a `BottomSheet` with "Allow" and "Not no
   remembered whatever the OS answers.
 - **Not now**, a tap outside the sheet, a drag down or Back remember "not now".
 
+With a screen reader on, the question is the first thing it reads after "Dialog" (#963,
+D-484): the sheet has no drag handle and no tap outside, whose scrim and "Dismiss" button
+TalkBack stopped on first. Not now and Back still answer.
+
 Either way the favourite stays saved, and a star never shows the primer again. The
 sheet is a modal route, so Flutter gives the screen reader's focus back to the star
 when it closes (D-225); on Now, where the add moves the session into Your next
@@ -144,6 +148,7 @@ async def ask(
         on_dismiss=dismissed,
         high_contrast=prefs.high_contrast_on,
         reduce_motion=prefs.reduce_motion,
+        screen_reader=prefs.screen_reader,
     )
     page.show_dialog(sheet)
 
@@ -189,6 +194,7 @@ def primer_sheet(
     on_dismiss: Handler,
     high_contrast: bool,
     reduce_motion: bool,
+    screen_reader: bool,
 ) -> ft.BottomSheet:
     """Return the primer: a decorative bell, `PRIMER`, then "Not now" and "Allow".
 
@@ -204,6 +210,8 @@ def primer_sheet(
             also after a button closed it.
         high_contrast: HC is on screen: a 1 dp `outline` edge (D-306).
         reduce_motion: The OS asks for less motion: the sheet does not slide (D-173).
+        screen_reader: A screen reader is on: the question comes first, with no drag
+            handle or tap outside to stop on before it (D-484).
     """
     content = ft.Column(
         [
@@ -249,13 +257,19 @@ def primer_sheet(
     )
     return ft.BottomSheet(
         ft.Container(  # 16 dp gutters (ux.md §3.6); the buttons clear the home bar
-            padding=ft.Padding.only(left=16, right=16, bottom=16),
+            # No handle above the bell with a screen reader on: the top is its own.
+            padding=ft.Padding.only(
+                left=16, right=16, bottom=16, top=16 if screen_reader else 0
+            ),
             # A scrolling Column takes all the height it is given (Flet's
             # scrollable_control.dart, #6450): the intrinsic height gives it its
             # content's, up to the sheet's limit, so the sheet stays as short.
             content=ft.Row([content], intrinsic_height=True),
         ),
-        show_drag_handle=True,
+        # TalkBack lands on the scrim, then the handle's "Dismiss", before the question
+        # (#963). A sheet that can't be dismissed has no scrim node, and Back still works.
+        show_drag_handle=not screen_reader,
+        dismissible=not screen_reader,
         scrollable=True,  # up to the screen's height, not 9/16 of it, at large text
         use_safe_area=True,
         shape=hc_sheet_shape(high_contrast),
