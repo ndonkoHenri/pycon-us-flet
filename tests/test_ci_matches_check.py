@@ -15,12 +15,16 @@ TRAILING_COMMENT = re.compile(r"\s+#.*$")
 
 
 def _commands(path: str, prefix: str) -> list[str]:
-    """Return each `uv` command of the file's lines that start with `prefix`, in order."""
+    """Return the file's `prefix` lines' commands, in order; each must be one `uv` line.
+
+    A `run: |` block or a command that isn't `uv` fails here, rather than go uncompared.
+    """
     commands = []
     for line in (ROOT / path).read_text().splitlines():
         stripped = line.strip()
-        if stripped.startswith(f"{prefix} uv "):
+        if stripped.startswith(f"{prefix} "):
             command = TRAILING_COMMENT.sub("", stripped.removeprefix(f"{prefix} "))
+            assert command.startswith("uv "), f"{path}: not a uv line: {stripped}"
             commands.append(QUIET.sub("", command))
     return commands
 
