@@ -18,6 +18,7 @@ repos:
         args: [--allow-multiple-documents]   # Maestro flows are a config document, ---, then the steps
       - id: check-toml
       - id: check-merge-conflict
+        args: [--assume-in-merge]   # or it looks only during a merge, and a committed marker passes
       - id: check-added-large-files
         args: [--maxkb=1000]
       - id: no-commit-to-branch
