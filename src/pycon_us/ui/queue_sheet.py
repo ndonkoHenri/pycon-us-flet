@@ -358,6 +358,7 @@ def use_queue_sheet(*, others: bool = False) -> QueueSheet:
             staff.retry_failed(svc.outbox, owner, time.time())
             svc.kick_sync()
 
+    @report_errors
     async def settle() -> None:
         """Make the sheet's live regions live once it has settled (#1074)."""
         set_live(False)
