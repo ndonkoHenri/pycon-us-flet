@@ -45,8 +45,14 @@ NO_ANSWER = refreshed("offline")[0]
 """What Refresh now says when the feed did not answer, the app's own words."""
 
 
-ABOUT_APP_LINK = "confcompanion://app/more/app"
-"""About this app's deep link; the scheme and host are `[tool.flet.deep_linking]`'s."""
+LINK_PREFIX = "confcompanion://app"
+"""Every deep link's start; the scheme and host are `[tool.flet.deep_linking]`'s."""
+
+ABOUT_APP_ROUTE = "/more/app"
+"""About this app's route."""
+
+ABOUT_APP_LINK = f"{LINK_PREFIX}{ABOUT_APP_ROUTE}"
+"""About this app's deep link."""
 
 OPEN_LINK_FLOW = Path(__file__).parents[2] / "maestro" / "subflows" / "open_link.yaml"
 """The Maestro flow that opens a link on iOS, and taps the simulator's Open prompt (F31)."""
@@ -63,23 +69,30 @@ def before_conference() -> str:
     return f"{day.isoformat()} 09:00"
 
 
-async def open_about_app() -> None:
-    """Open About this app by its deep link, from the host.
+async def open_route(route: str) -> None:
+    """Open an app route by its deep link, from the host.
 
-    Its row is below the fold of the More root on every phone, the iPhone 17 Pro Max's
-    too, and a flow cannot scroll to it: `RemoteTester` has no drag (U35, #288), and
-    the test binding drops the device's own touches, so a host-side swipe doesn't reach
-    the app either. `adb` sends the link on Android, where Maestro reading the
-    accessibility tree would change what the app does (F72). `simctl openurl` asks
-    "Open in …?" (F31), so Maestro sends it on iOS.
+    About this app's row is below the fold of the More root on every phone, the iPhone
+    17 Pro Max's too, and so is Settings', and a flow cannot scroll to either:
+    `RemoteTester` has no drag (U35, #288), and the test binding drops the device's own
+    touches, so a host-side swipe doesn't reach the app either. `adb` sends the link on
+    Android, where Maestro reading the accessibility tree would change what the app
+    does (F72). `simctl openurl` asks "Open in …?" (F31), so Maestro sends it on iOS.
+
+    Args:
+        route: The route path, e.g. `/more/app`.
     """
     if PLATFORM == "android":
         intent = ("shell", "am", "start", "-a", "android.intent.action.VIEW")
-        await run(adb(), "-s", DEVICE, *intent, "-d", ABOUT_APP_LINK)
+        await run(adb(), "-s", DEVICE, *intent, "-d", f"{LINK_PREFIX}{route}")
     else:
-        route = ABOUT_APP_LINK.removeprefix("confcompanion://app")
         env = ("-e", f"ROUTE={route}")
         await run("maestro", "--device", DEVICE, "test", *env, str(OPEN_LINK_FLOW))
+
+
+async def open_about_app() -> None:
+    """Open About this app by its deep link, from the host (`open_route()`)."""
+    await open_route(ABOUT_APP_ROUTE)
 
 
 async def open_developer(t: RemoteTester) -> None:

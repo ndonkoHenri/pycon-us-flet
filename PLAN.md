@@ -267,7 +267,7 @@ In parallel upstream: U1, U15 and spike S6.
 
 **Scope:**
 - A performance pass and an accessibility audit.
-- A few goldens.
+- Six goldens (recorded early, D-495), re-recorded when the UI changes on purpose.
 - The 2027 data, if published.
 - "View source" on each screen.
 - The README, with screenshots and an accessibility section, plus CONTRIBUTING and good first issues.

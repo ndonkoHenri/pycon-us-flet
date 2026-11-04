@@ -25,7 +25,7 @@
 | Mock API, client, signing, outbox (§4) | `httpx.MockTransport`, hypothesis | every PR, from P3 | yes |
 | UI smoke flows (§5) | `flet test`, `flet_app`, `RemoteTester` | UI-heavy PRs; phase exits | no |
 | Device journeys and regression matrices (§5.5) | Maestro on packaged builds (`maestro/`) | PRs that change a journey; phase exits; a matrix's PRs | no |
-| Goldens (§6) | `adb exec-out screencap` on Android, `take_screenshot` on iOS; `assert_screenshot` | P4 only | no |
+| Goldens (§6) | `adb exec-out screencap` on Android; `assert_screenshot` | Phase exits and Flet pin bumps; six images, one named emulator (D-495) | no |
 | Accessibility (§7) | contrast test; flows at 200 %; screen readers | every PR (contrast); phase exits | contrast only |
 | Device checklist and performance (§8, §9) | packaged builds on an Android emulator and an iOS simulator; the iPhone for hardware checks (D-102) | phase exits | no |
 | Public feed check (§12) | `tools/check_feed.py`, `httpx.MockTransport` in its tests | by hand while the repo is private; weekly once it is public (D-273) | its tests; the check itself runs on its own |
@@ -58,7 +58,7 @@ tests/
     mock/                                              # accounts per role, sponsors, products, attendees (D-50)
   ui/
     __init__.py, conftest.py, helpers.py               # see §5
-    test_<journey>.py, golden/<platform>/...           # flows; goldens in P4
+    test_<journey>.py, golden/<platform>/...           # flows; the six goldens (§6)
 ```
 
 All these paths are listed in decisions §M (Tests).
@@ -109,7 +109,7 @@ extend-select = ["I", "UP", "B", "SIM", "D", "DTZ", "E", "W", "PT", "S"]  # ... 
 | UI flows on the iOS simulator | `uv run flet test ios -d <simulator-udid> --tests-dir tests/ui -v` |
 | One flow | add `-k shell` |
 | UI flows while another build may run (parallel agents) | from a worktree, prefix with its own pub cache, `PUB_CACHE=$PWD/build/pub-cache` (development.md §5.8, D-219, D-176) |
-| Record or update goldens (P4) | add `-k goldens -u`, or `--update-failed-goldens` |
+| Record or update goldens (§6) | on the goldens' emulator, `-k goldens -u`, or `--update-failed-goldens` |
 | Public feed check | `uv run python -m tools.check_feed` (add years to check others, e.g. `2025 2026`) |
 | Feature matrix check (after editing `docs/feature-matrix.md`; `tests/test_check_matrix.py` runs it in pytest) | `uv run python -m tools.check_matrix` (add `--breakdown` for the fuller counts) |
 | A feed shifted to now, for real-time device checks (§9.1) | `uv run python -m tools.shifted_feed <session id> --in 5m [--move 15m]` |
@@ -436,12 +436,14 @@ The machine records each row's attribution at enqueue time, and what it expects 
 | `tap_first_text(t, texts)` | Tap whichever of these texts shows first: for rows a feed refresh may change, such as the first speakers |
 | `tap_back_arrow(t)`, `press_system_back(t)` | Back, as above |
 | `screenshot(name)` | `build/ui/<platform>/<name>.png` through `adb exec-out screencap -p` or `xcrun simctl io <udid> screenshot`, not `take_screenshot` (§5.1) |
+| `capture(t, name)`, `demo_mode()` | The golden's PNG bytes, as often as a launch needs: the device's own on Android, `take_screenshot` on iOS; and SystemUI's demo mode around them, which freezes Android's status bar (§6) |
 
 `tests/ui/conftest.py` holds `feed_url` and `silent_feed`; `tests/ui/feeds.py` holds `laptop_url()`, `SilentFeed` and `PairFeed`. The harness arrived in P0 with the shell flow (P0-27, #78); the Developer helpers arrived with the first P1 flows (P1-30, #108, D-223), in `tests/ui/developer.py`:
 
 | Helper | What it does |
 |---|---|
 | `open_developer(t)` | From a tab root: More, then About this app's deep link (`open_about_app()`, D-478) → the version row (`about_app.version`) 7 times → Developer options (`about_app.developer`): always through About; once unlocked, the seven version taps are skipped. The View under Developer is the More root. Refresh now must be on Developer's first screen: a flow cannot scroll (U35), so the Data section follows the feed and the iOS flows run on an iPhone 17 Pro Max simulator (D-223, D-478) |
+| `open_route(route)` (`tests/ui/developer.py`) | Opens a route by its deep link: `adb` on Android, Maestro on iOS (F31), for a page below the fold of More, such as About this app (`open_about_app()`) and Settings (§6) |
 | `apply_options(t, now=, feed_url=)` | Types the fake clock and the feed URL, taps Apply and waits for "Applied: …" |
 | `refresh_now(t, outcome=None)` | Taps Refresh now and waits up to 60 s for its outcome: these words (`UPDATED`, `NO_ANSWER`, the app's own), or any |
 | `start_app(t)` (`tests/ui/helpers.py`) | Waits for the first screen, Welcome's Get started (`welcome.start`) or Now, and taps Get started until Now's title shows: a test build is a fresh install, so a plain start opens Welcome (D-287). Every flow starts with it |
@@ -578,13 +580,14 @@ platform), and at every phase exit and Flet pin bump on both platforms, with the
 checklist (§9). A regression matrix runs on a PR that touches what it guards, against
 `main`'s build on the same device.
 
-## 6. Goldens (P4 only)
+## 6. Goldens (D-78, D-495)
 
-Goldens churn while the UI evolves, so a handful arrive only in P4 (D-78):
+Six images pin how the app looks on one emulator (#839, #840):
 
-- **Set:** Now, Schedule and Session detail, each in light and dark: six images.
-- **One test, one launch:** `tests/ui/test_goldens.py` visits all six with the fixture feed and a fixed clock, switching the theme in Settings. Each shot lets the screen settle, then runs `flet_app.assert_screenshot(name, await capture(t, name))` (99.0 % similarity by default).
-- **Capture:** `RemoteTester.take_screenshot` works once per launch on Android (U280, [#884](https://github.com/ndonkoHenri/pycon-us-flet/issues/884), F300), so six shots in one launch take the device's own bytes there; `assert_screenshot` takes any PNG bytes. On iOS, `take_screenshot` has no such limit. The helper #840 adds to `tests/ui/helpers.py`, beside `screenshot()`:
+- **Set:** Now, Schedule and Session detail, each in light and dark. `tests/ui/test_goldens.py` is one test and one launch: it sets the fake clock to 09:30 on the opening day (the third day, with a plenary under way and a keynote next) and the recorded feed, picks Light or Dark in Settings (opened by its deep link, `open_route()`), and visits the three screens in each.
+- **What they protect against:** an unintended change in how these three screens look: a colour token, a spacing, a clipped or overflowing row, a surface the dark theme missed. They run at phase exits and Flet pin bumps, on the emulator below. A failure means *look at the diff*: an intended change is re-recorded and its PR explains the images. They protect nothing about a phone: the emulator's fonts, density and compositor are not a phone's, so a pass is no pass for the device checklist (§9), and they pin only what these six states show. They are not in CI (§12).
+- **One device:** the Android emulator `pycon_pixel6a_api36` (a Pixel 6a: 1080 x 2400 px, 420 dpi, API 36), with its animations off (`tools.device up android --avd pycon_pixel6a_api36 --port <port> --no-animations`). The test skips on any other device (`getprop ro.boot.qemu.avd_name`), so a run of every flow elsewhere is not failed by it. Images: `tests/ui/golden/android/goldens/`, 1080 x 2400 px, about 1.2 MB the six. iOS has none (see below).
+- **Capture:** `RemoteTester.take_screenshot` works once per launch on Android (U280, [#884](https://github.com/ndonkoHenri/pycon-us-flet/issues/884), F300), so six shots in one launch take the device's own bytes there; `assert_screenshot` takes any PNG bytes. The helper, in `tests/ui/helpers.py` beside `screenshot()`:
 
   ```python
   async def capture(t: RemoteTester, name: str) -> bytes:
@@ -595,10 +598,30 @@ Goldens churn while the UI evolves, so a handful arrive only in P4 (D-78):
       return await t.take_screenshot(name)
   ```
 
-  This path is read from the sources at the pin; no device has run it yet, and #840's first run is its proof. When U280 is fixed, the helper can go.
-- **What Android's capture holds:** the whole screen, status and navigation bars included. It pumps no frame, hence the settling first (`await t.pump_and_settle()`). `take_screenshot` pumps one and draws only the Flutter view (F300).
-- **One device:** a named Android emulator (recorded in the docstring); images in `tests/ui/golden/android/goldens/`. A capture of another size is not a failure: the comparison resizes it first (F300). iOS goldens are optional.
-- **Updating:** `-u` records; after an intentional change, `--update-failed-goldens` rewrites only what changed. The PR explains the image diffs. On Android, every capture shows the status bar, so freeze its clock and icons with SystemUI demo mode before recording or comparing; #840 writes the commands down here.
+  **Run on devices (#840, 2026-11-04, Flet `1.1.0.dev4`):** one shot taken twice in a launch worked through `capture()` on the emulator (two identical 103,734-byte PNGs) and on an iPhone 17 Pro Max simulator (iOS 26.5; 261,837 bytes twice), and `take_screenshot` twice failed on the emulator with `'!_isSurfaceRendered': Surface already converted to an image` and worked twice on the simulator. When U280 is fixed, the helper can go.
+- **What Android's capture holds:** the whole screen, status and navigation bars included. It pumps no frame, hence the settling first (`settle()`: a short real-time wait while pumping, then `pump_and_settle()`). `take_screenshot` pumps one and draws only the Flutter view (F300).
+- **The status bar is frozen** with SystemUI's demo mode (`demo_mode()` in `tests/ui/helpers.py`), entered before the first shot and left in a `finally`:
+
+  ```bash
+  adb -s $D shell settings put global sysui_demo_allowed 1
+  adb -s $D shell am broadcast -a com.android.systemui.demo -e command enter
+  adb -s $D shell am broadcast -a com.android.systemui.demo -e command clock -e hhmm 1000
+  adb -s $D shell am broadcast -a com.android.systemui.demo -e command network -e wifi show -e level 4 -e fully true
+  adb -s $D shell am broadcast -a com.android.systemui.demo -e command network -e mobile hide
+  adb -s $D shell am broadcast -a com.android.systemui.demo -e command battery -e level 100 -e plugged false
+  adb -s $D shell am broadcast -a com.android.systemui.demo -e command notifications -e visible false
+  adb -s $D shell am broadcast -a com.android.systemui.demo -e command exit   # when done
+  ```
+
+  The mobile icon is hidden because it differed by about 230 pixels (33 x 33, the icon's box) between launches with a fixed level.
+- **Threshold, and the noise it must clear** (`assert_screenshot`'s structural similarity, one comparison per image per launch): **99.9 %**, not `assert_screenshot`'s default 99.0 %. The index barely reacts to a uniform colour shift, so on `now_light` a background 20 levels darker scores 99.35 % and a blanked 120 px band 99.14 %, and both would pass at 99.0 % (computed from the committed image, as Flet computes it); 99.9 % fails both, and a layout shift (the lower half 8 px down: 93.5 %). It still passes a small clip (a 60 x 480 px row end blanked: 99.94 %), so the images say "something moved or changed colour", not "every pixel is right". 99.9 % sits under the noise measured:
+  - *Status bar:* with the mobile icon showing, four launches gave 99.991 % at worst, the differences in that icon's box (33 x 33 px, about 230 pixels), plus the Now button's shadow edge once. With it hidden, nine launches (54 comparisons) gave 100.0 % in 49, 99.999998 % in four (163 pixels, at most 6 in the sum of the three colour channels: the shadow edge of the Schedule's "Now" button in dark) and 99.9913 % once (`now_dark`, in a slow launch of 97 s; its cause was not looked into). They compared against two recordings of the same screens, one before and one after rebasing onto `main`; the last two launches are the ones with the 99.9 % threshold.
+  - *The fake clock runs forward from its start,* so text that changes by the minute ("Starts in 15 min", the Now line's "9:30", Now's progress bar) changes if a launch crosses a minute boundary. Measured by starting the clock 20 s earlier (09:29:10 against the images' 09:30:00): 99.978 % and 99.987 % on Now and Schedule, 100.0 % on Session detail. None of the nine launches showed one, but a slow host's could, which is why the threshold is 99.9 %, not 99.99 %: a failure that shows only text of the minute, and nothing else, is a re-run.
+- **What the images show that is easy to miss:** the dark Schedule shows the "Now" button and the light one does not, in every launch. From `screens/schedule_now.py`, the button hides only while the list's own jump is the known landing (D-204), and the dark Schedule is shown the second time, after the theme switch rebuilt the tabs; that reading was not checked on a device. The images pin the behaviour as it is (whether it is wanted: [#1079](https://github.com/ndonkoHenri/pycon-us-flet/issues/1079)): a change to D-204 re-records them.
+- **Data:** only the recorded feed (`tests/fixtures/feeds/`, public) and the bundled venue plan: speakers and sessions are the public feed's, there is no account, token or saved session. Each image is looked at before it is committed (AGENTS.md, D-162's check).
+- **iOS:** the test skips on iOS: goldens there are optional. The same test ran on the simulator (`-u`, then one comparison: 99.97 % to 100 % on the six), but its images are 1320 x 2868 px and about 2.5 MB the six, twice the Android set, and nothing yet asks for them; record them when an iOS-only regression shows the need (a `needs-decision` issue). The images of that run were not kept.
+- **Updating:** on the emulator above, `-k goldens -u` records all six; after an intentional change, `--update-failed-goldens` rewrites only the images that changed (and "Creating missing golden" for new ones). Re-recording writes new PNGs into git history, about 1.2 MB a time: do it for a change that is meant, once, and have the PR explain each image diff (a before and after in its body). Then run the test twice without `-u` before the PR is ready. **Set `SOURCE_URL` (D-292, when the repository goes public) and all six move:** View source adds an overflow menu to the app bars that have none, Now's among them, so the PR that sets it re-records them.
+- **Recorded:** 2026-11-04 at Flet `1.1.0.dev4` (D-481), on `pycon_pixel6a_api36`. Re-record after a pin bump that moves the pixels, once the screens are looked at.
 
 ## 7. Accessibility checks (D-33)
 
@@ -947,7 +970,7 @@ Testing gates per phase, from PLAN §7's exit criteria (the milestone descriptio
 | **P1** | + queries, time formatting, slugs, HTML→Markdown, refresh failure paths, favourites, track badges | The shell flow and F1–F5 plus Maestro F6 (`star_undo`, `now_next`) on both platforms, once at 200 % text | Checklist 1–11; P1 screen-reader flows; a simulated conference day; D-80 numbers recorded |
 | **P2** | + diff (`PyCon/pycon-us-mobile#312`), `.ics`, reminder plan, all year data, sprint-only rooms seeded from `map.toml` (MAP-08), high-contrast schemes | + Maestro F7 (`session_room_plan`) | + checklist 3, 10, 12, 15 (deep links); P2 screen-reader flows; an external tester's unaided task; numbers and app size re-recorded |
 | **P3** | + signing vectors, mock contract, faults under both semantics, outbox machine, sqlite, staff truth table, favourites sync, PSF guard | + Maestro F8 (`offline_scans` through `tools.offline_scans`) | + checklist 13; P3 screen-reader flows; if E1 is bundled, printed mock badges scan on the iPhone (on Android, the emulator's virtual scene camera), including two devices checking in one attendee; otherwise the same scenario passes with manual or HID entry (PLAN P3 exit 5); compared with the mock's log |
-| **P4** | All green; goldens added | All flows, both platforms, twice in a row | Full audit with both screen readers; targets met; no known data-loss or task-blocking bugs; clean-checkout build ≤ 30 min; the demo script runs end to end twice without Wi-Fi |
+| **P4** | All green; goldens pass (§6) | All flows, both platforms, twice in a row | Full audit with both screen readers; targets met; no known data-loss or task-blocking bugs; clean-checkout build ≤ 30 min; the demo script runs end to end twice without Wi-Fi |
 
 ## 12. Checks and CI wiring (D-84, D-273)
 
