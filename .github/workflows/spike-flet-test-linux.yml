@@ -38,13 +38,24 @@ jobs:
           sudo apt-get update -qq
           sudo apt-get install -y -qq clang cmake ninja-build pkg-config libgtk-3-dev liblzma-dev libstdc++-12-dev \
             libsecret-1-dev libjsoncpp-dev libgstreamer1.0-dev libgstreamer-plugins-base1.0-dev libunwind-dev \
-            xvfb gnome-keyring dbus-x11 libmpv-dev mpv
+            xvfb gnome-keyring dbus-x11 libmpv-dev mpv dunst
+      # connectivity_plus reads NetworkManager over D-Bus on Linux and throws without it. Told to leave the devices alone,
+      # so the runner's network keeps working.
+      - name: NetworkManager, leaving the runner's network alone
+        run: |
+          sudo mkdir -p /etc/NetworkManager/conf.d
+          printf '[keyfile]\nunmanaged-devices=*\n' | sudo tee /etc/NetworkManager/conf.d/99-unmanaged.conf
+          sudo apt-get install -y -qq network-manager
+          sudo systemctl start NetworkManager
+          nmcli general status
+          curl -fsS -o /dev/null https://pypi.org/simple/ && echo "the network still works"
       - name: Run the flows
         env:
           FLET_CLI_NO_RICH_OUTPUT: "1"
         run: |
           xvfb-run -a -s "-screen 0 1280x1024x24" dbus-run-session -- bash -c '
             echo -n "" | gnome-keyring-daemon --unlock --components=secrets
+            dunst &
             uv run flet test linux --tests-dir tests/ui --yes -v
           ' 2>&1 | tee build-flows.log
           exit "${PIPESTATUS[0]}"
