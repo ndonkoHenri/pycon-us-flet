@@ -367,3 +367,21 @@ def test_close_is_a_named_button_that_closes_the_sheet() -> None:
     assert isinstance(button, ft.IconButton) and button.tooltip == "Close"
     cast(Callable[[], None], button.on_click)()
     assert closed == [1]
+
+
+def test_a_screen_reader_meets_the_title_first() -> None:
+    """With a screen reader on, no handle or scrim precedes the title (D-485, #1058)."""
+    plain = sheet(Queue())
+    assert plain.show_drag_handle and plain.dismissible
+    read = queue_sheet(
+        Queue(),
+        SheetState(Staff(), NOW),
+        tokens=LIGHT_TOKENS,
+        style=ft.Animation(0),
+        on_sync_now=lambda: None,
+        on_retry_failed=lambda: None,
+        on_confirmed=lambda _open: None,
+        on_close=lambda: None,
+        screen_reader=True,
+    )
+    assert not read.show_drag_handle and not read.dismissible

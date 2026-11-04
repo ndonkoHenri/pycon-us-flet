@@ -165,6 +165,7 @@ def use_find(
             SheetActions(changed, clear, pick, close, dismissed),
             tokens=tokens,
             reduce_motion=prefs.reduce_motion,
+            screen_reader=prefs.screen_reader,
         )
         if finding is not None
         else None
