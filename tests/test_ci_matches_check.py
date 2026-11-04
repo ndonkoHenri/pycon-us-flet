@@ -1,4 +1,4 @@
-"""`ci.yml` and `tools/check.sh` run the same checks in the same order (D-273, D-480, D-482).
+"""`ci.yml` and `tools/check.sh` run the same checks in the same order (D-273, D-480, D-483).
 
 The merge gate and the pre-push hook run `check.sh`, and CI runs `ci.yml`, so a step that one has and the other lacks
 would let a change pass on one and fail on the other.
