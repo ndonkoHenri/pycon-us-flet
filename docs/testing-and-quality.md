@@ -75,6 +75,7 @@ dev = [                      # host only; every flet-* pinned to one version (de
     "flet-platform-assets==1.1.0.dev4",
     "flet[test]==1.1.0.dev4", # pytest-asyncio, numpy, Pillow, scikit-image
     "pytest",
+    "pytest-xdist",                   # `-n auto` in ci.yml and tools/check.sh: the tests take 90% of a CI run (D-482)
     "hypothesis",
     "ruff",
     "pre-commit",                     # the hooks of .pre-commit-config.yaml (D-480); tools/check.sh runs them

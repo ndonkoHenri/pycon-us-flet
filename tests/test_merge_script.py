@@ -15,9 +15,13 @@ MERGE = Path(__file__).resolve().parent.parent / "tools" / "merge.sh"
 
 
 def _git(cwd: Path, *args: str) -> str:
-    """Run git in `cwd` and return its output."""
+    """Run git in `cwd` with an identity of its own (a runner has none), and return its output."""
     done = subprocess.run(
-        ["git", *args], cwd=cwd, check=True, capture_output=True, text=True
+        ["git", "-c", "user.name=T", "-c", "user.email=t@example.com", *args],
+        cwd=cwd,
+        check=True,
+        capture_output=True,
+        text=True,
     )
     return done.stdout.strip()
 

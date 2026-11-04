@@ -51,6 +51,6 @@ step uv run ruff format --check
 step uv run pre-commit run --all-files --hook-stage manual --show-diff-on-failure
 step uv run pyright
 if [ "$fast" = 0 ]; then
-    step uv run pytest -q --hypothesis-profile=ci  # hypothesis's built-in profile, 200 examples via tests/conftest.py
+    step uv run pytest -q -n auto --hypothesis-profile=ci  # hypothesis's built-in profile, 200 examples via tests/conftest.py
 fi
 echo "check.sh: all $total steps passed"
