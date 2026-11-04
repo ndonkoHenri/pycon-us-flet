@@ -135,6 +135,43 @@ async def test_a_link_does_not_wait_for_a_picker_flet_cannot_close(
     assert picker.open is True  # not asked: Flutter would not close it
 
 
+async def test_a_link_closes_a_snack_bar_kept_for_a_screen_reader(
+    open_at: Open,
+) -> None:
+    """A kept Undo goes as the route changes, so no later screen hears it (D-496).
+
+    It closes at once and the link waits for nothing; `update()` is what Flet turns
+    into `removeCurrentSnackBar()`.
+    """
+    shown = await open_at("/now/session/31")
+    kept = ft.SnackBar(
+        ft.Text("Removed from My schedule"),
+        action=ft.SnackBarAction("Undo"),
+        persist=True,
+    )
+    shown.page.show_dialog(kept)
+    await shown.settle()
+
+    await shown.go(LINK)
+    assert shown.routes() == ["/", LINK]
+    assert kept.open is False
+
+
+async def test_a_snack_bar_that_times_out_stays_through_a_link(open_at: Open) -> None:
+    """Without a screen reader the Undo isn't kept: it has its 4 s, over any page."""
+    shown = await open_at("/now/session/31")
+    timed = ft.SnackBar(
+        ft.Text("Removed from My schedule"),
+        action=ft.SnackBarAction("Undo"),
+        persist=False,
+    )
+    shown.page.show_dialog(timed)
+    await shown.settle()
+
+    await shown.go(LINK)
+    assert timed.open is True
+
+
 async def test_a_message_over_a_dialog_stays_while_the_dialog_closes(
     open_at: Open,
 ) -> None:
