@@ -29,6 +29,10 @@ from pycon_us.ui.scrolling import anchored
 NOW_LINE = 2
 """The now line's thickness in dp (ux.md §5.2): twice a slot's divider, in `primary`."""
 
+LATE_END_S = 10.0
+"""How long after a jump that came back "still" a scroll end still counts as that jump's,
+in seconds: a starved frame can finish the scroll well after the jump stopped asking."""
+
 SAID_S = 5.0
 """How long the landing note keeps its words, in seconds (D-241): long enough for
 TalkBack to read them out, short enough that the note is no lasting stop."""
@@ -119,6 +123,8 @@ class Landing:
     A scroll of the user's own while a jump is waiting ends it as its landing, since a
     scroll end does not say who scrolled (the pinned `ListView.scroll_to()` returns
     nothing about where it got to); the next half-screen scroll corrects the button.
+    So does a jump's own end that comes late, after it came back "still"
+    (`Signals.late_ends_until`): the landing moves there rather than the button coming back.
 
     Attributes:
         day: The list's day, today when it jumped.
@@ -202,10 +208,14 @@ class Signals:
         ended: Set when the shown list's scroll ends (`jump_to_key()`).
         settled: Set when `Tabs` reports a day, which it does once a switch has
             finished sliding, the one asked for from Python included.
+        late_ends_until: The `time.monotonic()` until which a scroll end is taken for
+            the last jump's own, since that jump came back "still". A user's drag or
+            a day change closes it.
     """
 
     ended: asyncio.Event = field(default_factory=asyncio.Event)
     settled: asyncio.Event = field(default_factory=asyncio.Event)
+    late_ends_until: float = 0.0
 
 
 def jumps_by_itself(
