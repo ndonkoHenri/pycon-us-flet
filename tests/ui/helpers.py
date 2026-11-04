@@ -402,7 +402,8 @@ async def demo_mode() -> AsyncIterator[None]:
     `adb exec-out screencap` holds the whole screen, so the bar's real clock would
     differ on every run. SystemUI's demo mode fixes its clock, signal, battery and
     icons. It does nothing on iOS, where `take_screenshot` draws the Flutter view
-    only. The exit runs even when the flow fails, so the emulator isn't left in it.
+    only. The exit runs even when the flow fails, so the emulator isn't left in it; if that
+    command fails too, the flow's own failure is the one that shows.
     """
     if PLATFORM != "android":
         yield
@@ -421,7 +422,9 @@ async def demo_mode() -> AsyncIterator[None]:
             await broadcast(*command)
         yield
     finally:
-        await broadcast("exit")
+        # A device that went away must not hide the flow's own failure (D-171).
+        with contextlib.suppress(AssertionError):
+            await broadcast("exit")
 
 
 async def screenshot_on_failure() -> None:

@@ -69,7 +69,7 @@ def before_conference() -> str:
     return f"{day.isoformat()} 09:00"
 
 
-async def open_link(route: str) -> None:
+async def open_route(route: str) -> None:
     """Open an app route by its deep link, from the host.
 
     About this app's row is below the fold of the More root on every phone, the iPhone
@@ -91,8 +91,8 @@ async def open_link(route: str) -> None:
 
 
 async def open_about_app() -> None:
-    """Open About this app by its deep link, from the host (`open_link()`)."""
-    await open_link(ABOUT_APP_ROUTE)
+    """Open About this app by its deep link, from the host (`open_route()`)."""
+    await open_route(ABOUT_APP_ROUTE)
 
 
 async def open_developer(t: RemoteTester) -> None:

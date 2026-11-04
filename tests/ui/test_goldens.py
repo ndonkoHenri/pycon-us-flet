@@ -23,7 +23,7 @@ import flet.testing as ftt
 import pytest
 from flet.testing.remote_tester import RemoteTester
 
-from tests.ui.developer import fresh_start, open_link
+from tests.ui.developer import fresh_start, open_route
 from tests.ui.helpers import (
     DEVICE,
     PLATFORM,
@@ -39,6 +39,14 @@ from tests.ui.helpers import (
     wait_for_tooltip,
 )
 from tests.ui.targets import conference_days, day_rows, recorded, row_id, saveable
+
+SIMILARITY = 99.9
+"""The threshold, in percent, of every comparison. `assert_screenshot`'s default, 99.0,
+passes a background 20 levels darker (99.35) and a blanked 120 px band (99.14), because
+structural similarity barely reacts to a uniform colour shift; 99.9 fails both. It sits
+under the worst difference a run showed from a minute ticking over in the fake clock
+(99.978) and the status bar's noise before the mobile icon was hidden (99.991), and 99.99
+would fail on a slow launch (testing-and-quality.md §6)."""
 
 AVD = "pycon_pixel6a_api36"
 """The Android virtual device the images were recorded on."""
@@ -59,6 +67,7 @@ def on_golden_device() -> bool:
         capture_output=True,
         text=True,
         check=False,
+        timeout=30,
     ).stdout.strip()
     return name == AVD
 
@@ -95,7 +104,7 @@ async def settle(t: RemoteTester) -> None:
 async def choose_appearance(t: RemoteTester, theme: str) -> None:
     """Pick Light or Dark in Settings and return to the Now root.
 
-    Settings is below the fold of More, so its deep link opens it (`open_link()`);
+    Settings is below the fold of More, so its deep link opens it (`open_route()`);
     Back returns to the More root, under it.
 
     Args:
@@ -103,7 +112,7 @@ async def choose_appearance(t: RemoteTester, theme: str) -> None:
         theme: `light` or `dark`, the radio rows' identifier ending.
     """
     await open_tab(t, "more")
-    await open_link("/more/settings")
+    await open_route("/more/settings")
     await wait_for_id(t, "more.title", gone=True)  # Settings has covered the root
     await tap_id(t, f"settings.appearance.{theme}")
     await t.pump(STEP)
@@ -116,7 +125,7 @@ async def choose_appearance(t: RemoteTester, theme: str) -> None:
 async def test_goldens(flet_app: ftt.FletTestApp, feed_url: str) -> None:
     """Each of the six screens matches its recorded image: Now, Schedule, Session detail.
 
-    Compared at `assert_screenshot`'s 99.0 % similarity, with the status bar frozen.
+    Compared at `SIMILARITY`, with the status bar frozen.
     """
     t = remote(flet_app)
     opening = saveable(day_rows(recorded(), OPENING_DAY))[1]  # PSF Welcome, at 09:25
@@ -126,13 +135,15 @@ async def test_goldens(flet_app: ftt.FletTestApp, feed_url: str) -> None:
             await choose_appearance(t, theme)
             await wait_for_id(t, "now.title")
             await settle(t)
-            flet_app.assert_screenshot(f"now_{theme}", await capture(t, f"now_{theme}"))
+            flet_app.assert_screenshot(
+                f"now_{theme}", await capture(t, f"now_{theme}"), SIMILARITY
+            )
 
             await open_tab(t, "schedule")
             await wait_for_id(t, row_id("schedule", opening))
             await settle(t)
             flet_app.assert_screenshot(
-                f"schedule_{theme}", await capture(t, f"schedule_{theme}")
+                f"schedule_{theme}", await capture(t, f"schedule_{theme}"), SIMILARITY
             )
 
             await tap_id(t, row_id("schedule", opening))
@@ -140,7 +151,7 @@ async def test_goldens(flet_app: ftt.FletTestApp, feed_url: str) -> None:
             await wait_for_id(t, "session.title")
             await settle(t)
             flet_app.assert_screenshot(
-                f"session_{theme}", await capture(t, f"session_{theme}")
+                f"session_{theme}", await capture(t, f"session_{theme}"), SIMILARITY
             )
             await tap_back_arrow(t)
             await wait_for_id(t, "schedule.title")
