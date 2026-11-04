@@ -197,6 +197,6 @@ class _Handler(BaseHTTPRequestHandler):
         self.end_headers()
         return True
 
-    def log_message(self, format: str, *args: object) -> None:
+    def log_message(self, format: str, *args: object) -> None:  # noqa: A002 (the stdlib handler's own signature)
         """Log the request line and status through `logging`, not `stderr`."""
         logger.info("Calendar file server: %s", format % args)

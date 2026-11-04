@@ -220,7 +220,7 @@ def test_the_same_instant_in_two_zones_is_one_time() -> None:
     assert label == "1:30 AM"
 
 
-NAIVE = datetime(2026, 5, 15, 9, 0)  # noqa: DTZ001
+NAIVE = datetime(2026, 5, 15, 9, 0)  # noqa: DTZ001 (naive on purpose: the call must refuse it)
 AWARE = datetime(2026, 5, 15, 16, 0, tzinfo=UTC)
 
 

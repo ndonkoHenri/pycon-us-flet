@@ -225,4 +225,4 @@ def test_a_naive_now_is_refused(
 ) -> None:
     """Now, the next session and the elapsed share refuse a naive now."""
     with pytest.raises(ValueError, match="aware"):
-        ask(processed(2026), datetime(2026, 5, 15, 10))  # noqa: DTZ001
+        ask(processed(2026), datetime(2026, 5, 15, 10))  # noqa: DTZ001 (naive on purpose: the call must refuse it)

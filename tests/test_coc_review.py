@@ -449,7 +449,10 @@ async def test_the_problem_is_announced_where_there_are_no_live_regions(
     show: Show, mock: MockState, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """iOS: the problem line is announced, and is no live region (said once)."""
-    announcing = lambda **kw: Prefs(announcements=True, **kw)
+
+    def announcing(**kw):
+        return Prefs(announcements=True, **kw)
+
     monkeypatch.setattr(test_staff_coc, "Prefs", announcing)
     shown = await show()
     task = await scan(shown)

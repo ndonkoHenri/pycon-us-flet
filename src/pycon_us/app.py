@@ -262,7 +262,7 @@ async def bootstrap(
     conference.start_refresh(svc.storage, svc.year, closed=svc.closed)
 
     @report_errors
-    def on_brightness(e: ft.Event[ft.Page]) -> None:
+    def on_brightness(_: ft.Event[ft.Page]) -> None:
         # Not e.brightness: at the pin the event arrives as a plain ControlEvent whose
         # data is the name (flet_backend.dart sends a string), while the page field is
         # already updated (S4).

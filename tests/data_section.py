@@ -1,8 +1,8 @@
 """The Developer screen's Data section fixtures and lookups, for its two test modules (#312).
 
 `test_developer_data.py` (the rows, Refresh now, Clear cached feed and the words)
-and `test_developer_data_reset.py` (Share log, Show welcome again and Reset app) run `DataActions` outside a renderer, as `Developer` runs in
-`test_developer.py`: its hooks are replaced and a fake page is bound. The feed fetch is
+and `test_developer_data_reset.py` (Share log, Show welcome again and Reset app) run `DataActions` outside a
+renderer, as `Developer` runs in `test_developer.py`: its hooks are replaced and a fake page is bound. The feed fetch is
 replaced too, so no test reaches the network. A module takes the fixtures by assigning
 them to its own names, as `docs/testing-and-quality.md` §3.1 says.
 """

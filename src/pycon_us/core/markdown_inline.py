@@ -152,9 +152,9 @@ def code(text: str) -> list[Token]:
 def paragraph(tokens: list[Token]) -> str:
     r"""Render an inline run as a paragraph; `\n` in it marks a hard break."""
     lines = []
-    for line in _resolve(tokens).split("\n"):
+    for raw in _resolve(tokens).split("\n"):
         # Space runs come from blocks inside inline elements; they are never meaningful.
-        line = re.sub(" {2,}", " ", line).strip(SPACE_CHARS)
+        line = re.sub(" {2,}", " ", raw).strip(SPACE_CHARS)
         if line:
             lines.append(escape_line_start(line))
     return "  \n".join(lines)

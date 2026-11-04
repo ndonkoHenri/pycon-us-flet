@@ -96,7 +96,77 @@ target-version = "py314"              # ruff also skips git-ignored paths (exclu
 extend-exclude = ["*.md"]             # code sketches in the docs are illustrations, not our code
 
 [tool.ruff.lint]
-extend-select = ["I", "UP", "B", "SIM", "D", "DTZ"]   # D: docstrings (D-74); DTZ: no naive datetimes (D-43)
+# ruff 0.17's default set already holds F (pyflakes), the dangerous B, S and BLE rules, ASYNC, PLE and some of PERF and
+# RUF; extend-select adds the families below and `ignore` takes out the rules that would fight the code. One comment per
+# family says why it is on, one per ignored rule why it is off (D-480, #1028). Not selected at all, and why:
+#   ERA  12 hits, all section-heading comments such as `# Escaping (D-115)` that read as calls
+#   TC   1,969 hits: moving imports under TYPE_CHECKING breaks Flet's runtime-evaluated annotations and dataclasses
+#   PLR  the magic-value, too-many-arguments and too-many-statements rules (about 750 hits) fight `@ft.component`
+#        functions, which take many props, and test asserts
+extend-select = [
+    "I",      # isort: imports in one order
+    "UP",     # pyupgrade: the syntax of Python 3.14
+    "B",      # bugbear: likely bugs
+    "SIM",    # simplify
+    "D",      # docstrings (D-74)
+    "DTZ",    # no naive datetimes (D-43)
+    "E",      # pycodestyle errors; E501 at 120 columns, the length the prose already keeps
+    "W",      # pycodestyle warnings
+    "C4",     # comprehensions: no needless list() or dict() around one
+    "PTH",    # pathlib over os.path and open()
+    "PERF",   # performance: a loop that is one extend() or comprehension
+    "T20",    # no print() in the app (tools print by design)
+    "A",      # builtins: a name that shadows one
+    "N",      # PEP 8 naming
+    "ARG",    # unused arguments
+    "PT",     # pytest style: raises() blocks of one statement, match=, parametrize names
+    "ASYNC",  # async functions: blocking calls and busy waits
+    "S",      # bandit, for src only: SQL built from strings, weak hashes, passwords in code
+    "PLC",    # pylint conventions: split() with maxsplit when only the first part is used
+    "PLW",    # pylint warnings: a loop variable reassigned
+    "RUF",    # ruff's own: unused noqa, a task nobody holds, regex patterns that are not raw
+    "PIE",    # misc. clutter: unneeded pass, range start, dict spread
+    "RET",    # return statements: no else after return, no unneeded variable
+    "LOG",    # logging: use of the logging module itself
+    "G",      # logging calls: lazy %-formatting, no f-strings in the message
+    "TID",    # tidy imports: no relative imports from a parent
+    "ICN",    # import conventions: `import flet as ft`
+    "ISC",    # implicit string concatenation: no accidental joins in a list
+    "RSE",    # raise: no parentheses on a bare class
+    "FURB",   # refurb: modern idioms of the standard library
+    "FLY",    # flynt: no `"".join` of constants where an f-string reads better
+]
+ignore = [
+    "ASYNC109",  # an async helper takes a `timeout` budget as part of its API; asyncio.timeout() inside would hide it
+    "N802",      # the Flet idiom: an `@ft.component` function is named like the control it returns, in CamelCase
+    "PLC0415",   # imports inside functions are deliberate: native extensions exist only in the packaged app
+    "PLW0108",   # `lambda: f()` late-binds on purpose where tests patch `f`
+    "PLW0603",   # four process-wide switches (clock, build, error details) are module state by design
+    "PT018",     # `assert a and b` is the style of 575 tests, and no bug hides in it
+    "RUF001",    # ambiguous Unicode in strings, docstrings and comments (RUF002, RUF003):
+    "RUF002",    # the text is deliberately typographic (the ellipsis, en dash, multiplication sign, curly quote)
+    "RUF003",
+    "S101",      # `assert` narrows a type for pyright in src; the tests are all asserts
+    "SIM108",    # at the 120-column limit it asks for nested ternaries that read worse (theme.py)
+]
+
+[tool.ruff.lint.pycodestyle]
+max-line-length = 120             # code is formatted at ruff's 88; docstrings and comments run to 120
+
+[tool.ruff.lint.per-file-ignores]
+# Frozen spike scripts: kept as they ran. E402: sys.path is set up before their imports.
+"docs/spikes/**" = ["A", "ARG", "ASYNC", "E402", "E501", "N", "PERF", "PLC", "PLW", "PTH", "S", "T20"]
+# Command-line scripts print by design, run adb, node and servers on purpose, and have handler signatures.
+"tools/**" = ["ARG", "S", "T20"]
+"tools/mock_api/server.py" = ["N815"]        # BaseHTTPRequestHandler wants do_GET, do_POST, ...
+"tools/mock_api/state.py" = ["N818"]         # `Refused` is the mock's vocabulary: 63 uses in 11 files, "Refused: 404 ..."
+# Tests: fakes copy the signatures they stand in for (id, format); fixtures and callbacks have fixed signatures;
+# polling helpers wait in a loop and tmp_path files are small; asserts and fake keys are the point.
+"tests/**" = ["A002", "ARG", "ASYNC110", "ASYNC240", "S"]
+"tests/ui/**" = ["T20"]                      # device flows report on stdout
+"src/pycon_us/screens/wifi.py" = ["S105"]            # the labels of a Wi-Fi password row, not passwords
+"src/pycon_us/services/credentials.py" = ["S105"]    # the names of the secure-storage keys, not secrets
+"src/pycon_us/services/outbox_*.py" = ["S608"]       # SQL built from column lists and ? placeholders; every value is bound
 
 [tool.ruff.lint.pydocstyle]
 convention = "google"

@@ -9,7 +9,8 @@ word and two backticks is a slip from reST. From the repo root:
 It exits 1 and prints one `path:line: text` per span. Only comments (`tokenize`) and bare
 string statements (`ast`: docstrings, attribute docstrings) are read, so a string that is
 data, such as a test fixture or the Markdown a converter must produce, is never flagged.
-A span whose text holds a backtick is allowed: Markdown needs the double delimiter there. `tests/test_check_backticks.py` pins this and runs the check on the repo.
+A span whose text holds a backtick is allowed: Markdown needs the double delimiter there.
+`tests/test_check_backticks.py` pins this and runs the check on the repo.
 """
 
 import argparse

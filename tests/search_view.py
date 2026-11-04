@@ -125,7 +125,8 @@ class Shown(harness.Shown):
         while not isinstance(node, list):
             node = node._b
         routes = []
-        for view in node:
+        for entry in node:
+            view = entry
             while not isinstance(view, ft.View):
                 view = view._b
             routes.append(str(view.route))

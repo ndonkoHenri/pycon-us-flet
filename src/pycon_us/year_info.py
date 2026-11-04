@@ -253,7 +253,7 @@ def check_info(content: Content, conference: ConferenceInfo, file: str) -> None:
 
 
 def check_credit_sponsors(
-    credits: SponsorCredits, data: ConferenceData, file: str
+    sponsor_credits: SponsorCredits, data: ConferenceData, file: str
 ) -> None:
     """Refuse a credit whose slug names no sponsor of a feed (D-337).
 
@@ -263,14 +263,14 @@ def check_credit_sponsors(
     they check the keynotes' sessions (D-217).
 
     Args:
-        credits: The `[sponsor_credits]` table.
+        sponsor_credits: The `[sponsor_credits]` table.
         data: The processed feed.
         file: The data file the credits come from, for the message.
 
     Raises:
         YearDataError: A credit's slug is not a sponsor of the feed.
     """
-    for key, credit in credits.items():
+    for key, credit in sponsor_credits.items():
         if sponsor_by_slug(data, credit.slug) is None:
             raise YearDataError(
                 f"{file}: sponsor_credits.{key}.slug: {credit.slug!r} is not a "

@@ -71,7 +71,7 @@ def sign(
         The lowercase hex SHA-1 of the parts joined with no separator.
     """
     head = f"{secret or ''}{timestamp}{method}{path_with_query}".encode()
-    return hashlib.sha1(head + body).hexdigest()
+    return hashlib.sha1(head + body).hexdigest()  # noqa: S324 (SHA-1 is the server's signature scheme, D-52)
 
 
 def auth_headers(

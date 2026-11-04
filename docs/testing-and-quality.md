@@ -91,7 +91,7 @@ pythonpath = ["."]           # tools.mock_api; pycon_us is installed editable by
 addopts = ["--ignore=tests/ui"]  # UI flows run only through flet test (see below)
 
 [tool.ruff.lint]
-extend-select = ["I", "UP", "B", "SIM", "D", "DTZ"]  # DTZ: no naive datetime.now()/utcnow() (D-43)
+extend-select = ["I", "UP", "B", "SIM", "D", "DTZ", "E", "W", "PT", "S"]  # ... and more, see pyproject.toml (D-480); DTZ: no naive datetimes (D-43)
 ```
 
 `flet[test]` brings `pytest-asyncio`, numpy, Pillow and scikit-image (screenshot comparison). It is needed by `flet test`, and `pytest-asyncio` runs our async client tests. Flet's pytest plugin defines the `flet_app` fixture only when `pytest_asyncio` imports, so `flet[test]` stays in `dev`, not in a separate group that `uv sync` skips. This is D-75's dev list: the Flet host tooling is listed by name, at the family's one version. `pycon_us` itself is importable because the project has a `[build-system]` (`uv_build`), so `uv sync` installs it editable from `src/` (D-82; development.md §3.1).

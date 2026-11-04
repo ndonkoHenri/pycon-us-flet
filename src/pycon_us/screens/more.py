@@ -10,8 +10,8 @@ The profile row comes first while a mock API URL is set (D-51, SHELL-12): "Sign 
 signed out, else the account's avatar, nickname and email, which opens the Account page
 (#688), and "Sign in again" once the server refused the key (#686); it appears,
 disappears and changes live with `Prefs` and the `Account` store. The Staff tools
-section follows it (`screens/staff_entry.py`, D-16, #725): a row per tool the account may open whose screen is built, the Lead
-scanner's with the outbox's "3 pending", live with the `Account` and `Staff` stores.
+section follows it (`screens/staff_entry.py`, D-16, #725): a row per tool the account may open whose screen is
+built, the Lead scanner's with the outbox's "3 pending", live with the `Account` and `Staff` stores.
 Every row pushes its page, so Back returns here (D-17): Expo hall is the drill's
 `/more/plan/expo`, a pushed View like any page.
 """

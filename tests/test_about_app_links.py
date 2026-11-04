@@ -116,7 +116,8 @@ def section(
 def data_rows(controls: list[ft.Control]) -> dict[str, str]:
     """The section's rows: each title and its second line."""
     found = {}
-    for row in controls:
+    for item in controls:
+        row = item
         if isinstance(row, ft.MergeSemantics):
             assert isinstance(row.content, ft.Semantics)
             assert row.content.identifier == "about_app.schedule"

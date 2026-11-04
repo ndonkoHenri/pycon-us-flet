@@ -143,7 +143,8 @@ def body_of(scaffold: dict[str, Any]) -> list[ft.Control]:
 def tiles(scaffold: dict[str, Any]) -> dict[str, ft.ListTile]:
     """The build's rows by title, the version row's `ListTile` included."""
     found = {}
-    for row in body_of(scaffold):
+    for item in body_of(scaffold):
+        row = item
         if isinstance(row, ft.Semantics) and row.live_region:
             continue  # the Developer row, below
         if isinstance(row, ft.MergeSemantics):

@@ -232,7 +232,7 @@ async def test_only_today_s_list_builds_every_slot(
     extents = {day: schedule.list_of(day).cache_extent for day in DAYS}
     assert extents.pop(FRIDAY) == scrolling.FULL_LIST_EXTENT
     assert set(extents.values()) == {None}
-    assert all(not schedule.list_of(d).build_controls_on_demand is False for d in DAYS)
+    assert all(schedule.list_of(d).build_controls_on_demand is not False for d in DAYS)
 
 
 async def test_outside_the_conference_no_list_is_built_in_full(

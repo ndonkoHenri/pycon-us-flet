@@ -37,7 +37,7 @@ from pycon_us.services.outbox_schema import (
 logger = logging.getLogger(__name__)
 
 
-class DbClosed(Exception):
+class DbClosedError(Exception):
     """The session closed the database; a late write is refused, not raised (D-120)."""
 
 
@@ -82,7 +82,7 @@ class OutboxDb:
     def _connect(self) -> sqlite3.Connection:
         """Return the connection, opening and migrating the file on first use."""
         if self._closed:
-            raise DbClosed
+            raise DbClosedError
         if self._connection is None:
             # isolation_level=None: autocommit, so each transaction is an explicit BEGIN.
             connection = sqlite3.connect(self.path, isolation_level=None)
@@ -118,7 +118,7 @@ class OutboxDb:
         """
         try:
             return action()
-        except DbClosed:
+        except DbClosedError:
             logger.warning("Outbox closed; refused to %s", what)
         except sqlite3.ProgrammingError:
             raise

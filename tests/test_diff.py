@@ -283,8 +283,10 @@ def plans(draw: st.DrawFn) -> tuple[Step, ...]:
     for key in draw(st.lists(st.sampled_from(ids), unique=True, max_size=6)):
         edit = draw(st.sampled_from(sorted(STEPS)))
         steps.append((key, edit, draw(STEPS[edit])))
-    for n in range(draw(st.integers(0, 3))):
-        steps.append((f"added-{n}", "add", draw(st.sampled_from(ids))))
+    steps.extend(
+        (f"added-{n}", "add", draw(st.sampled_from(ids)))
+        for n in range(draw(st.integers(0, 3)))
+    )
     return tuple(steps)
 
 

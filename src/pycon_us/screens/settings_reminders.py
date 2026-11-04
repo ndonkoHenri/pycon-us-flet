@@ -4,8 +4,8 @@
 D-401): a level-2 heading; a card while notifications need the user (`card_for()`):
 "Allow notifications" while the OS can still ask, both it and "Open settings" once
 Android refused a request again (it may still ask, or answer without a prompt: F259),
-"Open settings" once only the system settings can change it, and on Android, while session reminders are on, the Alarms &
-reminders card (D-221); the "Remind me before sessions in My schedule" switch, with
+"Open settings" once only the system settings can change it, and on Android, while session reminders are on, the
+Alarms & reminders card (D-221); the "Remind me before sessions in My schedule" switch, with
 the 5 · 10 · 15 min `SegmentedButton` only while it is on; and the three conference
 moments. Each row is a `ListTile(toggle_inputs=True)` that saves silently: the
 scheduler re-plans on any change of `Prefs.reminders` (D-389), and only a failed write

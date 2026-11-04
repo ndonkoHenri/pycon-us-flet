@@ -229,9 +229,9 @@ async def test_reset_app_clears_storage_and_every_store_as_after_a_fresh_install
 
     The session has been used: settings (reminders too), favourites of two years, the
     Developer options, a cache, a change log, a fake clock, a feed URL, remembered
-    places and a signed-in mock account, whose key and secret go too (#684). Only another app's key is left; the device facts stay and Developer locks
-    again. Then, as at a start, a quiet refresh of the year's feed runs, the app goes to
-    Welcome, as a first start does (D-287), and says "App reset".
+    places and a signed-in mock account, whose key and secret go too (#684). Only another app's key is left; the
+    device facts stay and Developer locks again. Then, as at a start, a quiet refresh of the year's feed runs, the
+    app goes to Welcome, as a first start does (D-287), and says "App reset".
     """
     stored.update(
         {

@@ -50,7 +50,7 @@ def test_failed_mode_doesnt_stop_the_rest(
         )
 
     monkeypatch.setattr(sweep, "run_flow", run_flow)
-    with pytest.raises(SystemExit, match="^1$"):
+    with pytest.raises(SystemExit, match=r"^1$"):
         sweep.main(
             [
                 "--device",
@@ -101,7 +101,7 @@ def test_failed_sign_in_skips_that_tour(
         return "sign_in" not in command[-1]
 
     monkeypatch.setattr(sweep, "run_flow", run_flow)
-    with pytest.raises(SystemExit, match="^1$"):
+    with pytest.raises(SystemExit, match=r"^1$"):
         sweep.main(
             [
                 "--device",
@@ -129,7 +129,7 @@ def test_refused_setting_fails_that_mode_only(
     monkeypatch.setattr(sweep.own, "start", lambda state, options: 8123)
     monkeypatch.setattr(sweep.device, "main", prefs)
     monkeypatch.setattr(sweep, "run_flow", lambda command: True)
-    with pytest.raises(SystemExit, match="^1$"):
+    with pytest.raises(SystemExit, match=r"^1$"):
         sweep.main(
             [
                 "--device",

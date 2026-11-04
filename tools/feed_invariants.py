@@ -306,9 +306,11 @@ def speakers_and_sessions_link_both_ways(feed: ProcessedFeed) -> list[str]:
             speaker = data.speakers.get(speaker_id)
             if speaker and speaker.name not in session.speaker_names:
                 problems.append(f"{session.id} does not name speaker {speaker_id}")
-    for speaker in data.speakers.values():
-        if speaker.name.startswith("Hosted by"):
-            problems.append(f"pseudo-speaker {speaker.id} is in the directory")
+    problems.extend(
+        f"pseudo-speaker {speaker.id} is in the directory"
+        for speaker in data.speakers.values()
+        if speaker.name.startswith("Hosted by")
+    )
     return problems
 
 

@@ -10,6 +10,7 @@ the call's arguments (D-72). The rows that report a problem, About this app's an
 safety's, hold the share's state through `use_problem_report()` (INFO-11).
 """
 
+import asyncio
 import logging
 from collections.abc import Awaitable, Callable
 from pathlib import Path
@@ -261,7 +262,12 @@ async def _console_log(svc: Services) -> Path | None:
     except SERVICE_ERRORS as error:
         logger.warning("Could not find the log: %s", type(error).__name__)
         return None
+    return path if await asyncio.to_thread(_has_content, path) else None
+
+
+def _has_content(path: Path) -> bool:
+    """Return whether `path` is a file with something in it; False when it cannot be read."""
     try:
-        return path if path.is_file() and path.stat().st_size > 0 else None
+        return path.is_file() and path.stat().st_size > 0
     except OSError:
-        return None
+        return False

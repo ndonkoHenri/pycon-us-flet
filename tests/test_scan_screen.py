@@ -210,7 +210,10 @@ async def test_a_scan_after_not_a_badge_code_is_read_alone(
 async def test_a_scanned_url_or_contact_card_is_not_a_badge_code(
     show: Show, rig: Rig, text: str
 ) -> None:
-    """A QR code that is a URL or a vCard has colons, yet says "Not a badge code" and reaches no handler (#978, D-477)."""
+    """A QR code that is a URL or a vCard has colons, yet says "Not a badge code" and reaches no handler.
+
+    (#978, D-477)
+    """
     shown = await show()
     await enter(shown, text)
     assert rig.badges == []
@@ -229,7 +232,10 @@ async def test_a_scanned_url_or_contact_card_is_not_a_badge_code(
 async def test_the_first_line_of_a_contact_card_or_a_wifi_code_is_not_a_badge(
     show: Show, rig: Rig, line: str
 ) -> None:
-    """A HID scanner types a QR text one line per Enter into the one-line field: a vCard's first line and a Wi-Fi code reach no handler (#978, D-477)."""
+    """A HID scanner types a QR text one line per Enter into the one-line field.
+
+    A vCard's first line and a Wi-Fi code reach no handler (#978, D-477).
+    """
     shown = await show()
     await enter(shown, line)
     assert rig.badges == []

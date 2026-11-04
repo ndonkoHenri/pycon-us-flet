@@ -256,7 +256,7 @@ def test_an_unexpected_conference_toml_layout_is_refused_and_nothing_changes(
         encoding="utf-8",
     )
     before = files(data_dir)
-    with pytest.raises(SnapshotError, match="^could not set snapshot_captured_at"):
+    with pytest.raises(SnapshotError, match=r"^could not set snapshot_captured_at"):
         update_snapshot(2026, data_dir, transport=serving(RECORDED), now=NOW)
     assert files(data_dir) == before
 
@@ -275,7 +275,7 @@ def test_a_capture_line_inside_a_multiline_string_is_not_rewritten(
         encoding="utf-8",
     )
     before = files(data_dir)
-    with pytest.raises(SnapshotError, match="other keys changed$"):
+    with pytest.raises(SnapshotError, match=r"other keys changed$"):
         update_snapshot(2026, data_dir, transport=serving(RECORDED), now=NOW)
     assert files(data_dir) == before
 
@@ -287,6 +287,6 @@ def test_a_network_failure_is_refused_and_nothing_changes(data_dir: Path) -> Non
         raise httpx.ConnectError("offline", request=request)
 
     before = files(data_dir)
-    with pytest.raises(SnapshotError, match="^could not fetch "):
+    with pytest.raises(SnapshotError, match=r"^could not fetch "):
         update_snapshot(2026, data_dir, transport=httpx.MockTransport(fail), now=NOW)
     assert files(data_dir) == before
