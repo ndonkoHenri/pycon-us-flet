@@ -279,6 +279,6 @@ def test_handle_does_no_io_and_reads_only_the_injected_clock(
         ("PATCH", f"{BASE}user/mobile_state/", None, body),
         ("GET", "/nowhere", {}, b""),
     ]
-    for method, path, headers, sent in requests:
-        headers = signed(who, method, path, sent) if headers is None else headers
+    for method, path, given, sent in requests:
+        headers = signed(who, method, path, sent) if given is None else given
         assert handle(state, method, path, headers, sent)[0] in (200, 404)

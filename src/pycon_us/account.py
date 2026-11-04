@@ -1,8 +1,8 @@
 """The `Account` store: who is signed in to the mock API, and with which roles (P3).
 
 Sign-in, the role flags, favourites sync and the staff outbox all read this one store
-(D-54, D-69); `services.favorites_sync` writes `favorites_dirty` (D-406). Its writes are awaited before it says so: `sign_in` saves the key, the
-secret and the account before `signed_in` turns True, and `sign_out` removes them
+(D-54, D-69); `services.favorites_sync` writes `favorites_dirty` (D-406). Its writes are awaited before it says so:
+`sign_in` saves the key, the secret and the account before `signed_in` turns True, and `sign_out` removes them
 before it turns False, so nothing reads a state that a relaunch would not find
 (STORE-04, AUTH-02; Ionic flipped "logged in" first). `restore` is strict: signed in
 only when the `pycon.account` preference and both secrets are there, and any part

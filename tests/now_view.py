@@ -189,9 +189,11 @@ def _texts(control: Any) -> list[str]:
     for c in _walk(control):
         if isinstance(c, ft.Text):
             found.append(str(c.value))
-        for name in ("title", "subtitle", "content"):
-            if isinstance(text := getattr(c, name, None), str):
-                found.append(text)
+        found.extend(
+            text
+            for name in ("title", "subtitle", "content")
+            if isinstance(text := getattr(c, name, None), str)
+        )
     return found
 
 

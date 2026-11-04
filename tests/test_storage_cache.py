@@ -75,7 +75,7 @@ async def test_a_written_feed_reads_back_byte_for_byte_with_its_save_time(
     cached = await store.read_feed()
     assert cached is not None
     assert cached.raw == raw
-    assert cached.saved_at == os.stat(tmp_path / "feed-2026.json").st_mtime
+    assert cached.saved_at == (tmp_path / "feed-2026.json").stat().st_mtime
 
 
 async def test_the_cache_file_is_named_after_the_year(
@@ -235,7 +235,7 @@ def test_data_dir_raises_when_it_cannot_be_created(
     """D-120's one exception: a data directory that cannot exist is a broken install."""
     (tmp_path / "taken").write_bytes(b"")
     monkeypatch.setenv("FLET_APP_STORAGE_DATA", str(tmp_path / "taken"))
-    with pytest.raises(OSError):
+    with pytest.raises(OSError, match="taken"):
         data_files.data_dir()
 
 

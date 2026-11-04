@@ -84,7 +84,7 @@ def test_clearing_the_fake_clock_returns_to_real_time() -> None:
 def test_naive_datetimes_are_refused(setter) -> None:
     """Both the test override and the fake clock refuse a naive datetime."""
     with pytest.raises(ValueError, match="aware"):
-        setter(datetime(2026, 5, 15, 9, 0))  # noqa: DTZ001
+        setter(datetime(2026, 5, 15, 9, 0))  # noqa: DTZ001 (naive on purpose: the call must refuse it)
 
 
 # ------------------------------------------------------------------ the Developer field (D-187)

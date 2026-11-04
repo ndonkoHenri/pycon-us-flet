@@ -199,7 +199,8 @@ async def test_no_match_offers_clear_search(show: Show, focused: list[int]) -> N
     shown = await show()
     await open_find(shown)
     await search_for(shown, "zz")
-    assert "No attendees match \N{LEFT DOUBLE QUOTATION MARK}zz\N{RIGHT DOUBLE QUOTATION MARK}" in sheet_texts(shown)  # fmt: skip
+    empty_line = "No attendees match \N{LEFT DOUBLE QUOTATION MARK}zz\N{RIGHT DOUBLE QUOTATION MARK}"
+    assert empty_line in sheet_texts(shown)
     clear = next(
         c
         for c in walk(sheet(shown))

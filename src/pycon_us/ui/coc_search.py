@@ -10,8 +10,8 @@ closes the sheet and hands the attendee to the tool, which opens the review dial
 `use_find()` is the tool's hook. Each opening carries a token: Flutter reports a
 sheet's dismissal after its exit animation, so a late one for an earlier sheet closes
 nothing. Clear lands as `use_field_query()`'s does (D-243): keys reported before
-Flutter has the empty text are dropped, so a stale query never comes back. **Privacy (D-56, D-72):** the query and the rows live in the hook's state
-while the sheet is open, never stored or logged, and go when it closes.
+Flutter has the empty text are dropped, so a stale query never comes back. **Privacy (D-56, D-72):** the query and
+the rows live in the hook's state while the sheet is open, never stored or logged, and go when it closes.
 """
 
 import asyncio

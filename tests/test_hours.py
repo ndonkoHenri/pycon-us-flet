@@ -186,4 +186,4 @@ def test_days_are_the_dates_any_service_opens_on() -> None:
 def test_a_naive_instant_is_refused() -> None:
     """A `now` without a zone has no instant, so the rule refuses it (D-43)."""
     with pytest.raises(ValueError, match="aware"):
-        hours_status(HOURS, datetime(2026, 5, 15, 10), PACIFIC, use_24h=False)  # noqa: DTZ001
+        hours_status(HOURS, datetime(2026, 5, 15, 10), PACIFIC, use_24h=False)  # noqa: DTZ001 (naive on purpose: the call must refuse it)

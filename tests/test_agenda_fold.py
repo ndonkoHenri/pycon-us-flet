@@ -126,8 +126,8 @@ def test_the_fold_is_equal_from_minute_to_minute_until_a_session_ends() -> None:
 def test_folding_needs_an_aware_instant() -> None:
     """Folding at a naive instant raises `ValueError`."""
     agenda = my_schedule(processed(2026), FOLDED)
+    naive = datetime(2026, 5, 14, 10)  # noqa: DTZ001 (naive on purpose: the call must refuse it)
     with pytest.raises(ValueError, match="aware"):
-        naive = datetime(2026, 5, 14, 10)  # noqa: DTZ001
         fold_ended(agenda, naive, load_year(2026).conference.zone)
 
 

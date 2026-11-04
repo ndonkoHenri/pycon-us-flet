@@ -27,7 +27,7 @@ from tests.now_view import may, render  # noqa: F401  (the harness's fixture)
 
 
 @pytest.fixture
-def show(render: Callable[..., Any]) -> Callable[..., Any]:  # noqa: F811
+def show(render: Callable[..., Any]) -> Callable[..., Any]:  # noqa: F811 (the `render` argument is the fixture imported above)
     """`tests/now_view.py`'s `render`: Now at a time, in a real Flet session."""
     return render
 

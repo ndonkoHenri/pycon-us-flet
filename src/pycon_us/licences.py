@@ -71,9 +71,9 @@ NOTICE = Component(
 """The repository's `NOTICE`, which Apache 2.0 asks a build to carry (D-87)."""
 
 
-def _package(key: str, name: str, licence: str, copyright: str) -> Component:
+def _package(key: str, name: str, licence: str, notice: str) -> Component:
     """Return a Python package's entry: its `uv.lock` name is `key`."""
-    return Component(key, name, licence, copyright, f"{key}.txt", package=key)
+    return Component(key, name, licence, notice, f"{key}.txt", package=key)
 
 
 GROUPS = (
@@ -271,8 +271,8 @@ def paragraphs(text: str) -> list[Paragraph]:
             found.append(Paragraph("\n".join(line.rstrip() for line in lines), True))
             continue
         joined: list[str] = []
-        for line in lines:
-            line = " ".join(line.split())
+        for raw in lines:
+            line = " ".join(raw.split())
             if joined and not _OWN_LINE.match(line):
                 joined[-1] = f"{joined[-1]} {line}"
             else:

@@ -55,7 +55,8 @@ class Shown(harness.Shown):
         while not isinstance(node, list):  # the providers lead to the Router's list
             node = node._b
         found = []
-        for view in node:
+        for entry in node:
+            view = entry
             while not isinstance(view, ft.View):
                 view = view._b
             found.append(view)

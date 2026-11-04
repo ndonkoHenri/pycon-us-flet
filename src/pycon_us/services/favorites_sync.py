@@ -10,8 +10,8 @@ runs after it, so it never reads a list older than the one just sent.
 
 What the server has is saved per year as a `SyncState` (`pref_keys.favorites_sync`)
 as soon as it changes, even while a request is out, and before any request, so a kill
-never forgets an unsent edit or a first sync that has not happened. A failure keeps it for the next start or resume. Nothing is sent while
-signed out, expired, with no mock URL (D-51) or with favourites that could not be read
+never forgets an unsent edit or a first sync that has not happened. A failure keeps it for the next start or resume.
+Nothing is sent while signed out, expired, with no mock URL (D-51) or with favourites that could not be read
 (D-172). The Account page's Sign out first tries once to send what waits (`flush()`,
 D-411); a sign-out stops the sync and forgets the state, and the local list stays
 (D-48). `Favorites` itself makes no request: it only notifies its edits.

@@ -395,11 +395,14 @@ async def test_a_door_lookup_of_an_unknown_attendee_is_a_404() -> None:
 async def test_an_unreadable_reply_is_an_api_error(fetch: str) -> None:
     """A 200 that isn't the documented object is an `ApiError` (D-120)."""
     client = client_for(replying(200, b'{"data": []}'))
-    with pytest.raises(ApiError):
+
+    async def call() -> object:
         if fetch == "catalog":
-            await fetch_catalog(client)
-        elif fetch == "lookup":
-            await fetch_attendee_products(client, "MOCK0001", [10], door=True)
-        else:
-            await redeem(client, {})
+            return await fetch_catalog(client)
+        if fetch == "lookup":
+            return await fetch_attendee_products(client, "MOCK0001", [10], door=True)
+        return await redeem(client, {})
+
+    with pytest.raises(ApiError):
+        await call()
     await client.aclose()

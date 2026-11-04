@@ -15,8 +15,9 @@ with "More" when it is long, which shows the whole text with its links (EVT-05);
 The status strip heads the page in every state (D-32): it says when the projects
 are not fresh or a refresh failed offline, and offers Refresh. A filter field pinned
 under it, above the list, narrows it as the user types, as the Speakers list's does
-(D-189; at large text the two scroll with the list, as on Job listings, #649): every word must be in the project's name, submitter or description text, accents and case ignored, never in markup (EVT-06, D-46). The menu
-opens the year's sprint page and its project form on us.pycon.org (EVT-08).
+(D-189; at large text the two scroll with the list, as on Job listings, #649): every word must be in the project's
+name, submitter or description text, accents and case ignored, never in markup (EVT-06, D-46). The menu opens the
+year's sprint page and its project form on us.pycon.org (EVT-08).
 
 Long lists stay cheap as the Speakers list does (D-153): the projects are ordered once
 per feed version, and each card is a memoised component keyed by project id, so a

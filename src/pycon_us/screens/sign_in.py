@@ -9,8 +9,8 @@ from a change event: Ionic's form missed what iOS autofilled. Every failure is s
 its own words on one live-region line under the button, and the fields keep what was
 typed. A success goes back to where the user came from, with "Signed in as
 <nickname>"; a lead-retrieval account lands on the Lead scanner instead, Back to More,
-unless Settings' Start screen says Now (D-16, #689). After the server refused the account's key ("Sign in again" on More), it
-says so and starts with the account's email filled in (#686).
+unless Settings' Start screen says Now (D-16, #689). After the server refused the account's key ("Sign in again" on
+More), it says so and starts with the account's email filled in (#686).
 
 It talks only to the local mock (D-51): with no mock API URL set it shows a state that
 says sign-in isn't available, never a form.

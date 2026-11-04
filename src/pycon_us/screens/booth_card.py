@@ -222,15 +222,15 @@ def _head(item: ExpoBooth, hiring: str) -> ft.Control:
     texts: list[ft.Control] = [
         ft.Text(title, theme_style=ft.TextThemeStyle.TITLE_MEDIUM)
     ]
-    for each in (line, hiring if len(item.sponsors) == 1 else ""):
-        if each:
-            texts.append(
-                ft.Text(
-                    each,
-                    theme_style=ft.TextThemeStyle.BODY_MEDIUM,
-                    color=ft.Colors.ON_SURFACE_VARIANT,
-                )
-            )
+    texts.extend(
+        ft.Text(
+            each,
+            theme_style=ft.TextThemeStyle.BODY_MEDIUM,
+            color=ft.Colors.ON_SURFACE_VARIANT,
+        )
+        for each in (line, hiring if len(item.sponsors) == 1 else "")
+        if each
+    )
     lead: list[ft.Control] = []
     if len(item.sponsors) == 1:
         sponsor = item.sponsors[0]

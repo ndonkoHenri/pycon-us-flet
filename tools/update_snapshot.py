@@ -74,7 +74,8 @@ def update_snapshot(
     Raises:
         SnapshotError: The feed could not be fetched, does not parse, has records the
             parser skips, has days outside the conference dates, or lacks a keynote's
-            session or has it on another track, or a credited sponsor; or `conference.toml` could not be updated. Nothing was written.
+            session or has it on another track, or a credited sponsor; or `conference.toml` could not be updated.
+            Nothing was written.
         YearDataError: The year's data files are invalid.
         OSError: Writing a file failed; that file is unchanged (`write_atomic`).
     """

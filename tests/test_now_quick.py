@@ -24,7 +24,7 @@ BUTTONS = [f"now.quick.{segment}" for segment in now_quick.PAGES]
 
 
 @pytest.fixture
-def show(render: Callable[..., Any]) -> Callable[..., Any]:  # noqa: F811
+def show(render: Callable[..., Any]) -> Callable[..., Any]:  # noqa: F811 (the `render` argument is the fixture imported above)
     """`tests/now_view.py`'s `render`: Now at a time, in a real Flet session."""
     return render
 

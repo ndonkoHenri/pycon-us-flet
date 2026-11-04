@@ -25,7 +25,7 @@ OPEN_SPACES_AT_11 = ("9113", "9040", "9072", "9059", "9086")
 
 
 @pytest.fixture
-def show(render: Callable[..., Any]) -> Callable[..., Any]:  # noqa: F811
+def show(render: Callable[..., Any]) -> Callable[..., Any]:  # noqa: F811 (the `render` argument is the fixture imported above)
     """`tests/now_view.py`'s `render`: Now at a time, in a real Flet session."""
     return render
 

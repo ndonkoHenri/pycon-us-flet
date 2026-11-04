@@ -66,11 +66,11 @@ def write_atomic(path: Path, data: bytes) -> None:
     tmp = path.with_name(path.name + ".tmp")
     with write_lock:
         try:
-            with open(tmp, "wb") as file:
+            with tmp.open("wb") as file:
                 file.write(data)
                 file.flush()
                 os.fsync(file.fileno())
-            os.replace(tmp, path)
+            tmp.replace(path)
         except OSError:
             with contextlib.suppress(OSError):  # keep the original error
                 tmp.unlink(missing_ok=True)
@@ -99,7 +99,7 @@ def unlink(path: Path) -> None:
 def read_feed_file(path: Path) -> CachedFeed | None:
     """Return the feed cache at `path`, or None when it is missing or unreadable."""
     try:
-        with open(path, "rb") as file:
+        with path.open("rb") as file:
             return CachedFeed(
                 raw=file.read(), saved_at=os.fstat(file.fileno()).st_mtime
             )

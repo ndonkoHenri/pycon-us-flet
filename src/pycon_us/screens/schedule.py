@@ -5,8 +5,8 @@ Day tabs over swipeable day lists (D-31): an `ft.Tabs` whose content starts with
 strip and "Times are Pacific Time (PDT)" while the device's clock differs from the
 conference's, D-20, D-32, D-240), then a `TabBarView` with one page per conference
 day, sprint days included. At the largest text sizes the head tops each day's list
-instead, so it scrolls away (`screens/schedule_head.py`, D-345). The tabs, the pages and the "Now" button come from `screens/schedule_days.py`: each page
-is a `DayList` of `SlotItem`s, memoised down to the rows (D-153). The first render
+instead, so it scrolls away (`screens/schedule_head.py`, D-345). The tabs, the pages and the "Now" button come from
+`screens/schedule_days.py`: each page is a `DayList` of `SlotItem`s, memoised down to the rows (D-153). The first render
 fills only the shown day, the second the others (D-156).
 
 The day opens on today during the conference, else on the first day; the day picked and

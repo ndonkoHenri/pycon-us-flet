@@ -5,8 +5,8 @@ sentence starts with "New: " (`item_phrase()`). The list marks the batches it sh
 seen once it has shown them 2 s as the top View (`use_seen_marks()`), which also
 clears Now's card; left sooner, or a session pushed on it, they stay unseen. With a
 screen reader on, a 2 s timer would drop "New:" while the list is still being read, so
-the batches are marked when the list is left instead. The app bar's overflow has Mark all as seen, disabled with nothing unseen. The marks are
-saved in the log's file (`ChangeLog.mark_seen()`), so they survive a relaunch.
+the batches are marked when the list is left instead. The app bar's overflow has Mark all as seen, disabled with
+nothing unseen. The marks are saved in the log's file (`ChangeLog.mark_seen()`), so they survive a relaunch.
 """
 
 import asyncio
