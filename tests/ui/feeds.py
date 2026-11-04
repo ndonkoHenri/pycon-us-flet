@@ -19,7 +19,7 @@ from tests.ui.helpers import PLATFORM
 
 HOLD_LIMIT = 30.0
 """Seconds a held request waits for `hang_up()` at most, so a failed flow's teardown
-never waits on it. The app gives up first: its feed timeout is 10 s (`api.FEED_TIMEOUT`),
+never waits on it. The app gives up first: its feed timeout is 10 s (`feed_api.FEED_TIMEOUT`),
 which the app also reads as no answer."""
 
 

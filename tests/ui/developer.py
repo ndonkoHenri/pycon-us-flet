@@ -35,7 +35,7 @@ from tests.ui.helpers import (
 
 REFRESH_TIMEOUT = 60.0
 """Seconds a Refresh now may take: the year's feed over the device's network, or the
-app's 10 s feed timeout (`api.FEED_TIMEOUT`) when no answer comes."""
+app's 10 s feed timeout (`feed_api.FEED_TIMEOUT`) when no answer comes."""
 
 UPDATED = refreshed(None)[0]
 """What Refresh now says once it has published the feed: "Schedule updated from the

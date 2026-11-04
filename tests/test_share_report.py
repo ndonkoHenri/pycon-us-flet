@@ -19,7 +19,7 @@ from pycon_us.config import load_year
 from pycon_us.favorites import Favorites
 from pycon_us.memory import ViewMemory
 from pycon_us.prefs import Prefs
-from pycon_us.services import Services, api
+from pycon_us.services import Services, api, feed_api
 from pycon_us.services.errors import LOG_DATE_FORMAT, LOG_FORMAT, RedactingFormatter
 from pycon_us.services.storage import Storage
 from pycon_us.state import Conference
@@ -56,7 +56,7 @@ def offline(monkeypatch: pytest.MonkeyPatch) -> None:
     async def fetch(url: str, **_: Any) -> bytes:
         raise api.NetworkError("ConnectError: offline")
 
-    monkeypatch.setattr(api, "fetch_feed", fetch)
+    monkeypatch.setattr(feed_api, "fetch_feed", fetch)
 
 
 @pytest.fixture

@@ -3,7 +3,7 @@
 `test_app.py` (the boot gate), `test_app_handlers.py` (the page's handlers) and
 `test_app_theme.py` (the theme, the services and the slots layout) run `bootstrap()`
 against fakes: the in-memory SharedPreferences and SemanticsService of
-`tests/fakes.py`, a fake page, and `api.fetch_feed` replaced by a held `Network`,
+`tests/fakes.py`, a fake page, and `feed_api.fetch_feed` replaced by a held `Network`,
 so nothing reaches the network. A module takes the fixtures by assigning them to its own
 names, as `docs/testing-and-quality.md` §3.1 says.
 """
@@ -23,7 +23,7 @@ from pycon_us.config import YearData, load_year
 from pycon_us.favorites import Favorites
 from pycon_us.memory import ViewMemory
 from pycon_us.prefs import Prefs
-from pycon_us.services import Services, api
+from pycon_us.services import Services, feed_api
 from pycon_us.services.storage import Storage
 from pycon_us.state import Conference
 from tests.fake_page import FakePage
@@ -83,7 +83,7 @@ def fake_page() -> FakePage:
 
 
 class Network:
-    """Stands in for `api.fetch_feed`: held until released, then answers or fails."""
+    """Stands in for `feed_api.fetch_feed`: held until released, then answers or fails."""
 
     def __init__(self) -> None:
         """Hold every fetch, with the recorded 2026 feed as the answer."""
@@ -102,9 +102,9 @@ class Network:
 
 @pytest.fixture
 def network(monkeypatch: pytest.MonkeyPatch) -> Iterator[Network]:
-    """Put a held `Network` in place of `api.fetch_feed`; release it after."""
+    """Put a held `Network` in place of `feed_api.fetch_feed`; release it after."""
     network = Network()
-    monkeypatch.setattr(api, "fetch_feed", network.fetch_feed)
+    monkeypatch.setattr(feed_api, "fetch_feed", network.fetch_feed)
     yield network
     network.released.set()  # let a held refresh end with the test
 

@@ -1,12 +1,12 @@
-"""HTTP: the public feed fetch and the signed client of the private API (D-05, D-53).
+"""The signed client of the private API, and the two errors every HTTP call raises (D-05, D-53).
 
-`fetch_feed` is P0's one request, an unsigned GET of the year's public feed.
 `ApiClient` is the only way the app talks to the private API, which it only ever
 reaches on the local mock (D-06): `ApiClient.request` refuses the PSF's hosts before
 sending (D-51), signs the exact bytes it sends (D-52) and corrects its clock once from
-the server's `Date` (D-53). Both raise the same two errors, so callers only ever
-branch on "no answer" (`NetworkError`) or "a bad answer" (`ApiError`). The endpoints
-and their timeouts are `services/endpoints.py`'s, after Ionic's `pycon-api.ts`.
+the server's `Date` (D-53). It and the public feed's fetch (`services/feed_api.py`)
+raise the same two errors, so callers only ever branch on "no answer" (`NetworkError`)
+or "a bad answer" (`ApiError`). The endpoints and their timeouts are
+`services/endpoints.py`'s, after Ionic's `pycon-api.ts`.
 """
 
 import json
@@ -19,9 +19,6 @@ import httpx
 
 from pycon_us.core.signing import canonical_body, enc, js_round, sign
 from pycon_us.services.endpoints import Endpoint
-
-FEED_TIMEOUT = 10.0
-"""Seconds to wait for the feed (connect, each read, the pool), as Ionic did (API-12)."""
 
 SKEW_LIMIT = 300.0
 """Seconds between a refused request's timestamp and the server's `Date` past which
@@ -124,40 +121,6 @@ class ApiError(Exception):
         this as `NetworkError.maybe_sent`: "not confirmed", never "not recorded" (D-410).
         """
         return self.status is None
-
-
-async def fetch_feed(
-    url: str, *, transport: httpx.AsyncBaseTransport | None = None
-) -> bytes:
-    """Download the public conference feed.
-
-    Args:
-        url: The year's `feed_url` (`conference.toml`).
-        transport: The HTTP transport; tests pass an `httpx.MockTransport`, the app
-            leaves it None.
-
-    Returns:
-        The response body exactly as served; the caller parses it.
-
-    Raises:
-        NetworkError: No answer arrived (`httpx.TransportError`, timeouts included).
-        ApiError: The server answered with an error status, or the answer could not be
-            read.
-    """
-    try:
-        async with httpx.AsyncClient(
-            transport=transport, timeout=FEED_TIMEOUT, follow_redirects=True
-        ) as client:
-            response = await client.get(url)
-            response.raise_for_status()
-            return response.content
-    except httpx.TransportError as error:
-        raise NetworkError.of(error) from error
-    except httpx.HTTPStatusError as error:
-        status = error.response.status_code
-        raise ApiError(status, error.response.reason_phrase) from error
-    except httpx.HTTPError as error:  # too many redirects, an undecodable body
-        raise ApiError(None, f"{type(error).__name__}: {error}") from error
 
 
 def refuse_private_psf(url: httpx.URL) -> None:
