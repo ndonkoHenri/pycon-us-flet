@@ -51,8 +51,12 @@ jobs:
         run: uv run flet build apk --arch x86_64 --yes -v
 
       # The emulator wants 7.4 GB for its data, and the build leaves 5.6 GB free. Only the APK is needed from here on.
+      # Gradle's daemons go first: one still writing made `rm` fail with "Directory not empty".
       - name: Drop what the build left
-        run: rm -rf build/flutter build/flutter-packages* build/site-packages ~/.gradle ~/flutter ~/.pub-cache
+        run: |
+          pkill -f 'GradleDaemon|KotlinCompileDaemon' || true
+          while pgrep -f 'GradleDaemon|KotlinCompileDaemon' > /dev/null; do sleep 1; done
+          rm -rf build/flutter build/flutter-packages* build/site-packages ~/.gradle ~/flutter ~/.pub-cache
 
       - name: Install Maestro
         run: |
