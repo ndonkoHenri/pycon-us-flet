@@ -60,21 +60,13 @@ def AppScaffold(
     A plain builder that calls hooks, so a screen calls it exactly once per render, in
     every branch (hooks are unconditional, D-70). It records the top View's route for
     the start route (D-143), places the body in `Shown`, which logs D-112's content
-    line (D-165), and puts `GutterProbe` under it, which tells the lists whether a
-    slot's time fits beside its rows (D-216). It also makes every route change, a
-    warm deep link's included, close the open dialogs and sheets first
-    (`ui.modals`, D-291).
+    line (D-165), puts `GutterProbe` under it (D-216) and makes every route change, a
+    warm deep link's included, close the open dialogs and sheets first (D-291).
 
-    On a tab root the View gets the bottom bar (D-144), with a 1 dp line above it in
-    high contrast, where the bar is the page's own colour (THEME-06), or from 600 dp the
-    rail beside the body (D-277); pushed Views get the back arrow instead (D-10). A
-    root's body is in the same place in both, so a rotation or a resize swaps the bar
-    and the rail without rebuilding it: its scroll, day and tabs stay (D-18). Back on a
-    root other than Now goes to Now, and Back on Now is left to the system, which leaves
-    the app (D-17, D-142). Back on a pushed View closes a dialog, a picker, a sheet or a
-    menu open over it, and only then pops the View (D-208). An unknown location's View
-    (`unknown`) is a one-View stack like a root but with the back arrow, and Back
-    there goes to Now too (D-270).
+    A tab root gets the bottom bar, or from 600 dp the rail, around one body that a
+    rotation never rebuilds; a pushed View gets the back arrow. Where Back goes on a
+    root, a pushed View and an unknown location is ux.md §2.4 (D-17, D-142, D-144,
+    D-208, D-270, D-277).
 
     Args:
         title: The screen's name: the app bar's title and, for screen readers, the
@@ -94,15 +86,12 @@ def AppScaffold(
             returns; ignored on pushed Views, which have neither.
         fab: The screen's floating action button, if any: the Schedule's "Now"
             (ux.md §5.2). The body leaves room for it at its end.
-        unknown: The View of a location no route has (`routes.NotFound`): its
-            arrow, the Back key and the predictive gesture go to Now, as a root's
-            Back does, and it is never where a new session returns (D-143, D-270).
-        still_bar: Keep the app bar's colour whatever scrolls in the body: for a
-            screen whose page never scrolls under the bar, only a box inside it, such
-            as the floor viewer's label card, or the expo hall's booth card while its
-            Map shows (D-479). Flutter's `AppBar` takes any scroll
-            in the body at depth 0 for the page's, and Flet has no
-            `notification_predicate` to say otherwise (F297, D-447).
+        unknown: The View of a location no route has (`routes.NotFound`): Back goes to
+            Now, as a root's does, and a new session never returns to it (D-143, D-270).
+        still_bar: Keep the app bar's colour whatever scrolls in the body, for a page
+            that never scrolls under the bar, only a box inside it (the floor viewer's
+            label card, D-479). Flutter's `AppBar` takes any scroll at depth 0 for the
+            page's and Flet has no `notification_predicate` (F297, D-447).
 
     Returns:
         The View for this route level.

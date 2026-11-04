@@ -1,53 +1,21 @@
 """Job listings (`/more/jobs`): a card per sponsor's listing, its roles linked (SPON-06).
 
-Ionic showed each listing's HTML under two styles of level badge, linked almost none of
-its roles, had no empty, loading or failed state, and its pull-to-refresh deleted the
-app's schedule cache, so a refresh offline lost the offline schedule (SPON-08). This
-page (ux.md §6.6), under the status strip, holds one outlined card per listing, in feed
-order:
+The page (ux.md §6.6) is one outlined card per listing, in feed order, under the status
+strip: a header that pushes the sponsor's detail, then the listing's roles as `LinkTile`s
+or, for a long-form listing, its text cut with "More". Above the cards sit the job fair
+plan's card (`job_fair_card()`, D-254) and, once the conference is over, a line saying
+the roles may have closed (D-482).
 
-- **The header**: the sponsor's logo on a 48 dp white plate (`logo_tile()`, D-262),
-  its name and its level as sponsor detail says it, "Visionary sponsor", and a chevron.
-  One node, a level-2 heading and a button read "Bloomberg, Visionary sponsor"
-  (`jobs.listing.<id>`, D-33, D-211); a tap pushes the sponsor's detail,
-  `/more/jobs/sponsor/<slug>` (D-17). A listing whose sponsor is not in the feed's
-  levels has no link and no chevron.
-- **Its roles** (`core/jobs.py`, D-278): the first five as `LinkTile`s with
-  `WORK_OUTLINE` that open the in-app browser (`jobs.role.<id>.<n>`), then "Show
-  all 15 roles", which shows the rest in place and becomes "Show fewer roles".
-- **A long-form listing** (SerpApi, marimo) instead shows its text cut at four lines
-  with "More", which shows the whole Markdown and its links, as a sprint card does
-  (`core.sprints.needs_more()`, D-202). A placeholder (OpenEDG's "N/A") says "No
-  roles listed".
-
-The refresh is the `Conference` store's (D-145): the status strip's Refresh, or a
-pull on the list (`pullable()`, U1, D-449); it never deletes the cache, so a failed
-one keeps the listings and the schedule. Without data the page loads and fails as the
-Sponsors list does (ux.md §4.1); a feed without listings says "No job listings yet"
-(2025), and has no filter. Each card is a memoised component keyed by its listing id
-(D-153), so a keystroke re-renders no card that stays. Above the cards, the job fair
-plan's card (`job_fair_card()`, SPON-10, D-254) pushes the floor viewer at
-`/more/jobs/plan/job-fair`: the tables where the listings' sponsors meet people.
-
-Once the conference is over (`info.last_day` has passed, as Welcome's thanks and Now's
-"See you next year" count it), one line heads the list, above that card: "These roles
-were listed for PyCon US 2026, and some have closed." The listings are the feed's
-snapshot, whose role links go stale (27 of 44 returned 404 six months on, #869) and
-which the app never edits or checks (D-135); the links stay, and the page says
-what it cannot know (D-482). During the conference it says nothing new.
-
-**The filter** (SPON-07): the pinned `SearchField` "Filter jobs" the Speakers and
-Sprints lists use (D-189), under the strip, keeps the listings whose text holds every
-word, in the sponsor's name, the role titles or the visible text, never the markup
-(`core.jobs.filter_listings()`, D-46), where Ionic's matched raw HTML: `nofollow`
-found Bloomberg. The field follows every keystroke (D-243), and the list follows once
-the typing pauses for 250 ms, as search does; a Clear empties both at once. The live
-count line says "3 listings" (D-226); a miss says "No roles match “rust”" with Clear
-filter, which puts the focus back in the field (D-182). The page stays mounted under a
-sponsor's detail, so Back finds the filter as it was. At large text (`Prefs.time_above`,
-D-216) the strip, the field and the count head the list and scroll away with it, as the
-Schedule's head does (D-345): pinned, they took half the screen at the largest sizes
-(#649).
+- **Data:** the listings are the feed's snapshot, which the app never edits or checks
+  (D-135). `core/jobs.py` reads them (D-278); `core.jobs.filter_listings()` keeps those
+  whose sponsor name, role titles or visible text hold every word (SPON-07, D-46).
+- **Refresh:** the `Conference` store's (D-145): the status strip's Refresh or a pull
+  on the list (D-449); it never deletes the cache, so a failed one keeps the schedule
+  (SPON-08). Without data the page loads and fails as the Sponsors list does.
+- **Rendering:** each card is a memoised component keyed by its listing id (D-153). The
+  filter's field follows every keystroke and the list follows when the typing pauses
+  (D-243); at large text the strip, the field and the count scroll with the list (D-216,
+  D-345).
 """
 
 import asyncio

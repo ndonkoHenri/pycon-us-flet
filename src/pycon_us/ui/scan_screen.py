@@ -1,50 +1,26 @@
 """The shared scan screen every staff tool renders (LEAD-01, LEAD-09, LEAD-14; D-65).
 
-ux.md §7.2: the app bar's sync chip and `KEYBOARD` button, the camera area, the
-result panel and manual entry, then the tool's own actions. A tool gives
-`ScanScreen` its title, a context line (or a control there, as the Lead scanner's
-sponsor chip) and an async `on_badge(badge) -> ScanResult`, and may add buttons
-for the result shown (`result_actions`, the Lead scanner's "Add note"): the
-screen parses what was entered (`parse_badge`), applies the per-code cooldown,
-awaits one handler at a time and shows what it returned, so the tools only return
-data.
+A tool gives `ScanScreen` its title, an async `on_badge(badge) -> ScanResult` and,
+optionally, a context line, buttons and a clearing rule; the screen does the rest, so
+the tools only return data. The layout and every scenario are ux.md §7.2.
 
-**Manual entry** takes the full `code:validator` payload, which USB and Bluetooth HID
-scanners also type before Enter. Every submit clears the field and keeps the focus in it,
-so a hardware scanner scans continuously: Android's Enter leaves the focus there and its
-keyboard up, and iOS's takes it out, so the screen puts it back (F274, U254). A code
-accepted in the last 4 s is cleared without a word (a held code). A second submit while
-the handler runs is dropped with its text, or the next scan would be typed after that
-text and read as one badge (D-471), and the line under the field says to scan it again.
-Text that is not a badge goes too, for the same reason (D-473): the panel says "Not a
-badge code" with the start of the text it read (a long one is clipped for the panel and
-for speech, #965), and its "Edit code" button gives the whole text back to be corrected
-by hand, so a scanner's next scan is its own badge and a typist still fixes a typo. The
-two are told apart by that tap, not by how fast the keys come.
-A handler can take a few seconds (the Lead scanner waits for its send, D-426): a
-result that comes after the screen is left, or while another View is on top of it,
-is dropped, so it never buzzes or speaks over another page.
+- **Input:** the full `code:validator` payload (`parse_badge`), from the camera, the
+  field or a HID scanner's keys followed by Enter. Text that is not a badge is answered
+  "Not a badge code", and "Edit code" gives it back to be corrected (D-473).
+- **Concurrency:** one `on_badge` runs at a time. A submit while it runs, while
+  scanning is paused (the queue sheet is open, or the tool gives `paused`) or for a code
+  accepted in the last 4 s is dropped with its text, never queued (D-471).
+- **Lifecycle:** the field keeps the focus, and gets it back after a pause and when
+  Back pops a page pushed over the screen (F274, D-438); the screen stays awake while
+  mounted; a result that arrives after the screen is left, or while another View is on
+  top, is dropped, so it never buzzes or speaks over another page.
+- **Results:** the panel shows each result with its haptics and announcement
+  (`ui/scan_feedback.py`); `result_actions` and `result_note` belong to the result shown;
+  a result the tool gets outside `on_badge` is handed over as `posted` (a `Posted`,
+  `ui/scan_result.py`) and shown once per serial; `clear_after` and `clear_in_background`
+  clear it (`ui/scan_clear.py`).
 
-**Beyond the panel** (#724, D-420): each result gives its haptics and, on iOS, an
-announcement (`ui/scan_feedback.py`); the screen stays awake while mounted and in
-the foreground. The **sync chip** (`ui/sync_chip.py`) opens the queue sheet with the
-signed-in account's rows (`use_queue_sheet()`); at large text it heads the body
-rather than the bar, so its words wrap (#752). Scanning **pauses** while the sheet
-is open, or while the tool says why (`paused`, its dialogs and sheets): a submit is
-dropped with its text, and the field says why; when the pause ends the focus goes
-back to the field. It goes back there too when Back pops a page pushed over the
-screen (the leads list, a picker), so a HID scanner's next scan lands in it (#775,
-D-438).
-
-**A result from elsewhere** (#761): a tool that gets a result outside `on_badge`
-(the CoC name search records without a scan) hands it over as `posted`, a
-`Posted` (`ui/scan_result.py`, with `Shown`) whose serial it bumps for each
-one; the screen shows it as a scan's, with its haptics and announcement, unless the
-screen has gone or is not on top.
-
-**Clearing** (#762, MASK-05): a tool may have its result cleared `clear_after` seconds
-after it shows, and when the app goes to the background (`ui/scan_clear.py`); the
-CoC tool does both. The camera area is `ui/scan_camera.py` (E1, #726).
+The camera area is `ui/scan_camera.py`, the sync chip and queue sheet `ui/sync_chip.py`.
 """
 
 from collections.abc import Awaitable, Callable

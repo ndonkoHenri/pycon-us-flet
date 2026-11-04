@@ -1,42 +1,23 @@
 """The CoC incident tool (`/more/staff/coc`): the scan screen and its attendee directory.
 
-The shared scan screen (`ui/scan_screen.py`, D-416) headed by the state of the
-attendee directory (MASK-01, #759). The route re-checks its rule on every render
-(architecture §12.4): an account without `mask_violation`, a signed-out session or
-no mock URL (D-51) sees "Not available for this account". It is mounted at
-`/now/staff/coc` too and records itself as the last tool opened (D-421), and More
-and Now list it (`BUILT_TOOLS`, #760).
+The shared scan screen (`ui/scan_screen.py`, D-416) headed by the state of the attendee
+directory (MASK-01..05). The screen's wording and flows are ux.md §7.3.
 
-**The directory** is fetched as the screen mounts (`conduct.fetch_directory()`) and
-kept in `CocTool`'s state only: never in a store, never in storage, never in a log
-(D-56, D-72). It goes when the screen unmounts (leaving the tool, a sign-out, losing
-the flag), and Reload fetches it again (D-432). A status line above the camera area
-says where it is: "Loading attendee list…" with a ring, "2,431 attendees" with
-Reload (`coc.directory.reload`), "Couldn't load the attendee list" with Retry
-(`coc.directory.retry`), or "Not available for this account" on a 403. The line is
-a live region (on iOS, an announcement), so the count and the error are said once.
-
-**Online only** (D-56): while `use_online()` says the device is offline, scanning is
-paused with "CoC capture needs a connection", and Retry and Reload are disabled with
-that reason.
-
-**A scan** opens the review dialog (`ui/coc_review.py`, #760; MASK-04) for the
-badge's code with its directory row, or without one: a code the loaded directory
-lacks is reviewed all the same (D-434). The handler awaits the dialog, so scanning is
-paused while it is open ("Paused while the review is open") and resumes in the field
-after it closes; the panel then says "Incident recorded" with the reply's count, or
-"Not recorded". Each record's count updates the directory's row.
-
-**Find by name** (`ui/coc_search.py`, #761; MASK-02, D-439) opens the name search
-over the loaded directory, disabled with its reason before it has loaded or offline;
-scanning is paused while it is open ("Paused while the search is open"). A row's tap
-opens the same review, and its result reaches the panel as `ScanScreen`'s
-`posted`, since no badge was scanned.
-
-**Clearing** (#762, MASK-05, O-7): a result clears 15 s after it shows and when the
-app goes to the background, which also closes the search with its query; an open
-review stays, with its notes (losing a half-written report is worse, and the dialog
-shows no email). "Show email" reveals a recorded result's email (`ui/coc_email.py`).
+- **Access:** the route re-checks its rule on every render (architecture §12.4): an
+  account without `mask_violation`, a signed-out session or no mock URL (D-51) sees "Not
+  available for this account". It is mounted at `/now/staff/coc` too and records itself
+  as the last tool opened (D-421).
+- **Directory:** fetched as the screen mounts (`conduct.fetch_directory()`) and kept in
+  `CocTool`'s state only: never in a store, in storage or in a log (D-56, D-72). It goes
+  when the screen unmounts, and Reload fetches it again (D-432). Online only: offline,
+  scanning is paused and Retry and Reload are disabled with the reason.
+- **Scan and search:** a scan, or a row of the name search (`ui/coc_search.py`, D-439),
+  opens the review dialog (`ui/coc_review.py`) that the handler awaits, for a code the
+  directory lacks too (D-434); scanning is paused while either is open. A search's
+  result reaches the panel as `ScanScreen`'s `posted`, since no badge was scanned.
+- **Clearing:** a result clears 15 s after it shows and when the app goes to the
+  background, which also closes the search; an open review stays, with its notes
+  (MASK-05, O-7).
 """
 
 from collections.abc import Awaitable, Callable

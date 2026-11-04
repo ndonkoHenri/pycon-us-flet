@@ -1,39 +1,27 @@
 """The Lead scanner (`/more/staff/lead`): the shared scan screen, capturing leads.
 
-The first mount of `ui/scan_screen.py`'s `ScanScreen` (LEAD-01, LEAD-09, LEAD-14;
-D-416). It re-checks its rule on every render (architecture §12.4): an account
-without `lead_retrieval` or `door_check`, a signed-out session or no mock URL
-(D-51) sees "Not available for this account", so a deep link cannot bypass it. It is
-mounted at `/now/staff/lead` too, for Now's Scan badges card, and records itself as
-the last tool opened, which that card opens next (D-421).
+The first mount of `ScanScreen` (`ui/scan_screen.py`, D-416; LEAD-01, LEAD-09, LEAD-14).
+The screen's wording and flows are ux.md §7.3.
 
-Past the rule, the account's consent (`SCANNER_CONSENT`, LEAD-04) is read from
-storage as the scanner opens, and until it is given `lead_consent.py`'s page shows
-instead (D-423): the scan screen is not mounted, so a HID scanner's typing goes
-nowhere. A badge scanned is captured through the outbox (`lead_capture.capture()`,
-D-426): queued, sent by the sync worker, and the row's state read back as the result,
-for the sponsor chosen when it was scanned (STORE-11).
-
-Staff who scan for a sponsor (`scans_for_sponsor()`, LEAD-05, LEAD-06) choose it on
-`lead_sponsor.py`'s picker, pushed at `…/staff/lead/sponsor`. The choice
-(`staff_sponsor()`) is read with the consent, and again whenever the location changes,
-so it is current when the picker goes back (D-425); scanning waits for that read
-("Checking the sponsor…"), so no row takes the old one (#873). With none, the picker
-opens by itself once, and the scan screen is paused ("Choose a sponsor to start
-scanning") with a "Choose sponsor" button; with one, a "For: Example Corp" chip
-(`lead.sponsor_chip`) heads the screen and opens the picker. A sponsor's own account
-sees none of these.
-
-After a capture (or a queued scan) the result has "Add note" (`lead.add_note`), and
-after a duplicate "Open lead" (`lead.open_lead`): both open `ui/lead_note_sheet.py`'s
-sheet for that lead, the sponsor it was scanned for whatever is chosen since (D-459),
-prefilled with its saved note (#742, LEAD-10). Scanning is paused while it is open
-("Paused while the note is open"), and the focus goes back to the field when it closes.
-
-Under the field, "Leads (42)" (`lead.leads`, the account's lead rows, read again as
-the outbox changes) pushes `staff_leads.py`'s list at `…/staff/lead/leads` (#743,
-D-428): a page of its own rather than a tab, so this screen stays as the four tools
-share it and a HID scanner never types into the list's search.
+- **Access:** re-checked on every render (architecture §12.4): an account without
+  `lead_retrieval` or `door_check`, a signed-out session or no mock URL (D-51) sees "Not
+  available for this account", so a deep link cannot bypass it. It is mounted at
+  `/now/staff/lead` too, for Now's Scan badges card, and records itself as the last tool
+  opened (D-421).
+- **Consent:** read from storage as the scanner opens (`SCANNER_CONSENT`, LEAD-04);
+  until it is given `lead_consent.py`'s page shows and the scan screen is not mounted,
+  so a HID scanner's typing goes nowhere (D-423).
+- **Capture:** through the outbox (`lead_capture.capture()`, D-426): queued, sent by the
+  sync worker, the row's state read back as the result, for the sponsor chosen when it
+  was scanned (STORE-11).
+- **Sponsor:** staff who scan for one (`scans_for_sponsor()`, LEAD-05, LEAD-06) choose it
+  on `lead_sponsor.py`'s picker. The choice is read with the consent and again whenever
+  the location changes (D-425); scanning waits for that read, so no row takes the old
+  one (#873).
+- **Note and leads:** a result's "Add note" and "Open lead" open `ui/lead_note_sheet.py`
+  for that lead, with scanning paused (#742, D-459); "Leads (42)" pushes
+  `staff_leads.py`'s list as a page, not a tab, so a HID scanner never types into its
+  search (#743, D-428).
 """
 
 from dataclasses import dataclass, replace
