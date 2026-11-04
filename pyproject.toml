@@ -128,6 +128,7 @@ extend-select = [
     "C4",     # comprehensions: no needless list() or dict() around one
     "PTH",    # pathlib over os.path and open()
     "PERF",   # performance: a loop that is one extend() or comprehension
+    "RUF",    # ruff's own: unused noqa, a task nobody holds, regex patterns that are not raw
     "PIE",    # misc. clutter: unneeded pass, range start, dict spread
     "RET",    # return statements: no else after return, no unneeded variable
     "LOG",    # logging: use of the logging module itself
@@ -141,6 +142,9 @@ extend-select = [
 ]
 
 ignore = [
+    "RUF001", # ambiguous Unicode in strings, docstrings and comments: the text is deliberately typographic (… – × ’)
+    "RUF002",
+    "RUF003",
     "SIM108",   # at 120 columns it asks for ternaries that do not read better (nested conditions in theme.py)
 ]
 

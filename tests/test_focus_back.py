@@ -148,7 +148,8 @@ async def test_back_from_another_window_the_opener_is_focused(
     """After the app has left and come back, the opener gets the focus once."""
     opener = mounted(page, ft.IconButton(ft.Icons.SHARE))
     async with focus_back(svc, opener):
-        asyncio.create_task(away_and_back(svc.presence))
+        away = asyncio.create_task(away_and_back(svc.presence))
+    await away
     assert focused == [opener]
 
 
@@ -164,7 +165,8 @@ async def test_the_control_mounted_on_the_return_is_the_one_focused(
     rebuilt._i = opener._i  # what Flet's reconciler does (`_migrate_state`)
     mounted(page, rebuilt)
     async with focus_back(svc, opener):
-        asyncio.create_task(away_and_back(svc.presence))
+        away = asyncio.create_task(away_and_back(svc.presence))
+    await away
     assert focused == [rebuilt]
 
 
