@@ -34,7 +34,7 @@ from pycon_us.state import use_conference
 from pycon_us.theme import use_tokens
 from pycon_us.ui.actions import NO_OUTCOME, outcome_line, padded
 from pycon_us.ui.buttons import LABEL_PADDING
-from pycon_us.ui.rows import LinkTile
+from pycon_us.ui.link_tile import LinkTile
 from pycon_us.ui.scaffold import AppScaffold, SectionHeader
 from pycon_us.ui.semantics import named
 from pycon_us.ui.widths import READING, sides, use_margin

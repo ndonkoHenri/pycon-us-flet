@@ -22,7 +22,7 @@ from pycon_us.screens.help import ReportProblem
 from pycon_us.services import Services
 from pycon_us.state import Conference
 from pycon_us.theme import LIGHT_TOKENS
-from pycon_us.ui import rows
+from pycon_us.ui import link_tile
 from pycon_us.ui.links import OPENS_IN
 from pycon_us.ui.share import LOG_SHARED, WITH_LOG
 from tests import help_page
@@ -65,7 +65,7 @@ async def report_section(
     answer_report_hooks(monkeypatch, services, conference, Prefs())
     monkeypatch.setattr(help_screen, "use_tokens", lambda: LIGHT_TOKENS)
     monkeypatch.setattr(help_screen, "SOURCE_URL", None)
-    monkeypatch.setattr(rows, "use_services", lambda: services)
+    monkeypatch.setattr(link_tile, "use_services", lambda: services)
 
     def render() -> list[ft.Control]:
         """`ReportProblem`'s controls, its state kept from the last render."""

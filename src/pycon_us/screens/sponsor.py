@@ -41,6 +41,7 @@ from pycon_us.services import Services, use_services
 from pycon_us.services.errors import report_errors
 from pycon_us.state import use_conference
 from pycon_us.ui.buttons import ICON_PADDING
+from pycon_us.ui.link_tile import LinkTile
 from pycon_us.ui.links import (
     OPENS_IN,
     LinkKind,
@@ -51,7 +52,6 @@ from pycon_us.ui.links import (
 )
 from pycon_us.ui.logos import logo_tile
 from pycon_us.ui.page_title import PageTitle
-from pycon_us.ui.rows import LinkTile
 from pycon_us.ui.scaffold import AppScaffold, SectionHeader
 from pycon_us.ui.semantics import named
 from pycon_us.ui.states import NoDataState, not_found

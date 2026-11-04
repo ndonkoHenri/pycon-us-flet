@@ -30,7 +30,8 @@ from pycon_us.services.errors import report_errors
 from pycon_us.theme import Tokens
 from pycon_us.ui.day_groups import DayGroup
 from pycon_us.ui.favorite import ToggleFavorite
-from pycon_us.ui.rows import LinkTile, SpeakerRow
+from pycon_us.ui.link_tile import LinkTile
+from pycon_us.ui.rows import SpeakerRow
 from pycon_us.ui.scaffold import SectionHeader
 from pycon_us.ui.session_rows import Changes, changes_of
 from pycon_us.ui.widths import LIST, sides, use_margin

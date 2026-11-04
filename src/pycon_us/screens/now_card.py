@@ -17,7 +17,7 @@ from pycon_us.core.models import ConferenceData, Session
 from pycon_us.core.row_views import places
 from pycon_us.core.timefmt import instant
 from pycon_us.services.errors import report_errors
-from pycon_us.ui.rows import LinkTile
+from pycon_us.ui.link_tile import LinkTile
 from pycon_us.ui.scaffold import SectionHeader
 from pycon_us.ui.semantics import named
 from pycon_us.ui.when_where import StatusLine, room_href

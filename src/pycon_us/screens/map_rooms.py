@@ -20,7 +20,7 @@ from pycon_us.services import use_services
 from pycon_us.services.errors import report_errors
 from pycon_us.state import use_conference
 from pycon_us.theme import use_tokens
-from pycon_us.ui.rows import LinkTile
+from pycon_us.ui.link_tile import LinkTile
 from pycon_us.ui.scaffold import SectionHeader
 from pycon_us.ui.scrolling import SCROLL_EVENT_MS
 from pycon_us.ui.states import EmptyState, NoDataState

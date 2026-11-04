@@ -33,8 +33,8 @@ from pycon_us.prefs import use_prefs
 from pycon_us.services import use_services
 from pycon_us.theme import use_tokens
 from pycon_us.ui.fold import FoldTile, expand_style
+from pycon_us.ui.link_tile import LinkTile
 from pycon_us.ui.location_card import job_fair_card, room_card
-from pycon_us.ui.rows import LinkTile
 from pycon_us.ui.semantics import named
 from pycon_us.ui.status_strip import use_minute
 

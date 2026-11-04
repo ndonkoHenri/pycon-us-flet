@@ -13,7 +13,7 @@ import flet as ft
 
 from pycon_us.licences import COMPONENTS, GROUPS, Component, paragraphs, read_text
 from pycon_us.ui.info_page import GUTTER
-from pycon_us.ui.rows import LinkTile
+from pycon_us.ui.link_tile import LinkTile
 from pycon_us.ui.scaffold import AppScaffold, SectionHeader
 from pycon_us.ui.states import not_found
 from pycon_us.ui.widths import LIST, READING, sides, use_margin

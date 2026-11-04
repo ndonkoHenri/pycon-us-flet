@@ -42,8 +42,8 @@ from pycon_us.services import use_services
 from pycon_us.theme import use_tokens
 from pycon_us.ui.actions import action_row
 from pycon_us.ui.info_page import GUTTER, InfoBody
+from pycon_us.ui.link_tile import SUBTITLED_TOP, LinkTile
 from pycon_us.ui.location_card import spot_card
-from pycon_us.ui.rows import SUBTITLED_TOP, LinkTile
 from pycon_us.ui.scaffold import AppScaffold, SectionHeader
 from pycon_us.ui.semantics import named
 from pycon_us.ui.share import (
@@ -397,7 +397,7 @@ def place_row(title: str, line: str, icon: ft.IconData, key: str) -> ft.Control:
     """Return a place's row: its name over the line that says where it is.
 
     A `ListTile` that opens nothing, laid out as a link row with a subtitle is
-    (`rows.SUBTITLED_TOP`), so its icon sits beside the name at any text size, and
+    (`link_tile.SUBTITLED_TOP`), so its icon sits beside the name at any text size, and
     one node read as one phrase ("Quiet room, VIP Room A & B, …").
 
     Args:

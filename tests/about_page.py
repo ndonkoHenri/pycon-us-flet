@@ -30,7 +30,7 @@ from pycon_us.services import Services, api, errors
 from pycon_us.services.build import known_build
 from pycon_us.services.storage import Storage
 from pycon_us.state import Conference
-from pycon_us.ui import rows as rows_module
+from pycon_us.ui import link_tile
 from pycon_us.ui import share as share_module
 from tests.fake_page import FakePage, bound, phone_margin
 from tests.fakes import (
@@ -127,9 +127,9 @@ def render(
     monkeypatch.setattr(about_app, "ConferenceData", lambda: CONFERENCE_DATA)
     monkeypatch.setattr(about_app, "HelpUsFixIt", lambda: HELP_US_FIX_IT)
     monkeypatch.setattr(
-        rows_module, "_ExternalLinkTile", inspect.unwrap(rows_module._ExternalLinkTile)
+        link_tile, "_ExternalLinkTile", inspect.unwrap(link_tile._ExternalLinkTile)
     )
-    monkeypatch.setattr(rows_module, "use_services", lambda: svc)
+    monkeypatch.setattr(link_tile, "use_services", lambda: svc)
     return lambda: cast(dict[str, Any], inspect.unwrap(AboutApp)())
 
 

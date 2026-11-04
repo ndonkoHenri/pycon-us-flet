@@ -55,9 +55,10 @@ from pycon_us.theme import Tokens, use_tokens
 from pycon_us.theme_hc import hc_border
 from pycon_us.ui.badges import ChangedBadge, TrackBadge, badge_row, badge_specs
 from pycon_us.ui.favorite import FavoriteButton, use_favorite_toggle
+from pycon_us.ui.link_tile import LinkTile
 from pycon_us.ui.links import feed_markdown
 from pycon_us.ui.page_title import PageTitle
-from pycon_us.ui.rows import LinkTile, SpeakerTile
+from pycon_us.ui.rows import SpeakerTile
 from pycon_us.ui.scaffold import AppScaffold, SectionHeader
 from pycon_us.ui.semantics import semantics_key
 from pycon_us.ui.session_rows import is_notice, use_recent_changes
