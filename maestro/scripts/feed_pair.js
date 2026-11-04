@@ -1,10 +1,11 @@
-// Ask the feed-pair server (tools/feed_pair.py) which side of its pair to serve.
+// Ask the feed-pair server (tools/feed_pair.py) which side of its pair to serve, or when.
 //
 // Runs on the laptop, as Maestro does, so it reaches the server at the laptop's own
 // loopback whatever the device reaches it at.
 // env:
 // - CONTROL_URL: the server, as the laptop reaches it (http://127.0.0.1:<port>);
-// - SIDE: "reset" serves the old feed, "swap" the new one.
+// - SIDE: "reset" serves the old feed, "swap" the new one; "hold" keeps the next feed
+//   requests open until "release".
 // Keeps, in `output`: side, the side the server says it now serves ("old" or "new").
 
 var response = http.post(CONTROL_URL + "/" + SIDE, { body: "" });

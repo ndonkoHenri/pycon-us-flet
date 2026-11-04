@@ -60,6 +60,7 @@ sheet. Where Maestro fits next to the `flet test` flows in `tests/ui/` is in
 | `journeys/lead_capture.yaml` | staff, lead | Against the local mock as `sponsor@example.com`: sign-in lands on the scanner's consent page, Continue disabled until the box is ticked; a typed code and a HID-style one, "Lead captured" with Add note, "Leads (2)"; the first again past the cooldown, "Already in your leads" with Open lead; "Not a badge code" with the text read, and Edit code (tapped: the text is back in the field, D-473); Back and in again, no consent page (LEAD-01, LEAD-04, #825). Needs the mock running |
 | `journeys/door_check.yaml` | staff, door | Against the local mock as `staff@example.com`: the picker opens by itself, Tutorials › All about decorators, "Ready, works offline", 2 attendees; a typed code and a HID-style one, "Checked in" with the dietary chip and "Admits 2", "2 checked in"; the first again past the cooldown, "Already checked in", the count unchanged; off the list, "Not registered for this session"; "Not a badge code" with the text read, and Edit code (D-473); "All synced" (DOOR-04, #825). Needs the mock running |
 | `journeys/swag_pickup.yaml` | staff, swag | Against the local mock as `staff@example.com`: paused until a category is chosen; a typed code opens the hand-out sheet, Cancel, "Ready to hand out"; a HID-style code, on a mock that hasn't seen the flow, "Hand out 3 items", "Handed out 3 items"; that badge again, "Already picked up"; nothing bought, "Nothing to pick up"; "Not a badge code" with the text read, and Edit code (D-473) (SHIRT-02, #825). Needs the mock running, just started to check the hand-out |
+| `journeys/pull_to_refresh.yaml` | feed_pair | Pull to refresh (D-449, #806), the feed held open by the feed-pair server: on Wednesday's list, swipes between days start no refresh; a pull shows the spinner and "Updating the schedule…", which end when the feed answers; a day change and "Show all" during the refresh (a render) and a changed feed after it leave no spinner; Sprints and Job listings the same; on Sprints, a feed that stays silent ends on the strip's "Offline" line and its working Refresh. Back during a refresh on Job listings leaves no error. Needs `tools.feed_pair` running ([below](#feed-pairs)) |
 | `regression/fling_after_sheet.yaml` | regression | Open space shown through the sheet, then a fling 0.8 to 1.0 s after "Show N sessions" (Maestro's pace, not #346's row D window), `TRIALS` times (at most about 35). Three control flings with no sheet first; each trial is "moved" (it ended within three rows of where a control ended, read from the first four rows of each; not merely in their slot), "short", "none" or "invalid" |
 
 Every flow but `theme_relaunch` and `reminder_settings` (which need no clock or feed, and start with `subflows/launch_fresh.yaml`), `reminder_primer` (which launches with notifications `unset`, then runs `subflows/get_started.yaml` and the same scene) and the `staff` flows ([below](#staff-flows-and-the-mock)) starts from `subflows/start_offline.yaml`: a fresh launch (`clearState`),
@@ -309,6 +310,10 @@ with a script (`scripts/feed_pair.js`), which posts to it from the laptop:
 uv run python -m tools.feed_pair --move 123 "Room 103ABC" --move 142 "Room 101B"
 maestro --device <udid> test maestro/journeys/change_log.yaml
 ```
+
+`journeys/pull_to_refresh.yaml` uses the same server with `--move 2 "Room 103ABC"`; it also
+holds feed requests open (`POST /hold`, `POST /release`), so a refresh runs for as long as
+the flow needs, up to the app's own 10 s feed timeout.
 
 Both `--move` edits are needed: without session 142's, the flow fails at its first
 "All changes" check. On Android, Maestro makes the app see a screen reader (F72), so the

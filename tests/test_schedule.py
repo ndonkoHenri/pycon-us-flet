@@ -148,7 +148,8 @@ async def test_the_zone_note_keeps_its_place_under_the_strip_in_every_zone(
     column = cast(ft.Column, schedule.tabs.content)
     assert len(column.controls) == 4  # the probe (D-331), the bar, the head, the pages
     pages = cast(ft.Stack, column.controls[-1])  # the day pages over the landing note
-    assert isinstance(pages.controls[-1], ft.TabBarView)
+    pulled = cast(ft.RefreshIndicator, pages.controls[-1])  # under pull-to-refresh
+    assert isinstance(pulled.content, ft.TabBarView)
 
 
 async def test_a_remembered_day_wins_over_today(
@@ -335,7 +336,10 @@ async def test_a_failed_first_fetch_says_so_and_offers_try_again(
     problem: Problem,
     body: str,
 ) -> None:
-    """A failed first fetch says why, and "Try again" starts a refresh."""
+    """A failed first fetch says why; "Try again" starts a refresh, and so does a pull.
+
+    The state's list is under pull-to-refresh too (D-449).
+    """
     refreshes: list[str] = []
 
     async def refresh(*_: Any, **__: Any) -> None:
@@ -352,6 +356,11 @@ async def test_a_failed_first_fetch_says_so_and_offers_try_again(
     await schedule.session.dispatch_event(button._i, "click", None)
     await settle()
     assert refreshes == ["refresh"]
+    (indicator,) = find(schedule.session, ft.RefreshIndicator)
+    monkeypatch.setattr(ft.RefreshIndicator, "_invoke_method", _told)
+    await schedule.session.dispatch_event(indicator._i, "refresh", None)
+    await settle()
+    assert refreshes == ["refresh", "refresh"]
 
 
 @pytest.mark.parametrize(("asked", "disabled"), [(False, False), (True, True)])
@@ -368,3 +377,7 @@ async def test_try_again_is_disabled_only_while_the_user_s_refresh_runs(
     (button,) = find(schedule.session, ft.FilledTonalButton)
     assert button.disabled is disabled
     assert texts(schedule.node("schedule.no_data"))[0] == "Can't load the schedule"
+
+
+async def _told(*_: Any) -> None:
+    """Stand in for ``RefreshIndicator``'s ``finish_refresh``: no Flutter to tell here."""

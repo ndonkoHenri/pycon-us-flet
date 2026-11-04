@@ -105,7 +105,9 @@ class PairFeed:
     flow on the laptop calls ``swap()``; Maestro, whose scripts run on the laptop too,
     posts to ``control_url``: ``POST /swap`` serves the new feed, ``POST /reset`` the
     old one again, so a flow can start from the old feed on a server left running.
-    Any other path is a 404.
+    ``POST /hold`` keeps the next feed requests open until ``POST /release``, so a flow
+    sees a refresh run for as long as it needs, up to the app's own feed timeout (D-449);
+    a reset releases them too. Any other path is a 404.
 
     Attributes:
         port: The port it listens on, on ``127.0.0.1``.
@@ -126,6 +128,8 @@ class PairFeed:
         self._sides = (old, new)
         self._swapped = False
         self._requests = 0
+        self._answer_now = threading.Event()  # set: answer at once; clear: hold
+        self._answer_now.set()
         feed = self
 
         class Pair(BaseHTTPRequestHandler):
@@ -133,15 +137,24 @@ class PairFeed:
                 if self.path.partition("?")[0] != feed.feed_path:
                     self.send_error(HTTPStatus.NOT_FOUND)
                     return
+                feed._answer_now.wait(HOLD_LIMIT)
                 body = feed._took()
-                self.send_response(HTTPStatus.OK)
-                self.send_header("Content-Type", "application/json")
-                self.send_header("Content-Length", str(len(body)))
-                self.end_headers()
-                self.wfile.write(body)
+                try:
+                    self.send_response(HTTPStatus.OK)
+                    self.send_header("Content-Type", "application/json")
+                    self.send_header("Content-Length", str(len(body)))
+                    self.end_headers()
+                    self.wfile.write(body)
+                except OSError:
+                    pass  # the app gave up on a held request: its own timeout
 
             def do_POST(self) -> None:
-                controls = {"/swap": feed.swap, "/reset": feed.reset}
+                controls = {
+                    "/swap": feed.swap,
+                    "/reset": feed.reset,
+                    "/hold": feed.hold,
+                    "/release": feed.release,
+                }
                 control = controls.get(self.path)
                 if control is None:
                     self.send_error(HTTPStatus.NOT_FOUND)
@@ -181,16 +194,26 @@ class PairFeed:
             self._swapped = True
 
     def reset(self) -> None:
-        """Serve the old feed again from the next request on."""
+        """Serve the old feed again from the next request on, with nothing held."""
         with self._lock:
             self._swapped = False
+        self.release()
+
+    def hold(self) -> None:
+        """Keep the next feed requests open until ``release()``."""
+        self._answer_now.clear()
+
+    def release(self) -> None:
+        """Answer the held feed requests, and the next ones at once."""
+        self._answer_now.set()
 
     def serve(self) -> None:
         """Start serving on a daemon thread."""
         threading.Thread(target=self._server.serve_forever, daemon=True).start()
 
     def close(self) -> None:
-        """Stop the server and free its port."""
+        """Release any held request, then stop the server and free its port."""
+        self.release()
         self._server.shutdown()
         self._server.server_close()
 

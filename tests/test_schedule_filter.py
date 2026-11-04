@@ -298,4 +298,7 @@ async def test_the_summary_keeps_its_place_so_the_day_pages_keep_theirs(
     assert len(after) == len(before)
     assert [type(c) for c in after][2:] == [type(c) for c in before][2:]
     pages = after[-1]  # the day pages, over the landing note (D-241)
-    assert isinstance(pages, ft.Stack) and isinstance(pages.controls[-1], ft.TabBarView)
+    assert isinstance(pages, ft.Stack)
+    pulled = pages.controls[-1]  # under pull-to-refresh (D-449)
+    assert isinstance(pulled, ft.RefreshIndicator)
+    assert isinstance(pulled.content, ft.TabBarView)

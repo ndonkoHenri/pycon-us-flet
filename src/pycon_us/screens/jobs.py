@@ -20,8 +20,8 @@ order:
   (``core.sprints.needs_more()``, D-202). A placeholder (OpenEDG's "N/A") says "No
   roles listed".
 
-The refresh is the ``Conference`` store's (D-145): the status strip's, then a
-``RefreshIndicator`` once U1 (#20) is pinned; it never deletes the cache, so a failed
+The refresh is the ``Conference`` store's (D-145): the status strip's Refresh, or a
+pull on the list (``pullable()``, U1, D-449); it never deletes the cache, so a failed
 one keeps the listings and the schedule. Without data the page loads and fails as the
 Sponsors list does (ux.md §4.1); a feed without listings says "No job listings yet"
 (2025), and has no filter. Each card is a memoised component keyed by its listing id
@@ -64,8 +64,9 @@ from pycon_us.ui.location_card import job_fair_card
 from pycon_us.ui.logos import logo_tile
 from pycon_us.ui.rows import LinkTile
 from pycon_us.ui.scaffold import AppScaffold
+from pycon_us.ui.scrolling import pullable
 from pycon_us.ui.states import EmptyState, NoDataState
-from pycon_us.ui.status_strip import StatusStrip
+from pycon_us.ui.status_strip import StatusStrip, use_refresh
 from pycon_us.ui.widths import LIST, capped, sides, use_margin
 
 SCREEN = "jobs"
@@ -100,6 +101,7 @@ def Jobs() -> ft.View:
     prefs = use_prefs()
     margin = use_margin(LIST)  # its width class (D-305)
     conference = use_conference()
+    refresh = use_refresh()
     tokens = use_tokens()
     field = use_field_query()
     query, set_query = ft.use_state("")  # the field's text once the typing pauses
@@ -191,7 +193,11 @@ def Jobs() -> ft.View:
         body=ft.Column(
             [
                 capped(head, margin),  # between the list's margins (D-305)
-                ft.ListView(items, expand=True, padding=sides(margin, bottom=24)),
+                # A pull runs the strip's refresh (SPON-08, D-449).
+                pullable(
+                    ft.ListView(items, expand=True, padding=sides(margin, bottom=24)),
+                    refresh,
+                ),
             ],
             spacing=0,
             expand=True,

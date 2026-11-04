@@ -1,0 +1,7 @@
+# Pull the list under the screen's middle down from its top, far enough to refresh (D-449).
+appId: io.github.ndonkohenri.confcompanion
+---
+- swipe:
+    start: "50%, 45%"
+    end: "50%, 85%"
+    duration: 700

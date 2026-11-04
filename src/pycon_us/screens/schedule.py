@@ -24,7 +24,8 @@ where it landed: VoiceOver through an announcement, TalkBack through a live regi
 (``landing_note()``, D-241). The button hides while the list is near where a jump left
 it, and while today's first jump is on its way; a screen reader keeps it (D-204). A
 minute tick (``use_minute()``) keeps today's dot, the button and the now line with the
-clock; the day shown stays put across midnight. Without any data (no snapshot or
+clock; the day shown stays put across midnight. A pull on a day's list refreshes the
+feed as the strip's Refresh does (SCHED-13, D-449). Without any data (no snapshot or
 cache, NEW-03) the screen shows the skeleton until the first fetch has failed, then
 "Can't load the schedule", which stays during a retry (D-32, ux.md §4.1).
 """
@@ -78,7 +79,7 @@ from pycon_us.ui.day_tabs import TAB_MS, day_tab
 from pycon_us.ui.favorite import use_favorite_toggle
 from pycon_us.ui.navigation import RETAP_SCROLL_MS
 from pycon_us.ui.scaffold import AppScaffold, search_button
-from pycon_us.ui.scrolling import JUMP_MS, jump_to_key
+from pycon_us.ui.scrolling import JUMP_MS, jump_to_key, pullable
 from pycon_us.ui.semantics import announce
 from pycon_us.ui.session_rows import changes_of, use_recent_changes, use_session_views
 from pycon_us.ui.states import NoDataState
@@ -296,13 +297,16 @@ def Schedule() -> ft.View:
                 search_button(memory, "sessions"),
                 ScheduleOverflow(source=__name__),
             ],
-            body=ft.ListView(
-                [
-                    strip_view(strip, tokens),
-                    NoDataState(conference, svc, "schedule.no_data"),
-                ],
-                expand=True,
-                padding=sides(margin),
+            body=pullable(
+                ft.ListView(
+                    [
+                        strip_view(strip, tokens),
+                        NoDataState(conference, svc, "schedule.no_data"),
+                    ],
+                    expand=True,
+                    padding=sides(margin),
+                ),
+                strip.on_refresh,  # a pull is Try again too (D-449)
             ),
         )
 
@@ -377,7 +381,12 @@ def Schedule() -> ft.View:
                 if prefs.time_above
                 else capped(ScheduleHead(head, track_filter.show_all, tokens), margin),
                 ft.Stack(
-                    [landing_note(said), ft.TabBarView(pages)],
+                    [
+                        landing_note(said),
+                        # Around the pages, not on each: the pulled day may leave while
+                        # its refresh runs, and this one stays mounted (D-449).
+                        pullable(ft.TabBarView(pages), strip.on_refresh, nested=True),
+                    ],
                     fit=ft.StackFit.EXPAND,
                     expand=True,
                 ),

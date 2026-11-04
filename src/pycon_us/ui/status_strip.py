@@ -1,7 +1,7 @@
 """The status strip, the zone note and the minute tick.
 
-``StatusStrip`` says when the data is not fresh, with Refresh until pull-to-refresh
-(U1) arrives (D-32, D-146); the screens that show the feed's state place it under
+``StatusStrip`` says when the data is not fresh, with Refresh, the way to what a pull
+on a list does for anyone who cannot pull (D-32, D-146, D-449); the screens that show the feed's state place it under
 their app bar. It is ``use_strip()``, which reads the feed's state and ticks, with
 ``strip_view()``, which draws a ``Strip`` value: the Schedule calls the two itself, so
 its memoised day lists get only the value (D-345, F150). ``zone_note_line()`` is the Schedule's line under it, "Times are
@@ -153,6 +153,22 @@ class Strip:
     on_refresh: Callable[[], Awaitable[None]]
 
 
+def use_refresh() -> Callable[[], Awaitable[None]]:
+    """Return the feed's refresh, the same callable for the caller's life.
+
+    A hook (D-70): what the strip's Refresh and a pull on a list run, the shared
+    ``Conference.refresh()`` (D-145, D-449).
+    """
+    svc = use_services()
+    conference = use_conference()
+
+    @report_errors
+    async def refresh() -> None:
+        await conference.refresh(svc.storage, svc.year, closed=svc.closed)
+
+    return ft.use_callback(refresh, [conference, svc])
+
+
 def use_strip(*, auto_refresh: bool = False) -> Strip:
     """Read what the status strip shows, and keep it up to date (D-32, D-40).
 
@@ -190,12 +206,7 @@ def use_strip(*, auto_refresh: bool = False) -> Strip:
 
     ft.use_effect(keep_up, [auto_refresh])
 
-    @report_errors
-    async def refresh() -> None:
-        await conference.refresh(svc.storage, svc.year, closed=svc.closed)
-
-    on_refresh = ft.use_callback(refresh, [conference, svc])
-    return Strip(status, line, conference.refreshing, on_refresh)
+    return Strip(status, line, conference.refreshing, use_refresh())
 
 
 @ft.component

@@ -149,7 +149,7 @@ Specs and status are in [`docs/flet-gaps-and-extensions.md`](docs/flet-gaps-and-
 | Gap | Interim (ships now) | Upstream piece | Priority |
 |---|---|---|---|
 | Scheduled local notifications | Now's "Your next session", an in-app Banner, `.ics` (alarm on iOS only, D-272); the settings say "not in this build" | **E3**: scheduling in the official flet-dev/flet#6948 extension (+ U7, which #6948 itself needs, and Android receivers). **Landed** at the pin `08b89cce5` (#445); the app reminds through it (#446..#449), and the interim stays for a build without it (D-60, D-63) | 1 (spike S6 during P1; app in P2) |
-| Pull-to-refresh | Status-strip Refresh + automatic refresh | **U1** `RefreshIndicator`. **Landed** at the pin `22a6dcb16` (#805); adoption in #806 | 2 (P1) |
+| Pull-to-refresh | Status-strip Refresh + automatic refresh | **U1** `RefreshIndicator`. **Adopted** (D-449, #806); in the pin since `22a6dcb16` (#805) | 2 (P1) |
 | Handler exceptions crash the session | `@report_errors` decorator | **U15** non-fatal mode + Python error hook | 3 (P1–P2) |
 | Barcode scanning | Manual + USB/Bluetooth HID entry | **E1** extension over `mobile_scanner` | 4 (spike S8; before P3) |
 | App version at runtime | `__version__` alone, outside a packaged build | **U4**, **landed** as `Page.get_package_info()` at the pin `08b89cce5` (#445); adopted (#452, D-386) | 5 (P2) |

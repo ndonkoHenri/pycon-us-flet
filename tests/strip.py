@@ -7,12 +7,14 @@ refreshes) render the strip's body outside a renderer: the hooks it calls
 The services, the page and the store are ``tests/chrome.py``'s; a module takes both
 modules' fixtures by assigning them to its own names, as that module's docstring says:
 ``chrome.year``, ``chrome.svc`` and ``chrome.conference`` too, which this ``hooks``
-takes by name.
+takes by name. ``finished`` and ``pull()`` serve the lists under pull-to-refresh
+(``ui/scrolling.py``'s ``pullable()``, D-449), whose screens' tests use ``network`` too.
 """
 
 import asyncio
 import inspect
 from collections.abc import Iterator
+from typing import Any
 from zoneinfo import ZoneInfo
 
 import flet as ft
@@ -24,6 +26,7 @@ from pycon_us.theme import DARK_TOKENS
 from pycon_us.ui import status_strip
 from pycon_us.ui.status_strip import StatusStrip
 from tests.fake_page import Hooks
+from tests.harness import Shown
 
 PACIFIC = ZoneInfo("America/Los_Angeles")
 
@@ -112,3 +115,28 @@ def network(monkeypatch: pytest.MonkeyPatch) -> Iterator[Network]:
     monkeypatch.setattr(api, "fetch_feed", fake.fetch_feed)
     yield fake
     fake.released.set()  # a held refresh ends with the test
+
+
+@pytest.fixture
+def finished(monkeypatch: pytest.MonkeyPatch) -> list[ft.RefreshIndicator]:
+    """The indicators told that their refresh ended: the harness has no Flutter to tell.
+
+    ``RefreshIndicator`` tells its client ``finish_refresh`` once ``on_refresh``
+    returns or raises, which stops the spinner; this records each one instead.
+    """
+    told: list[ft.RefreshIndicator] = []
+
+    async def invoke(self: ft.RefreshIndicator, method_name: str, *_: Any) -> None:
+        assert method_name == "finish_refresh"
+        told.append(self)
+
+    monkeypatch.setattr(ft.RefreshIndicator, "_invoke_method", invoke)
+    return told
+
+
+def pull(shown: Shown, indicator: ft.RefreshIndicator) -> asyncio.Task[None]:
+    """Pull ``indicator`` down far enough, as Flutter reports it: its ``refresh`` event.
+
+    Returns the event's run, which ends once ``on_refresh`` has returned.
+    """
+    return asyncio.ensure_future(shown.event(indicator, "refresh"))
