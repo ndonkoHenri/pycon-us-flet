@@ -1,0 +1,19 @@
+# gitleaks's settings for this repository (#847). The default rules stay on; the two allowlists below are the only hits the
+# first full-history sweep found, and both are false positives. Keep an allowlist this narrow: a path or a pattern a
+# real secret could not hide in. docs/development.md §7.6 says how the sweep runs.
+title = "pycon-us-flet"
+
+[extend]
+useDefault = true
+
+[[allowlists]]
+description = "Signing test vectors: 40-hex X-API-Signature values made with the fixture's own dummy key and secret"
+targetRules = ["generic-api-key"]
+condition = "AND"   # both the path and the 40-hex value must match: any other key in that file still fires
+paths = ['''^tests/fixtures/ionic/signing\.json$''']
+regexes = ['''^[0-9a-f]{40}$''']
+
+[[allowlists]]
+description = "A Python keyword argument beside an argument named tokens: `intro(track, tokens, spanish=SPANISH ...)` in src/pycon_us/screens/track.py"
+targetRules = ["generic-api-key"]
+regexes = ['''^spanish=SPANISH$''']

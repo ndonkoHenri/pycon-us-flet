@@ -4,6 +4,9 @@ Thanks for helping. This is a community rebuild of the PyCon US mobile app in Py
 for Android and iOS. **It is not an official PSF app**: the Python Software Foundation and the PyCon US team don't run
 or support it, so please report its bugs here and not to them.
 
+Everyone taking part follows the [Code of Conduct](CODE_OF_CONDUCT.md). To report a security problem, use
+[`SECURITY.md`](SECURITY.md)'s private route, not a public issue.
+
 **No CLA or DCO** (D-87). The project is Apache-2.0, and GitHub's terms make your contribution Apache-2.0 too. You
 don't need to sign anything or add a sign-off line.
 

@@ -1005,7 +1005,7 @@ trufflehog filesystem build/sweep/history.patch --no-verification --no-update --
 
 A hit's `StartLine` is a line of the dump. To find its commit: `awk -v n=<line> 'NR<=n && /^commit /{c=$0} NR==n{print c; exit}' build/sweep/history.patch`.
 
-The first sweep's only hits were 34 `generic-api-key` from gitleaks, all false positives: 28 in `tests/fixtures/ionic/signing.json` (two commits; signatures made with the fixture's own dummy secret) and 6 in `src/pycon_us/screens/track.py` (four commits; the argument name `tokens` beside an identifier). Anything else is new: look at it. Never paste a value. Say where it is, and mark it for the owner to rotate; rewriting history is the owner's call (D-101).
+The first sweep's only hits were 34 `generic-api-key` from gitleaks, all false positives: 28 in `tests/fixtures/ionic/signing.json` (two commits; signatures made with the fixture's own dummy secret) and 6 in `src/pycon_us/screens/track.py` (four commits; the argument name `tokens` beside an identifier). `.gitleaks.toml` allowlists exactly those two, so a scan of the tree or of a commit stays quiet about them; the default rules stay on. Anything else is new: look at it. Never paste a value. Say where it is, and mark it for the owner to rotate; rewriting history is the owner's call (D-101).
 
 **Secrets in what people wrote** (issues, PRs, comments, reviews):
 
@@ -1032,6 +1032,8 @@ grep -rhoE --include='*.txt' '[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[a-z]{2,}' build
 Only `example.com` and `example.org` sample accounts, the conference's public addresses and Mastodon handles should show. OCR misses what small text and pictures hold, so looking is still part of it.
 
 **Personal data in the text.** Look at the commit identities (`git -C build/sweep/mirror.git log --all --format='%ae%n%ce' | sort | uniq -c`), and grep the dump and `build/sweep/api` for phone numbers, emails and `/Users/`. A phone number that isn't a `555-01xx` fake or the Code of Conduct hotline needs a look. #847's first result lists what is already known.
+
+**Dependabot** (`.github/dependabot.yml`) keeps the Actions our workflows use current once the repo is public; it doesn't read the Python side (the file says why).
 
 **Python dependencies on the host.** `uv.lock` is what the tools and tests run on, and nothing else. The workspace's own Flet packages come from `.flet-src`, so they're left out of the export:
 
