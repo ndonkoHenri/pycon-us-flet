@@ -396,3 +396,14 @@ def shown_problem(shown: Shown) -> str:
     line = in_sheet(shown, "lead.note.problem")
     assert isinstance(line, ft.Text)
     return str(line.value)
+
+
+async def test_a_screen_reader_meets_the_title_first(show: Show, db: OutboxDb) -> None:
+    """With a screen reader on, no handle or scrim precedes the title (D-485, #1058)."""
+    shown = await show(signed_in(lead_retrieval=True), outbox=db)
+    shown.prefs.screen_reader = True
+    await scan(shown)
+    await tap(shown, "lead.add_note")
+    current = sheet(shown)
+    assert current is not None
+    assert not current.show_drag_handle and not current.dismissible

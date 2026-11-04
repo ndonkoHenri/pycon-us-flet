@@ -7,9 +7,9 @@ exit criterion 2): Ionic's pull-to-refresh synced only pending scans, never fail
   and failed rows, newest first, its latest confirmed rows, and, where the host asks
   (Developer, D-412), other accounts' unsynced rows, which wait for their own sign-in
   (architecture §12.1).
-- `queue_sheet()` lays it out in a modal `BottomSheet` with a drag handle and a
-  Close button: the
-  state in words (`sync_chip.chip_words()`, a live region); **Sync now**, which kicks
+- `queue_sheet()` lays it out in a modal `BottomSheet` with a drag handle (none with a
+  screen reader on, D-485) and a Close button: the state in words
+  (`sync_chip.chip_words()`, a live region); **Sync now**, which kicks
   the worker and is disabled with a ring while a pass runs; **Retry failed**, only
   while rows have failed; the rows (`queue_rows.row_tile()`), or "Everything is
   synced"; the confirmed rows in a fold; other accounts' rows under their own heading.
@@ -170,6 +170,7 @@ def queue_sheet(
     on_confirmed: Callable[[bool], None],
     on_close: Callable[[], object],
     reduce_motion: bool = False,
+    screen_reader: bool = False,
 ) -> ft.BottomSheet:
     """Return the queue sheet (ux.md §7.2): the state, the two actions, the rows.
 
@@ -185,6 +186,7 @@ def queue_sheet(
         on_confirmed: Opens or closes the confirmed rows' fold.
         on_close: Close, and a dismissal: a swipe, Back.
         reduce_motion: The sheet appears without its slide (D-34, D-173).
+        screen_reader: A screen reader is on: no drag handle or scrim to stop on (D-485).
     """
     staff, now = state.staff, state.now
     actions = [
@@ -237,7 +239,10 @@ def queue_sheet(
             body.extend(row_tile(row, now, tokens) for row in rows)
     return ft.BottomSheet(
         ft.Container(  # 16 dp gutters (ux.md §3.6), clear of the home bar
-            padding=ft.Padding.only(left=16, right=16, bottom=16),
+            # No handle above the title with a screen reader on: the top is its own.
+            padding=ft.Padding.only(
+                left=16, right=16, bottom=16, top=16 if screen_reader else 0
+            ),
             content=ft.Column(
                 body,
                 spacing=0,
@@ -245,7 +250,8 @@ def queue_sheet(
                 horizontal_alignment=ft.CrossAxisAlignment.STRETCH,
             ),
         ),
-        show_drag_handle=True,
+        show_drag_handle=not screen_reader,
+        dismissible=not screen_reader,
         scrollable=True,  # up to the screen's height: the rows have room at 200 %
         use_safe_area=True,
         shape=hc_sheet_shape(tokens.high_contrast),
@@ -359,6 +365,7 @@ def use_queue_sheet(*, others: bool = False) -> QueueSheet:
             on_confirmed=set_confirmed_open,
             on_close=close_sheet,
             reduce_motion=prefs.reduce_motion,
+            screen_reader=prefs.screen_reader,
         )
         if is_open
         else None

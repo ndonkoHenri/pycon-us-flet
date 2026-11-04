@@ -321,3 +321,14 @@ async def test_a_hid_submit_while_the_sheet_is_open_is_dropped(
     ]
     await shown.click(in_sheet(shown, "swag.cancel"))
     await submit
+
+
+async def test_a_screen_reader_meets_the_title_first(show: Show) -> None:
+    """With a screen reader on, no handle or scrim precedes the title (D-485, #1058)."""
+    shown = await show()
+    shown.prefs.screen_reader = True
+    submit = await scan(shown, ADA)
+    current = cast(ft.BottomSheet, sheet(shown))
+    assert not current.show_drag_handle and not current.dismissible
+    await shown.click(cast(ft.TextButton, in_sheet(shown, "swag.cancel")))
+    await submit

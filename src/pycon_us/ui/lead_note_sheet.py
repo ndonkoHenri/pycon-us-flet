@@ -1,8 +1,8 @@
 """The lead note sheet: interest, follow-ups and free text for one lead (#742; LEAD-10).
 
 ux.md §7.3. Ionic's modal labelled its choices with emoji, which screen readers read
-oddly; here a modal `BottomSheet` with a drag handle, everything scrolling together
-so Save stays in reach at 200 % text:
+oddly; here a modal `BottomSheet` with a drag handle (none with a screen reader on,
+D-485), everything scrolling together so Save stays in reach at 200 % text:
 
 - a level-1 heading "Note for Ada" (the lead's name, or its code), the code under it
   when the name is the heading, and "For Example Corp" on a staff account's lead, since
@@ -106,6 +106,7 @@ def note_sheet(
     *,
     high_contrast: bool = False,
     reduce_motion: bool = False,
+    screen_reader: bool = False,
 ) -> ft.BottomSheet:
     """Return the note sheet for `editing` (ux.md §7.3).
 
@@ -116,6 +117,7 @@ def note_sheet(
         actions: The handlers.
         high_contrast: HC is on screen: a 1 dp `outline` edge draws the sheet.
         reduce_motion: The sheet appears without its slide (D-34, D-173).
+        screen_reader: A screen reader is on: no drag handle or scrim to stop on (D-485).
     """
     draft = editing.draft
     body: list[ft.Control] = [heading(title_of(editing), 1)]
@@ -189,7 +191,10 @@ def note_sheet(
     )
     return ft.BottomSheet(
         ft.Container(  # 16 dp gutters (ux.md §3.6), clear of the home bar
-            padding=ft.Padding.only(left=16, right=16, bottom=16),
+            # No handle above the title with a screen reader on: the top is its own.
+            padding=ft.Padding.only(
+                left=16, right=16, bottom=16, top=16 if screen_reader else 0
+            ),
             content=ft.Column(
                 body,
                 spacing=8,
@@ -198,7 +203,8 @@ def note_sheet(
                 horizontal_alignment=ft.CrossAxisAlignment.STRETCH,
             ),
         ),
-        show_drag_handle=True,
+        show_drag_handle=not screen_reader,
+        dismissible=not screen_reader,
         scrollable=True,  # up to the screen's height: Save stays in reach at 200 %
         use_safe_area=True,
         shape=hc_sheet_shape(high_contrast),
@@ -300,6 +306,7 @@ def use_note_sheet(*, owner: str) -> NoteSheet:
             SheetActions(interest, follow_up, save, close),
             high_contrast=tokens.high_contrast,
             reduce_motion=prefs.reduce_motion,
+            screen_reader=prefs.screen_reader,
         )
         if editing is not None
         else None

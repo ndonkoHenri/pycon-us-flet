@@ -4,7 +4,8 @@ ux.md §5.3. `screens/schedule_filter.py` owns the filter (the stored list, the 
 the action and the summary) and shows this sheet through `ft.use_dialog`; here is what
 it shows, so each module stays under about 400 lines (D-66):
 
-- `filter_sheet()`, a modal `BottomSheet` with a drag handle, the screen's height
+- `filter_sheet()`, a modal `BottomSheet` with a drag handle (none with a
+  screen reader on, D-485), the screen's height
   until U32 (#238): "Filter sessions" and Reset scroll with the chips, and "Show N
   sessions" stays pinned under them;
 - a `Chip` per track the feed has, with its check (not colour alone, D-33), named by
@@ -108,6 +109,7 @@ def filter_sheet(
     on_close: Callable[[], None],
     on_tracks_page: Callable[[], None],
     reduce_motion: bool,
+    screen_reader: bool = False,
     high_contrast: bool = False,
 ) -> ft.BottomSheet:
     """Return the filter sheet (ux.md §5.3): title and Reset, chips, the count button.
@@ -128,6 +130,7 @@ def filter_sheet(
         on_tracks_page: "What do these mean?".
         reduce_motion: The OS asks for less motion: the sheet appears without its
             slide (D-34, D-173).
+        screen_reader: A screen reader is on: no drag handle or scrim to stop on (D-485).
         high_contrast: HC is on screen: the sheet is the surface there, as the page
             under its scrim nearly is, so a 1 dp `outline` border draws its edge
             (D-306); the chips are outlined by the theme's chip theme.
@@ -241,7 +244,10 @@ def filter_sheet(
     )
     return ft.BottomSheet(
         ft.Container(  # 16 dp gutters (ux.md §3.6); the button clears the home bar
-            padding=ft.Padding.only(left=16, right=16, bottom=16),
+            # No handle above the title with a screen reader on: the top is its own.
+            padding=ft.Padding.only(
+                left=16, right=16, bottom=16, top=16 if screen_reader else 0
+            ),
             content=ft.Column(
                 [
                     # The title and the chips scroll; the button stays: pinned, the
@@ -271,7 +277,8 @@ def filter_sheet(
                 horizontal_alignment=ft.CrossAxisAlignment.STRETCH,
             ),
         ),
-        show_drag_handle=True,
+        show_drag_handle=not screen_reader,
+        dismissible=not screen_reader,
         scrollable=True,  # the screen's height, so the chips have room at 200 % text
         use_safe_area=True,
         shape=hc_sheet_shape(high_contrast),

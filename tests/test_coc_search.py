@@ -446,3 +446,13 @@ async def test_a_tap_on_a_row_the_results_replaced_is_dropped(show: Show) -> Non
     await shown.settle()
     assert dialog(shown) is None and sheet(shown) is not None
     await asyncio.wait_for(task, 2)
+
+
+async def test_a_screen_reader_meets_no_handle_or_scrim(show: Show) -> None:
+    """With a screen reader on, the sheet has no handle or scrim to stop on (D-485)."""
+    shown = await show()
+    shown.prefs.screen_reader = True
+    await open_find(shown)
+    current = cast(ft.BottomSheet, sheet(shown))
+    assert not current.show_drag_handle
+    assert not current.dismissible

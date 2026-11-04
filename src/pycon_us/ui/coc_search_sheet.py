@@ -203,6 +203,7 @@ def find_sheet(
     *,
     tokens: Tokens,
     reduce_motion: bool = False,
+    screen_reader: bool = False,
 ) -> ft.BottomSheet:
     """Return the full-height search sheet (ux.md §7.3): the field pinned, rows under.
 
@@ -214,6 +215,7 @@ def find_sheet(
         actions: The handlers.
         tokens: The scheme's tokens; in high contrast a 1 dp edge draws the sheet.
         reduce_motion: The sheet appears without its slide (D-34, D-173).
+        screen_reader: A screen reader is on: no drag handle or scrim to stop on (D-485).
     """
     ref, text = entry
     head = ft.Container(
@@ -234,7 +236,8 @@ def find_sheet(
     )
     return ft.BottomSheet(
         ft.Container(  # clear of the home bar; the parts keep their 16 dp gutters
-            padding=ft.Padding.only(bottom=16),
+            # No handle above the title with a screen reader on: the top is its own.
+            padding=ft.Padding.only(bottom=16, top=16 if screen_reader else 0),
             content=ft.Column(
                 [
                     head,
@@ -248,7 +251,8 @@ def find_sheet(
                 horizontal_alignment=ft.CrossAxisAlignment.STRETCH,
             ),
         ),
-        show_drag_handle=True,
+        show_drag_handle=not screen_reader,
+        dismissible=not screen_reader,
         scrollable=True,  # up to the screen's height: room for the rows at 200 %
         use_safe_area=True,
         shape=hc_sheet_shape(tokens.high_contrast),

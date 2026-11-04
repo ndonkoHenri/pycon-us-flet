@@ -297,3 +297,17 @@ def _changed(slot: Slot, index: int, before: tuple[Slot, ...]) -> bool:
     # last one while its sessions are; the memo compares with == after `is` (F34).
     old = next((i for i, s in enumerate(before) if s == slot), None)
     return old is None or (old > 0) != (index > 0)
+
+
+async def test_a_sighted_user_keeps_the_handle_and_the_tap_outside(shown: Show) -> None:
+    """Without a screen reader the sheet has its handle and its scrim (D-485)."""
+    current = await open_sheet(await shown())
+    assert current.show_drag_handle and current.dismissible
+
+
+async def test_a_screen_reader_meets_the_title_first(shown: Show) -> None:
+    """With a screen reader on, no handle or scrim precedes the title (D-485, #1058)."""
+    schedule = await shown()
+    schedule.prefs.screen_reader = True
+    current = await open_sheet(schedule)
+    assert not current.show_drag_handle and not current.dismissible
