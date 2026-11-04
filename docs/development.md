@@ -161,7 +161,7 @@ requires-python = ">=3.14,<3.15"      # flet build bundles CPython 3.14 (D-82, F
 dependencies = [                      # bundled into the app by flet build: pin exactly
     "flet==1.1.0.dev4",               # one version for the whole Flet family (§2.2)
     "httpx==0.28.1",                  # the app imports it: without this, phones get what pip finds that day (D-470)
-    "tzdata==2026.5",                 # zoneinfo data on phones (D-43)
+    "tzdata==2026.6",                 # zoneinfo data on phones (D-43)
 ]
 
 [build-system]                        # uv sync installs pycon_us (src/pycon_us) editable on the host
@@ -1025,7 +1025,7 @@ done
 
 The result covers those builds only. `uv tree --locked --no-default-groups` lists the names that may ship, but its versions are the lock's.
 
-Fix a hit that ships with an exact pin in `[project].dependencies`, like `tzdata==2026.5`, then `uv lock`, or by seeing that a new build already resolves the fixed version. Either way, run the audit on a new build to confirm it. If no phone wheel has the fix, a pin would break the build, so it's an `upstream` issue here (D-213). One is known: `msgpack` 1.1.2, the newest wheel on `pypi.flet.dev`, has two advisories (#890).
+Fix a hit that ships with an exact pin in `[project].dependencies`, like `tzdata==2026.6`, then `uv lock`, or by seeing that a new build already resolves the fixed version. Either way, run the audit on a new build to confirm it. If no phone wheel has the fix, a pin would break the build, so it's an `upstream` issue here (D-213). One is known: `msgpack` 1.1.2, the newest wheel on `pypi.flet.dev`, has two advisories (#890).
 
 **Dart dependencies.** A real build has the set that ships, with the extensions (§5.3):
 
