@@ -11,6 +11,7 @@ import asyncio
 from collections.abc import AsyncIterator, Awaitable, Callable
 from contextlib import AsyncExitStack
 from pathlib import Path
+from typing import cast
 
 import flet as ft
 import httpx
@@ -160,7 +161,7 @@ async def test_the_form_has_its_identifiers_hints_and_keyboards(
     # Next on the email, then the password's default Done, which signs in.
     assert email.text_input_action is ft.TextInputAction.NEXT
     assert password.text_input_action is None
-    assert password.password and password.can_reveal_password
+    assert password.password
     assert password.autofill_hints == [ft.AutofillHint.PASSWORD]
     (group,) = shown.find(ft.AutofillGroup)
     # Nothing to save before a sign-in: leaving never offers to save the fields.
@@ -393,3 +394,19 @@ async def test_after_a_revoked_key_sign_in_starts_with_the_email(
     await type_into(shown, "Password", "mock-all")
     await shown.click(submit(shown))
     assert account.signed_in and not account.expired
+
+
+async def test_the_reveal_button_is_named_and_says_what_it_will_do(
+    show: Show, recorder: Recorder
+) -> None:
+    """Show password reveals it and becomes Hide password (#837: "Unlabelled" before)."""
+    shown = await show(recorder)
+    button = cast(ft.IconButton, shown.node("sign_in.reveal").content)
+    assert button.tooltip == "Show password"
+    assert field(shown, "Password").password
+    await shown.click(button)
+    button = cast(ft.IconButton, shown.node("sign_in.reveal").content)
+    assert button.tooltip == "Hide password"
+    assert not field(shown, "Password").password
+    await shown.click(button)
+    assert field(shown, "Password").password
