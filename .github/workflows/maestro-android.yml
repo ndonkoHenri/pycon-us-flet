@@ -83,6 +83,7 @@ jobs:
 
       # Animations stay on: Maestro waits for them (maestro/README.md). The action runs each line on its own and stops
       # at the first that fails.
+      # hide_error_dialogs: on these 2 vCPUs, "System UI isn't responding" once sat over a healthy app and failed both flows.
       - name: Run the flows
         uses: reactivecircus/android-emulator-runner@a421e43855164a8197daf9d8d40fe71c6996bb0d # v2.38.0
         env:
@@ -97,6 +98,7 @@ jobs:
           emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -no-snapshot-save
           script: |
             adb shell settings put secure show_ime_with_hard_keyboard 0
+            adb shell settings put global hide_error_dialogs 1
             adb install -r build/apk/pycon-us.apk
             maestro test --include-tags=smoke --debug-output build/maestro/smoke --flatten-debug-output maestro
             maestro test -e MOCK_URL="$MOCK_URL" --debug-output build/maestro/staff --flatten-debug-output maestro/journeys/coc_capture.yaml
