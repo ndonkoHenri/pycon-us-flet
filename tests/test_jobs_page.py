@@ -8,6 +8,7 @@ these tests read what the page makes of them. The filter (SPON-07, #400) is
 read to TalkBack and VoiceOver is checked on devices (the PR).
 """
 
+import asyncio
 from dataclasses import replace
 from pathlib import Path
 from typing import Any, cast
@@ -19,14 +20,16 @@ from pycon_us.core.jobs import sponsor_of
 from pycon_us.core.sprints import needs_more
 from pycon_us.locations import parent_of
 from pycon_us.screens import jobs as screen
+from pycon_us.services import api
 from pycon_us.services.storage import Storage
 from pycon_us.state import Conference
-from tests import jobs_view
+from tests import jobs_view, strip
 from tests.fakes import MemoryPrefs
 from tests.feeds import recorded
 from tests.jobs_view import CARD, DATA, VIEW, YEAR, listing, role_ids, toggle_of
 
 show, sleeps = jobs_view.show, jobs_view.sleeps  # the fixtures, under these names
+network, finished = strip.network, strip.finished
 
 
 # ------------------------------------------------------------------ the rules
@@ -199,6 +202,32 @@ async def test_a_failed_refresh_offline_keeps_the_listings_and_the_schedule(
     assert len(shown.nodes(CARD)) == 13
     assert conference.data is not None and conference.data.sessions
     assert storage.feed_path.read_bytes() == recorded(2026)
+
+
+async def test_a_pull_on_the_list_runs_the_strip_s_refresh_and_ends_offline(
+    show: Any, network: strip.Network, finished: list[ft.RefreshIndicator]
+) -> None:
+    """SPON-08, D-449: a pull is the strip's Refresh; offline it ends, the cards stay.
+
+    No hanging spinner (Ionic's), no second request for a pull during the first's,
+    and no error beyond the strip's "Offline" line.
+    """
+    shown = await show()
+    (indicator,) = shown.find(ft.RefreshIndicator)
+    assert isinstance(indicator.content, ft.ListView)
+    first = strip.pull(shown, indicator)
+    await network.arrived.wait()
+    second = strip.pull(shown, indicator)
+    await shown.settle()
+    network.error = api.NetworkError("ConnectError: offline")
+    network.released.set()
+    await asyncio.gather(first, second)
+
+    assert network.requests == 1
+    assert len(finished) == 2
+    assert shown.conference.problem == "offline"
+    assert len(shown.nodes(CARD)) == 13
+    assert shown.snack_bars == []
 
 
 def _under(control: ft.BaseControl, ancestor: ft.BaseControl) -> bool:

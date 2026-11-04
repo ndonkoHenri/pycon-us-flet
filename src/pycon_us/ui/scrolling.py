@@ -7,10 +7,13 @@ the one jump (D-155): it handles the ways a keyed ``scroll_to`` fails quietly or
 and says how it ended. The policy of when to jump (the Schedule's: once per conference
 day, never on Back, a refresh or a filter change, D-18 and D-204) is the screen's.
 A keyed item carries its ``ScrollKey`` on an empty anchor, ``anchored()`` (D-242).
+``pullable()`` puts a list under pull-to-refresh, the status strip's Refresh as a
+gesture (U1, D-449).
 """
 
 import asyncio
 import logging
+from collections.abc import Awaitable, Callable
 from typing import Literal
 
 import flet as ft
@@ -65,6 +68,41 @@ def anchored(key: str, content: ft.Control) -> ft.Control:
         spacing=0,
         # The content keeps the list's full width, as it had without the anchor.
         horizontal_alignment=ft.CrossAxisAlignment.STRETCH,
+    )
+
+
+def pullable(
+    content: ft.Control,
+    on_refresh: Callable[[], Awaitable[None]],
+    *,
+    nested: bool = False,
+) -> ft.RefreshIndicator:
+    """Return ``content``, a list, under pull-to-refresh (U1, D-449).
+
+    A pull far enough down from the list's top calls ``on_refresh``, and Flutter's
+    spinner turns until it returns: give it the refresh the status strip's Refresh
+    runs, ``Conference.refresh()``, which a refresh already running joins (single
+    flight, D-145), so a pull during one sends no second request and its spinner
+    lasts as long as that one. The strip keeps its button, the accessible way to
+    refresh: a pull is a gesture a screen reader never makes (ux.md §9).
+
+    The list keeps its ref, keys and scroll handler, so a keyed jump, the re-tap
+    scroll and a put-back reach it as before; a list too short to scroll can still
+    be pulled (Flet's own physics, at the pin).
+
+    Args:
+        content: The list: a ``ListView``, which the indicator takes the place of
+            in its column (``expand``); or, with ``nested``, what holds the lists.
+        on_refresh: The refresh, an ``async`` handler wrapped in ``report_errors``.
+        nested: The lists are deeper in ``content``: the Schedule's day pages. Flutter
+            starts a pull only from a vertical drag at a list's top, so a swipe between
+            the pages never pulls (D-449).
+    """
+    return ft.RefreshIndicator(
+        content=content,
+        on_refresh=on_refresh,
+        expand=True,
+        handle_nested_scrolls=nested,
     )
 
 

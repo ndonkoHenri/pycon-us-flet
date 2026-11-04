@@ -12,16 +12,18 @@ with "More" when it is long, which shows the whole text with its links (EVT-05);
 "Project page", which opens the project's site in the in-app browser. The card is
 ``screens/sprint_card.py``'s.
 
-A filter field pinned above the list narrows it as the user types, as the Speakers
-list's does (D-189): every word must be in the project's name, submitter or
-description text, accents and case ignored, never in markup (EVT-06, D-46). The menu
+The status strip heads the page in every state (D-32): it says when the projects
+are not fresh or a refresh failed offline, and offers Refresh. A filter field pinned
+under it, above the list, narrows it as the user types, as the Speakers list's does
+(D-189; at large text the two scroll with the list, as on Job listings, #649): every word must be in the project's name, submitter or description text, accents and case ignored, never in markup (EVT-06, D-46). The menu
 opens the year's sprint page and its project form on us.pycon.org (EVT-08).
 
 Long lists stay cheap as the Speakers list does (D-153): the projects are ordered once
 per feed version, and each card is a memoised component keyed by project id, so a
 keystroke re-renders no card that stays. A refresh is the ``Conference`` store's, which
-never wipes the cache (EVT-07, D-145); without data the page loads and fails as the
-Speakers list does (ux.md §4.1).
+never wipes the cache (EVT-07, D-145): the strip's Refresh, a pull on the list
+(``pullable()``, D-449), or Try again without data, when the page loads and fails as
+the Speakers list does (ux.md §4.1).
 """
 
 from urllib.parse import urlsplit
@@ -31,6 +33,7 @@ import flet as ft
 from pycon_us.config import ConferenceInfo
 from pycon_us.core.sprints import filter_projects, projects
 from pycon_us.core.timefmt import day_heading, day_range_label
+from pycon_us.prefs import use_prefs
 from pycon_us.screens.sprint_card import SCREEN, ProjectCard
 from pycon_us.services import Services, use_services
 from pycon_us.services.errors import report_errors
@@ -40,7 +43,9 @@ from pycon_us.ui.fields import SearchField, found_count, use_field_query
 from pycon_us.ui.links import open_link
 from pycon_us.ui.menus import menu_item, overflow_menu, view_source_items
 from pycon_us.ui.scaffold import AppScaffold, SectionHeader
+from pycon_us.ui.scrolling import pullable
 from pycon_us.ui.states import EmptyState, NoDataState
+from pycon_us.ui.status_strip import StatusStrip, use_refresh
 from pycon_us.ui.widths import LIST, capped, sides, use_margin
 
 FILTER_HINT = "Filter projects"
@@ -63,8 +68,10 @@ INTRO = (
 def Sprints() -> ft.View:
     """The Sprints page: when they are, then a filter field over the project cards."""
     svc = use_services()
+    prefs = use_prefs()
     margin = use_margin(LIST)  # its width class (D-305)
     conference = use_conference()
+    refresh = use_refresh()
     info = svc.year.conference
     field = use_field_query()
     tokens = use_tokens()
@@ -77,7 +84,9 @@ def Sprints() -> ft.View:
     async def submit(e: ft.Event[ft.Button]) -> None:
         await open_link(svc, info.sprint_submit_url, opener=e.control)
 
-    pinned: list[ft.Control] = []
+    # The strip in every state: its Refresh is the pull's for anyone who cannot pull,
+    # and its line says a refresh failed offline (D-32, D-449).
+    pinned: list[ft.Control] = [StatusStrip()]
     items: list[ft.Control]
     if data is None:
         items = [
@@ -104,7 +113,7 @@ def Sprints() -> ft.View:
         ]
     else:
         found = filter_projects(listed, query)
-        pinned = [
+        pinned.append(
             SearchField(
                 value=field.value,
                 on_change=field.changed,
@@ -117,7 +126,7 @@ def Sprints() -> ft.View:
                 identifier=f"{SCREEN}.filter",
                 high_contrast=tokens.high_contrast,
             )
-        ]
+        )
         if found and found is not listed:  # a filter applies and finds some
             pinned.append(
                 found_count(
@@ -143,23 +152,26 @@ def Sprints() -> ft.View:
                     identifier=f"{SCREEN}.no_match",
                 )
             )
+    # The strip, the field and its count in a column of their own, so the list keeps its
+    # place in the body as they come and go (D-189, D-153).
+    head = ft.Column(
+        pinned, spacing=0, horizontal_alignment=ft.CrossAxisAlignment.STRETCH
+    )
+    if prefs.time_above:
+        items.insert(0, head)  # at large text it scrolls away with the list, as on Jobs
+        head = ft.Column([])  # an empty column keeps the list's place in the body
     return AppScaffold(
         title="Sprints",
         source=None,  # in its menu
         actions=_menu(info, svc),
         body=ft.Column(
             [
-                # The field and its count in a column of their own, so the list keeps
-                # its place in the body as they come and go (D-189, D-153).
-                capped(
-                    ft.Column(
-                        pinned,
-                        spacing=0,
-                        horizontal_alignment=ft.CrossAxisAlignment.STRETCH,
-                    ),
-                    margin,
+                capped(head, margin),
+                # A pull runs the same refresh as Try again (EVT-07, D-449).
+                pullable(
+                    ft.ListView(items, expand=True, padding=sides(margin, bottom=24)),
+                    refresh,
                 ),
-                ft.ListView(items, expand=True, padding=sides(margin, bottom=24)),
             ],
             spacing=0,
             expand=True,

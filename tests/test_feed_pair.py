@@ -10,6 +10,8 @@ guards the app's feed refresh, not a test's own server.
 
 import urllib.request
 from collections.abc import Iterator
+from concurrent.futures import ThreadPoolExecutor
+from concurrent.futures import TimeoutError as FutureTimeout
 from dataclasses import dataclass
 from pathlib import Path
 from urllib.error import HTTPError
@@ -94,6 +96,27 @@ def test_its_control_paths_swap_and_reset_and_say_the_side(feed: PairFeed) -> No
     reset = local(feed, "/reset", post=True)
     assert (reset.status, reset.text, feed.swapped) == (200, "old", False)
     assert feed.requests == 1  # control requests are not feed requests
+
+
+def test_a_hold_keeps_feed_requests_open_until_released(feed: PairFeed) -> None:
+    """``POST /hold`` leaves a feed request unanswered; ``POST /release`` answers it."""
+    assert local(feed, "/hold", post=True).status == 200
+    with ThreadPoolExecutor(max_workers=1) as pool:
+        held = pool.submit(local, feed, feed.feed_path)
+        with pytest.raises(FutureTimeout):
+            held.result(timeout=0.3)
+        assert feed.requests == 0
+
+        assert local(feed, "/release", post=True).status == 200
+        assert held.result(timeout=5).content == OLD
+    assert feed.requests == 1
+
+
+def test_a_reset_releases_a_hold(feed: PairFeed) -> None:
+    """A flow that ends on a reset leaves nothing held for the next run."""
+    feed.hold()
+    feed.reset()
+    assert local(feed, feed.feed_path).content == OLD
 
 
 def test_it_serves_the_active_years_feed_path_with_any_query(feed: PairFeed) -> None:

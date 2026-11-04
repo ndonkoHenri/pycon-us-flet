@@ -1,0 +1,27 @@
+# A refresh has ended and left no spinner (D-449).
+#
+# A spinner slows Maestro's own steps, so on a busy host a step can outlast the app's
+# 10 s feed timeout: then the refresh ended on the strip's Offline line. Its Refresh
+# clears that, and no "Refresh" left at all says the spinner has gone too.
+appId: io.github.ndonkohenri.confcompanion
+---
+- extendedWaitUntil:
+    notVisible:
+      id: app.status
+      text: ".*Updating the schedule.*"
+    timeout: 15000
+- runFlow:
+    when:
+      visible:
+        id: app.status
+        text: ".*Offline.*"
+    commands:
+      - tapOn:
+          text: Refresh
+          enabled: true
+- extendedWaitUntil:
+    notVisible:
+      text: Refresh
+    timeout: 15000
+- assertNotVisible:
+    id: app.status

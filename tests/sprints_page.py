@@ -19,6 +19,7 @@ import pytest
 from pycon_us.config import YearData, load_year
 from pycon_us.core.models import Sprint
 from pycon_us.core.sprints import projects
+from pycon_us.prefs import Prefs
 from pycon_us.screens import sprint_card
 from pycon_us.screens import sprints as screen
 from pycon_us.screens import tracks as hub_screen
@@ -73,8 +74,8 @@ class Shown(harness.Shown):
 async def show(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> AsyncIterator[Any]:
     """Return a function that renders a screen, Sprints by default, over the feed.
 
-    It takes the screen, then a ``conference`` (the recorded 2026 one by default) and a
-    ``year`` (2026's).
+    It takes the screen, then a ``conference`` (the recorded 2026 one by default), a
+    ``year`` (2026's) and the ``prefs``.
     """
     counted = sprint_card.cut_short
 
@@ -91,6 +92,7 @@ async def show(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> AsyncIterator
             component: Any = screen.Sprints,
             conference: Conference | None = None,
             year: YearData = YEAR,
+            prefs: Prefs | None = None,
         ) -> Shown:
             return await stack.enter_async_context(
                 harness.showing(
@@ -98,6 +100,7 @@ async def show(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> AsyncIterator
                     screen,
                     hub_screen,
                     year=year,
+                    prefs=prefs,
                     conference=Conference(data=DATA, source="bundled", version=1)
                     if conference is None
                     else conference,

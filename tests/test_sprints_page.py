@@ -8,6 +8,7 @@ sees which card bodies ran (D-153). The harness and lookups are
 wrap at 200 % and read to TalkBack and VoiceOver is checked on devices (the PR).
 """
 
+import asyncio
 from dataclasses import replace
 from datetime import date
 from pathlib import Path
@@ -15,17 +16,21 @@ from typing import Any, cast
 
 import flet as ft
 import httpx
+import pytest
 
+from pycon_us.prefs import Prefs
 from pycon_us.screens import sprints as screen
+from pycon_us.services import api
 from pycon_us.services.storage import Storage
 from pycon_us.state import Conference
-from tests import sprints_page
+from tests import sprints_page, strip
 from tests.fakes import MemoryLauncher, MemoryPrefs
 from tests.feeds import recorded
 from tests.sessions import menu_text
 from tests.sprints_page import (
     ALL,
     CARD,
+    DATA,
     INFO,
     YEAR,
     card_of,
@@ -40,6 +45,7 @@ FORM_URL = "https://example.org/2026/sprints/project/submit/"
 """A project form for 2026, whose own went with the live site (#824)."""
 
 show, focused = sprints_page.show, sprints_page.focused
+network, finished = strip.network, strip.finished
 
 
 async def test_every_project_has_a_card_in_the_pages_order(show: Any) -> None:
@@ -316,3 +322,60 @@ async def test_a_failed_refresh_keeps_the_projects_and_the_cache(
     assert conference.problem == "offline"
     assert len(shown.listed) == 24
     assert storage.feed_path.read_bytes() == recorded(2026)
+
+
+async def test_a_pull_on_the_list_refreshes_once_and_offline_keeps_the_projects(
+    show: Any, network: strip.Network, finished: list[ft.RefreshIndicator]
+) -> None:
+    """EVT-07, D-449: the list pulls to refresh; a second pull joins the first.
+
+    Offline, both spinners end, the projects stay, and only the status strip says
+    so, with its "Offline" line and an enabled Refresh that runs the same refresh
+    (the accessible way to the pull, D-32): no "Something went wrong".
+    """
+    shown = await show()
+    (indicator,) = shown.find(ft.RefreshIndicator)
+    assert isinstance(indicator.content, ft.ListView)
+    assert indicator.expand  # the list's place in the body
+    first = strip.pull(shown, indicator)
+    await network.arrived.wait()
+    second = strip.pull(shown, indicator)  # while the first runs
+    await shown.settle()
+    assert finished == []  # the spinner turns while the refresh runs
+    network.error = api.NetworkError("ConnectError: offline")
+    network.released.set()
+    await asyncio.gather(first, second)
+
+    assert network.requests == 1
+    # Each pull's spinner ends, through the indicator the refresh's renders left (F299).
+    (mounted,) = shown.find(ft.RefreshIndicator)
+    assert finished == [mounted, mounted]
+    assert shown.conference.problem == "offline"
+    assert len(shown.listed) == 24
+    assert shown.snack_bars == []
+    assert any(text.startswith("Offline") for text in shown.texts())  # the strip's
+    (button,) = [b for b in shown.find(ft.TextButton) if b.content == "Refresh"]
+    assert not button.disabled
+    await shown.click(button)
+    assert network.requests == 2  # the pull's refresh, from the strip
+
+
+@pytest.mark.parametrize("large_text", [False, True])
+async def test_at_large_text_the_strip_and_the_field_scroll_with_the_list(
+    show: Any, large_text: bool
+) -> None:
+    """Pinned over the list; at large text they head it (#649, D-449).
+
+    Pinned, the two would take a third of the screen at the largest sizes.
+    """
+    offline = Conference(data=DATA, source="bundled", version=1, problem="offline")
+    shown = await show(
+        conference=offline, prefs=Prefs(loaded=True, time_above=large_text)
+    )
+    (text_field,) = shown.find(ft.TextField)
+    (strip_line,) = shown.nodes("app.status")  # the strip shows offline
+    for control in (text_field, strip_line):
+        node = control.parent
+        while node is not None and not isinstance(node, ft.ListView):
+            node = node.parent
+        assert (node is not None) is large_text

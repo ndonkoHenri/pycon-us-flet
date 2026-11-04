@@ -21,9 +21,10 @@ from pycon_us.prefs import Prefs
 from pycon_us.screens import schedule as screen
 from pycon_us.screens import schedule_head
 from pycon_us.screens.schedule_slots import slot_keys
+from pycon_us.services import api
 from pycon_us.state import Conference
 from pycon_us.ui import scrolling, status_strip
-from tests import schedule_view
+from tests import schedule_view, strip
 from tests.feeds import processed
 from tests.schedule_view import (
     BEFORE,
@@ -44,6 +45,7 @@ now = schedule_view.now
 memory = schedule_view.memory
 conference = schedule_view.conference
 shown = schedule_view.shown
+network, finished = strip.network, strip.finished
 
 
 # ------------------------------------------------------------------ the day lists
@@ -240,6 +242,34 @@ async def test_outside_the_conference_no_list_is_built_in_full(
     now[0] = BEFORE
     schedule = await shown()
     assert {schedule.list_of(day).cache_extent for day in DAYS} == {None}
+
+
+async def test_one_indicator_around_the_day_pages_runs_the_strip_s_refresh(
+    shown: Callable[[], Awaitable[Shown]],
+    network: strip.Network,
+    finished: list[ft.RefreshIndicator],
+) -> None:
+    """SCHED-13, D-449: a pull on any day's list is the strip's Refresh.
+
+    One indicator around the ``TabBarView`` that takes the lists' nested scrolls, so it
+    stays mounted when the pulled day leaves. Flet ends its spinner once; offline, no
+    slot re-renders.
+    """
+    schedule = await shown()
+    (indicator,) = schedule.find(ft.RefreshIndicator)
+    assert isinstance(indicator.content, ft.TabBarView)
+    assert indicator.handle_nested_scrolls
+    schedule.slots.clear()
+    pulled = strip.pull(schedule, indicator)
+    await network.arrived.wait()
+    network.error = api.NetworkError("ConnectError: offline")
+    network.released.set()
+    await pulled
+
+    assert network.requests == 1
+    assert finished == schedule.find(ft.RefreshIndicator)
+    assert schedule.conference.problem == "offline"
+    assert schedule.slots == []
 
 
 @pytest.mark.parametrize("time_above", [False, True])

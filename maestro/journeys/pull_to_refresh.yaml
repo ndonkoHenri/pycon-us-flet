@@ -1,0 +1,279 @@
+# Pull to refresh on the Schedule, Sprints and Job listings (D-449, #806): the spinner
+# shows for as long as the refresh runs and ends after it, also when a render replaces
+# the indicator during or after the refresh (F299), when the pulled day or page leaves
+# during it, and a swipe between days never pulls.
+#
+# Needs the feed-pair server running on the laptop, which holds a refresh open for as
+# long as the flow asks, up to the app's own 10 s feed timeout:
+#
+#   uv run python -m tools.feed_pair --move 2 "Room 103ABC"
+#
+# env (each has a default, for the server's default port, 8460): FEED_URL and CONTROL_URL,
+# as journeys/change_log.yaml says.
+#
+# Not airplane mode: it would cut the emulator's way to the laptop too. The offline
+# ending is the held feed's silence past the app's timeout, which the app reads as no
+# answer, as without a network.
+appId: io.github.ndonkohenri.confcompanion
+name: Pull to refresh shows the spinner while it runs and ends it after
+tags:
+  - feed_pair
+env:
+  FEED_URL: "${FEED_URL || (maestro.platform == 'android' ? 'http://10.0.2.2:8460/conference-2026.json' : 'http://127.0.0.1:8460/conference-2026.json')}"
+  CONTROL_URL: ${CONTROL_URL || 'http://127.0.0.1:8460'}
+onFlowComplete:
+  - runScript:
+      file: ../scripts/feed_pair.js
+      env:
+        SIDE: reset
+---
+- runScript:
+    file: ../scripts/feed_pair.js
+    env:
+      SIDE: reset
+- runFlow: ../subflows/launch_fresh.yaml
+- runFlow:
+    file: ../subflows/set_scene.yaml
+    env:
+      NOW: "2026-05-15 14:10"
+      FEED_URL: ${FEED_URL}
+      OUTCOME: "Schedule updated from the feed\\."
+
+# Wednesday: its memoised list (D-153) opens at its top, unlike today's.
+- tapOn:
+    id: app.nav.schedule
+- extendedWaitUntil:
+    visible:
+      id: schedule.day_tab.0
+    timeout: 15000
+- tapOn:
+    id: schedule.day_tab.0
+- extendedWaitUntil:
+    visible:
+      id: schedule.favorite.2
+    timeout: 15000
+
+# Swipes between days, one straight and one drifting about 10 degrees down, as a thumb
+# does, with the feed held: had one pulled, the strip would say "Updating the schedule…".
+- runScript:
+    file: ../scripts/feed_pair.js
+    env:
+      SIDE: hold
+- swipe:
+    start: "85%, 50%"
+    end: "15%, 50%"
+    duration: 300
+- extendedWaitUntil:
+    notVisible:
+      id: schedule.favorite.2
+    timeout: 15000
+- assertNotVisible:
+    id: app.status
+- swipe:
+    start: "15%, 45%"
+    end: "85%, 50%"
+    duration: 300
+- extendedWaitUntil:
+    visible:
+      id: schedule.favorite.2
+    timeout: 15000
+- assertNotVisible:
+    id: app.status
+- assertNotVisible:
+    text: Refresh
+- runScript:
+    file: ../scripts/feed_pair.js
+    env:
+      SIDE: release
+
+# The plain pull, on a list that keeps its indicator.
+- runFlow: ../subflows/hold_pull_end.yaml
+- takeScreenshot: pull-01-schedule-ended
+
+# The pulled day leaves during the refresh, by its tab: the spinner stays
+# with the one indicator around the day pages, and ends (U285, #1020: with one on each
+# page, its finish timed out into the full-screen error 10 s later, which later steps
+# here and the last wait would meet).
+- runScript:
+    file: ../scripts/feed_pair.js
+    env:
+      SIDE: hold
+- runFlow: ../subflows/pull.yaml
+- extendedWaitUntil:
+    visible:
+      text: Refresh
+      enabled: true
+    timeout: 5000
+- tapOn:
+    id: schedule.day_tab.1
+- runScript:
+    file: ../scripts/feed_pair.js
+    env:
+      SIDE: release
+- runFlow: ../subflows/refresh_ended.yaml
+- tapOn:
+    id: schedule.day_tab.0
+- extendedWaitUntil:
+    visible:
+      id: schedule.favorite.2
+    timeout: 15000
+
+# A render during the refresh: "Show all" re-renders every day's list (F299). It heads the
+# list at any text size, where a star can sit under the "Today" button once the strip
+# shows at the largest sizes.
+- runScript:
+    file: ../scripts/feed_pair.js
+    env:
+      SIDE: hold
+- runFlow: ../subflows/pull.yaml
+- extendedWaitUntil:
+    visible:
+      text: Refresh
+      enabled: true
+    timeout: 5000
+- takeScreenshot: pull-02-schedule-spinner
+- tapOn:
+    id: schedule.show_all
+- extendedWaitUntil:
+    notVisible:
+      id: schedule.show_all
+    timeout: 8000
+- runScript:
+    file: ../scripts/feed_pair.js
+    env:
+      SIDE: release
+- runFlow: ../subflows/refresh_ended.yaml
+
+# Sprints: its screen re-renders as a refresh starts, so the indicator is replaced.
+- runFlow:
+    file: ../subflows/tab.yaml
+    env:
+      TAB: more
+      NAME: "More.*Tab 5 of 5"
+- scrollUntilVisible:
+    element:
+      id: more.sprints
+    direction: DOWN
+- tapOn:
+    id: more.sprints
+- extendedWaitUntil:
+    visible:
+      id: sprints.filter
+    timeout: 15000
+- runFlow: ../subflows/hold_pull_end.yaml
+- takeScreenshot: pull-03-sprints-ended
+
+# Offline, with the projects kept: the pull ends with the strip's line and its Refresh,
+# which still works. The feed stays held past the app's timeout.
+- runScript:
+    file: ../scripts/feed_pair.js
+    env:
+      SIDE: hold
+- runFlow: ../subflows/pull.yaml
+- extendedWaitUntil:
+    visible:
+      id: app.status
+      text: ".*Offline.*"
+    timeout: 20000
+- takeScreenshot: pull-04-sprints-offline
+- runScript:
+    file: ../scripts/feed_pair.js
+    env:
+      SIDE: release
+- assertVisible:
+    id: sprints.filter
+- tapOn:
+    text: Refresh
+    enabled: true
+- extendedWaitUntil:
+    notVisible:
+      text: Refresh
+    timeout: 15000
+- assertNotVisible:
+    id: app.status
+- runFlow: ../subflows/back.yaml
+- extendedWaitUntil:
+    visible:
+      id: more.title
+    timeout: 15000
+
+# Job listings: its screen re-renders as a refresh starts too.
+- scrollUntilVisible:
+    element:
+      id: more.jobs
+    direction: DOWN
+# A tap right after Back can land before More takes it, so the tap and the wait go together.
+- retry:
+    maxRetries: 2
+    commands:
+      - tapOn:
+          id: more.jobs
+      - extendedWaitUntil:
+          visible:
+            id: jobs.filter
+          timeout: 15000
+- runFlow: ../subflows/hold_pull_end.yaml
+- takeScreenshot: pull-05-jobs-ended
+
+# The page leaves during the refresh: Back, which unmounts the list and its indicator.
+- runScript:
+    file: ../scripts/feed_pair.js
+    env:
+      SIDE: hold
+- runFlow: ../subflows/pull.yaml
+- extendedWaitUntil:
+    visible:
+      text: Refresh
+      enabled: true
+    timeout: 5000
+- runFlow: ../subflows/back.yaml
+- extendedWaitUntil:
+    visible:
+      id: more.title
+    timeout: 15000
+- runScript:
+    file: ../scripts/feed_pair.js
+    env:
+      SIDE: release
+
+# Long enough for a finish that failed to reach the screen, as above.
+- extendedWaitUntil:
+    visible:
+      text: Error running app
+    timeout: 12000
+    optional: true
+- assertNotVisible:
+    text: Error running app
+- assertVisible:
+    id: more.title
+
+# Back on Wednesday's list, last, as it changes the feed for the rest of the session.
+- tapOn:
+    id: app.nav.schedule
+- extendedWaitUntil:
+    visible:
+      id: schedule.day_tab.0
+    timeout: 15000
+- tapOn:
+    id: schedule.day_tab.0
+- waitForAnimationToEnd
+
+# A render after the refresh: a changed feed re-renders the Schedule and every day list,
+# whose views are new (D-153), and the spinner still ends. The list shows the session's move.
+- runScript:
+    file: ../scripts/feed_pair.js
+    env:
+      SIDE: swap
+- runFlow: ../subflows/hold_pull_end.yaml
+- scrollUntilVisible:
+    element:
+      id: schedule.session.2
+      text: ".*Room 103ABC.*"
+    direction: DOWN
+    speed: 20
+    timeout: 60000
+    visibilityPercentage: 30  # taller than the screen at the largest text
+- runScript:
+    file: ../scripts/feed_pair.js
+    env:
+      SIDE: reset

@@ -1,0 +1,31 @@
+# With the feed held, a pull shows the spinner and "Updating the schedule…"; released,
+# both go (D-449). The list must be at its top, and the strip hidden before the pull.
+#
+# The spinner's node is the one enabled "Refresh": the strip's button of that name is
+# disabled while a refresh the user asked for runs (D-181).
+appId: io.github.ndonkohenri.confcompanion
+---
+- runScript:
+    file: ../scripts/feed_pair.js
+    env:
+      SIDE: hold
+- runFlow: pull.yaml
+- extendedWaitUntil:
+    visible:
+      text: Refresh
+      enabled: true
+    timeout: 5000
+- assertVisible:
+    id: app.status
+    text: ".*Updating the schedule.*"
+- runScript:
+    file: ../scripts/feed_pair.js
+    env:
+      SIDE: release
+# The strip goes with the refresh, its button too: no "Refresh" is left at all.
+- extendedWaitUntil:
+    notVisible:
+      text: Refresh
+    timeout: 15000
+- assertNotVisible:
+    id: app.status
