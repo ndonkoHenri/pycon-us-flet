@@ -47,7 +47,7 @@ then shows its Scan badges card from the start.
 | The fake clock on a conference day | Tried at Friday 14:10 by the journeys. **The 10:48 moment and these stars have only been computed:** `core/agenda.py` and `now_header.py` over the bundled snapshot, in Python, on 2026-11-02. |
 | Overlaps; a star with Undo | Tried: `maestro/journeys/my_schedule_overlap.yaml`, `star_undo.yaml`. |
 | The offline strip's words | Computed in Python with a refused connection, on 2026-11-02. Not seen on a device with the Wi-Fi off. |
-| Hot reload in the companion client | Tried with the network on, on an emulator and a simulator (S5, `development.md` §5.2). **Not tried** with the Wi-Fi off, or on a second simulator beside the packaged build. |
+| Hot reload in the companion client | Tried at `1.1.0.dev4` with the network on, on an iPhone 17 simulator, pressing `R` before each save because of U287 (#1038, #1044; `development.md` §5.2). **Not tried** at this version on an emulator, with the Wi-Fi off, or on a second simulator beside the packaged build. |
 | The mock over loopback from a packaged build | Tried with the network on (#668, on both platforms). **Not tried** with the Wi-Fi off; `10.0.2.2` is the one most worth checking. |
 | Door check, its words and its queue | The UI was tried at `08b89cce5` (#784), and #827 is the rerun at the current pin. The words below came from the real client and the real server over loopback, in a Python script with no UI, on 2026-11-02. |
 | A phone on a laptop hotspot | **Never tried** (D-457). |
@@ -210,19 +210,26 @@ on the device; here Python is on the laptop.
 **Interim:** a companion client built from the pin, on a simulator (`development.md` §5.2), until a 1.1 companion is in
 the stores (D-81).
 
+Until Flet fixes U287 (#1044), a save can leave B on the boot spinner, so press `R` in T3 before each save
+(`development.md` §5.2).
+
 1. Put B beside the editor, on Now.
-2. In `now_card.py`, change `HEADING = "Your next session"` to `HEADING = "Next for you"`, and save.
-3. Undo and save, so the audience sees it go back.
+2. Press `R` in T3 and wait for Now to come back.
+3. In `now_card.py`, change `HEADING = "Your next session"` to `HEADING = "Next for you"`, and save.
+4. Press `R` in T3 again and wait for Now, then undo and save, so the audience sees it go back.
 
-**On screen:** T2 restarts Python, B reconnects, and the card's heading reads "Next for you". A reload resets what is
-in memory, not the stars or the fake clock (`development.md` §5.2). The countdown goes back to 12 min, since the clock
-starts again.
+**On screen:** T2 restarts Python, B reconnects, and within seconds (4 in the one timed run) the card's heading reads "Next for you",
+still on Now. A reload resets what is in memory, not the stars or the fake clock (`development.md` §5.2). The countdown
+goes back to 12 min, since the clock starts again.
 
-**Fallback:** no change after 20 seconds: go to the recording and tell the room what it would have done. A stuck port
-is `lsof -nP -iTCP:8550 -sTCP:LISTEN`, for after the talk. Either way, leave the file as it was:
+**Fallback:** B on the purple spinner after a save: press `R` in T3, and the edit shows. No change 20 seconds after
+that: go to the recording and tell the room what it would have done. A stuck port is
+`lsof -nP -iTCP:8550 -sTCP:LISTEN`, for after the talk. Either way, leave the file as it was:
 `git restore src/pycon_us/screens/now_card.py`.
 
-**Not tried:** the reload with the Wi-Fi off, how long it takes, and whether B comes back on Now.
+**Tried** (#1038, on 2026-11-04): these steps on an iPhone 17 on iOS 26.5, at 10:48 with one star, session 4, waiting 8
+seconds after each `R`. **Not tried:** the reload with the Wi-Fi off, a shorter wait after `R`, and simulator B's iPhone
+17 Pro beside the packaged build.
 
 ### 5. A staff scan against the mock (1:45, simulator A)
 
