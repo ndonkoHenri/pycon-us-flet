@@ -15,8 +15,8 @@ SnackBars and Banners stay (`KEPT`): they are messages, not routes (Flutter's
 `ScaffoldMessenger` shows them over every page). The one exception is a SnackBar kept
 for a screen reader, which goes as the route changes, without waiting, since TalkBack
 would speak it again on every later screen (`close_kept_snack_bars()`, D-496). What
-Python cannot close stays as Flutter leaves it, until U89: a popup menu, which Flet gives Python no handle on, and a date or time picker
-(`UNCLOSABLE`), which Flet only opens; Back closes either (D-208), and a picker goes
+Python cannot close stays as Flutter leaves it, until U89: a popup menu, which Flet
+gives Python no handle on, and a date or time picker (`UNCLOSABLE`), which Flet only opens; Back closes either (D-208), and a picker goes
 with its View.
 
 The rule holds for every route change, not only for links: the Router replaces
