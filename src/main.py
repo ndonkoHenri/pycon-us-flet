@@ -5,6 +5,8 @@ per session; on Android a new session can start in the same Python process (F26,
 so what must outlive a session lives at module level here.
 """
 
+import sys
+
 import flet as ft
 
 from pycon_us import APP_NAME
@@ -44,6 +46,11 @@ def main(page: ft.Page) -> None:
     lands.
     """
     page.title = APP_NAME
+    if (
+        sys.platform == "linux"
+    ):  # S9 only (#363): a phone-sized window; this branch never merges
+        page.window.width = 412
+        page.window.height = 915
 
     @report_errors
     def on_view_pop(e: ft.ViewPopEvent) -> None:

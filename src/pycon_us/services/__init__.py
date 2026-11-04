@@ -7,6 +7,7 @@ phases add the scanner.
 
 import asyncio
 import contextlib
+import sys
 from collections.abc import Callable
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING
@@ -60,8 +61,8 @@ def _permissions() -> PermissionHandler | None:
     The extension is imported only then, so the companion app is never sent a control
     its client may lack (D-63, F14).
     """
-    if not capabilities.PERMISSIONS:
-        return None
+    if not capabilities.PERMISSIONS or sys.platform == "linux":
+        return None  # Linux for S9 only (#363): the extension raises there; this branch never merges
     from flet_permission_handler import PermissionHandler
 
     return PermissionHandler()
