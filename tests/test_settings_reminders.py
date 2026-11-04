@@ -521,13 +521,28 @@ async def test_back_from_system_settings_the_button_gets_the_focus(
     else:
         os.exact = os.grant_exact = False  # left without allowing them
         status = PermissionStatus.GRANTED
-    shown = await open_section(ON, android=True, permissions=MemoryPermissions(status))
+    permissions = MemoryPermissions(status)
+    gate = asyncio.Event()
+    # Both cards open another app's window: the OS's settings page, or Alarms & reminders.
+    if card == "blocked":
+        permissions.settings_gate = gate
+    else:
+        os.settings_gate = gate
+    shown = await open_section(ON, android=True, permissions=permissions)
     click = asyncio.create_task(
         shown.click(button(shown, f"settings.reminders.{card}"))
     )
-    await asyncio.sleep(0.05)  # the system settings are up
-    shown.services.presence.leave()
-    await asyncio.sleep(0.05)
+    await shown.settle()
+    opened = (
+        permissions.settings_opened
+        if card == "blocked"
+        else os.calls.count("request_exact_alarm_permission")
+    )
+    assert opened == 1  # the settings page is up
+    shown.services.presence.leave()  # Android: the app goes under the settings page
+    gate.set()  # the user leaves the page
+    await shown.settle()
+    assert focused == []  # nothing is focused while the app is under the page
     shown.services.presence.come_back()
     await click
     await shown.settle()
