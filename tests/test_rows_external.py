@@ -12,7 +12,7 @@ import flet as ft
 import pytest
 
 from pycon_us.services import Services
-from pycon_us.ui.rows import LinkTile
+from pycon_us.ui.link_tile import LinkTile
 from tests import row_tiles
 from tests.fake_page import FakePage
 from tests.row_tiles import (

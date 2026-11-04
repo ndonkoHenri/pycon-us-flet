@@ -1,6 +1,6 @@
 """The link rule (INFO-14, ux.md §4.7): what a link's target is and how it opens.
 
-One place for it, used by `ui.rows.LinkTile` and by the feed's texts
+One place for it, used by `ui.link_tile.LinkTile` and by the feed's texts
 (`feed_markdown()`): `link_kind()` says what a target is, and `open_link()` opens it
 the way that kind opens.
 

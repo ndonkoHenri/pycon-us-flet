@@ -24,7 +24,7 @@ from pycon_us.screens import help as help_screen
 from pycon_us.screens.help import Help
 from pycon_us.services import Services
 from pycon_us.services.storage import Storage
-from pycon_us.ui import info_page, rows
+from pycon_us.ui import info_page, link_tile
 from pycon_us.year_info import SafetyContact
 from tests.fake_page import FakePage, bound, phone_margin
 from tests.fakes import (
@@ -67,9 +67,9 @@ def svc(tmp_path: Path) -> Services:
 def page(svc: Services, monkeypatch: pytest.MonkeyPatch) -> Iterator[FakePage]:
     """A `FakePage` (iOS) bound, with the contact rows' body inline over `svc`."""
     monkeypatch.setattr(
-        rows, "_ExternalLinkTile", inspect.unwrap(rows._ExternalLinkTile)
+        link_tile, "_ExternalLinkTile", inspect.unwrap(link_tile._ExternalLinkTile)
     )
-    monkeypatch.setattr(rows, "use_services", lambda: svc)
+    monkeypatch.setattr(link_tile, "use_services", lambda: svc)
     fake = FakePage()
     with bound(fake):
         yield fake

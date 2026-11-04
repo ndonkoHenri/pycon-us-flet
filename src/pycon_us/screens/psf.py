@@ -24,8 +24,8 @@ from pycon_us.services.errors import report_errors
 from pycon_us.ui.brands import brand_icon
 from pycon_us.ui.buttons import ICON_PADDING
 from pycon_us.ui.info_page import GUTTER, InfoBody
+from pycon_us.ui.link_tile import LinkTile
 from pycon_us.ui.links import OPENS_IN, LinkKind, external, open_link
-from pycon_us.ui.rows import LinkTile
 from pycon_us.ui.scaffold import AppScaffold, SectionHeader
 from pycon_us.ui.semantics import semantics_key
 from pycon_us.ui.states import EmptyState

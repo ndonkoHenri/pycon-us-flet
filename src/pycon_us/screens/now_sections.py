@@ -29,7 +29,7 @@ from pycon_us.screens.now_header import (
 )
 from pycon_us.services.errors import report_errors
 from pycon_us.ui.buttons import LABEL_PADDING
-from pycon_us.ui.rows import LinkTile
+from pycon_us.ui.link_tile import LinkTile
 from pycon_us.ui.scaffold import SectionHeader
 from pycon_us.ui.semantics import named
 

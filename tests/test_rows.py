@@ -13,7 +13,8 @@ import pytest
 
 from pycon_us.core.models import Speaker
 from pycon_us.ui.brands import brand_icon
-from pycon_us.ui.rows import LinkTile, SpeakerTile, speaker_avatar
+from pycon_us.ui.link_tile import LinkTile
+from pycon_us.ui.rows import SpeakerTile, speaker_avatar
 from tests import row_tiles
 from tests.fake_page import FakePage
 from tests.row_tiles import HOTLINE, PROFILE, node_of, tap, tile_of

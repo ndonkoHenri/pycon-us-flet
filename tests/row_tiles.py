@@ -18,7 +18,7 @@ from pycon_us.config import load_year
 from pycon_us.memory import ViewMemory
 from pycon_us.services import Services
 from pycon_us.services.storage import Storage
-from pycon_us.ui import rows
+from pycon_us.ui import link_tile
 from tests.fake_page import FakePage, bound
 from tests.fakes import (
     MemoryClipboard,
@@ -61,9 +61,9 @@ def page(svc: Services, monkeypatch: pytest.MonkeyPatch) -> Iterator[FakePage]:
     The external row's component body runs inline: there is no renderer here.
     """
     monkeypatch.setattr(
-        rows, "_ExternalLinkTile", inspect.unwrap(rows._ExternalLinkTile)
+        link_tile, "_ExternalLinkTile", inspect.unwrap(link_tile._ExternalLinkTile)
     )
-    monkeypatch.setattr(rows, "use_services", lambda: svc)
+    monkeypatch.setattr(link_tile, "use_services", lambda: svc)
     fake = FakePage()
     with bound(fake):
         yield fake

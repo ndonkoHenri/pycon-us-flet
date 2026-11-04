@@ -17,7 +17,7 @@ from pycon_us.screens.about_app import HelpUsFixIt
 from pycon_us.services import Services
 from pycon_us.state import Conference
 from pycon_us.theme import LIGHT_TOKENS
-from pycon_us.ui import rows as rows_module
+from pycon_us.ui import link_tile
 from pycon_us.ui import share as share_module
 from pycon_us.ui.share import DIAGNOSTICS_SHARED, LOG_SHARED, WITH_LOG, WITHOUT_LOG
 from tests import about_page
@@ -58,9 +58,9 @@ def help_section(
     monkeypatch.setattr(about_app, "use_tokens", lambda: LIGHT_TOKENS)
     monkeypatch.setattr(about_app, "SOURCE_URL", None)
     monkeypatch.setattr(
-        rows_module, "_ExternalLinkTile", inspect.unwrap(rows_module._ExternalLinkTile)
+        link_tile, "_ExternalLinkTile", inspect.unwrap(link_tile._ExternalLinkTile)
     )
-    monkeypatch.setattr(rows_module, "use_services", lambda: svc)
+    monkeypatch.setattr(link_tile, "use_services", lambda: svc)
 
     def render() -> list[ft.Control]:
         states.index = 0

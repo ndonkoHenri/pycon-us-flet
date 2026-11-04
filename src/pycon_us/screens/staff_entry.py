@@ -24,7 +24,7 @@ from pycon_us.core.staff_tools import (
 from pycon_us.prefs import use_prefs
 from pycon_us.services import use_services
 from pycon_us.staff import Staff, use_staff
-from pycon_us.ui.rows import LinkTile
+from pycon_us.ui.link_tile import LinkTile
 from pycon_us.ui.scaffold import SectionHeader
 
 SECTION = "Staff tools"

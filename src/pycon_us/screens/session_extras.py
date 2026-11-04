@@ -35,9 +35,9 @@ from pycon_us.theme import Tokens
 from pycon_us.theme_hc import hc_border
 from pycon_us.ui.favorite import ToggleFavorite
 from pycon_us.ui.focus_back import focus_back
+from pycon_us.ui.link_tile import LinkTile
 from pycon_us.ui.links import open_link
 from pycon_us.ui.menus import menu_item, overflow_menu, view_source_items
-from pycon_us.ui.rows import LinkTile
 from pycon_us.ui.scaffold import SectionHeader
 from pycon_us.ui.semantics import named
 from pycon_us.ui.session_rows import SessionRow, use_session_views

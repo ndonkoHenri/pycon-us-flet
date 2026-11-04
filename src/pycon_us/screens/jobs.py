@@ -70,10 +70,10 @@ from pycon_us.state import use_conference
 from pycon_us.theme import use_tokens
 from pycon_us.ui.fields import SearchField, found_count, use_field_query
 from pycon_us.ui.fold import toggle_button
+from pycon_us.ui.link_tile import LinkTile
 from pycon_us.ui.links import feed_markdown
 from pycon_us.ui.location_card import job_fair_card
 from pycon_us.ui.logos import logo_tile
-from pycon_us.ui.rows import LinkTile
 from pycon_us.ui.scaffold import AppScaffold
 from pycon_us.ui.scrolling import pullable
 from pycon_us.ui.states import EmptyState, NoDataState
