@@ -491,7 +491,8 @@ async def test_sync_now_sends_every_row_and_the_dialog_follows_the_count(
     await settled(shown)
     assert title(shown) == SIGN_OUT_TITLE
     assert dialog_texts(shown) == [SIGN_OUT_BODY]
-    assert label(action(shown, "account.sign_out.confirm")) == "Sign out"
+    # Not the opener's words: TalkBack's focus went to a node with them (#1089).
+    assert label(action(shown, "account.sign_out.confirm")) == "Yes, sign out"
 
 
 async def test_unsynced_scans_and_my_schedule_are_both_named(

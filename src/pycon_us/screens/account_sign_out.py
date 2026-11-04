@@ -19,6 +19,10 @@ from pycon_us.ui.semantics import named
 
 SIGN_OUT_TITLE = "Sign out?"
 SIGN_OUT_BODY = "Your saved sessions stay on this device."
+
+SIGN_OUT_CONFIRM = "Yes, sign out"
+"""Not the opener's "Sign out": TalkBack gives its focus back to a node with the opener's
+label, so the dialog opened on the button that signs out, not on its question (#1089)."""
 UNSYNCED = "Your latest changes to My schedule haven't reached your account yet."
 """The dialog's extra line when the try before it could not send them (D-411)."""
 
@@ -87,7 +91,7 @@ def sign_out_dialog(
         on_sync_now: Sends the rows, keeping the dialog open.
     """
     lines = [SIGN_OUT_BODY] if synced else [SIGN_OUT_BODY, UNSYNCED]
-    title, confirm = SIGN_OUT_TITLE, "Sign out"
+    title, confirm = SIGN_OUT_TITLE, SIGN_OUT_CONFIRM
     extra: list[ft.Control] = []
     if unsynced:
         title, confirm = scans_line(unsynced), f"Sign out anyway ({unsynced} unsynced)"
