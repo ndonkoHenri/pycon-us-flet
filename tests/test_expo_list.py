@@ -456,3 +456,27 @@ async def test_the_map_tab_s_other_panes_keep_a_tinting_bar(render: Render) -> N
     await shown.settle()
     assert shown.memory.map_tab != "expo"
     assert shown.still_bars[-1] is False
+
+
+async def test_the_expo_tab_corrects_the_flag_when_it_comes_back(render: Render) -> None:
+    """Rooms, then a List picked elsewhere, then Expo: the bar follows the view shown.
+
+    The parent's flag outlives the pane (it is the last view the pane told), so the
+    pane that mounts again must correct it (#962).
+    """
+    shown = await render()
+    slugs = [pane.slug for pane in screen.panes_of(YEAR.map)]
+    (tabs,) = shown.find(ft.Tabs)
+
+    async def pick(slug: str) -> None:
+        index = slugs.index(slug)
+        shown.session.apply_patch(tabs._i, {"selected_index": index})
+        await shown.session.dispatch_event(tabs._i, "change", index)
+        await shown.settle()
+
+    await pick(screen.ROOMS)
+    assert shown.still_bars[-1] is False
+    shown.memory.expo_view = expo_pane.LIST_VIEW  # as the pushed hall's switch does
+    await pick(screen.EXPO)
+    assert shown.switch.selected == [expo_pane.LIST_VIEW]
+    assert shown.still_bars[-1] is False
