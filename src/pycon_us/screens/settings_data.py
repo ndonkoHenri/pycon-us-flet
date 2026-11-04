@@ -1,14 +1,14 @@
 """Settings' Data section: is my schedule current, and in which zone are its times.
 
-``DataSection`` is the last section of Settings before About this app (ux.md §6.9,
+`DataSection` is the last section of Settings before About this app (ux.md §6.9,
 P2-62): **Refresh now**, whose second line says where the schedule on screen came from
 and its age, the bundled snapshot named as such (D-292), and which asks for a refresh
 (D-181) and says in place how it ended (D-29, D-210), a failed one keeping the schedule
 (D-32); **Schedule changes**, which pushes the change log on Settings
-(``/more/settings/changes/<year>``, D-255) and says how many saved sessions changed
+(`/more/settings/changes/<year>`, D-255) and says how many saved sessions changed
 while Now's card would; and, only while the device's clock differs from the
 conference's, the zone row, "Times are Pacific Time (PDT)" and the device's own offset
-(D-35, D-240). Apart from ``settings.py`` so that the stores' changes and the minute's
+(D-35, D-240). Apart from `settings.py` so that the stores' changes and the minute's
 tick re-render this section and not the page (D-175).
 """
 
@@ -41,7 +41,7 @@ def DataSection(slot: int) -> ft.Control:
 
     A component of its own: the outcome is its state, and it re-renders with the
     feed's store, so a refresh that lands, asked for here or not, updates the line,
-    and each minute (``use_minute()``), so the age and the zone row keep up.
+    and each minute (`use_minute()`), so the age and the zone row keep up.
 
     Args:
         slot: The width the leading icons are centred in: Settings' radio width, so
@@ -121,7 +121,7 @@ def zone_row(note: str, offset: timedelta | None, *, slot: int) -> ft.Control:
     to change, the app's times are always the conference's.
 
     Args:
-        note: ``zone_note()``'s words, e.g. "Times are Pacific Time (PDT)".
+        note: `zone_note()`'s words, e.g. "Times are Pacific Time (PDT)".
         offset: The device's UTC offset now, said on the second line.
         slot: The width the icon is centred in.
     """

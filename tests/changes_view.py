@@ -1,12 +1,12 @@
 """Schedule changes' harness, for its two test modules (NEW-04, D-255, #435).
 
-``show`` renders ``screens/schedule_changes.py`` in a real Flet session
-(``tests/sessions.py``) under a ``ChangeLog`` seeded with the batches below, built by
+`show` renders `screens/schedule_changes.py` in a real Flet session
+(`tests/sessions.py`) under a `ChangeLog` seeded with the batches below, built by
 hand, with the clock held at 10:42 AM on Saturday, May 16 in Long Beach and the seen
-marks' 2 s wait held until the test releases it (``tests/timers.py``). The list can be
-left in the same session. ``test_schedule_changes.py`` pins the list,
-``test_schedule_changes_seen.py`` the seen marks; each takes ``show`` by assignment
-(``docs/testing-and-quality.md`` §3.1).
+marks' 2 s wait held until the test releases it (`tests/timers.py`). The list can be
+left in the same session. `test_schedule_changes.py` pins the list,
+`test_schedule_changes_seen.py` the seen marks; each takes `show` by assignment
+(`docs/testing-and-quality.md` §3.1).
 """
 
 import asyncio
@@ -51,7 +51,7 @@ SAVED = "142"
 def listing(
     title: str = "Python for Humans", hour: int = 10, location: str = "Room 104A"
 ) -> Listing:
-    """A session's listing on Saturday, May 16, from ``hour``:30 for 30 minutes."""
+    """A session's listing on Saturday, May 16, from `hour`:30 for 30 minutes."""
     start = datetime(2026, 5, 16, hour, 30, tzinfo=LA)
     return Listing(title, start, start + timedelta(minutes=30), location)
 
@@ -79,7 +79,7 @@ OLDER = Batch(
 
 @dataclass
 class Changes(Shown):
-    """The harness's ``Shown`` on Schedule changes, with its held wait and a way out."""
+    """The harness's `Shown` on Schedule changes, with its held wait and a way out."""
 
     sleeps: HeldSleeps = field(default_factory=HeldSleeps)
     """The seen marks' sleeps: the 2 s wait ends when the test releases it."""
@@ -94,13 +94,13 @@ class Changes(Shown):
     async def saved(self) -> list[bool]:
         """Each batch's seen mark in the log's file, once the log's writes have landed.
 
-        A write runs in a thread, which ``settle()`` does not wait for.
+        A write runs in a thread, which `settle()` does not wait for.
         """
         await asyncio.gather(*self.change_log._saves)  # pyright: ignore[reportPrivateUsage]
         return [batch.seen for batch in await read_batches(self.storage, LA)]
 
     def unseen(self) -> list[bool]:
-        """Each batch's seen mark in the log, ``True`` for unseen, in the log's order."""
+        """Each batch's seen mark in the log, `True` for unseen, in the log's order."""
         return [not batch.seen for batch in self.change_log.batches]
 
     def dots(self) -> dict[str, float]:
@@ -112,7 +112,7 @@ class Changes(Shown):
 
 
 def _dot(node: ft.Semantics) -> ft.Container:
-    """The unseen dot of an item's node: the second child of its leading ``Stack``."""
+    """The unseen dot of an item's node: the second child of its leading `Stack`."""
     tile = cast(ft.ListTile, node.content)
     stack = cast(ft.Stack, tile.leading)
     return cast(ft.Container, stack.controls[1])
@@ -125,8 +125,8 @@ type Show = Callable[..., Awaitable[Changes]]
 async def show(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> AsyncIterator[Show]:
     """Return a function that shows Schedule changes over the recorded 2026 feed.
 
-    It takes the log's ``batches``, the ``saved`` session ids, the drill id and the
-    ``Prefs`` (a screen reader, reduced motion). The seen marks' wait is held.
+    It takes the log's `batches`, the `saved` session ids, the drill id and the
+    `Prefs` (a screen reader, reduced motion). The seen marks' wait is held.
     """
     monkeypatch.setattr(screen, "now", lambda: NOW)
     sleeps = HeldSleeps()
@@ -197,7 +197,7 @@ def outline(page: Shown) -> list[str]:
 
 
 def _text(control: object) -> str:
-    """The first ``Text`` value under ``control``."""
+    """The first `Text` value under `control`."""
     while control is not None and not isinstance(control, ft.Text):
         control = getattr(control, "content", None)
     return str(control.value) if control is not None else ""

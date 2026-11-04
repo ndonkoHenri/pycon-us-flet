@@ -1,13 +1,13 @@
-"""Search's result list (``screens/search.py``): the results by type, sessions by day.
+"""Search's result list (`screens/search.py`): the results by type, sessions by day.
 
 Its own module so that the screen stays under about 400 lines (D-66), as the Developer
-screen's pickers are (D-187). ``ResultList`` is memoised, and so is each day of
-sessions (``ui.day_groups.DayGroup``, keyed by its date), over the memoised session
+screen's pickers are (D-187). `ResultList` is memoised, and so is each day of
+sessions (`ui.day_groups.DayGroup`, keyed by its date), over the memoised session
 and speaker rows (D-153): new results re-render only the days and rows they changed,
 and a star tap one row.
 
 A broad query finds most of the feed, so each type shows its first rows
-(``FIRST_SESSIONS``, ``FIRST_SPEAKERS``, every place, ``FIRST_SPONSORS``) and a "Show all 326 sessions" row
+(`FIRST_SESSIONS`, `FIRST_SPEAKERS`, every place, `FIRST_SPONSORS`) and a "Show all 326 sessions" row
 renders the rest of its type on request (D-218): the first render of a one-letter
 query stays near that of a query that finds a few dozen rows, and every result stays
 one tap away.
@@ -104,11 +104,11 @@ def ResultList(
     count line above the list ("7 sessions") and stack two headings over the first
     row, so the day headings take level 2 then. The count line already says each
     type's count, so the type headings leave it out. A type heading is a step up from
-    a day's (``TITLE_MEDIUM`` in ``on_surface``, with a divider before every type but
+    a day's (`TITLE_MEDIUM` in `on_surface`, with a divider before every type but
     the first), so that on screen too it opens a kind of result, not one more day.
 
-    Each type shows its first rows (``first_results()``: ``FIRST_SESSIONS``,
-    ``FIRST_SPEAKERS``, every place, ``FIRST_SPONSORS``), then a "Show all" row when it found more, which
+    Each type shows its first rows (`first_results()`: `FIRST_SESSIONS`,
+    `FIRST_SPEAKERS`, every place, `FIRST_SPONSORS`), then a "Show all" row when it found more, which
     renders the rest of that type (D-218). Which types are shown whole is this list's
     own state, held with the results it was asked of: a search that finds other
     results starts cut again, and so does the old query typed again after it; the
@@ -118,8 +118,8 @@ def ResultList(
         results: The last search's results.
         views: Every session's row view, by id, built once per feed version.
         entries: Every directory speaker's entry, by id, built once per feed version.
-        saved: ``Favorites.ids``.
-        changes: Every session's recent changes (``use_recent_changes()``).
+        saved: `Favorites.ids`.
+        changes: Every session's recent changes (`use_recent_changes()`).
         on_toggle: The list's one star handler.
         tokens: The scheme's tokens (D-150).
         state: What shows instead of results (the hint, a miss, no data), or None.
@@ -223,20 +223,20 @@ def show_all_row(
 ) -> ft.Control:
     """Return the row under a cut type that renders the rest of it (D-218).
 
-    A real row, not a small text button: a Material ``ListTile`` (56 dp, wider than
+    A real row, not a small text button: a Material `ListTile` (56 dp, wider than
     the 48 dp target) whose words say the full count, "Show all 326 sessions", in
-    ``primary`` with ``EXPAND_MORE`` at its end, where the rows' chevrons and stars
+    `primary` with `EXPAND_MORE` at its end, where the rows' chevrons and stars
     sit, so it reads as an action rather than one more result. Its text starts on the
-    session rows' 16 dp line, and in ``BODY_LARGE`` it is no day heading
-    (``TITLE_SMALL`` in ``primary``). One node for screen readers, read as its words
+    session rows' 16 dp line, and in `BODY_LARGE` it is no day heading
+    (`TITLE_SMALL` in `primary`). One node for screen readers, read as its words
     and "button"; the icon says nothing. The rows it renders take its place.
 
     Args:
-        kind: ``sessions``, ``speakers`` or ``sponsors``: its identifier's key and
+        kind: `sessions`, `speakers` or `sponsors`: its identifier's key and
             its noun.
         count: How many the type found, every row included.
         on_click: Renders the rest of the type, which it reads from the row's
-            ``data``.
+            `data`.
     """
     return ft.MergeSemantics(
         content=ft.Semantics(
@@ -278,12 +278,12 @@ def room_row(room: Room, view_path: str) -> ft.Control:
 def spot_row(pin: Pin, view_path: str) -> ft.Control:
     """Return a venue spot result: its label and sublabel, opening its floor plan.
 
-    A tap pushes the floor viewer at the spot's pin (``…/plan/<plan>?pin=<key>``), as
-    a ``LocationCard`` does, so Back returns to the results (D-351). Its leading icon
+    A tap pushes the floor viewer at the spot's pin (`…/plan/<plan>?pin=<key>`), as
+    a `LocationCard` does, so Back returns to the results (D-351). Its leading icon
     is the pin's rather than the rooms' place mark: it opens a plan, not a detail.
 
     Args:
-        pin: The venue spot (``MapData.venue_spots()``).
+        pin: The venue spot (`MapData.venue_spots()`).
         view_path: This View's path, so the plan is pushed on top of search.
     """
     return LinkTile(
@@ -316,13 +316,13 @@ def booth_row(entry: BoothEntry, view_path: str) -> ft.Control:
     """Return a booth result: its number and exhibitor, opening the expo at the booth.
 
     A tap pushes the expo hall with the booth selected and its card
-    (``booth_href()``, D-377), so Back returns to the results; a booth the plan does
+    (`booth_href()`, D-377), so Back returns to the results; a booth the plan does
     not draw says so under its title, and opens the List under its line. One node,
     read "Booth 613, Bloomberg" (the middle dot is not read), then the line when
     there is one. Its icon is the Sponsors entry's: a booth, not a room's place mark.
 
     Args:
-        entry: The exhibitor at its booth (``core.expo.booth_entries()``).
+        entry: The exhibitor at its booth (`core.expo.booth_entries()`).
         view_path: This View's path, so the expo is pushed on top of search.
     """
     return LinkTile(

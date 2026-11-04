@@ -1,10 +1,10 @@
 """Tests for the Schedule's positions and Jump to now (D-18, D-155, #89).
 
-The screen renders in ``tests/schedule_view.py``'s harness: ``ListView.scroll_to`` is
+The screen renders in `tests/schedule_view.py`'s harness: `ListView.scroll_to` is
 recorded and answered with the scroll end Flutter would report, and each jump is
-recorded (``Shown.jumps``), so a test checks which jumps ran and where they went (#237).
+recorded (`Shown.jumps`), so a test checks which jumps ran and where they went (#237).
 Whether a jump lands is a device check (#89). When a jump runs is in
-``test_schedule_button.py``.
+`test_schedule_button.py`.
 """
 
 import asyncio
@@ -395,7 +395,7 @@ async def test_a_second_tap_on_the_same_slot_empties_the_note_first(
 async def test_the_note_empties_once_talkback_has_read_it(
     shown: Callable[..., Awaitable[Shown]], monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """D-241: with words it is a stop in linear navigation, so only for ``SAID_S``."""
+    """D-241: with words it is a stop in linear navigation, so only for `SAID_S`."""
     monkeypatch.setattr(screen, "SAID_S", 0.01)
     schedule = await shown(screen_reader=True)
     await schedule.press_now()
@@ -414,7 +414,7 @@ async def test_the_note_stays_empty_without_talkback(
 
     D-241: the landing note is TalkBack's path, for a screen reader where Flutter
     reports no announcements (Android). Without a screen reader nothing is said, and
-    VoiceOver hears the landing through ``announce_message()`` instead.
+    VoiceOver hears the landing through `announce_message()` instead.
     """
     schedule = await shown(**settings)
     await schedule.scroll_away()

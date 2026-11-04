@@ -1,9 +1,9 @@
 """The mock API's in-memory state, its seed, and what every endpoint shares (D-50, D-57).
 
-``MockState`` holds the seeded accounts, sponsors, products and attendees, plus every
+`MockState` holds the seeded accounts, sponsors, products and attendees, plus every
 lead, note, redemption and incident the endpoints record, so tests can count how often
-a capture was applied under each ``capture`` semantics. ``Call`` is one signed request
-as an endpoint sees it, and ``Refused`` is how an endpoint answers with an error.
+a capture was applied under each `capture` semantics. `Call` is one signed request
+as an endpoint sees it, and `Refused` is how an endpoint answers with an error.
 """
 
 import json
@@ -17,7 +17,7 @@ from tools.mock_api.crowd import crowd
 from tools.mock_api.faults import Faults
 
 SEED = Path(__file__).resolve().parents[2] / "tests" / "fixtures" / "mock" / "seed.json"
-"""The seed every ``MockState`` starts from: fake data only."""
+"""The seed every `MockState` starts from: fake data only."""
 
 type Capture = Literal["idempotent", "non_idempotent"]
 """How the mock applies a repeated capture (D-57; README, Unknown)."""
@@ -30,19 +30,19 @@ COC_DEDUPE = 60
 
 @dataclass
 class Account:
-    """A seeded account, with what ``authenticate`` returns and the favourites it syncs.
+    """A seeded account, with what `authenticate` returns and the favourites it syncs.
 
     Attributes:
-        role: What the account is for (``attendee``, ``speaker``, ``sponsor``,
-            ``staff``, ``coc`` or ``all``); only the seed and the tests read it.
+        role: What the account is for (`attendee`, `speaker`, `sponsor`,
+            `staff`, `coc` or `all`); only the seed and the tests read it.
         email: The sign-in email.
         password: The sign-in password (fake).
-        nickname: The name ``authenticate`` returns.
-        key: The API key the client sends as ``X-API-Key`` (fake).
+        nickname: The name `authenticate` returns.
+        key: The API key the client sends as `X-API-Key` (fake).
         secret: The API secret the client signs with (fake).
         features: The role flags as the server sends them; a flag left out is absent
             from every reply, which the client must read as False.
-        favorites: The session ids ``mobile_state`` keeps, always strings (D-42).
+        favorites: The session ids `mobile_state` keeps, always strings (D-42).
         sponsor_id: The sponsor a lead-retrieval account's leads go to, or None.
     """
 
@@ -76,7 +76,7 @@ class Sponsor:
 
 @dataclass(frozen=True)
 class Category:
-    """A product category: sessions for the door, or swag (``/shirt|swag/i``).
+    """A product category: sessions for the door, or swag (`/shirt|swag/i`).
 
     Attributes:
         id: The category's id.
@@ -93,7 +93,7 @@ class Product:
 
     Attributes:
         id: The product's id.
-        name: Its name, e.g. ``"Wed May 13 9:00 AM - All about decorators"``.
+        name: Its name, e.g. `"Wed May 13 9:00 AM - All about decorators"`.
         category: Its category's id.
     """
 
@@ -104,21 +104,21 @@ class Product:
 
 @dataclass
 class Attendee:
-    """A seeded attendee with a badge ``access_code:validator`` (all fake).
+    """A seeded attendee with a badge `access_code:validator` (all fake).
 
     Attributes:
-        id: The attendee's id (``attendee_id`` in ``fetch_products``).
+        id: The attendee's id (`attendee_id` in `fetch_products`).
         access_code: The badge's access code.
-        validator: The badge's validator, the part after the ``:``.
+        validator: The badge's validator, the part after the `:`.
         first_name: What a lead capture returns.
         full_name: The full name.
         nickname: The nickname.
         badge_name: The name printed on the badge.
-        email: The email, at ``example.com``.
+        email: The email, at `example.com`.
         violations: Code of Conduct incidents recorded before the mock started.
-        dietary: Dietary needs, or ``""``.
+        dietary: Dietary needs, or `""`.
         has_allergy: Whether the attendee has an allergy.
-        allergy: The allergy, or ``""``.
+        allergy: The allergy, or `""`.
         products: The quantity bought of each product, by product id.
     """
 
@@ -188,17 +188,17 @@ class MockState:
         categories: The product categories.
         products: The products, by id.
         attendees: The attendees, by access code.
-        capture: ``idempotent`` applies a repeated capture once; ``non_idempotent``
+        capture: `idempotent` applies a repeated capture once; `non_idempotent`
             applies every request (D-57).
         leads: Every lead recorded, in order.
         notes: Every lead note recorded, in order.
         redemptions: Every redemption recorded, in order.
-        redeem_replies: Under ``idempotent`` capture, the first reply to each redeem
-            request, keyed by (access code, ``scanned_at``, products and quantities).
+        redeem_replies: Under `idempotent` capture, the first reply to each redeem
+            request, keyed by (access code, `scanned_at`, products and quantities).
         incidents: Every Code of Conduct incident recorded, in order.
-        faults: The faults switched on (D-57; ``faults.py``).
-        skew: Seconds the mock's clock runs ahead of ``now`` (behind when negative),
-            so a device whose clock is right looks skewed to it (D-57, ``--skew``).
+        faults: The faults switched on (D-57; `faults.py`).
+        skew: Seconds the mock's clock runs ahead of `now` (behind when negative),
+            so a device whose clock is right looks skewed to it (D-57, `--skew`).
     """
 
     year: int
@@ -237,7 +237,7 @@ class MockState:
             now: The clock to use.
             capture: The capture semantics to serve.
             attendees: How many made-up attendees to add after the seeded ones
-                (``crowd.py``, ``--attendees``).
+                (`crowd.py`, `--attendees`).
 
         Returns:
             A state that shares nothing with any other.
@@ -316,7 +316,7 @@ class Refused(Exception):
 
     Attributes:
         status: The HTTP status.
-        body: The error body, ``{"code", "error"}`` unless an endpoint says otherwise.
+        body: The error body, `{"code", "error"}` unless an endpoint says otherwise.
     """
 
     def __init__(self, status: int, message: str, body: object = None) -> None:
@@ -326,7 +326,7 @@ class Refused(Exception):
             status: The HTTP status.
             message: What went wrong; it never echoes the request, so it always
                 serialises.
-            body: The error body; None gives the 2019 shape ``{"code", "error"}``.
+            body: The error body; None gives the 2019 shape `{"code", "error"}`.
         """
         super().__init__(status, message)
         self.status = status
@@ -340,9 +340,9 @@ class Call:
     Attributes:
         state: The mock's state; endpoints that write change it.
         account: The account the key belongs to.
-        now: The time of this request, ``state.now()`` plus ``state.skew``.
-        query: The query after ``?``, exactly as sent (``""`` when there is none).
-        segment: The route's variable path segment as sent, or ``""``.
+        now: The time of this request, `state.now()` plus `state.skew`.
+        query: The query after `?`, exactly as sent (`""` when there is none).
+        segment: The route's variable path segment as sent, or `""`.
         body: The body bytes as sent.
     """
 

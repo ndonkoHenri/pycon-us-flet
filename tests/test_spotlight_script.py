@@ -1,8 +1,8 @@
-"""Tests for ``maestro/scripts/spotlight_name.js``, which reads the spotlight's sponsor (#455).
+"""Tests for `maestro/scripts/spotlight_name.js`, which reads the spotlight's sponsor (#455).
 
-Maestro runs it with ``runScript`` after ``copyTextFrom`` on Now's spotlight card; here
-Node runs it the same way, in a fresh context with a test's ``maestro.copiedText`` and
-``output``. The phrases are ``core.sponsors.thanks()``'s own, so the script and the card
+Maestro runs it with `runScript` after `copyTextFrom` on Now's spotlight card; here
+Node runs it the same way, in a fresh context with a test's `maestro.copiedText` and
+`output`. The phrases are `core.sponsors.thanks()`'s own, so the script and the card
 cannot drift apart unnoticed. Skipped where Node is missing.
 """
 
@@ -34,7 +34,7 @@ process.stdout.write(JSON.stringify(context.output));
 
 
 def spotlight_name(copied: str) -> str:
-    """Run the script on ``copied`` as the card's text and return the name it kept."""
+    """Run the script on `copied` as the card's text and return the name it kept."""
     assert NODE is not None
     result = subprocess.run(
         [NODE, "-e", HARNESS, str(SCRIPT), copied],
@@ -46,7 +46,7 @@ def spotlight_name(copied: str) -> str:
 
 
 def sponsor(name: str, level: str) -> Sponsor:
-    """Return a sponsor with ``name`` and ``level``, its other fields as the feed's."""
+    """Return a sponsor with `name` and `level`, its other fields as the feed's."""
     return Sponsor(
         name=name,
         slug=name.lower().replace(" ", "-"),
@@ -70,12 +70,12 @@ def sponsor(name: str, level: str) -> Sponsor:
     ],
 )
 def test_the_name_is_read_from_the_card_s_own_phrase(name: str, level: str) -> None:
-    """The script keeps the name of ``thanks()``'s phrase, whatever the article."""
+    """The script keeps the name of `thanks()`'s phrase, whatever the article."""
     assert spotlight_name(thanks(sponsor(name, level))) == name
 
 
 def test_special_characters_are_escaped_so_the_name_matches_itself_whole() -> None:
-    """Maestro's ``text:`` is a regular expression: a "." or "(" is escaped."""
+    """Maestro's `text:` is a regular expression: a "." or "(" is escaped."""
     copied = thanks(sponsor("Example (Labs) Inc.", "Partner"))
     assert spotlight_name(copied) == r"Example \(Labs\) Inc\."
 

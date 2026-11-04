@@ -1,8 +1,8 @@
-"""Tests for Swag pickup's hand-out, ``swag.hand_out()`` and the offer (#769; SHIRT-04).
+"""Tests for Swag pickup's hand-out, `swag.hand_out()` and the offer (#769; SHIRT-04).
 
 Each row of the issue's outcome table against the mock's real transport, signed in as
 the seeded staff account (Ada: 2 T-shirts, product 30, and a bag, 40), or a fixed
-``httpx.MockTransport`` reply: all, part or nothing handed out, no connection, an
+`httpx.MockTransport` reply: all, part or nothing handed out, no connection, an
 answer lost or unreadable after the server applied it (D-410), a refusal. Nothing is
 ever resent or queued (D-56, D-57).
 """
@@ -39,7 +39,7 @@ SCANNED_AT = 1778860800.25
 
 
 async def offer_for(client: ApiClient, scanned: Badge = ADA) -> Offer:
-    """Return the offer a lookup of ``scanned`` makes, as the sheet gets it."""
+    """Return the offer a lookup of `scanned` makes, as the sheet gets it."""
     offers: list[Offer] = []
 
     async def keep(given: Offer) -> ScanResult | None:
@@ -204,7 +204,7 @@ async def test_an_unreadable_answer_is_not_confirmed_and_never_resent(
 
 
 async def test_an_error_envelope_under_200_stays_a_refusal() -> None:
-    """A ``{"code", "error"}`` reply is the server's no: "Not handed out", its words."""
+    """A `{"code", "error"}` reply is the server's no: "Not handed out", its words."""
     client, recorder, state = await signed_in("staff")
     offer = await offer_for(client)
     recorder.inner = replying(200, b'{"code": 500, "error": "Boom."}')
@@ -262,5 +262,5 @@ async def _none() -> ScanResult | None:
 
 
 def redeems(recorder: Recorder) -> list[httpx.Request]:
-    """The ``redeem`` POSTs the client sent."""
+    """The `redeem` POSTs the client sent."""
     return [r for r in recorder.sent if r.url.path.endswith(REDEEM.path)]

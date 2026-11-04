@@ -1,20 +1,20 @@
 """The app's own Views in a real Flet session, for the deep-link tests (P2-79, #439).
 
 A deep link's path is an internal route (D-21, D-269): cold, it is the session's start
-route; warm, a route change. ``open_at`` renders the app's ``ROUTES`` and screens with
-``tests/harness.py``'s ``showing()`` (``view_path=None``: a real Router, rendered as
-the page's Views, as ``main.py`` renders it) over the 2026 feed, starting at a
-location. ``Shown.go()`` changes the route as Flutter does for a warm link or a
-``page.navigate``, and ``Shown.back()`` presses Back as the system does:
+route; warm, a route change. `open_at` renders the app's `ROUTES` and screens with
+`tests/harness.py`'s `showing()` (`view_path=None`: a real Router, rendered as
+the page's Views, as `main.py` renders it) over the 2026 feed, starting at a
+location. `Shown.go()` changes the route as Flutter does for a warm link or a
+`page.navigate`, and `Shown.back()` presses Back as the system does:
 
-* a View that declines its pop (``can_pop=False``) is asked through
-  ``on_confirm_pop`` (D-142, D-270);
-* a View that can pop is popped by Flutter's Navigator, which reaches ``main.py``'s
-  ``page.on_view_pop`` and so ``parent_of()`` (D-141, D-208, F46);
+* a View that declines its pop (`can_pop=False`) is asked through
+  `on_confirm_pop` (D-142, D-270);
+* a View that can pop is popped by Flutter's Navigator, which reaches `main.py`'s
+  `page.on_view_pop` and so `parent_of()` (D-141, D-208, F46);
 * Back on a one-View stack that can pop (Now) leaves the app (F29).
 
-The test modules assign the fixture to their own name, as ``tests/chrome.py``'s are
-(``open_at = links.open_at``).
+The test modules assign the fixture to their own name, as `tests/chrome.py`'s are
+(`open_at = links.open_at`).
 """
 
 import asyncio
@@ -38,7 +38,7 @@ YEAR = load_year(2026)
 DATA = processed(2026)
 
 EXIT = "exit"
-"""What ``Shown.back()`` returns when Back leaves the app (F29)."""
+"""What `Shown.back()` returns when Back leaves the app (F29)."""
 
 
 class Shown(harness.Shown):
@@ -62,19 +62,19 @@ class Shown(harness.Shown):
         return found
 
     def routes(self) -> list[str]:
-        """The stacked Views' routes (their keys: ``/`` for every root), bottom first."""
+        """The stacked Views' routes (their keys: `/` for every root), bottom first."""
         return [str(view.route) for view in self.views()]
 
     def has(self, identifier: str) -> bool:
-        """Whether a mounted semantics node has ``identifier``."""
+        """Whether a mounted semantics node has `identifier`."""
         return bool(self.nodes(identifier))
 
     async def go(self, location: str) -> None:
-        """Change the route as a warm link or ``page.navigate`` does: set, then heard.
+        """Change the route as a warm link or `page.navigate` does: set, then heard.
 
-        Flutter updates ``page.route`` before it sends the event (``flet_backend.dart``,
-        ``_sendRouteChangeEvent``); the handler is whatever the page has, the Router's
-        or the one ``ui.modals`` put in front of it.
+        Flutter updates `page.route` before it sends the event (`flet_backend.dart`,
+        `_sendRouteChangeEvent`); the handler is whatever the page has, the Router's
+        or the one `ui.modals` put in front of it.
         """
         self.went.append(location)
         self.page.route = location
@@ -83,7 +83,7 @@ class Shown(harness.Shown):
         await self.settle()
 
     async def back(self) -> str:
-        """Press Back once, as the system does; return where it went, or ``EXIT``."""
+        """Press Back once, as the system does; return where it went, or `EXIT`."""
         views = self.views()
         top = views[-1]
         if not top.can_pop:
@@ -111,15 +111,15 @@ type Open = Callable[..., Awaitable[Shown]]
 async def open_at(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> AsyncIterator[Open]:
-    """Provide ``open_at(location)``: the app started at a location, as a cold link.
+    """Provide `open_at(location)`: the app started at a location, as a cold link.
 
-    ``page.navigate`` becomes what Flutter does next: the route changes and the page
-    hears of it (``Shown.go()``). ``memory`` passes a ``ViewMemory`` that an earlier
+    `page.navigate` becomes what Flutter does next: the route changes and the page
+    hears of it (`Shown.go()`). `memory` passes a `ViewMemory` that an earlier
     session of the process left (D-143, F29).
 
     The status strip's automatic refresh (D-40) never starts: Now and Schedule would
     fetch the real feed, which tests never do (#539); the strip's refreshes are
-    ``test_status_strip_ticks.py``'s.
+    `test_status_strip_ticks.py`'s.
     """
     monkeypatch.setattr(Conference, "start_refresh_if_due", lambda *_, **__: None)
     async with AsyncExitStack() as stack:

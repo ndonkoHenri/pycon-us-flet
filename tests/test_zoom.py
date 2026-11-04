@@ -21,7 +21,7 @@ from pycon_us.ui.zoom_geometry import (
 )
 
 LANDSCAPE_PLAN = (2048.0, 1583.0)
-"""The Concourse plan's size in pixels (``map.toml``)."""
+"""The Concourse plan's size in pixels (`map.toml`)."""
 
 PORTRAIT_PLAN = (1583.0, 2048.0)
 """The Arena plan's size in pixels."""
@@ -45,7 +45,7 @@ def test_fitted_contains_the_plan_and_keeps_its_ratio() -> None:
 
 
 def test_fitted_is_empty_before_the_first_layout() -> None:
-    """Before ``on_size_change`` reports a size, the plan has none, so nothing is placed."""
+    """Before `on_size_change` reports a size, the plan has none, so nothing is placed."""
     assert fitted((0.0, 0.0), LANDSCAPE_PLAN) == (0.0, 0.0)
 
 
@@ -107,7 +107,7 @@ def test_centred_on_puts_the_box_centre_on_the_point() -> None:
 
 @pytest.mark.parametrize("factor", [1.5, 1 / 1.5, 2.0])
 def test_refocus_keeps_the_focus_on_the_same_plan_point(factor: float) -> None:
-    """After ``zoom()`` (about the top-left corner, F76) the pan puts the focus back."""
+    """After `zoom()` (about the top-left corner, F76) the pan puts the focus back."""
     before = Transform(1.8, -120.0, -60.0)
     focus = (191.0, 320.0)
     after = Transform(before.scale * factor, before.x, before.y)  # zoom keeps t
@@ -135,7 +135,7 @@ def test_refocus_reads_a_clamped_zoom_back() -> None:
 
 
 def panned(now: Transform, delta: tuple[float, float]) -> Transform:
-    """The transform after ``pan(dx, dy)``: it moves ``scale`` logical pixels a unit (F76)."""
+    """The transform after `pan(dx, dy)`: it moves `scale` logical pixels a unit (F76)."""
     return Transform(
         now.scale, now.x + now.scale * delta[0], now.y + now.scale * delta[1]
     )
@@ -172,7 +172,7 @@ def test_into_bounds_undoes_any_pan_at_fit() -> None:
 
 
 def zoom_at(scale: float) -> Zoom:
-    """A zoom layer's state over the Concourse plan in a 382 x 640 viewer, at ``scale``."""
+    """A zoom layer's state over the Concourse plan in a 382 x 640 viewer, at `scale`."""
     return Zoom(
         viewer=ft.Ref[ft.InteractiveViewer](),
         natural=LANDSCAPE_PLAN,

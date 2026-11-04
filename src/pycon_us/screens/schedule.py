@@ -1,29 +1,29 @@
-"""Schedule (``/schedule``): the programme by day and time slot (SCHED-01, SCHED-02).
+"""Schedule (`/schedule`): the programme by day and time slot (SCHED-01, SCHED-02).
 
-Day tabs over swipeable day lists (D-31): an ``ft.Tabs`` whose content starts with its
-``TabBar`` (no ``AppBar.bottom``, U10), then the head (the filter summary, the status
+Day tabs over swipeable day lists (D-31): an `ft.Tabs` whose content starts with its
+`TabBar` (no `AppBar.bottom`, U10), then the head (the filter summary, the status
 strip and "Times are Pacific Time (PDT)" while the device's clock differs from the
-conference's, D-20, D-32, D-240), then a ``TabBarView`` with one page per conference
+conference's, D-20, D-32, D-240), then a `TabBarView` with one page per conference
 day, sprint days included. At the largest text sizes the head tops each day's list
-instead, so it scrolls away (``screens/schedule_head.py``, D-345). The tabs, the pages and the "Now" button come from ``screens/schedule_days.py``: each page
-is a ``DayList`` of ``SlotItem``s, memoised down to the rows (D-153). The first render
+instead, so it scrolls away (`screens/schedule_head.py`, D-345). The tabs, the pages and the "Now" button come from `screens/schedule_days.py`: each page
+is a `DayList` of `SlotItem`s, memoised down to the rows (D-153). The first render
 fills only the shown day, the second the others (D-156).
 
 The day opens on today during the conference, else on the first day; the day picked and
-each list's offset live in ``ViewMemory``, so a tab return or a new session finds them
+each list's offset live in `ViewMemory`, so a tab return or a new session finds them
 (D-18); a text-size or filter change puts each list back on the item at its top, by key
-(D-331, D-371, ``screens/schedule_place.py``); what the day lists hold, and their
-put-back, are ``screens/schedule_slots.py``'s. A detail pushed over the Schedule keeps
+(D-331, D-371, `screens/schedule_place.py`); what the day lists hold, and their
+put-back, are `screens/schedule_slots.py`'s. A detail pushed over the Schedule keeps
 it mounted, and so its place.
 
 Jump to now (D-155, D-204) lands on the slot that is on, else on today's now line
-(``now_place()``): by itself on the first display of each today in the process, be it
+(`now_place()`): by itself on the first display of each today in the process, be it
 when the Schedule opens or when the user swipes to today, and again with the "Now"
 button, which switches to today first when another day shows, and tells a screen reader
 where it landed: VoiceOver through an announcement, TalkBack through a live region
-(``landing_note()``, D-241). The button hides while the list is near where a jump left
+(`landing_note()`, D-241). The button hides while the list is near where a jump left
 it, and while today's first jump is on its way; a screen reader keeps it (D-204). A
-minute tick (``use_minute()``) keeps today's dot, the button and the now line with the
+minute tick (`use_minute()`) keeps today's dot, the button and the now line with the
 clock; the day shown stays put across midnight. A pull on a day's list refreshes the
 feed as the strip's Refresh does (SCHED-13, D-449). Without any data (no snapshot or
 cache, NEW-03) the screen shows the skeleton until the first fetch has failed, then

@@ -1,10 +1,10 @@
-"""Tests for Help & safety (``/more/help``; INFO-07, INFO-11, D-281).
+"""Tests for Help & safety (`/more/help`; INFO-07, INFO-11, D-281).
 
-``Help`` runs outside a renderer over the fixtures and lookups of
-``tests/help_page.py``: its services and ``AppScaffold`` are replaced, and a fake page
+`Help` runs outside a renderer over the fixtures and lookups of
+`tests/help_page.py`: its services and `AppScaffold` are replaced, and a fake page
 is bound as Flet binds a session's page; the contact rows' component body runs inline
-over the same services, as ``test_rows.py`` runs it. Report a problem with the app is
-tested in ``test_help_report.py``. What TalkBack and VoiceOver read, and how the card
+over the same services, as `test_rows.py` runs it. Report a problem with the app is
+tested in `test_help_report.py`. What TalkBack and VoiceOver read, and how the card
 looks at 200 % text, are checked on devices (the PR).
 """
 
@@ -99,7 +99,7 @@ def test_the_card_s_first_stop_is_its_level_2_heading(
 def test_the_card_is_outlined_in_error_and_reads_as_its_parts(
     render: Callable[[Services], dict[str, Any]], svc: Services
 ) -> None:
-    """An ``error`` edge, and not one node: the heading, rows and line are stops."""
+    """An `error` edge, and not one node: the heading, rows and line are stops."""
     card = card_of(blocks_of(render(svc))[0])
     assert card.variant is ft.CardVariant.OUTLINED
     assert isinstance(card.shape, ft.RoundedRectangleBorder)
@@ -145,7 +145,7 @@ async def test_the_email_row_copies_its_address(
 async def test_a_phone_row_calls_and_copies_its_number(
     render: Callable[[Services], dict[str, Any]], svc: Services, page: FakePage
 ) -> None:
-    """A tap hands ``tel:`` to the phone app; Copy copies the number as stored."""
+    """A tap hands `tel:` to the phone app; Copy copies the number as stored."""
     year = replace(
         svc.year, content=replace(svc.year.content, safety_contacts=(HOTLINE,))
     )
@@ -163,7 +163,7 @@ async def test_a_phone_row_calls_and_copies_its_number(
 async def test_a_call_that_cannot_open_says_so_and_copy_still_works(
     render: Callable[[Services], dict[str, Any]], svc: Services, page: FakePage
 ) -> None:
-    """Where ``tel:`` fails (an iPad, a simulator), the row says so; Copy still copies."""
+    """Where `tel:` fails (an iPad, a simulator), the row says so; Copy still copies."""
     year = replace(
         svc.year, content=replace(svc.year.content, safety_contacts=(HOTLINE,))
     )
@@ -201,7 +201,7 @@ def test_the_code_of_conduct_links_open_in_the_browser(
 def test_without_year_data_the_page_shows_the_feed_s_block(
     render: Callable[[Services], dict[str, Any]], svc: Services
 ) -> None:
-    """A year without the tables hands the page to the feed's ``code-of-conduct``."""
+    """A year without the tables hands the page to the feed's `code-of-conduct`."""
     content = replace(svc.year.content, safety_contacts=(), help=None)
     with Renderer().with_context():  # what calling a component needs, as in a render
         scaffold = render(replace(svc, year=replace(svc.year, content=content)))
@@ -243,7 +243,7 @@ def test_all_maps_opens_the_map_s_floor_plans(
 def test_a_year_without_plans_shows_no_card_and_no_all_maps(
     render: Callable[[Services], dict[str, Any]], svc: Services
 ) -> None:
-    """Without ``map.toml`` (2025's case) the places are their lines alone."""
+    """Without `map.toml` (2025's case) the places are their lines alone."""
     year = replace(svc.year, map=MapData())
     assert outline(blocks_of(render(replace(svc, year=year))))[2:7] == [
         "help.info_desk",
@@ -255,7 +255,7 @@ def test_a_year_without_plans_shows_no_card_and_no_all_maps(
 
 
 def test_contacts_without_help_show_the_card_alone(page: FakePage) -> None:
-    """The card needs only the contacts; without ``[help]`` it has no staff line."""
+    """The card needs only the contacts; without `[help]` it has no staff line."""
     (block,) = help_blocks((HOTLINE,), None)
     assert len(card_items(block)) == 2  # the heading and the row
 
@@ -272,7 +272,7 @@ def test_contacts_without_help_show_the_card_alone(page: FakePage) -> None:
 def test_a_contact_s_line_is_its_value_as_it_reads(
     kind: str, value: str, line: str
 ) -> None:
-    """A North American number in groups, an address with a break after its ``@``.
+    """A North American number in groups, an address with a break after its `@`.
 
     Other numbers read as written, a page by its host.
     """

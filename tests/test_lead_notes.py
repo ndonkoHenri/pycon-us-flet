@@ -1,6 +1,6 @@
-"""Tests for ``core/lead_notes.py``: a lead note's parts and Ionic's text format (LEAD-10).
+"""Tests for `core/lead_notes.py`: a lead note's parts and Ionic's text format (LEAD-10).
 
-The text is what the server and Ionic's records keep (``composeNote``, ``parseNote``;
+The text is what the server and Ionic's records keep (`composeNote`, `parseNote`;
 docs/research/ionic/staff-tools-auth.md §7a), so a note composed here reads back the
 same, and an older or hand-written note still opens.
 """
@@ -64,11 +64,11 @@ def test_a_note_in_no_known_line_is_free_text() -> None:
 
 
 def test_the_notes_line_runs_to_the_end() -> None:
-    """``Notes:`` takes every line after it, as Ionic's pattern does."""
+    """`Notes:` takes every line after it, as Ionic's pattern does."""
     assert parse("Interest: cold\nNotes: one\ntwo").text == "one\ntwo"
 
 
 def test_free_text_that_mentions_a_part_stays_text() -> None:
-    """Only the lines before ``Notes:`` are parts: the text can say "Interest: hot"."""
+    """Only the lines before `Notes:` are parts: the text can say "Interest: hot"."""
     note = LeadNote(text="Asked about Interest: hot\nFollow-up: Demo")
     assert parse(compose(note)) == note

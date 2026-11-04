@@ -1,6 +1,6 @@
 """Tests for the search screen's first rows of each type and its Show all (D-193).
 
-The harness is ``tests/search_view.py``'s.
+The harness is `tests/search_view.py`'s.
 """
 
 from typing import cast
@@ -57,7 +57,7 @@ async def _show_whole(shown: Shown, kind: str) -> None:
 
 
 def _keys(ids: list[str]) -> list[str]:
-    """The semantics keys of ``ids``."""
+    """The semantics keys of `ids`."""
     return [semantics_key(i) for i in ids]
 
 

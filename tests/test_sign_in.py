@@ -1,8 +1,8 @@
 """Tests for the Sign in page and More's profile row (AUTH-01, API-02, SHELL-12, #685).
 
-The page runs in a real Flet session (``tests/harness.py``) over the seeded mock behind
-``tools/mock_api/transport.py``, so each sign-in goes through the real client and the
-``Account`` store. Typing is what Flutter reports: the field's value, then (for typing,
+The page runs in a real Flet session (`tests/harness.py`) over the seeded mock behind
+`tools/mock_api/transport.py`, so each sign-in goes through the real client and the
+`Account` store. Typing is what Flutter reports: the field's value, then (for typing,
 not for autofill) a change event. How the page looks, autofill and the screen readers
 are checked on devices (the PR).
 """
@@ -36,10 +36,10 @@ from tools.mock_api.transport import mock_transport
 VIEW = "/more/sign-in"
 
 ROLES = ("attendee", "speaker", "sponsor", "staff", "coc", "all")
-"""Every seeded account (``tests/fixtures/mock/seed.json``)."""
+"""Every seeded account (`tests/fixtures/mock/seed.json`)."""
 
 LEADS = ("sponsor", "all")
-"""The seeded accounts with ``lead_retrieval``: a sign-in lands on the scanner (D-16)."""
+"""The seeded accounts with `lead_retrieval`: a sign-in lands on the scanner (D-16)."""
 
 type Show = Callable[..., Awaitable[Shown]]
 
@@ -52,13 +52,13 @@ def state() -> MockState:
 
 @pytest.fixture
 def recorder(state: MockState) -> Recorder:
-    """A transport to ``state`` that keeps every request sent through it."""
+    """A transport to `state` that keeps every request sent through it."""
     return Recorder(mock_transport(state))
 
 
 @pytest.fixture
 def account() -> Account:
-    """A signed-out ``Account`` store, as after a first launch."""
+    """A signed-out `Account` store, as after a first launch."""
     return Account()
 
 
@@ -76,7 +76,7 @@ async def show(
             view_path: str = VIEW,
             prefs: Prefs | None = None,
         ) -> Shown:
-            """Render ``screen``; a transport sets the mock URL, None leaves it unset."""
+            """Render `screen`; a transport sets the mock URL, None leaves it unset."""
             private_api = PrivateApi(transport, credentials=account.credentials)
             if prefs is None:
                 prefs = Prefs(loaded=True)
@@ -292,15 +292,15 @@ def test_every_failure_has_its_sentence() -> None:
 
 
 class Held(Recorder):
-    """A transport to the mock that holds each request until ``release`` is set."""
+    """A transport to the mock that holds each request until `release` is set."""
 
     def __init__(self, inner: httpx.AsyncBaseTransport) -> None:
-        """Hold requests to ``inner``, which answers them once released."""
+        """Hold requests to `inner`, which answers them once released."""
         super().__init__(inner)
         self.release = asyncio.Event()
 
     async def handle_async_request(self, request: httpx.Request) -> httpx.Response:
-        """Record the request, wait for ``release``, then let the mock answer."""
+        """Record the request, wait for `release`, then let the mock answer."""
         self.sent.append(request)
         await self.release.wait()
         return await self.inner.handle_async_request(request)
@@ -385,7 +385,7 @@ async def test_a_revoked_key_turns_the_row_into_sign_in_again_live(
 async def test_after_a_revoked_key_sign_in_starts_with_the_email(
     show: Show, recorder: Recorder, account: Account
 ) -> None:
-    """Sign in says why and fills the email in; signing in clears ``expired``."""
+    """Sign in says why and fills the email in; signing in clears `expired`."""
     account.email, account.signed_in, account.expired = "all@example.com", True, True
     shown = await show(recorder)
     assert field(shown, "Email").value == "all@example.com"

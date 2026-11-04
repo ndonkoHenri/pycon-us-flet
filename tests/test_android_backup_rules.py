@@ -1,10 +1,10 @@
 """Guard D-472: Android's Auto Backup takes only the preferences file.
 
 The secure-storage files hold ciphertext that only this phone's Keystore can open, and
-``outbox-<year>.db`` would send a restored phone's queued scans again. The rules are an
+`outbox-<year>.db` would send a restored phone's queued scans again. The rules are an
 allowlist of the one file the preferences live in, in both files Android reads (Android
-11 and older, then 12 and newer), and ``pyproject.toml`` points the manifest at them.
-The backup and restore itself is run on an emulator (``docs/development.md`` §8.1).
+11 and older, then 12 and newer), and `pyproject.toml` points the manifest at them.
+The backup and restore itself is run on an emulator (`docs/development.md` §8.1).
 """
 
 import tomllib
@@ -25,7 +25,7 @@ PREFERENCES = ("sharedpref", "FlutterSharedPreferences.xml")
 
 
 def android_settings() -> dict:
-    """Return ``[tool.flet.android]`` from ``pyproject.toml``."""
+    """Return `[tool.flet.android]` from `pyproject.toml`."""
     pyproject = tomllib.loads((ROOT / "pyproject.toml").read_text(encoding="utf-8"))
     return pyproject["tool"]["flet"]["android"]
 
@@ -36,10 +36,10 @@ def res_dir() -> Path:
 
 
 def includes(file: str, *parents: str) -> list[tuple[str | None, str | None]]:
-    """Return the (domain, path) of every ``<include>`` under ``parents`` in a rules file.
+    """Return the (domain, path) of every `<include>` under `parents` in a rules file.
 
     Args:
-        file: The rules file's name in ``res/xml``.
+        file: The rules file's name in `res/xml`.
         parents: The element names from the root down to the one holding the includes;
             none for a root that holds them itself.
     """
@@ -54,7 +54,7 @@ def includes(file: str, *parents: str) -> list[tuple[str | None, str | None]]:
 
 
 def test_the_manifest_names_both_rule_files_and_says_backup_is_on() -> None:
-    """``allowBackup`` is stated, and each rules attribute names a file that ships."""
+    """`allowBackup` is stated, and each rules attribute names a file that ships."""
     application = android_settings()["manifest_application"]
     assert application["allowBackup"] == "true"
     assert application["fullBackupContent"] == "@xml/backup_rules"
@@ -64,7 +64,7 @@ def test_the_manifest_names_both_rule_files_and_says_backup_is_on() -> None:
 
 
 def test_android_11_and_older_backs_up_only_the_preferences_file() -> None:
-    """``fullBackupContent`` includes the preferences file and nothing else."""
+    """`fullBackupContent` includes the preferences file and nothing else."""
     assert includes("backup_rules.xml") == [PREFERENCES]
 
 

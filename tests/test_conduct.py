@@ -1,10 +1,10 @@
-"""Tests for the CoC tool's pure rules: ``core/conduct.py`` (#758; MASK-01, MASK-02).
+"""Tests for the CoC tool's pure rules: `core/conduct.py` (#758; MASK-01, MASK-02).
 
-``parse_directory`` reads ``coc_attendees``' data as Ionic did, without letting one bad
-entry hide the others; ``search`` folds and needs every word (D-46), caps its rows and
+`parse_directory` reads `coc_attendees`' data as Ionic did, without letting one bad
+entry hide the others; `search` folds and needs every word (D-46), caps its rows and
 says when it cut them, and stays fast over 5,000 attendees; the count words and the one
-threshold set serve the list and the result alike; ``parse_capture`` reads the
-attendee an incident went to. The calls are in ``tests/test_conduct_calls.py``.
+threshold set serve the list and the result alike; `parse_capture` reads the
+attendee an incident went to. The calls are in `tests/test_conduct_calls.py`.
 """
 
 import time
@@ -32,7 +32,7 @@ JOSE = Attendee("MOCK0009", "José Müller", "pepe", "Pepito", 2)
 
 
 def entry(code: object, full_name: object = "", **more: object) -> dict[str, object]:
-    """Return one ``coc_attendees`` entry with this code and full name, and ``more``."""
+    """Return one `coc_attendees` entry with this code and full name, and `more`."""
     return {"access_code": code, "full_name": full_name, **more}
 
 
@@ -79,13 +79,13 @@ def test_a_repeated_code_keeps_the_first_entry() -> None:
 def test_a_missing_or_non_integer_count_reads_as_zero(
     violations: object, incidents: int
 ) -> None:
-    """``violations`` counts only as a non-negative int; anything else is 0."""
+    """`violations` counts only as a non-negative int; anything else is 0."""
     data = [entry("MOCK0001", "Ada", violations=violations)]
     assert parse_directory(data)[0].incidents == incidents
 
 
 def test_names_that_are_not_strings_read_as_empty() -> None:
-    """A null or numeric name is ``""``; the display name falls back past it."""
+    """A null or numeric name is `""`; the display name falls back past it."""
     (attendee,) = parse_directory([entry("X1", None, nickname=7, badge_name=" Bo ")])
     assert (attendee.full_name, attendee.nickname, attendee.badge_name) == (
         "",
@@ -97,7 +97,7 @@ def test_names_that_are_not_strings_read_as_empty() -> None:
 
 @pytest.mark.parametrize("data", [None, {}, {"data": []}, "[]"])
 def test_data_that_is_not_a_list_is_refused(data: object) -> None:
-    """Not a list: a ``TypeError``, which the fetch makes an ``ApiError``."""
+    """Not a list: a `TypeError`, which the fetch makes an `ApiError`."""
     with pytest.raises(TypeError):
         parse_directory(data)
 
@@ -147,7 +147,7 @@ def test_search_folds_and_needs_every_word(query: str, found: list[Attendee]) ->
 
 
 def test_search_keeps_the_directory_s_order_and_caps_its_rows() -> None:
-    """At most ``LIMIT`` rows, in order, with ``more`` set only when rows were cut."""
+    """At most `LIMIT` rows, in order, with `more` set only when rows were cut."""
     attendees = tuple(Attendee(f"C{n:02}", f"Sam {n:02}") for n in range(LIMIT + 1))
     capped = search(attendees, "sam")
     assert capped.rows == attendees[:LIMIT]
@@ -192,7 +192,7 @@ def test_count_words_and_level(incidents: int, words: str, level: Level) -> None
 
 
 def test_a_capture_reply_reads_into_the_attendee_recorded() -> None:
-    """Names, email and the new count, as ``coc_capture`` returns them."""
+    """Names, email and the new count, as `coc_capture` returns them."""
     data = {
         "nickname": "gsample",
         "full_name": "Grace Sample",
@@ -215,6 +215,6 @@ def test_a_capture_reply_without_names_email_or_count_still_reads() -> None:
 
 @pytest.mark.parametrize("data", [None, [], "recorded"])
 def test_a_capture_reply_that_is_not_an_object_is_refused(data: object) -> None:
-    """Not an object: a ``TypeError``, which ``record()`` makes an ``ApiError``."""
+    """Not an object: a `TypeError`, which `record()` makes an `ApiError`."""
     with pytest.raises(TypeError):
         parse_capture(data)

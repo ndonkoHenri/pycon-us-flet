@@ -1,17 +1,17 @@
 """The star and what a favourites edit says: saving to My schedule.
 
-``FavoriteButton`` is the one favourite control (D-30): a 48 dp star on every session
+`FavoriteButton` is the one favourite control (D-30): a 48 dp star on every session
 row and in session detail. A list owner gets the one handler its stars share from
-``use_favorite_toggle()``, which saves, gives the selection click and shows the
-SnackBar of ux.md §4.4 (D-184). ``use_add_all()`` is a track page's "Add all to My
-schedule" (SCHED-24), with the same SnackBar and its count (D-209); ``use_forget()``
+`use_favorite_toggle()`, which saves, gives the selection click and shows the
+SnackBar of ux.md §4.4 (D-184). `use_add_all()` is a track page's "Add all to My
+schedule" (SCHED-24), with the same SnackBar and its count (D-209); `use_forget()`
 is My schedule's "Forget them", the saved sessions the feed dropped (D-329). An edit
 that says nothing closes the favourites SnackBar still showing, so a screen reader is never left
 with "Removed" about a session saved again (D-251). With a screen reader on, an add says
 "Added to My schedule": the star's tap no longer says its state itself (D-355).
-``selection_click()`` is that click, which search's scope chips give too (ux.md §4.5).
+`selection_click()` is that click, which search's scope chips give too (ux.md §4.5).
 
-A session's badges, which its row shows beside the star, are ``ui/badges.py``'s (D-267).
+A session's badges, which its row shows beside the star, are `ui/badges.py`'s (D-267).
 """
 
 import logging
@@ -66,13 +66,13 @@ _EDITS: WeakKeyDictionary[ft.Page, int] = WeakKeyDictionary()
 """How many favourites edits each page has started; only the newest reports (D-251)."""
 
 type ToggleFavorite = Callable[[str], Awaitable[None]]
-"""A list's one star handler: ``await on_toggle(session_id)``."""
+"""A list's one star handler: `await on_toggle(session_id)`."""
 
 type AddAll = Callable[[Iterable[str]], Awaitable[None]]
-"""A track page's "Add all to My schedule": ``await add_all(session_ids)``."""
+"""A track page's "Add all to My schedule": `await add_all(session_ids)`."""
 
 type RemoveAll = Callable[[Iterable[str]], Awaitable[None]]
-"""My schedule's "Forget them": ``await forget(session_ids)`` (D-329)."""
+"""My schedule's "Forget them": `await forget(session_ids)` (D-329)."""
 
 
 def FavoriteButton(
@@ -84,30 +84,30 @@ def FavoriteButton(
 ) -> ft.Control:
     """Return the star (D-30): a 48 dp icon button, filled while the session is saved.
 
-    A plain builder, as ``badges.TrackBadge``: the memoised row that holds it
-    (D-153) passes the scheme's ``Tokens.favorite`` as ``color``. Its tooltip says
+    A plain builder, as `badges.TrackBadge`: the memoised row that holds it
+    (D-153) passes the scheme's `Tokens.favorite` as `color`. Its tooltip says
     what a tap does, "Add to My schedule" or "Remove from My schedule" (D-27). A
-    screen reader gets one node: the stable name ``FAVORITE_LABEL``, a switch, and the
-    saved state as on or off (D-184). The ``IconButton`` alone came out nameless and
+    screen reader gets one node: the stable name `FAVORITE_LABEL`, a switch, and the
+    saved state as on or off (D-184). The `IconButton` alone came out nameless and
     stateless in TalkBack's tree (S2), since a tooltip is not an Android content
     description.
 
     The state is said once: the tooltip is left out of the semantics (iOS would read
     it after the label), and the icon is swapped here rather than through
-    ``IconButton.selected``, which would add a "selected" to the toggle's "on".
+    `IconButton.selected`, which would add a "selected" to the toggle's "on".
 
-    The tap gives no click of its own (``enable_feedback=False``, D-355): Flutter's
+    The tap gives no click of its own (`enable_feedback=False`, D-355): Flutter's
     click sends Android's "clicked" event at once, and TalkBack read the star's state
     from it before Python had changed it, so it sometimes said "on" after a removal
-    (#342, F173). The tap's word comes from the SnackBar instead (``feedback()``).
+    (#342, F173). The tap's word comes from the SnackBar instead (`feedback()`).
 
     Args:
         selected: Whether the session is saved to My schedule.
         on_click: What a tap does; it calls the list owner's
-            ``use_favorite_toggle()`` handler with the row's session.
-        color: The filled star's colour, ``Tokens.favorite``.
+            `use_favorite_toggle()` handler with the row's session.
+        color: The filled star's colour, `Tokens.favorite`.
         identifier: The node's semantics identifier for UI tests,
-            ``<screen>.favorite.<session id>`` (decisions §M).
+            `<screen>.favorite.<session id>` (decisions §M).
     """
     return ft.MergeSemantics(
         content=ft.Semantics(
@@ -136,14 +136,14 @@ def feedback(change: Change, *, screen_reader: bool = False) -> str | None:
     """Return what the SnackBar says after a star tap, or None when it says nothing.
 
     An add says nothing to the eye: the filled star and the selection click are its
-    feedback. With a screen reader on it says ``ADDED``, since the star's tap does not
+    feedback. With a screen reader on it says `ADDED`, since the star's tap does not
     say its state (D-355). A removal says so, because the row may vanish (My
     schedule). An edit that was shown but not saved says that instead, as the tap's
     one SnackBar (ux.md §4.4).
 
     Args:
-        change: What ``Favorites.toggle()`` or ``Favorites.undo()`` returned.
-        screen_reader: A screen reader is on (``Prefs.screen_reader``).
+        change: What `Favorites.toggle()` or `Favorites.undo()` returned.
+        screen_reader: A screen reader is on (`Prefs.screen_reader`).
     """
     if not change.saved:
         return NOT_SAVED
@@ -156,7 +156,7 @@ async def selection_click(haptics: ft.HapticFeedback) -> None:
     """Give the selection click (ux.md §4.5), logging rather than reporting a failure.
 
     Args:
-        haptics: ``Services.haptics``.
+        haptics: `Services.haptics`.
     """
     try:
         await haptics.selection_click()
@@ -165,16 +165,16 @@ async def selection_click(haptics: ft.HapticFeedback) -> None:
 
 
 def use_favorite_toggle(favorites: Favorites) -> ToggleFavorite:
-    """Return the one star handler of a list: ``await on_toggle(session_id)`` (D-172).
+    """Return the one star handler of a list: `await on_toggle(session_id)` (D-172).
 
-    A hook for the component that owns a list and already calls ``use_favorites()``;
-    rows never call it. The handler is made once (``use_callback(..., [])``), so it is
+    A hook for the component that owns a list and already calls `use_favorites()`;
+    rows never call it. The handler is made once (`use_callback(..., [])`), so it is
     the same object on every render and memoised rows given it stay skipped (D-153).
     It closes over the store, the page, the services and the settings, which all live
     as long as the session. A tap shows the change at once (the store assigns before
     it saves), then:
 
-    - an add gives a selection click (``HapticFeedback``, ux.md §4.5);
+    - an add gives a selection click (`HapticFeedback`, ux.md §4.5);
     - a removal shows "Removed from My schedule" with Undo;
     - an edit that was not saved shows "Couldn't save your change" instead, keeping
       Undo when the edit was a removal;
@@ -182,10 +182,10 @@ def use_favorite_toggle(favorites: Favorites) -> ToggleFavorite:
     - an edit that says nothing (an add or an Undo without a screen reader) closes
       the favourites SnackBar still showing, as a new one replaces it (D-251);
     - an add that was saved shows the reminders primer, once, when it was never
-      answered (``ui.reminder_primer``, D-61, D-395).
+      answered (`ui.reminder_primer`, D-61, D-395).
 
     Args:
-        favorites: The list owner's ``use_favorites()`` store.
+        favorites: The list owner's `use_favorites()` store.
 
     Returns:
         The handler; it reports an unexpected error rather than raising (D-163).
@@ -220,19 +220,19 @@ def _announce(
     *,
     edit: int,
 ) -> None:
-    """Report a star edit through ``_report()``: ``feedback()``'s SnackBar, or none.
+    """Report a star edit through `_report()`: `feedback()`'s SnackBar, or none.
 
     A removal's SnackBar has Undo; an edit that says nothing closes the last (D-251).
-    With a screen reader on, an add (an Undo's too) says ``ADDED`` (D-355).
+    With a screen reader on, an add (an Undo's too) says `ADDED` (D-355).
 
     Args:
         page: The session's page.
         favorites: The store the edit changed; Undo reverses the edit in it.
         svc: The session's services: where the favourites are kept.
-        prefs: The session's ``Prefs``: with a screen reader on, an add says
-            ``ADDED`` and an Undo SnackBar stays (D-355, D-184).
+        prefs: The session's `Prefs`: with a screen reader on, an add says
+            `ADDED` and an Undo SnackBar stays (D-355, D-184).
         change: The edit.
-        edit: The edit's number from ``_begin()``.
+        edit: The edit's number from `_begin()`.
     """
 
     @report_errors
@@ -250,11 +250,11 @@ def added_feedback(change: Change) -> str:
     """Return what the SnackBar says after "Add all to My schedule" (ux.md §5.10).
 
     It counts only the sessions the tap saved, never those saved before (D-172):
-    "Added 16 sessions", "Added 1 session", or ``ALREADY_SAVED`` when there were none.
-    An edit that was shown but not saved says ``NOT_SAVED`` instead (ux.md §4.4).
+    "Added 16 sessions", "Added 1 session", or `ALREADY_SAVED` when there were none.
+    An edit that was shown but not saved says `NOT_SAVED` instead (ux.md §4.4).
 
     Args:
-        change: What ``Favorites.add_many()`` returned.
+        change: What `Favorites.add_many()` returned.
     """
     if not change.saved:
         return NOT_SAVED
@@ -265,21 +265,21 @@ def added_feedback(change: Change) -> str:
 
 
 def use_add_all(favorites: Favorites) -> AddAll:
-    """Return a track page's "Add all to My schedule": ``await add_all(ids)`` (D-209).
+    """Return a track page's "Add all to My schedule": `await add_all(ids)` (D-209).
 
-    A hook for the page that already calls ``use_favorites()``. Unlike
-    ``use_favorite_toggle()``'s handler it is not memoised: no memoised control
+    A hook for the page that already calls `use_favorites()`. Unlike
+    `use_favorite_toggle()`'s handler it is not memoised: no memoised control
     receives it, since the page builds its menu on every render (D-153). No dialog
     first: the add is reversible (D-29). It saves every id at once
-    (``Favorites.add_many()``), gives the selection click when it saved any, and shows
-    one SnackBar, ``added_feedback()``'s, with Undo whenever it saved some, also when
-    the write failed. Undo takes back only what the tap added (``Favorites.undo()``),
+    (`Favorites.add_many()`), gives the selection click when it saved any, and shows
+    one SnackBar, `added_feedback()`'s, with Undo whenever it saved some, also when
+    the write failed. Undo takes back only what the tap added (`Favorites.undo()`),
     so the list is again what it was, and says nothing more, as a star's Undo does,
     closing the SnackBar (D-251), unless its own write fails ("Couldn't save your
     change", with no Undo of the Undo: the menu offers the add again).
 
     Args:
-        favorites: The page's ``use_favorites()`` store.
+        favorites: The page's `use_favorites()` store.
 
     Returns:
         The handler; it reports an unexpected error rather than raising (D-163).
@@ -310,15 +310,15 @@ def use_add_all(favorites: Favorites) -> AddAll:
 
 
 def use_forget(favorites: Favorites) -> RemoveAll:
-    """Return My schedule's "Forget them": ``await forget(ids)`` (D-329).
+    """Return My schedule's "Forget them": `await forget(ids)` (D-329).
 
-    It removes every id at once (``Favorites.remove_many()``) and says so as a star's
-    removal does, through ``_announce()``: "Removed from My schedule" with Undo, which
+    It removes every id at once (`Favorites.remove_many()`) and says so as a star's
+    removal does, through `_announce()`: "Removed from My schedule" with Undo, which
     saves them all again, or "Couldn't save your change". No dialog: it is reversible
-    (D-29). Not memoised, as ``use_add_all()``: no memoised control receives it.
+    (D-29). Not memoised, as `use_add_all()`: no memoised control receives it.
 
     Args:
-        favorites: The screen's ``use_favorites()`` store.
+        favorites: The screen's `use_favorites()` store.
 
     Returns:
         The handler; it reports an unexpected error rather than raising (D-163).
@@ -355,29 +355,29 @@ def _report(
     """Report a favourites edit: its SnackBar, or none, never the last edit's (D-251).
 
     A message shows a floating SnackBar for 4 s, its one action Undo when given
-    (D-29). Flet's ``SnackBarControl`` removes the current SnackBar before it shows
-    one (``snack_bar.dart``), so a new message replaces the last. An edit that says
+    (D-29). Flet's `SnackBarControl` removes the current SnackBar before it shows
+    one (`snack_bar.dart`), so a new message replaces the last. An edit that says
     nothing closes the last favourites SnackBar itself, while it still shows: with a
     screen reader it stays until used (D-184), and "Removed from My schedule" must not
     outlive the add or Undo that saved the session again (#334). It closes that
-    SnackBar only, never ``page.pop_dialog()``'s top dialog (ux.md §4.5); and only
+    SnackBar only, never `page.pop_dialog()`'s top dialog (ux.md §4.5); and only
     when nothing is shown, since a close and a show sent together each remove the
     current SnackBar after the frame, in an order Flet does not promise. Edits
     overlap (a second tap while the first awaits its write or its haptic click), so
     only the page's newest edit reports: an older one, finishing late, must neither
     close a newer edit's SnackBar nor show one over its silence. The newest writes the
-    whole set (``Favorites``), so its result is the one that counts.
+    whole set (`Favorites`), so its result is the one that counts.
 
     Args:
         page: The session's page.
         message: What it says, or None when the edit says nothing.
         undo: Undo's handler, or None for a SnackBar without an action.
         svc: The session's services, which watch a screen reader's SnackBar.
-        prefs: The session's ``Prefs``: while a screen reader is on, an Undo
+        prefs: The session's `Prefs`: while a screen reader is on, an Undo
             SnackBar stays until it is used, replaced, closed by the next edit, or
             no screen reader is on (D-184, D-251, D-356). A SnackBar without Undo,
-            ``ADDED`` among them (D-355), goes after its 4 s and is not watched.
-        edit: The edit's number from ``_begin()``, taken before its first await.
+            `ADDED` among them (D-355), goes after its 4 s and is not watched.
+        edit: The edit's number from `_begin()`, taken before its first await.
     """
     if _EDITS.get(page) != edit:
         return  # a newer edit has started: its report, or its silence, counts

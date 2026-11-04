@@ -70,8 +70,8 @@ def test_my_schedule_lists_a_saved_poster_on_its_day() -> None:
 def test_my_schedule_holds_the_schedule_s_slots_and_the_model_s_sessions() -> None:
     """My schedule's slots carry the Schedule's keys and hold the model's own sessions.
 
-    One ``Slot`` (D-185): a saved slot has the key of the Schedule's slot at its start
-    (D-155's ``slot-<iso>``); its rows and the overlaps are the sessions.
+    One `Slot` (D-185): a saved slot has the key of the Schedule's slot at its start
+    (D-155's `slot-<iso>`); its rows and the overlaps are the sessions.
     """
     data = processed(2026)
     agenda = my_schedule(data, frozenset({"2", "19", "153"}))
@@ -88,12 +88,12 @@ def test_my_schedule_holds_the_schedule_s_slots_and_the_model_s_sessions() -> No
 
 
 def test_nothing_saved_is_an_empty_agenda() -> None:
-    """With nothing saved, My schedule has no days and no overlaps: ``Agenda((), {})``."""
+    """With nothing saved, My schedule has no days and no overlaps: `Agenda((), {})`."""
     assert my_schedule(processed(2026), frozenset()) == Agenda((), {})
 
 
 def test_an_agenda_s_sessions_are_its_rows_in_agenda_order() -> None:
-    """``Agenda.sessions`` lists every saved session in the feed, day by day and slot by slot.
+    """`Agenda.sessions` lists every saved session in the feed, day by day and slot by slot.
 
     It is what My schedule's export holds (#426): the model's own sessions, an id the
     feed dropped left out, and nothing at all with nothing saved.

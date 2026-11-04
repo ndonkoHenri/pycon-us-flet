@@ -1,10 +1,10 @@
-"""Tests for the sponsors by level, ``sponsor_by_slug()`` and the spotlight pick.
+"""Tests for the sponsors by level, `sponsor_by_slug()` and the spotlight pick.
 
 DATA-22, SPON-02 and D-261 for the levels; SHELL-08 and D-298 for the spotlight.
 
-The feed's ``conference.sponsors`` is an object of sponsor lists keyed by level;
-``feed.process()`` decodes it through ``records.sponsor_levels()`` and sorts the levels
-once. The invariants over it are in ``test_feed_invariants.py``.
+The feed's `conference.sponsors` is an object of sponsor lists keyed by level;
+`feed.process()` decodes it through `records.sponsor_levels()` and sorts the levels
+once. The invariants over it are in `test_feed_invariants.py`.
 """
 
 import logging
@@ -30,12 +30,12 @@ type Change = Callable[[dict[str, Any]], object]
 
 
 def sponsors_of(data: ConferenceData) -> list[Sponsor]:
-    """Every sponsor of ``data``, level by level."""
+    """Every sponsor of `data`, level by level."""
     return [sponsor for level in data.sponsor_levels for sponsor in level.sponsors]
 
 
 def sponsors_from(change: Change) -> ConferenceData:
-    """The 2026 feed processed with ``change`` applied to its JSON first."""
+    """The 2026 feed processed with `change` applied to its JSON first."""
     return process(changed(2026, change), settings(2026))
 
 
@@ -52,7 +52,7 @@ def test_every_level_and_sponsor_of_the_feed_is_decoded(
 
 @pytest.mark.parametrize("year", YEARS)
 def test_levels_come_by_level_order_with_the_feeds_sponsors(year: int) -> None:
-    """Each level holds its feed list in feed order, the levels sorted by ``level_order``."""
+    """Each level holds its feed list in feed order, the levels sorted by `level_order`."""
     raw = document(year)["conference"]["sponsors"]
     data = processed(year)
     expected = sorted(raw, key=lambda level: raw[level][0]["level_order"])
@@ -114,7 +114,7 @@ def test_sponsor_by_slug_returns_none_for_an_unknown_slug(slug: str) -> None:
 
 
 def test_ionics_double_dash_slug_finds_its_sponsor() -> None:
-    """``qube-research--technologies`` routes to Qube Research & Technologies (SPON-02)."""
+    """`qube-research--technologies` routes to Qube Research & Technologies (SPON-02)."""
     sponsor = sponsor_by_slug(processed(2026), "qube-research--technologies")
     assert sponsor is not None and sponsor.name == "Qube Research & Technologies"
 
@@ -154,7 +154,7 @@ def test_html_in_a_description_stays_as_text() -> None:
 
 
 def test_a_feed_without_sponsors_has_no_levels() -> None:
-    """A feed without ``conference.sponsors``, or without ``conference``, processes."""
+    """A feed without `conference.sponsors`, or without `conference`, processes."""
 
     def no_sponsors(doc: dict[str, Any]) -> None:
         del doc["conference"]["sponsors"]
@@ -275,7 +275,7 @@ def test_a_level_left_without_sponsors_is_not_listed() -> None:
 
 
 def test_sponsors_that_are_not_an_object_are_skipped_whole() -> None:
-    """A ``conference.sponsors`` list is skipped, named; the schedule still processes."""
+    """A `conference.sponsors` list is skipped, named; the schedule still processes."""
 
     def spoil(doc: dict[str, Any]) -> None:
         doc["conference"]["sponsors"] = []
@@ -287,7 +287,7 @@ def test_sponsors_that_are_not_an_object_are_skipped_whole() -> None:
 
 
 def test_levels_with_one_order_keep_feed_order() -> None:
-    """Two levels with the same ``level_order`` stay in the feed's order."""
+    """Two levels with the same `level_order` stay in the feed's order."""
 
     def tie(doc: dict[str, Any]) -> None:
         sponsors = doc["conference"]["sponsors"]
@@ -302,7 +302,7 @@ def test_levels_with_one_order_keep_feed_order() -> None:
 
 
 def test_spotlight_candidates_are_the_banner_sponsors_in_level_order() -> None:
-    """The candidates are the 14 ``mobile_banner`` sponsors of 2026, top level first."""
+    """The candidates are the 14 `mobile_banner` sponsors of 2026, top level first."""
     data = processed(2026)
     candidates = spotlight_candidates(data)
     assert [s for s in sponsors_of(data) if s.mobile_banner] == list(candidates)
@@ -311,7 +311,7 @@ def test_spotlight_candidates_are_the_banner_sponsors_in_level_order() -> None:
 
 
 def test_the_pick_is_a_candidate_and_follows_the_seed() -> None:
-    """A seeded ``Random`` picks a candidate, the same one for the same seed."""
+    """A seeded `Random` picks a candidate, the same one for the same seed."""
     candidates = spotlight_candidates(processed(2026))
     for seed in range(20):
         first = pick_spotlight(candidates, "", Random(seed))

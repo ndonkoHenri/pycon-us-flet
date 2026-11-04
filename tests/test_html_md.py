@@ -1,9 +1,9 @@
 """Named tests for the HTML → Markdown converter (D-114, D-115; DATA-25, SESS-06).
 
 One test per tag of S3's census, per row of its "could change meaning" table and per
-boundary of ``docs/testing-and-quality.md`` §3.4. Inputs are small, real-looking HTML;
-the feed samples and the whole-feed invariant are in ``test_html_md_feeds.py``, the
-search text and the properties in ``test_html_md_text.py``.
+boundary of `docs/testing-and-quality.md` §3.4. Inputs are small, real-looking HTML;
+the feed samples and the whole-feed invariant are in `test_html_md_feeds.py`, the
+search text and the properties in `test_html_md_text.py`.
 """
 
 import html
@@ -25,7 +25,7 @@ HAZARD = (
 
 
 def md(value: str) -> str:
-    """Convert ``value`` to Markdown, with the 2026 site as the base of its links."""
+    """Convert `value` to Markdown, with the 2026 site as the base of its links."""
     return to_markdown(value, SITE)
 
 

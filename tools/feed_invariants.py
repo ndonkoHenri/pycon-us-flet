@@ -1,14 +1,14 @@
 """The invariants of a processed feed, shared by the tests and the live-feed check (D-77).
 
-Each invariant takes a ``ProcessedFeed`` and returns its problems, one line each; an empty
-list means it holds. ``tests/test_feed_invariants.py`` asserts that every list is empty for
-the recorded feeds, and ``tools/check_feed.py`` prints them for the live feed, so both run
+Each invariant takes a `ProcessedFeed` and returns its problems, one line each; an empty
+list means it holds. `tests/test_feed_invariants.py` asserts that every list is empty for
+the recorded feeds, and `tools/check_feed.py` prints them for the live feed, so both run
 the same code (testing-and-quality.md §3.3). They return problems instead of asserting so
 the weekly check can report every broken invariant, not only the first.
 
-The stable-ids invariant compares two outlines of the model: ``tools/feed_outline.py``'s
-``outline()``, the reviewed snapshot's view of it. The sponsor and job-listing invariants
-live in ``tools/sponsor_invariants.py``; ``INVARIANTS`` lists them with the others.
+The stable-ids invariant compares two outlines of the model: `tools/feed_outline.py`'s
+`outline()`, the reviewed snapshot's view of it. The sponsor and job-listing invariants
+live in `tools/sponsor_invariants.py`; `INVARIANTS` lists them with the others.
 """
 
 import json
@@ -62,7 +62,7 @@ class ProcessedFeed:
     Attributes:
         raw: The feed's bytes.
         document: The same bytes as JSON, to compare the model with.
-        data: The model ``feed.process`` built from them.
+        data: The model `feed.process` built from them.
         year: The year's data: its zone, dates and display-time overrides.
     """
 
@@ -78,7 +78,7 @@ class ProcessedFeed:
 
 
 def processed_feed(raw: bytes, year: YearData) -> ProcessedFeed:
-    """Process ``raw`` with the year's settings.
+    """Process `raw` with the year's settings.
 
     Raises:
         FeedError: The feed does not parse.
@@ -315,7 +315,7 @@ def speakers_and_sessions_link_both_ways(feed: ProcessedFeed) -> list[str]:
 def rooms_and_sessions_agree(feed: ProcessedFeed) -> list[str]:
     """DATA-16, ROOM-06: one room per slug, naturally sorted, listing who names it.
 
-    Only a sprint-only room seeded from ``map.toml`` lists no session (MAP-08).
+    Only a sprint-only room seeded from `map.toml` lists no session (MAP-08).
     """
     data = feed.data
     sprint_rooms = set(feed.year.feed_settings.sprint_rooms)
@@ -379,7 +379,7 @@ def _one_row_a_day(
     name: str,
     is_slot: Callable[[dict[str, Any]], bool],
 ) -> list[str]:
-    """Check that each day with a matching slot has exactly one row called ``name``."""
+    """Check that each day with a matching slot has exactly one row called `name`."""
     slot_days = {
         local_date(datetime.fromisoformat(slot["start"]), feed.zone)
         for slot in feed.document["schedule"]

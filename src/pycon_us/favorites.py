@@ -1,17 +1,17 @@
-"""The ``Favorites`` store: the sessions saved to My schedule (STORE-02, SCHED-12; D-48).
+"""The `Favorites` store: the sessions saved to My schedule (STORE-02, SCHED-12; D-48).
 
 Favourites are local-first: they need no account and are saved per conference year under
-``pycon.<year>.favorites``, because ids are unique only within one year's feed, so a 2026
-favourite never marks a 2027 session (D-48). Signed in, ``services/favorites_sync.py``
+`pycon.<year>.favorites`, because ids are unique only within one year's feed, so a 2026
+favourite never marks a 2027 session (D-48). Signed in, `services/favorites_sync.py`
 syncs them with the mock account (D-55, D-406); the store itself makes no request.
 
 **How a list uses it without re-rendering every row** (D-153, D-172): only the component
-that owns a list calls ``use_favorites()``, since a subscription re-renders its component
-on every change (F3). It hands each memoised day list or slot ``favorites.ids & their_ids``,
-each memoised row ``session_id in favorites.ids``, and one ``on_toggle(session_id)`` made
-with ``ft.use_callback(..., [])``: the store and ``Storage`` are the same objects for the
+that owns a list calls `use_favorites()`, since a subscription re-renders its component
+on every change (F3). It hands each memoised day list or slot `favorites.ids & their_ids`,
+each memoised row `session_id in favorites.ids`, and one `on_toggle(session_id)` made
+with `ft.use_callback(..., [])`: the store and `Storage` are the same objects for the
 whole session, so a callback that closes over them never goes stale. A row that called
-``use_favorites()`` itself would re-render on every star tap, wherever it was.
+`use_favorites()` itself would re-render on every star tap, wherever it was.
 """
 
 import logging
@@ -49,12 +49,12 @@ class Change:
 class Favorites:
     """The session ids saved to My schedule for the active conference year (D-30, D-48).
 
-    ``ids`` is a frozenset: a lookup is O(1), and the part of it under a memoised list
-    (``ids & day_ids``) compares equal while nothing under that list changed (D-153,
-    F34). Every edit assigns ``ids`` once, so it notifies once, and an edit that changes
-    nothing neither notifies nor writes. It is saved sorted, as ``list[str]`` (F12).
+    `ids` is a frozenset: a lookup is O(1), and the part of it under a memoised list
+    (`ids & day_ids`) compares equal while nothing under that list changed (D-153,
+    F34). Every edit assigns `ids` once, so it notifies once, and an edit that changes
+    nothing neither notifies nor writes. It is saved sorted, as `list[str]` (F12).
 
-    Each edit returns a ``Change`` for its Undo; ``undo()`` takes it back. An edit shows
+    Each edit returns a `Change` for its Undo; `undo()` takes it back. An edit shows
     first and is saved after (D-172): the star changes without waiting for
     SharedPreferences, and a second tap during the write starts from the first's result.
 
@@ -76,12 +76,12 @@ class Favorites:
         """Read the year's favourites.
 
         An absent or unreadable value reads as none (logged, D-120). Until a read
-        succeeds, edits show but are not saved (``saved=False``, ``loaded`` stays
+        succeeds, edits show but are not saved (`saved=False`, `loaded` stays
         False): a read that fails leaves the store empty, and an empty set is never
         written over favourites that could not be read (D-172).
 
         Args:
-            storage: Where they are kept; its ``year`` picks the key (D-48).
+            storage: Where they are kept; its `year` picks the key (D-48).
         """
         key = favorites(storage.year)
         try:
@@ -99,8 +99,8 @@ class Favorites:
     def reset(self) -> None:
         """Forget every saved session, as after a fresh install, without writing.
 
-        Reset app (DEV-05, D-198) calls it once ``Storage.clear_prefs()`` has removed
-        the stored list, so there is nothing to write; ``loaded`` stays as it is, and
+        Reset app (DEV-05, D-198) calls it once `Storage.clear_prefs()` has removed
+        the stored list, so there is nothing to write; `loaded` stays as it is, and
         the next edit saves as usual.
         """
         self.ids = frozenset()
@@ -113,7 +113,7 @@ class Favorites:
             session_id: The session's id.
 
         Returns:
-            The change: ``added`` or ``removed`` holds the id. A removal is what shows
+            The change: `added` or `removed` holds the id. A removal is what shows
             "Removed from My schedule · Undo" (ux.md §4.4).
         """
         if session_id in self.ids:
@@ -128,11 +128,11 @@ class Favorites:
             session_ids: The sessions' ids; those saved already are left as they are.
 
         Returns:
-            The change; ``added`` holds only the newly saved ids, so "Added 16 sessions"
+            The change; `added` holds only the newly saved ids, so "Added 16 sessions"
             counts them and Undo removes only them.
 
         Raises:
-            TypeError: ``session_ids`` is one string, not a collection of ids.
+            TypeError: `session_ids` is one string, not a collection of ids.
         """
         return await self._edit(storage, add=_id_set(session_ids) - self.ids)
 
@@ -144,10 +144,10 @@ class Favorites:
             session_ids: The sessions' ids; those not saved are ignored.
 
         Returns:
-            The change; ``removed`` holds only the ids that were saved.
+            The change; `removed` holds only the ids that were saved.
 
         Raises:
-            TypeError: ``session_ids`` is one string, not a collection of ids.
+            TypeError: `session_ids` is one string, not a collection of ids.
         """
         return await self._edit(storage, remove=_id_set(session_ids) & self.ids)
 
@@ -158,14 +158,14 @@ class Favorites:
 
         Args:
             storage: Where the favourites are kept.
-            session_ids: The ids to keep, ``core.favorites_sync.reconcile()``'s.
+            session_ids: The ids to keep, `core.favorites_sync.reconcile()`'s.
 
         Returns:
             Whether they were written, or nothing needed writing; False also while no
-            read has succeeded, when nothing is written (``loaded``).
+            read has succeeded, when nothing is written (`loaded`).
 
         Raises:
-            TypeError: ``session_ids`` is one string, not a collection of ids.
+            TypeError: `session_ids` is one string, not a collection of ids.
         """
         ids = _id_set(session_ids)
         change = await self._edit(storage, add=ids - self.ids, remove=self.ids - ids)
@@ -176,7 +176,7 @@ class Favorites:
 
         Args:
             storage: Where the favourites are kept.
-            change: What ``toggle``, ``add_many``, ``remove_many`` or ``undo`` returned.
+            change: What `toggle`, `add_many`, `remove_many` or `undo` returned.
 
         Returns:
             The change the undo made, itself undoable.
@@ -213,17 +213,17 @@ def _id_set(session_ids: Iterable[str]) -> frozenset[str]:
 
 
 FavoritesCtx: ft.ContextProvider[Favorites | None] = ft.create_context(None)
-"""Provides the session's ``Favorites``; ``App`` writes the provider out (D-69)."""
+"""Provides the session's `Favorites`; `App` writes the provider out (D-69)."""
 
 
 def use_favorites() -> Favorites:
-    """Return the ``Favorites`` store and re-render the caller when it changes (F3).
+    """Return the `Favorites` store and re-render the caller when it changes (F3).
 
     Call it in the component that owns a list, never in its rows (module docstring,
     D-153): each caller re-renders on every star tap.
 
     Raises:
-        RuntimeError: No ``FavoritesCtx`` provider is above the calling component.
+        RuntimeError: No `FavoritesCtx` provider is above the calling component.
     """
     store = ft.use_context(FavoritesCtx)
     if store is None:

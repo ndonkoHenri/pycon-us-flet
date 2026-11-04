@@ -1,9 +1,9 @@
 """Tests for the Map's tabs and the panes' places (#391; MAP-01..03).
 
-``Map`` runs in ``tests/map_view.py``'s harness over the 2026 feed and ``map.toml``,
-``ListView.scroll_to`` recorded instead of sent to a client. Floor plans' cards, Job
-fair and the app bar are ``test_map_panes.py``'s, the Rooms pane's rows
-``test_map.py``'s. How the tabs look and read, and that the pane keeps its place on the
+`Map` runs in `tests/map_view.py`'s harness over the 2026 feed and `map.toml`,
+`ListView.scroll_to` recorded instead of sent to a client. Floor plans' cards, Job
+fair and the app bar are `test_map_panes.py`'s, the Rooms pane's rows
+`test_map.py`'s. How the tabs look and read, and that the pane keeps its place on the
 device, are checked on devices (the PR).
 """
 
@@ -30,9 +30,9 @@ render = map_view.render  # the fixture, under this module's name
 
 
 async def test_the_map_opens_on_rooms_under_its_named_tabs(render: Render) -> None:
-    """Rooms, Floor plans, Expo and Job fair are the first row, Rooms shown, no ``TabBarView``.
+    """Rooms, Floor plans, Expo and Job fair are the first row, Rooms shown, no `TabBarView`.
 
-    Each tab carries ``map.tab.<slug>``; the pane shown is the rooms' keyed list,
+    Each tab carries `map.tab.<slug>`; the pane shown is the rooms' keyed list,
     alone under the bar (D-312).
     """
     shown = await render()
@@ -55,7 +55,7 @@ async def test_the_map_opens_on_rooms_under_its_named_tabs(render: Render) -> No
 async def test_floor_plans_lists_a_card_per_plan_in_the_map_s_order(
     render: Render,
 ) -> None:
-    """``?tab=floor-plans`` opens the pane: a card per plan, in ``map.toml``'s order."""
+    """`?tab=floor-plans` opens the pane: a card per plan, in `map.toml`'s order."""
     shown = await render("/map?tab=floor-plans")
     assert shown.tabs.selected_index == 1
     assert shown.pane.key == "floor-plans"
@@ -65,7 +65,7 @@ async def test_floor_plans_lists_a_card_per_plan_in_the_map_s_order(
 
 @pytest.mark.parametrize("route", ["/map?tab=nowhere", "/map?tab="])
 async def test_an_unknown_tab_falls_back_to_rooms(render: Render, route: str) -> None:
-    """A ``?tab=`` that names no pane opens Rooms, and the memory says Rooms."""
+    """A `?tab=` that names no pane opens Rooms, and the memory says Rooms."""
     memory = ViewMemory(map_tab="floor-plans")
     shown = await render(route, memory=memory)
     assert shown.pane.key == "rooms"
@@ -97,7 +97,7 @@ async def pick_in_app(shown: links.Shown, index: int) -> None:
 
 
 async def test_a_pick_puts_its_own_tab_in_the_route(render: Render) -> None:
-    """A pick navigates to its pane's ``?tab=``: no stale query is left in the route."""
+    """A pick navigates to its pane's `?tab=`: no stale query is left in the route."""
     shown = await render("/map?tab=floor-plans")
     await shown.pick(0)
     await shown.pick(1)
@@ -107,9 +107,9 @@ async def test_a_pick_puts_its_own_tab_in_the_route(render: Render) -> None:
 async def test_a_pick_over_a_tab_link_survives_search_and_back(
     open_at: links.Open,
 ) -> None:
-    """Rooms, picked on ``/map?tab=floor-plans``, is still shown after Search and Back.
+    """Rooms, picked on `/map?tab=floor-plans`, is still shown after Search and Back.
 
-    Search's way back is the route it was opened from (``search_base``): with the old
+    Search's way back is the route it was opened from (`search_base`): with the old
     query left in it, Back reopened Floor plans (D-18; Codex on #591).
     """
     memory = ViewMemory()
@@ -135,7 +135,7 @@ async def test_a_pick_over_a_tab_link_survives_a_new_session(
     shown = await open_at("/map?tab=floor-plans", memory=memory)
     await pick_in_app(shown, 0)
     assert memory.last_location == "/map?tab=rooms"
-    # Where Start sends the new session (``routes.Start``, checked in test_routes_locations).
+    # Where Start sends the new session (`routes.Start`, checked in test_routes_locations).
     target = start_target(memory.last_location, memory.search_base, onboarded=True)
     assert target == "/map?tab=rooms"
     again = await open_at(target, memory=memory)

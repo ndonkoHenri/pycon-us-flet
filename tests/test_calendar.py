@@ -1,8 +1,8 @@
-"""Tests for ``services/calendar.py``: Add to calendar's two routes (D-272, SESS-04).
+"""Tests for `services/calendar.py`: Add to calendar's two routes (D-272, SESS-04).
 
 iOS's runs the real loopback server against a launcher that fetches the URL as
 SFSafariViewController does and then raises as url_launcher_ios does (F91); Android's
-records the save dialog's file (``MemoryFilePicker``). Whether a calendar then adds the
+records the save dialog's file (`MemoryFilePicker`). Whether a calendar then adds the
 event is checked on devices (the PR, #121).
 """
 
@@ -34,7 +34,7 @@ DATA = b"BEGIN:VCALENDAR\r\nVERSION:2.0\r\nEND:VCALENDAR\r\n"
 """A calendar file's bytes: what is served or saved, never parsed here."""
 
 SLUG = "python-for-humans"
-"""The file's name without ``.ics``."""
+"""The file's name without `.ics`."""
 
 LAUNCH_ERROR = "PlatformException(Error, Error while launching http://127.0.0.1)"
 """What url_launcher_ios raises after the sheet showed (F91)."""
@@ -44,14 +44,14 @@ class Fetch:
     """What one GET of the served URL answered: status, type and body."""
 
     def __init__(self, status: int, content_type: str | None, body: bytes) -> None:
-        """Keep the answer's status, ``Content-Type`` and body."""
+        """Keep the answer's status, `Content-Type` and body."""
         self.status = status
         self.content_type = content_type
         self.body = body
 
 
 def get(url: str) -> Fetch:
-    """GET ``url`` as a browser would; a 404 is an answer too, not an error."""
+    """GET `url` as a browser would; a 404 is an answer too, not an error."""
     try:
         with urllib.request.urlopen(url, timeout=5) as response:
             return Fetch(
@@ -62,7 +62,7 @@ def get(url: str) -> Fetch:
 
 
 def is_down(url: str) -> bool:
-    """Whether nothing answers at ``url`` any more."""
+    """Whether nothing answers at `url` any more."""
     try:
         urllib.request.urlopen(url, timeout=2).close()
     except urllib.error.HTTPError:
@@ -88,7 +88,7 @@ class SafariLauncher(MemoryLauncher):
     ) -> None:
         """Record the URL, GET the other paths and then the file, and raise.
 
-        With ``hold``, wait for ever (until cancelled) instead.
+        With `hold`, wait for ever (until cancelled) instead.
         """
         self.launched.append((url, mode))
         if self.hold:
@@ -105,7 +105,7 @@ class SafariLauncher(MemoryLauncher):
 def page(svc: Services) -> Iterator[FakePage]:
     """Return a fake iPhone page, bound as Flet binds it while a handler runs.
 
-    Bound after ``svc`` is built: a Flet service registers with a bound page.
+    Bound after `svc` is built: a Flet service registers with a bound page.
     """
     fake = FakePage()
     with bound(fake):
@@ -145,9 +145,9 @@ def picker(svc: Services) -> MemoryFilePicker:
 async def test_ios_serves_the_file_on_the_loopback_in_the_in_app_browser(
     page: FakePage, svc: Services
 ) -> None:
-    """The file is served as ``text/calendar`` and opened in the in-app browser.
+    """The file is served as `text/calendar` and opened in the in-app browser.
 
-    Never ``EXTERNAL_APPLICATION``, which opens a calendar subscription (D-272).
+    Never `EXTERNAL_APPLICATION`, which opens a calendar subscription (D-272).
     """
     await add_to_calendar(svc, SLUG, DATA)
     ((url, mode),) = launcher(svc).launched
@@ -236,7 +236,7 @@ async def test_the_server_logs_each_request_s_method_path_and_status(
 
 
 async def test_only_a_get_of_the_file_counts_as_fetched() -> None:
-    """A HEAD of the file, or a GET of another path, leaves ``fetched`` unset."""
+    """A HEAD of the file, or a GET of another path, leaves `fetched` unset."""
     served = LoopbackFile(f"{SLUG}.ics", DATA)
     try:
         head = urllib.request.Request(served.url, method="HEAD")
@@ -272,7 +272,7 @@ async def test_android_saves_the_file_and_says_how_to_open_it(
 async def test_android_says_nothing_when_the_save_is_cancelled(
     page: FakePage, svc: Services
 ) -> None:
-    """A cancel (``None``) is the user's choice and needs no answer."""
+    """A cancel (`None`) is the user's choice and needs no answer."""
     page.platform = ft.PagePlatform.ANDROID
     picker(svc).answer = None
     await add_to_calendar(svc, SLUG, DATA)

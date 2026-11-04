@@ -1,13 +1,13 @@
 """The Speakers list's built cases and harness, for its three test modules (#312).
 
-``test_speakers.py`` (the query), ``test_speakers_screen.py`` (the list and its filter
-field) and ``test_speakers_rows.py`` (the rows, the headings and the states) share the
+`test_speakers.py` (the query), `test_speakers_screen.py` (the list and its filter
+field) and `test_speakers_rows.py` (the rows, the headings and the states) share the
 small built cases and the harness here. The screen runs in a real Flet session under the
-store providers (``tests/harness.py``'s ``showing()``, which names the Flet internals
+store providers (`tests/harness.py`'s `showing()`, which names the Flet internals
 it uses): a keystroke is the field's value patched in and its change event dispatched,
 as Flutter sends them, and Flet's scheduler re-renders what changed, so a test sees
 which row and section bodies ran (D-153). A module takes the fixtures by assigning them
-to its own names, as ``docs/testing-and-quality.md`` §3.1 says.
+to its own names, as `docs/testing-and-quality.md` §3.1 says.
 """
 
 from collections.abc import AsyncIterator, Awaitable, Callable
@@ -36,7 +36,7 @@ ROW = "speakers.speaker."
 def with_speakers(names: list[str], *, sessions: dict[str, list[str]] | None = None):
     """The 2026 feed with only these speakers, whose ids are "0", "1", and so on.
 
-    If ``sessions`` is given, only these sessions too: copies of one 2026 session,
+    If `sessions` is given, only these sessions too: copies of one 2026 session,
     linked to the speakers named by id.
     """
     base = processed(2026)
@@ -55,9 +55,9 @@ def names(entries: tuple[SpeakerEntry, ...]) -> list[str]:
 
 @dataclass
 class Shown(harness.Shown):
-    """The harness's ``Shown`` (``tests/harness.py``) on the Speakers screen.
+    """The harness's `Shown` (`tests/harness.py`) on the Speakers screen.
 
-    Its rows are speakers: ``rows`` holds the speaker ids whose row bodies ran.
+    Its rows are speakers: `rows` holds the speaker ids whose row bodies ran.
     """
 
     sections: list[str] = field(default_factory=list)
@@ -105,7 +105,7 @@ type Render = Callable[[Conference], Awaitable[Shown]]
 async def render(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> AsyncIterator[Render]:
-    """Return a function that shows the Speakers screen over a given ``Conference``.
+    """Return a function that shows the Speakers screen over a given `Conference`.
 
     Each screen it shows closes when the test ends.
     """
@@ -166,7 +166,7 @@ def focused(monkeypatch: pytest.MonkeyPatch) -> list[ft.TextField]:
 
 
 def _under(control: ft.BaseControl, ancestor: ft.BaseControl) -> bool:
-    """Whether ``ancestor`` is ``control`` or one of its parents."""
+    """Whether `ancestor` is `control` or one of its parents."""
     node: ft.BaseControl | None = control
     while node is not None:
         if node is ancestor:

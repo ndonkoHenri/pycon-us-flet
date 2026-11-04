@@ -1,12 +1,12 @@
 """Tests for the Schedule's track filter: its words and its summary (#87).
 
 The pure words are checked on the 2026 year data; the sheet is
-``test_schedule_filter_sheet.py``'s.
+`test_schedule_filter_sheet.py`'s.
 
 STORE-09, SCHED-09, SCHED-10; D-20, D-178. The screen renders in a real Flet session
-through ``tests/schedule_view.py``'s ``shown`` fixture, whose ``AppScaffold`` stand-in
-places the app bar's actions, so the ``TUNE`` action, the sheet (``ft.use_dialog``),
-the chips and the summary run as Flet runs them; ``tests/filter_sheet.py`` finds and
+through `tests/schedule_view.py`'s `shown` fixture, whose `AppScaffold` stand-in
+places the app bar's actions, so the `TUNE` action, the sheet (`ft.use_dialog`),
+the chips and the summary run as Flet runs them; `tests/filter_sheet.py` finds and
 taps them. How the sheet looks and scrolls at 200 % text is a device check (#87).
 """
 
@@ -184,7 +184,7 @@ async def test_a_wrapped_show_all_starts_its_label_under_the_summary_words(
     #283: Material shrinks a text button's side padding as text grows (12 dp to 4), so
     at large text a "Show all" on a run of its own started right of the words. Pinned,
     and indented by the mark's width, its label starts where the words do: the mark,
-    then ``SHOW_ALL_INSET`` (D-373).
+    then `SHOW_ALL_INSET` (D-373).
     """
     schedule = await shown()
     (words,) = find(

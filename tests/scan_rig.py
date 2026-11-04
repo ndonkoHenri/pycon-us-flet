@@ -1,9 +1,9 @@
 """The scan screen's test rig: a recording handler, a held clock and a live session.
 
-Shared by ``tests/test_scan_screen.py`` and ``tests/test_scan_feedback.py``: the screen
-runs in a real Flet session (``tests/harness.py``) around ``Rig.on_badge``; entry is
+Shared by `tests/test_scan_screen.py` and `tests/test_scan_feedback.py`: the screen
+runs in a real Flet session (`tests/harness.py`) around `Rig.on_badge`; entry is
 what Flutter reports: the field's value, a change event, then the submit event with
-the text. The clock is ``ui/scan_screen.py``'s ``clock()``, held by the rig.
+the text. The clock is `ui/scan_screen.py`'s `clock()`, held by the rig.
 """
 
 import asyncio
@@ -46,7 +46,7 @@ class Rig:
         self.clear_in_background = False
 
     async def on_badge(self, badge: Badge) -> ScanResult:
-        """Record the badge; wait for ``gate`` when one is set; return ``result``."""
+        """Record the badge; wait for `gate` when one is set; return `result`."""
         self.badges.append(badge)
         if self.gate is not None:
             await self.gate.wait()
@@ -71,7 +71,7 @@ def rig(monkeypatch: pytest.MonkeyPatch) -> Rig:
 
 
 class Timer:
-    """Stands in for the clear's timer (``ui/scan_clear.py``'s ``wait``): held until ``ring``."""
+    """Stands in for the clear's timer (`ui/scan_clear.py`'s `wait`): held until `ring`."""
 
     def __init__(self) -> None:
         """Start with no timer asked for, and none rung."""
@@ -79,7 +79,7 @@ class Timer:
         self.rung = asyncio.Event()
 
     async def wait(self, seconds: float) -> None:
-        """Record the seconds asked for, then wait for ``ring()``."""
+        """Record the seconds asked for, then wait for `ring()`."""
         self.waits.append(seconds)
         await self.rung.wait()
 
@@ -98,14 +98,14 @@ def timer(monkeypatch: pytest.MonkeyPatch) -> Timer:
 
 
 async def pause(shown: harness.Shown) -> None:
-    """Send the app to the background as ``app.py`` does on ``pause`` (D-420)."""
+    """Send the app to the background as `app.py` does on `pause` (D-420)."""
     shown.services.foreground.clear()
     shown.services.background.set()
     await shown.settle()
 
 
 async def resume(shown: harness.Shown) -> None:
-    """Bring the app back as ``on_resume()`` does."""
+    """Bring the app back as `on_resume()` does."""
     shown.services.background.clear()
     shown.services.foreground.set()
     await shown.settle()
@@ -124,12 +124,12 @@ async def show(
             prefs: Prefs | None = None,
             staff: Staff | None = None,
         ) -> harness.Shown:
-            """Render ``screen``, by default a scan screen titled "Lead scanner".
+            """Render `screen`, by default a scan screen titled "Lead scanner".
 
             Args:
                 screen: The component to render instead of the default screen.
-                prefs: The ``Prefs`` store (announcements on, say).
-                staff: The ``Staff`` store the sync chip counts.
+                prefs: The `Prefs` store (announcements on, say).
+                staff: The `Staff` store the sync chip counts.
             """
 
             @ft.component
@@ -168,7 +168,7 @@ def entry(shown: harness.Shown) -> ft.TextField:
 
 
 async def enter(shown: harness.Shown, text: str) -> None:
-    """Type ``text`` as Flutter reports it, then press Enter (a HID scanner's way)."""
+    """Type `text` as Flutter reports it, then press Enter (a HID scanner's way)."""
     field = entry(shown)
     shown.session.apply_patch(field._i, {"value": text})
     await shown.event(field, "change", text)
@@ -176,7 +176,7 @@ async def enter(shown: harness.Shown, text: str) -> None:
 
 
 async def scan(shown: harness.Shown, code: str) -> None:
-    """Scan ``code`` as a HID scanner does, whatever the field holds: nothing replaces it.
+    """Scan `code` as a HID scanner does, whatever the field holds: nothing replaces it.
 
     The keys land after the text the field shows by then, and Enter submits it all, so a
     scan after text left behind reads as what the two make together.

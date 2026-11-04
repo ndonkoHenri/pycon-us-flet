@@ -45,7 +45,7 @@ def first_speakers() -> list[str]:
 
     Taken from the bundled snapshot. On a device with a network, a refresh replaces it
     with the live feed, whose speakers change between snapshot refreshes, so the flow
-    taps whichever of the first few is on screen. P1-30's ``fresh_start()`` will serve
+    taps whichever of the first few is on screen. P1-30's `fresh_start()` will serve
     a recorded feed instead.
     """
     year = load_year()

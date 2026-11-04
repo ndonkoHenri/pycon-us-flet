@@ -2,14 +2,14 @@
 
 ux.md §7.3 (MASK-02, MASK-03; D-439). Not every incident comes with a badge in reach.
 "Find by name" opens a full-height sheet over the scan screen
-(``ui/coc_search_sheet.py``, the look) that searches the loaded directory with
-``core/conduct.py``'s ``search()``, 250 ms after typing pauses (D-46). A row's tap
+(`ui/coc_search_sheet.py`, the look) that searches the loaded directory with
+`core/conduct.py`'s `search()`, 250 ms after typing pauses (D-46). A row's tap
 closes the sheet and hands the attendee to the tool, which opens the review dialog
-(``ui/coc_review.py``): the same dialog and the same call as a scan (D-430).
+(`ui/coc_review.py`): the same dialog and the same call as a scan (D-430).
 
-``use_find()`` is the tool's hook. Each opening carries a token: Flutter reports a
+`use_find()` is the tool's hook. Each opening carries a token: Flutter reports a
 sheet's dismissal after its exit animation, so a late one for an earlier sheet closes
-nothing. Clear lands as ``use_field_query()``'s does (D-243): keys reported before
+nothing. Clear lands as `use_field_query()`'s does (D-243): keys reported before
 Flutter has the empty text are dropped, so a stale query never comes back. **Privacy (D-56, D-72):** the query and the rows live in the hook's state
 while the sheet is open, never stored or logged, and go when it closes.
 """
@@ -37,7 +37,7 @@ DEBOUNCE_SECONDS = 0.25
 
 @dataclass(frozen=True)
 class Finder:
-    """What the CoC tool gets from ``use_find()``.
+    """What the CoC tool gets from `use_find()`.
 
     Attributes:
         open: Opens the search.

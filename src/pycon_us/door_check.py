@@ -1,17 +1,17 @@
 """A door check-in through the outbox, decided on the device (#766; DOOR-04, DOOR-07).
 
-``check_in()`` is Door check's ``on_badge``. The decision is local, against the
-preloaded attendee list (``door_preload.py``) and the account's own door rows
-(``core/admission.decide()``, STORE-12), so the line keeps moving offline; a badge
-outside the list is looked up online (``fetch_attendee_products(door=True)``). An
-admission is a ``door`` row (``core/outbox_enqueue.admit()``, one per check-in), which
-the ``SyncWorker`` sends as the ``redeem`` POST (D-56, D-407). Unlike the Lead scanner
+`check_in()` is Door check's `on_badge`. The decision is local, against the
+preloaded attendee list (`door_preload.py`) and the account's own door rows
+(`core/admission.decide()`, STORE-12), so the line keeps moving offline; a badge
+outside the list is looked up online (`fetch_attendee_products(door=True)`). An
+admission is a `door` row (`core/outbox_enqueue.admit()`, one per check-in), which
+the `SyncWorker` sends as the `redeem` POST (D-56, D-407). Unlike the Lead scanner
 (D-426) the door doesn't wait for the worker: the person is admitted now, and the sync
-chip and the queue sheet say how the row syncs. A reply whose ``errors`` say a product
+chip and the queue sheet say how the row syncs. A reply whose `errors` say a product
 was already redeemed still syncs the row, and the queue sheet shows it (D-441).
 "Checked in" and "Already checked in" carry the attendee's allergy and dietary chips,
-from the list or the lookup (``core/admission.tags()``, DOOR-05, #767). An attendee a
-lookup found is kept in ``looked_up``, the screen's memory only (D-56), so a rescan of a
+from the list or the lookup (`core/admission.tags()`, DOOR-05, #767). An attendee a
+lookup found is kept in `looked_up`, the screen's memory only (D-56), so a rescan of a
 badge outside the list still shows them; a row kept from before (a relaunch) asks the
 server for the details, and a failed ask shows the code.
 """
@@ -50,7 +50,7 @@ NOT_FOUND = 404
 """The lookup's status for an attendee the server doesn't know."""
 
 type Quantities = tuple[tuple[int, int], ...]
-"""``(product id, quantity)`` pairs, in the session's order."""
+"""`(product id, quantity)` pairs, in the session's order."""
 
 
 async def check_in(
@@ -70,13 +70,13 @@ async def check_in(
     """Decide a door scan, queue the admission, and say how it went, at once.
 
     Args:
-        db: The outbox (``Services.outbox``); None says the check-in couldn't be saved.
-        staff: The ``Staff`` store: its counts are updated after an admission, and
-            ``offline`` adds "Saved. Will sync.".
-        kick: Asks the worker for a pass (``Services.kick_sync``).
-        api: ``Services.api``, for a badge outside the list; None has no connection.
+        db: The outbox (`Services.outbox`); None says the check-in couldn't be saved.
+        staff: The `Staff` store: its counts are updated after an admission, and
+            `offline` adds "Saved. Will sync.".
+        kick: Asks the worker for a pass (`Services.kick_sync`).
+        api: `Services.api`, for a badge outside the list; None has no connection.
         badge: The badge scanned; last of the positional arguments, so the screen
-            passes a ``functools.partial`` of the others as its ``on_badge``.
+            passes a `functools.partial` of the others as its `on_badge`.
         owner: The signed-in account's lower-cased email.
         session: The scan session, the screen visit's id: part of a row's key.
         product_ids: The chosen session's products.

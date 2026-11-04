@@ -1,7 +1,7 @@
 """Tests for session detail's extras (NEW-06, SESS-09, SESS-11; ux.md §5.5, D-206).
 
 Share and its text, a Posters row's posters, an open space's image and site link
-(``screens/session_extras.py``), in ``SessionDetail`` as ``tests/session_detail.py``
+(`screens/session_extras.py`), in `SessionDetail` as `tests/session_detail.py`
 renders it. How they look, at 200 % text and in dark mode, is checked on devices (the
 PR); here, what they say and what a tap does.
 """
@@ -36,7 +36,7 @@ from tests.session_detail import (
 async def render(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> AsyncIterator[Render]:
-    """Return a function that renders a session's detail at ``VIEW``, given its id."""
+    """Return a function that renders a session's detail at `VIEW`, given its id."""
     async with rendering(tmp_path, monkeypatch) as show:
         yield show
 

@@ -1,9 +1,9 @@
 """Tests for My schedule's Export to calendar (.ics) (#426; SESS-05; ux.md §5.6, D-289).
 
-When the overflow is offered, what the file holds and how a tap goes, in ``MySchedule``
-as ``tests/harness.py``'s ``showing()`` renders it, on Android, whose save dialog is a
-fake that records the file and can be held open. ``services.calendar``'s own routes,
-iOS's loopback included, are ``tests/test_calendar.py``'s.
+When the overflow is offered, what the file holds and how a tap goes, in `MySchedule`
+as `tests/harness.py`'s `showing()` renders it, on Android, whose save dialog is a
+fake that records the file and can be held open. `services.calendar`'s own routes,
+iOS's loopback included, are `tests/test_calendar.py`'s.
 """
 
 import asyncio
@@ -56,7 +56,7 @@ FILE = "pycon-us-2026-my-schedule.ics"
 """The export's name: the year's, whatever is saved."""
 
 Show = Callable[..., Awaitable[Shown]]
-"""Shows My schedule with the given saved ids; ``loaded=False`` leaves them unread."""
+"""Shows My schedule with the given saved ids; `loaded=False` leaves them unread."""
 
 
 @pytest.fixture
@@ -77,17 +77,17 @@ async def show(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> AsyncIterator
             e3: bool = False,
             reminders: ReminderSettings | None = None,
         ) -> Shown:
-            """Show the screen with ``saved`` stored, and with or without the feed.
+            """Show the screen with `saved` stored, and with or without the feed.
 
-            ``e3`` gives the services a ``Scheduler``, as a build with E3 has;
-            ``reminders`` are the stored reminder settings.
+            `e3` gives the services a `Scheduler`, as a build with E3 has;
+            `reminders` are the stored reminder settings.
             """
             if e3:
 
                 def with_e3(
                     year: YearData, directory: Path, memory: object = None
                 ) -> Services:
-                    """The services of a build with E3: a ``Scheduler`` over the fake."""
+                    """The services of a build with E3: a `Scheduler` over the fake."""
                     svc = memory_services(year, directory)
                     scheduler = Scheduler(cast(Notifications, MemoryNotifications()))
                     return dataclasses.replace(svc, reminders=scheduler)
@@ -156,7 +156,7 @@ def uids(text: str) -> list[str]:
 
 
 def test_the_file_is_named_after_the_year() -> None:
-    """ux.md §5.6: ``pycon-us-<year>-my-schedule.ics``, a name a person recognises."""
+    """ux.md §5.6: `pycon-us-<year>-my-schedule.ics`, a name a person recognises."""
     assert f"{export_slug(2026)}.ics" == FILE
 
 
@@ -293,7 +293,7 @@ async def test_with_e3_and_nothing_saved_reminder_settings_is_still_offered(
 
 
 async def test_reminder_settings_opens_settings_over_my_schedule(show: Show) -> None:
-    """Its tap pushes ``/my-schedule/settings``, so Back returns to My schedule."""
+    """Its tap pushes `/my-schedule/settings`, so Back returns to My schedule."""
     shown = await show(e3=True)
     menu = cast(ft.PopupMenuButton, shown.node("my_schedule.overflow").content)
     (item,) = menu.items

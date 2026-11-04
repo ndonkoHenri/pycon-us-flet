@@ -1,7 +1,7 @@
-"""The change log's file, ``changes-<year>.json`` (D-47, D-120, D-255; NEW-04).
+"""The change log's file, `changes-<year>.json` (D-47, D-120, D-255; NEW-04).
 
-Over a real ``Storage`` in ``tmp_path`` with in-memory SharedPreferences; the batches'
-JSON form itself is ``tests/test_change_batches.py``'s.
+Over a real `Storage` in `tmp_path` with in-memory SharedPreferences; the batches'
+JSON form itself is `tests/test_change_batches.py`'s.
 """
 
 import asyncio
@@ -48,17 +48,17 @@ MOVED = Change(
 
 @pytest.fixture
 def store(tmp_path: Path) -> Storage:
-    """A 2026 ``Storage`` in ``tmp_path``, over in-memory SharedPreferences."""
+    """A 2026 `Storage` in `tmp_path`, over in-memory SharedPreferences."""
     return Storage(prefs=MemoryPrefs(), directory=tmp_path, year=2026)
 
 
 def batches(*hours_ago: int) -> list[Batch]:
-    """One batch of ``MOVED`` for each of ``hours_ago``, detected that long before NOW."""
+    """One batch of `MOVED` for each of `hours_ago`, detected that long before NOW."""
     return [Batch(NOW - timedelta(hours=hours), (MOVED,)) for hours in hours_ago]
 
 
 def test_the_log_is_per_year_in_the_data_directory(store: Storage) -> None:
-    """The log is ``changes-<year>.json`` beside the feed cache (section M)."""
+    """The log is `changes-<year>.json` beside the feed cache (section M)."""
     assert changes_path(store) == store.directory / "changes-2026.json"
     other = Storage(prefs=store.prefs, directory=store.directory, year=2025)
     assert changes_path(other).name == "changes-2025.json"
@@ -174,7 +174,7 @@ async def test_a_deletion_waits_for_a_queued_write_of_either_file(
 ) -> None:
     """A log deletion lets a feed write asked for before it land first, and vice versa.
 
-    Both files' writes are kept in ``Storage._writes``, so neither deletion can be
+    Both files' writes are kept in `Storage._writes`, so neither deletion can be
     overtaken by a write asked for before it (D-244's order, D-255).
     """
     held = QueuedWrite(monkeypatch)

@@ -1,8 +1,8 @@
 """Tests for the Account page (AUTH-09, AUTH-10, AUTH-11, SHELL-13; #688, D-411).
 
-The page runs in a real Flet session (``tests/harness.py``) over the seeded mock behind
-``tools/mock_api/transport.py``, signed in through the real ``Account`` store, with the
-favourites sync's loop running as ``App`` runs it, and a real ``outbox-<year>.db`` for
+The page runs in a real Flet session (`tests/harness.py`) over the seeded mock behind
+`tools/mock_api/transport.py`, signed in through the real `Account` store, with the
+favourites sync's loop running as `App` runs it, and a real `outbox-<year>.db` for
 the staff rows sign-out names (D-414). How it looks, the in-app browser and the screen
 readers are checked on devices (the PR).
 """
@@ -80,19 +80,19 @@ def state() -> MockState:
 
 @pytest.fixture
 def recorder(state: MockState) -> Recorder:
-    """A transport to ``state`` that keeps every request sent through it."""
+    """A transport to `state` that keeps every request sent through it."""
     return Recorder(mock_transport(state))
 
 
 @pytest.fixture
 def account() -> Account:
-    """A signed-out ``Account`` store, as after a first launch."""
+    """A signed-out `Account` store, as after a first launch."""
     return Account()
 
 
 @pytest.fixture
 def staff() -> Staff:
-    """The session's ``Staff`` store, with no counts."""
+    """The session's `Staff` store, with no counts."""
     return Staff()
 
 
@@ -117,7 +117,7 @@ async def show(
 ) -> AsyncIterator[Show]:
     """Return a function that renders the page with the mock URL set, signed in.
 
-    The favourites sync's loop runs for the session, as ``App`` runs it, and stops
+    The favourites sync's loop runs for the session, as `App` runs it, and stops
     with it.
     """
     async with AsyncExitStack() as stack:
@@ -128,7 +128,7 @@ async def show(
             year: YearData = WITH_DISCORD,
             **kwargs: object,
         ) -> Shown:
-            """Render the page, signed in as the seeded ``role`` (None: signed out)."""
+            """Render the page, signed in as the seeded `role` (None: signed out)."""
             private_api = PrivateApi(recorder, credentials=account.credentials)
             prefs = Prefs(loaded=True)
             prefs.dev = {DEV_MOCK_API_URL: BASE_URL}
@@ -199,14 +199,14 @@ def dialog_texts(shown: Shown) -> list[str]:
 
 
 def button(shown: Shown, identifier: str) -> ft.Control:
-    """The button that ``identifier`` names on the page."""
+    """The button that `identifier` names on the page."""
     node = shown.node(identifier)
     assert isinstance(node.content, ft.Control)
     return node.content
 
 
 def action(shown: Shown, identifier: str) -> ft.Control:
-    """The open dialog's button that ``identifier`` names."""
+    """The open dialog's button that `identifier` names."""
     found = dialog(shown)
     assert found is not None
     for merged in found.actions:
@@ -258,7 +258,7 @@ async def test_each_seeded_account_shows_its_chips_and_discord_for_speakers(
 async def test_mounting_refreshes_the_role_flags(
     show: Show, recorder: Recorder, account: Account, tmp_path: Path
 ) -> None:
-    """The page asks ``check_features`` when it mounts (D-403)."""
+    """The page asks `check_features` when it mounts (D-403)."""
     private_api = PrivateApi(recorder, credentials=account.credentials)
     await private_api.connect(BASE_URL, 2026)
     assert private_api.client is not None
@@ -397,7 +397,7 @@ async def test_signed_out_the_page_shows_a_state(show: Show) -> None:
 
 
 def seed(db: OutboxDb, owner: str, *statuses: Status) -> None:
-    """Store one lead row of ``owner``'s in each of ``statuses``."""
+    """Store one lead row of `owner`'s in each of `statuses`."""
     for number, status in enumerate(statuses):
         code = f"MOCK{number:04}"
         decide = partial(

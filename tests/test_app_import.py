@@ -1,8 +1,8 @@
 """The app's modules import in any order, as a phone's first import does (#746).
 
-The tests' own imports load ``pycon_us.services`` early, which hid an import cycle that
-stopped every packaged build at start; a fresh interpreter imports ``pycon_us.app``
-first, as ``main.py`` does.
+The tests' own imports load `pycon_us.services` early, which hid an import cycle that
+stopped every packaged build at start; a fresh interpreter imports `pycon_us.app`
+first, as `main.py` does.
 """
 
 import subprocess

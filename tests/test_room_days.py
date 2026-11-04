@@ -1,6 +1,6 @@
 """Tests for room detail's day lists and "Now in this room" (#101; ROOM-03).
 
-The page runs in ``tests/room_view.py``'s harness at fixed times of the 2026 feed; rows
+The page runs in `tests/room_view.py`'s harness at fixed times of the 2026 feed; rows
 leave out the room's own name.
 """
 
@@ -93,7 +93,7 @@ async def test_a_row_pushes_its_session_on_top_of_the_room(render: Render) -> No
 
 
 def _holds(control: Any, node: ft.Semantics) -> bool:
-    """Whether ``control`` is the tappable ``Container`` right around ``node``."""
+    """Whether `control` is the tappable `Container` right around `node`."""
     return (
         isinstance(control, ft.Container)
         and control.on_click is not None
@@ -222,7 +222,7 @@ async def test_the_minute_tick_re_renders_only_now_in_this_room(
 ) -> None:
     """A minute tick re-renders Now in this room without building the day lists again.
 
-    It is a leaf component on ``use_minute()`` (D-194).
+    It is a leaf component on `use_minute()` (D-194).
     """
     monkeypatch.setattr(status_strip, "TICK_SECONDS", 0.01)
     built: list[int] = []

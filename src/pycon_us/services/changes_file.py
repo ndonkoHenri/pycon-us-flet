@@ -1,9 +1,9 @@
-"""The change log's file, ``changes-<year>.json`` in the data directory (D-47, D-255; NEW-04).
+"""The change log's file, `changes-<year>.json` in the data directory (D-47, D-255; NEW-04).
 
-The batches a year's refreshes recorded, kept for 14 days (``core/change_batches.py`` has
-the batches, their JSON form and the trim). Writes and deletions go through ``Storage``,
+The batches a year's refreshes recorded, kept for 14 days (`core/change_batches.py` has
+the batches, their JSON form and the trim). Writes and deletions go through `Storage`,
 so they keep the feed cache's order: every write, of either file, is a task kept in
-``Storage._writes``, and a deletion waits for all of them, so a log write asked for
+`Storage._writes`, and a deletion waits for all of them, so a log write asked for
 before a feed URL change cannot land after its deletion and mix two feeds (D-244, D-255).
 Failures are logged and returned, never raised (D-120): the batches in memory stay right
 for the session.
@@ -21,7 +21,7 @@ logger = logging.getLogger(__name__)
 
 
 def changes_path(storage: Storage) -> Path:
-    """Return the change log of ``storage``'s year, ``changes-<year>.json``.
+    """Return the change log of `storage`'s year, `changes-<year>.json`.
 
     Args:
         storage: The session's storage: its data directory and year.
@@ -39,16 +39,16 @@ async def read_batches(storage: Storage, zone: tzinfo) -> list[Batch]:
     Returns:
         The batches in the file's order; none when there is no file, or it cannot be
         read (logged). A file that is partly corrupt gives the batches that can be read
-        (``decode_batches()``, logged).
+        (`decode_batches()`, logged).
     """
     raw = await asyncio.to_thread(_read, changes_path(storage))
     return [] if raw is None else decode_batches(raw, zone)
 
 
 async def write_batches(storage: Storage, batches: list[Batch]) -> bool:
-    """Replace the year's change log with ``batches``, atomically.
+    """Replace the year's change log with `batches`, atomically.
 
-    The caller trims them first (``trim()``) and gives them in the order to keep.
+    The caller trims them first (`trim()`) and gives them in the order to keep.
 
     Args:
         storage: The session's storage.
@@ -76,7 +76,7 @@ async def delete_batches(storage: Storage, reason: str) -> bool:
 
 
 def _read(path: Path) -> bytes | None:
-    """Return the bytes of ``path``, or None when it is missing or unreadable (logged)."""
+    """Return the bytes of `path`, or None when it is missing or unreadable (logged)."""
     try:
         return path.read_bytes()
     except FileNotFoundError:

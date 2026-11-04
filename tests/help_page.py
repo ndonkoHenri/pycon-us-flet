@@ -1,11 +1,11 @@
 """Help & safety's fixtures and lookups, for its two test modules (#623).
 
-``test_help.py`` (the page: the Report a concern card, the places and the contacts)
-and ``test_help_report.py`` (Report a problem with the app) run ``Help`` and
-``ReportProblem`` outside a renderer: their services and ``AppScaffold`` are replaced,
+`test_help.py` (the page: the Report a concern card, the places and the contacts)
+and `test_help_report.py` (Report a problem with the app) run `Help` and
+`ReportProblem` outside a renderer: their services and `AppScaffold` are replaced,
 and a fake page is bound as Flet binds a session's page; the contact rows' component
-body runs inline over the same services, as ``test_rows.py`` runs it. A module takes
-the fixtures by assigning them to its own names, as ``docs/testing-and-quality.md``
+body runs inline over the same services, as `test_rows.py` runs it. A module takes
+the fixtures by assigning them to its own names, as `docs/testing-and-quality.md`
 §3.1 says.
 """
 
@@ -45,8 +45,8 @@ HOTLINE = SafetyContact(
 """A phone contact no year ships (the 2026 hotline is on no public page, D-45)."""
 
 REPORT_PROBLEM_SECTION = ft.Container()
-"""What ``ReportProblem`` renders as in the page's tests: its own tests are in
-``test_help_report.py``."""
+"""What `ReportProblem` renders as in the page's tests: its own tests are in
+`test_help_report.py`."""
 
 
 @pytest.fixture
@@ -65,7 +65,7 @@ def svc(tmp_path: Path) -> Services:
 
 @pytest.fixture
 def page(svc: Services, monkeypatch: pytest.MonkeyPatch) -> Iterator[FakePage]:
-    """A ``FakePage`` (iOS) bound, with the contact rows' body inline over ``svc``."""
+    """A `FakePage` (iOS) bound, with the contact rows' body inline over `svc`."""
     monkeypatch.setattr(
         rows, "_ExternalLinkTile", inspect.unwrap(rows._ExternalLinkTile)
     )
@@ -79,7 +79,7 @@ def page(svc: Services, monkeypatch: pytest.MonkeyPatch) -> Iterator[FakePage]:
 def render(
     monkeypatch: pytest.MonkeyPatch, page: FakePage
 ) -> Callable[[Services], dict[str, Any]]:
-    """Render ``Help`` once over the given services and return its scaffold's kwargs."""
+    """Render `Help` once over the given services and return its scaffold's kwargs."""
     monkeypatch.setattr(help_screen, "AppScaffold", lambda **kwargs: kwargs)
     monkeypatch.setattr(help_screen, "ReportProblem", lambda: REPORT_PROBLEM_SECTION)
     # The credit is a component of its own, tested in test_sponsor_credit.py: here a
@@ -105,7 +105,7 @@ def render(
     monkeypatch.setattr(info_page, "use_margin", phone_margin)
 
     def render(svc: Services) -> dict[str, Any]:
-        """``Help``'s body, its services answered with ``svc``."""
+        """`Help`'s body, its services answered with `svc`."""
         monkeypatch.setattr(help_screen, "use_services", lambda: svc)
         return cast(dict[str, Any], inspect.unwrap(Help)())
 
@@ -113,14 +113,14 @@ def render(
 
 
 def blocks_of(scaffold: dict[str, Any]) -> list[ft.Control]:
-    """Return the items of the scaffold's ``ListView`` body."""
+    """Return the items of the scaffold's `ListView` body."""
     body = scaffold["body"]
     assert isinstance(body, ft.ListView)
     return list(body.controls)
 
 
 def card_of(block: ft.Control) -> ft.Card:
-    """Return the Report a concern ``Card`` inside its gutter."""
+    """Return the Report a concern `Card` inside its gutter."""
     assert isinstance(block, ft.Container)
     card = block.content
     assert isinstance(card, ft.Card)
@@ -135,7 +135,7 @@ def card_items(block: ft.Control) -> list[ft.Control]:
 
 
 def link_node(row: ft.Control) -> ft.Semantics:
-    """Return a link row's merged ``Semantics`` node (its identifier and link flag)."""
+    """Return a link row's merged `Semantics` node (its identifier and link flag)."""
     if isinstance(row, ft.Row):  # a phone or email row: the link, then Copy
         holder = row.controls[0]
         assert isinstance(holder, ft.Container) and holder.content is not None
@@ -147,7 +147,7 @@ def link_node(row: ft.Control) -> ft.Semantics:
 
 
 def tile_of(row: ft.Control) -> ft.ListTile:
-    """Return a row's ``ListTile``."""
+    """Return a row's `ListTile`."""
     tile = link_node(row).content
     assert isinstance(tile, ft.ListTile)
     return tile
@@ -166,7 +166,7 @@ def copy_node(row: ft.Control) -> ft.Semantics:
 
 
 async def click(control: ft.Control) -> None:
-    """Await a tile's or a button's ``on_click``, as a tap does."""
+    """Await a tile's or a button's `on_click`, as a tap does."""
     handler = getattr(control, "on_click", None)
     assert handler is not None
     await cast(Callable[[], Awaitable[None]], handler)()
@@ -182,7 +182,7 @@ def said(page: FakePage) -> list[str]:
 
 
 def block_named(blocks: list[ft.Control], identifier: str) -> ft.Control:
-    """Return the one in-app or plain row whose merged node is ``identifier``."""
+    """Return the one in-app or plain row whose merged node is `identifier`."""
     (block,) = [
         block
         for block in blocks
@@ -193,7 +193,7 @@ def block_named(blocks: list[ft.Control], identifier: str) -> ft.Control:
 
 
 def outline(blocks: list[ft.Control]) -> list[str]:
-    """The page as headings (``# ``), the card, row identifiers and the summary."""
+    """The page as headings (`# `), the card, row identifiers and the summary."""
     result = []
     for block in blocks:
         if block is REPORT_PROBLEM_SECTION:

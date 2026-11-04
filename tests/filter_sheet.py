@@ -1,7 +1,7 @@
 """The Schedule filter tests' support: the sheet's controls, taps and counts (#87).
 
-``tests/test_schedule_filter.py`` and ``tests/test_schedule_filter_sheet.py`` share it,
-over ``tests/schedule_view.py``'s ``shown`` fixture. Each takes ``encoded`` by
+`tests/test_schedule_filter.py` and `tests/test_schedule_filter_sheet.py` share it,
+over `tests/schedule_view.py`'s `shown` fixture. Each takes `encoded` by
 assignment: the sheet is a dialog, whose updates need encoded messages.
 """
 
@@ -31,11 +31,11 @@ INFO = load_year(2026).conference
 STORED = "pycon.excluded_tracks"
 
 type Show = Callable[..., Awaitable[Shown]]
-"""The ``shown`` fixture: render the Schedule, with ``Prefs`` fields as keywords."""
+"""The `shown` fixture: render the Schedule, with `Prefs` fields as keywords."""
 
 
 def stored(schedule: Shown) -> dict[str, Any]:
-    """What SharedPreferences holds for the session (``tests/fakes.MemoryPrefs``)."""
+    """What SharedPreferences holds for the session (`tests/fakes.MemoryPrefs`)."""
     return cast(MemoryPrefs, schedule.storage.prefs).values
 
 
@@ -61,7 +61,7 @@ def shown_count(conference: Conference, excluded: tuple[str, ...]) -> int:
 
 
 def chip_parts(label: Any) -> tuple[ft.Icon | None, ft.Text]:
-    """Return a chip label's check (``None`` when it has none) and its name."""
+    """Return a chip label's check (`None` when it has none) and its name."""
     assert isinstance(label, ft.Container)
     row = label.content
     assert isinstance(row, ft.Row)
@@ -82,7 +82,7 @@ def summary(schedule: Shown) -> str | None:
 
 
 def filter_button(schedule: Shown) -> ft.IconButton:
-    """The app bar's filter ``IconButton``."""
+    """The app bar's filter `IconButton`."""
     (node,) = find(
         schedule.session, ft.Semantics, lambda c: c.identifier == "schedule.filter"
     )
@@ -99,7 +99,7 @@ def sheet(schedule: Shown) -> ft.BottomSheet | None:
 
 
 def node(schedule: Shown, identifier: str) -> ft.Semantics:
-    """Return the sheet's semantics node ``identifier``."""
+    """Return the sheet's semantics node `identifier`."""
     current = sheet(schedule)
     assert current is not None
     return next(
@@ -110,12 +110,12 @@ def node(schedule: Shown, identifier: str) -> ft.Semantics:
 
 
 def in_sheet(schedule: Shown, identifier: str) -> Any:
-    """Return the control under the sheet's semantics node ``identifier``."""
+    """Return the control under the sheet's semantics node `identifier`."""
     return node(schedule, identifier).content
 
 
 def chip(schedule: Shown, key: str) -> ft.Chip:
-    """The sheet's chip for the track ``key``."""
+    """The sheet's chip for the track `key`."""
     found = in_sheet(schedule, f"schedule.filter.{key}")
     assert isinstance(found, ft.Chip)
     return found
@@ -143,7 +143,7 @@ def button_label(schedule: Shown) -> str:
 
 
 def descendants(control: Any) -> list[Any]:
-    """Every control under ``control``, through ``content`` and ``controls``."""
+    """Every control under `control`, through `content` and `controls`."""
     found = [control]
     for child in (getattr(control, "content", None), *getattr(control, "controls", ())):
         if isinstance(child, ft.BaseControl):
@@ -152,7 +152,7 @@ def descendants(control: Any) -> list[Any]:
 
 
 async def click(schedule: Shown, control: ft.BaseControl) -> None:
-    """Dispatch a click on ``control``, then let the session settle."""
+    """Dispatch a click on `control`, then let the session settle."""
     await schedule.session.dispatch_event(control._i, "click", None)
     await settle()
 

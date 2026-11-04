@@ -1,10 +1,10 @@
 """The floor viewer's harness, for its test modules (#623).
 
-``test_plan.py`` (the pin, the zoom and the gestures) and ``test_plan_tables.py`` (the
-job fair's tables) open ``PlanViewer`` in a real Flet session (``tests/sessions.py``)
-over the 2026 ``map.toml``, with its pulse waits held (``tests/timers.py``) and
-``FakeViewer`` standing in for the ``InteractiveViewer``'s methods. A module takes the
-``render`` fixture by assigning it to its own name, as ``docs/testing-and-quality.md``
+`test_plan.py` (the pin, the zoom and the gestures) and `test_plan_tables.py` (the
+job fair's tables) open `PlanViewer` in a real Flet session (`tests/sessions.py`)
+over the 2026 `map.toml`, with its pulse waits held (`tests/timers.py`) and
+`FakeViewer` standing in for the `InteractiveViewer`'s methods. A module takes the
+`render` fixture by assigning it to its own name, as `docs/testing-and-quality.md`
 §3.1 says.
 """
 
@@ -37,7 +37,7 @@ BOX = (382.0, 640.0)
 
 @dataclass
 class Plan(harness.Shown):
-    """The harness's ``Shown`` on one ``PlanViewer``."""
+    """The harness's `Shown` on one `PlanViewer`."""
 
     viewer: FakeViewer = field(default_factory=FakeViewer)
     sleeps: HeldSleeps = field(default_factory=HeldSleeps)
@@ -46,22 +46,22 @@ class Plan(harness.Shown):
 
     @property
     def zoom_layer(self) -> ft.InteractiveViewer:
-        """The plan's one ``InteractiveViewer``."""
+        """The plan's one `InteractiveViewer`."""
         (found,) = self.find(ft.InteractiveViewer)
         return found
 
     @property
     def image(self) -> ft.Image:
-        """The plan's ``Image``."""
+        """The plan's `Image`."""
         (found,) = self.find(ft.Image)
         return found
 
     def pins(self) -> list[ft.Stack]:
-        """The pins drawn on the plan: the ``Stack``s scaled back against the zoom."""
+        """The pins drawn on the plan: the `Stack`s scaled back against the zoom."""
         return [s for s in self.find(ft.Stack) if s.scale is not None]
 
     def button(self, name: str) -> ft.IconButton:
-        """A zoom button, under its merged identifier ``plan.<name>``."""
+        """A zoom button, under its merged identifier `plan.<name>`."""
         return cast(ft.IconButton, self.node(f"plan.{name}").content)
 
     async def lay_out(self, box: tuple[float, float] = BOX) -> None:
@@ -70,13 +70,13 @@ class Plan(harness.Shown):
         await self.event(sized, "size_change", {"w": box[0], "h": box[1]})
 
     async def transformed(self) -> None:
-        """Report the fake viewer's transform, as ``on_transform_changed`` does."""
+        """Report the fake viewer's transform, as `on_transform_changed` does."""
         v = self.viewer
         data = {"s": v.scale, "tx": v.x, "ty": v.y, "tz": 0.0, "m": []}
         await self.event(self.zoom_layer, "transform_changed", data)
 
     async def until_held(self, *, timeout: float = 30.0) -> None:
-        """Settle until the pulse waits on a held sleep, or fail after ``timeout`` s.
+        """Settle until the pulse waits on a held sleep, or fail after `timeout` s.
 
         A poll rather than a fixed wait, so a loaded host only makes it slower.
         """
@@ -100,11 +100,11 @@ type Render = Callable[..., Awaitable[Plan]]
 async def render(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> AsyncIterator[Render]:
-    """Yield a function that opens ``PlanViewer`` at a route and returns its ``Plan``.
+    """Yield a function that opens `PlanViewer` at a route and returns its `Plan`.
 
-    The plan is the Concourse level unless ``plan_id`` names another; reduced motion,
-    the view memory and the ``Conference`` (no feed by default) can be set too. The pulse's waits are held and the viewer's
-    methods are ``FakeViewer``'s.
+    The plan is the Concourse level unless `plan_id` names another; reduced motion,
+    the view memory and the `Conference` (no feed by default) can be set too. The pulse's waits are held and the viewer's
+    methods are `FakeViewer`'s.
     """
     sleeps = HeldSleeps()
     monkeypatch.setattr(screen, "asyncio", sleeps)  # the plan module's name only

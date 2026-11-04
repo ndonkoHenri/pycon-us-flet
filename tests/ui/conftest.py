@@ -1,8 +1,8 @@
-"""Fixtures for the UI flows, which ``flet test`` runs on an emulator or a simulator.
+"""Fixtures for the UI flows, which `flet test` runs on an emulator or a simulator.
 
-Flet's pytest plugin gives each flow ``flet_app``: a fresh launch of the test build,
-driven through ``flet_app.tester`` (D-78; testing-and-quality.md §5). Plain
-``uv run pytest`` never collects this directory (``addopts``), since that fixture
+Flet's pytest plugin gives each flow `flet_app`: a fresh launch of the test build,
+driven through `flet_app.tester` (D-78; testing-and-quality.md §5). Plain
+`uv run pytest` never collects this directory (`addopts`), since that fixture
 provisions a Flutter test host.
 """
 
@@ -23,8 +23,8 @@ FEEDS = Path(__file__).parents[1] / "fixtures" / "feeds"
 def feed_url() -> Iterator[str]:
     """Serve the recorded feeds from this machine; return the active year's feed URL.
 
-    The URL is the one the app can reach (``laptop_url()``). Flows set it in the
-    Developer screen with ``fresh_start()`` (``tests/ui/developer.py``).
+    The URL is the one the app can reach (`laptop_url()`). Flows set it in the
+    Developer screen with `fresh_start()` (`tests/ui/developer.py`).
     """
     handler = partial(SimpleHTTPRequestHandler, directory=str(FEEDS))
     server = ThreadingHTTPServer(("127.0.0.1", 0), handler)
@@ -38,10 +38,10 @@ def feed_url() -> Iterator[str]:
 
 @pytest.fixture
 def silent_feed() -> Iterator[SilentFeed]:
-    """Serve a feed that never answers from this machine (``SilentFeed``).
+    """Serve a feed that never answers from this machine (`SilentFeed`).
 
-    Flows set its ``url`` in the Developer screen, as a person would; ``hold()`` and
-    ``hang_up()`` let a flow see a refresh run and end (F1).
+    Flows set its `url` in the Developer screen, as a person would; `hold()` and
+    `hang_up()` let a flow see a refresh run and end (F1).
     """
     feed = SilentFeed()
     feed.serve()

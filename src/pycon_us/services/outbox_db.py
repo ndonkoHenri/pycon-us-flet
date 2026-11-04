@@ -1,11 +1,11 @@
-"""The staff outbox's sqlite database, ``outbox-<year>.db`` in the data directory (D-49, D-56).
+"""The staff outbox's sqlite database, `outbox-<year>.db` in the data directory (D-49, D-56).
 
-``core/outbox_enqueue.py`` and ``core/outbox.py`` decide what a scan, a send or a
+`core/outbox_enqueue.py` and `core/outbox.py` decide what a scan, a send or a
 sign-out does to the rows; this module only stores them. One connection, opened on
 first use and used only from the asyncio loop thread: statements take milliseconds,
-so nothing goes to ``to_thread``, and sqlite's ``check_same_thread`` refuses any other
-thread (D-49). The file is in WAL mode and migrated by ``PRAGMA user_version``. S1 ran
-``sqlite3`` in the packaged runtime on both platforms, and the file survived update
+so nothing goes to `to_thread`, and sqlite's `check_same_thread` refuses any other
+thread (D-49). The file is in WAL mode and migrated by `PRAGMA user_version`. S1 ran
+`sqlite3` in the packaged runtime on both platforms, and the file survived update
 installs (D-108).
 
 A database that cannot be opened, read or written is an expected failure: it is logged
@@ -59,20 +59,20 @@ class Counts:
 class OutboxDb:
     """A year's outbox rows: every outbox read and write goes through here.
 
-    Built by ``Services.create()`` and closed by ``Services.close()``. The connection
+    Built by `Services.create()` and closed by `Services.close()`. The connection
     opens on first use, from the loop thread that then owns it, so an install whose
     staff tools never run (they are hidden without a mock API URL, D-51) never creates
     the file. Every method is synchronous and runs on that thread (D-49).
 
     Attributes:
-        path: The database file, ``outbox-<year>.db`` in the data directory.
+        path: The database file, `outbox-<year>.db` in the data directory.
     """
 
     def __init__(self, directory: Path, year: int) -> None:
-        """Point at ``year``'s file in ``directory``; nothing is opened yet.
+        """Point at `year`'s file in `directory`; nothing is opened yet.
 
         Args:
-            directory: The durable data directory, from ``data_dir()`` (D-108).
+            directory: The durable data directory, from `data_dir()` (D-108).
             year: The conference year whose rows it holds (D-466).
         """
         self.path = directory / file_name(year)
@@ -111,9 +111,9 @@ class OutboxDb:
             raise
 
     def _attempt[T](self, what: str, action: Callable[[], T]) -> T | None:
-        """Return ``action()``, or None when the database fails, logged (D-120).
+        """Return `action()`, or None when the database fails, logged (D-120).
 
-        A use from another thread (``sqlite3.ProgrammingError``) is a bug, not a storage
+        A use from another thread (`sqlite3.ProgrammingError`) is a bug, not a storage
         failure, so it is raised.
         """
         try:
@@ -133,19 +133,19 @@ class OutboxDb:
     def enqueue(
         self, code: str, decide: Callable[[list[Row]], Enqueued]
     ) -> Enqueued | None:
-        """Apply a ``core.outbox_enqueue`` decision and store its row, atomically.
+        """Apply a `core.outbox_enqueue` decision and store its row, atomically.
 
-        ``decide`` is ``scan_lead``, ``save_note`` or ``admit`` with every argument but
-        the rows (a ``functools.partial``). It is given every row of the access code,
+        `decide` is `scan_lead`, `save_note` or `admit` with every argument but
+        the rows (a `functools.partial`). It is given every row of the access code,
         every owner's: all three decide from those alone, since a door row's
-        ``idem_key`` starts with its code.
+        `idem_key` starts with its code.
 
         Args:
             code: The attendee's access code.
             decide: The decision, given the code's rows.
 
         Returns:
-            The decision, with the stored row and its id for ``QUEUED``; None when the
+            The decision, with the stored row and its id for `QUEUED`; None when the
             database failed (logged) and nothing was stored.
         """
 
@@ -187,7 +187,7 @@ class OutboxDb:
         the old send's outcome is dropped (D-56). The next pass sends the edit.
 
         Args:
-            row: A stored row (with its id), as ``core.outbox`` changed it.
+            row: A stored row (with its id), as `core.outbox` changed it.
 
         Returns:
             Whether it was saved: False when the database failed (logged, D-120) or an
@@ -213,7 +213,7 @@ class OutboxDb:
 
         A send that may have reached the server is a fact about the row, not about the
         revision that was sent: an edit while it was in flight drops the send's
-        outcome (``save()``), never this flag.
+        outcome (`save()`), never this flag.
 
         Args:
             row_id: The stored row's id.
@@ -252,7 +252,7 @@ class OutboxDb:
             now: The current time (epoch seconds).
 
         Returns:
-            The rows, as ``core.outbox.due()`` orders them; none when the database
+            The rows, as `core.outbox.due()` orders them; none when the database
             fails (logged): nothing is sent, and the next pass tries again.
         """
         params = {"owner": owner, "now": now}
@@ -292,7 +292,7 @@ class OutboxDb:
             statuses: The statuses to list.
 
         Returns:
-            The rows by ``created_at`` then id, or None when the database fails (logged).
+            The rows by `created_at` then id, or None when the database fails (logged).
         """
         marks = ", ".join("?" * len(statuses))
         sql = f"SELECT * FROM outbox WHERE owner = ? AND status IN ({marks})"
@@ -304,7 +304,7 @@ class OutboxDb:
     def door_rows(self, owner: str, code: str) -> list[Row] | None:
         """Return the owner's door rows for an access code, every status (STORE-12).
 
-        Door check's "Already checked in" reads them (``core.admission.decide()``).
+        Door check's "Already checked in" reads them (`core.admission.decide()`).
 
         Returns:
             The rows, or None when the database fails (logged).
@@ -331,7 +331,7 @@ class OutboxDb:
         return self._owners("WHERE status <> 'synced'", ())
 
     def _owners(self, where: str, params: tuple[str, ...]) -> list[str] | None:
-        """Return the owners of the rows ``where`` selects, sorted."""
+        """Return the owners of the rows `where` selects, sorted."""
         sql = f"SELECT DISTINCT owner FROM outbox {where} ORDER BY owner"
         return self._attempt(
             "list owners",
@@ -339,7 +339,7 @@ class OutboxDb:
         )
 
     def delete_synced(self, owner: str) -> bool:
-        """Delete the owner's synced rows on an account switch (``forget_synced()``).
+        """Delete the owner's synced rows on an account switch (`forget_synced()`).
 
         A synced lead whose note hasn't synced stays, as the note waits for it; pending
         and failed rows stay, as does every other owner's row.
@@ -352,9 +352,9 @@ class OutboxDb:
     def forget_other_accounts(self, owner: str) -> bool:
         """Delete every other owner's synced rows, as an account switch does (D-414).
 
-        Each other owner's rows go as ``delete_synced()`` deletes them: a synced lead
+        Each other owner's rows go as `delete_synced()` deletes them: a synced lead
         whose note hasn't synced stays, as do the pending and failed rows. The worker
-        runs it at each start of a signed-in account's sync (``services.sync``): an
+        runs it at each start of a signed-in account's sync (`services.sync`): an
         earlier account's synced rows are then ones the new account must not see, and
         the next start finds none left.
 
@@ -372,7 +372,7 @@ class OutboxDb:
         return all(deleted)
 
     def clear(self, owner: str | None = None) -> bool:
-        """Delete every row of ``owner``, or every row ("Clear staff data", confirmed).
+        """Delete every row of `owner`, or every row ("Clear staff data", confirmed).
 
         Returns:
             Whether the rows are gone; a failure is logged (D-120).

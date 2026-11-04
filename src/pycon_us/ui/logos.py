@@ -1,8 +1,8 @@
-"""A logo on a white tile, with the initials when there is none: ``logo_tile()``.
+"""A logo on a white tile, with the initials when there is none: `logo_tile()`.
 
 Logos are drawn for a white page: a dark mark on a transparent ground vanishes on the
 dark surface. So a logo sits on a white tile in both schemes, with a hairline
-``outline_variant`` edge, wherever the app shows one: a sprint project's card (EVT-05,
+`outline_variant` edge, wherever the app shows one: a sprint project's card (EVT-05,
 D-202), the Sponsors list (D-279) and detail, Job listings and Now's sponsor
 spotlight (ux.md §5.1, §6.5, §6.6). One builder, so the tile is drawn one way (D-262).
 """
@@ -19,7 +19,7 @@ INSET = 6
 """The white margin between the tile's edge and its logo or initials, in dp."""
 
 EDGE = 1
-"""The width of the tile's hairline ``outline_variant`` edge, in dp."""
+"""The width of the tile's hairline `outline_variant` edge, in dp."""
 
 CORNER = 12
 """The tile's corner radius, in dp."""
@@ -33,18 +33,18 @@ def logo_tile(
     width: float | None = None,
     fill: bool = False,
 ) -> ft.Control:
-    """Return the logo of ``name`` on a white tile, or its initials when there is none.
+    """Return the logo of `name` on a white tile, or its initials when there is none.
 
-    The logo fits inside the tile's inset (``BoxFit.CONTAIN``). The initials stand in
+    The logo fits inside the tile's inset (`BoxFit.CONTAIN`). The initials stand in
     when there is no logo and when it cannot load (offline, a broken URL), in the brand
-    indigo; a ``CircleAvatar`` holds them because it does not scale its text, so they
+    indigo; a `CircleAvatar` holds them because it does not scale its text, so they
     fit the tile at any text size. The tile is decorative for screen readers: the name
     is always said beside it, so neither the logo nor the initials is a node.
 
     Args:
         name: Whose logo it is: a project's or a sponsor's name, for the initials.
         logo_url: The logo's URL, or None when the feed has none.
-        size: The tile's height in dp, and its width unless ``width`` is given.
+        size: The tile's height in dp, and its width unless `width` is given.
         width: A wider plate's width in dp, as sponsor detail's 240 × 96 (ux.md §6.5);
             the initials keep to the height.
         fill: The plate takes the width its parent gives it instead, as the Sponsors

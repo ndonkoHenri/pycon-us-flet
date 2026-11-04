@@ -1,12 +1,12 @@
 """Apply what U7 would render to the generated Android project (S6 only).
 
 flutter_local_notifications needs core library desugaring in the app module,
-and the build template at the pin has no option for it, so ``flet build apk``
-stops at ``:app:checkReleaseAarMetadata``. After that first failed build, run::
+and the build template at the pin has no option for it, so `flet build apk`
+stops at `:app:checkReleaseAarMetadata`. After that first failed build, run:
 
     uv run python patch_desugaring.py
 
-then ``flet build apk`` again: the template is re-rendered only when its inputs
+then `flet build apk` again: the template is re-rendered only when its inputs
 change, so the patched file is kept. An iOS build in between re-renders it, so
 patch again after one. This is a spike shortcut, never an app practice
 (docs/spikes/06-reminders.md, U7, #293).

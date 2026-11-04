@@ -1,15 +1,15 @@
 """S4 reproducer: the Router, the recursive drill route and native Back.
 
 Spike S4 (docs/spikes/04-router-back.md). The shell the decisions prescribe, with
-stub screens: ``page.on_view_pop`` set before ``page.render_views(App, memory)``
-(D-19), a boot gate (D-69), ``ft.Router(ROUTES, manage_views=True)`` with five
-tab roots, a More page, the recursive drill (``session``, ``speaker``, ``room``)
-under every root, page and the global modal ``/search``, and D-17's Back rule:
-non-Now roots set ``can_pop=False`` and an ``on_confirm_pop`` that goes to Now.
+stub screens: `page.on_view_pop` set before `page.render_views(App, memory)`
+(D-19), a boot gate (D-69), `ft.Router(ROUTES, manage_views=True)` with five
+tab roots, a More page, the recursive drill (`session`, `speaker`, `room`)
+under every root, page and the global modal `/search`, and D-17's Back rule:
+non-Now roots set `can_pop=False` and an `on_confirm_pop` that goes to Now.
 
-Every step prints a line starting with ``S4 `` (logcat tag ``flet.python`` on
-Android, sender ``dart_bridge`` on iOS). With ``S4_JOURNEY=1`` in the
-environment (``SIMCTL_CHILD_S4_JOURNEY=1`` for ``simctl launch``), or from More,
+Every step prints a line starting with `S4 ` (logcat tag `flet.python` on
+Android, sender `dart_bridge` on iOS). With `S4_JOURNEY=1` in the
+environment (`SIMCTL_CHILD_S4_JOURNEY=1` for `simctl launch`), or from More,
 the app walks the journeys itself and checks each step.
 """
 
@@ -36,7 +36,7 @@ LEVELS: dict[str, tuple[str, str]] = {}  # view path -> (kind, ident) as rendere
 
 
 def log(event: str, **values: object) -> None:
-    """Print one ``S4`` line with the session number and seconds since start."""
+    """Print one `S4` line with the session number and seconds since start."""
     fields = " ".join(f"{key}={value}" for key, value in values.items())
     stamp = f"s={SESSIONS_STARTED[0]} t={time.perf_counter() - T0:.3f}"
     print(f"S4 {event} {stamp} {fields}", flush=True)
@@ -57,7 +57,7 @@ ROOMS = {"hall-a": "Hall A", "room-102a": "Room 102A", "expo-hall": "Expo hall"}
 
 
 def find_session(sid: str) -> tuple[str, tuple[str, ...], str] | None:
-    """A stub session: one of SESSIONS, or a generated Schedule row ``d<day>-<n>``."""
+    """A stub session: one of SESSIONS, or a generated Schedule row `d<day>-<n>`."""
     if sid in SESSIONS:
         return SESSIONS[sid]
     if len(sid) > 3 and sid[0] == "d" and sid[1] in "123" and sid[2] == "-":
@@ -81,7 +81,7 @@ class ViewMemory:
 @ft.observable
 @dataclass
 class Device:
-    """What the page handlers report; the boot gate opens on ``loaded``."""
+    """What the page handlers report; the boot gate opens on `loaded`."""
 
     loaded: bool = False
     dark: bool = False
@@ -230,7 +230,7 @@ def link(view_path: str, kind: str, ident: str, label: str) -> ft.ListTile:
 # ------------------------------------------------------------------ screens
 @ft.component
 def Start() -> ft.View:
-    """``/``: go to Now, or (per-process memory) back to where the user was."""
+    """`/`: go to Now, or (per-process memory) back to where the user was."""
     page = ft.context.page
     memory = ft.use_context(MemoryCtx)
 
@@ -396,7 +396,7 @@ def More() -> ft.View:
 
 @ft.component
 def Speakers() -> ft.View:
-    """``/more/speakers``: a More page with drill rows."""
+    """`/more/speakers`: a More page with drill rows."""
     view_path = ft.use_view_path()
     rows = [link(view_path, "speaker", spid, name) for spid, name in SPEAKERS.items()]
     return scaffold(
@@ -406,7 +406,7 @@ def Speakers() -> ft.View:
 
 @ft.component
 def Search() -> ft.View:
-    """The global modal ``/search`` (D-19): results push details on top of it."""
+    """The global modal `/search` (D-19): results push details on top of it."""
     page = ft.context.page
     view_path = ft.use_view_path()
     memory = ft.use_context(MemoryCtx)
@@ -610,8 +610,8 @@ def main(page: ft.Page) -> None:
 async def run_journeys(page: ft.Page, memory: ViewMemory, reason: str) -> None:
     """Walk the S4 journeys through the router and check every step.
 
-    Taps call what the UI calls (``drill_href``, ``parent_of``, the tab targets);
-    system Back and gestures are driven from outside (``drive_android.py``).
+    Taps call what the UI calls (`drill_href`, `parent_of`, the tab targets);
+    system Back and gestures are driven from outside (`drive_android.py`).
     """
     results = {"pass": 0, "fail": 0}
     log("journey-start", reason=reason)

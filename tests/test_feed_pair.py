@@ -1,10 +1,10 @@
 """Tests for the change log's feed-pair server and its CLI (#460, D-255).
 
-``PairFeed`` (``tests/ui/feeds.py``) serves a pair's old feed at the active year's feed
-path, then the new one once swapped; ``tools/feed_pair.py`` builds the pair from the
+`PairFeed` (`tests/ui/feeds.py`) serves a pair's old feed at the active year's feed
+path, then the new one once swapped; `tools/feed_pair.py` builds the pair from the
 recorded feed with named edits and serves it. The server runs on this machine's
-loopback, as on a device check, and the tests reach it with ``urllib`` (``fetch()``):
-httpx's transports refuse every real connection in the tests (``no_network``), which
+loopback, as on a device check, and the tests reach it with `urllib` (`fetch()`):
+httpx's transports refuse every real connection in the tests (`no_network`), which
 guards the app's feed refresh, not a test's own server.
 """
 
@@ -32,7 +32,7 @@ TALK = "123"
 
 @pytest.fixture
 def feed() -> Iterator[PairFeed]:
-    """A ``PairFeed`` of two small bodies, serving on a free port until the test ends."""
+    """A `PairFeed` of two small bodies, serving on a free port until the test ends."""
     server = PairFeed(OLD, NEW)
     server.serve()
     yield server
@@ -58,7 +58,7 @@ OPENER = urllib.request.build_opener(urllib.request.ProxyHandler({}))
 
 
 def fetch(url: str, *, post: bool = False) -> Answer:
-    """GET ``url``, or POST an empty body to it, and return the answer, errors included."""
+    """GET `url`, or POST an empty body to it, and return the answer, errors included."""
     request = urllib.request.Request(url, data=b"" if post else None)
     try:
         with OPENER.open(request, timeout=5) as response:
@@ -70,12 +70,12 @@ def fetch(url: str, *, post: bool = False) -> Answer:
 
 
 def local(feed: PairFeed, path: str, *, post: bool = False) -> Answer:
-    """GET (or POST to) ``path`` on ``feed``, as this machine reaches it."""
+    """GET (or POST to) `path` on `feed`, as this machine reaches it."""
     return fetch(f"{feed.control_url}{path}", post=post)
 
 
 def test_it_serves_the_old_feed_then_the_new_one_once_swapped(feed: PairFeed) -> None:
-    """The feed path answers with the old side, the new after ``swap()``, the old after ``reset()``."""
+    """The feed path answers with the old side, the new after `swap()`, the old after `reset()`."""
     first = local(feed, feed.feed_path)
     feed.swap()
     second = local(feed, feed.feed_path)
@@ -88,7 +88,7 @@ def test_it_serves_the_old_feed_then_the_new_one_once_swapped(feed: PairFeed) ->
 
 
 def test_its_control_paths_swap_and_reset_and_say_the_side(feed: PairFeed) -> None:
-    """``POST /swap`` serves the new feed and ``POST /reset`` the old, each saying which."""
+    """`POST /swap` serves the new feed and `POST /reset` the old, each saying which."""
     swapped = local(feed, "/swap", post=True)
     assert (swapped.status, swapped.text, feed.swapped) == (200, "new", True)
     assert local(feed, feed.feed_path).content == NEW
@@ -99,7 +99,7 @@ def test_its_control_paths_swap_and_reset_and_say_the_side(feed: PairFeed) -> No
 
 
 def test_a_hold_keeps_feed_requests_open_until_released(feed: PairFeed) -> None:
-    """``POST /hold`` leaves a feed request unanswered; ``POST /release`` answers it."""
+    """`POST /hold` leaves a feed request unanswered; `POST /release` answers it."""
     assert local(feed, "/hold", post=True).status == 200
     with ThreadPoolExecutor(max_workers=1) as pool:
         held = pool.submit(local, feed, feed.feed_path)
@@ -120,7 +120,7 @@ def test_a_reset_releases_a_hold(feed: PairFeed) -> None:
 
 
 def test_it_serves_the_active_years_feed_path_with_any_query(feed: PairFeed) -> None:
-    """The feed is at ``/conference-<year>.json``, the path ``laptop_url()`` names."""
+    """The feed is at `/conference-<year>.json`, the path `laptop_url()` names."""
     assert feed.feed_path == f"/conference-{YEAR}.json"
     assert feed.url.endswith(f":{feed.port}{feed.feed_path}")
     assert local(feed, f"{feed.feed_path}?v=2").content == OLD
@@ -139,12 +139,12 @@ def test_any_other_path_is_not_found(feed: PairFeed) -> None:
 
 
 def edits(*argv: str) -> list[Edit]:
-    """The edits the CLI makes of ``argv``."""
+    """The edits the CLI makes of `argv`."""
     return feed_pair.edits_of(feed_pair.parser().parse_args(argv))
 
 
 def test_the_cli_finds_the_change_its_move_makes() -> None:
-    """``--move`` moves the slot: the app's diff finds one room change of it."""
+    """`--move` moves the slot: the app's diff finds one room change of it."""
     old, new = pair(YEAR, *edits("--move", TALK, "Room 103ABC"))
 
     assert old == recorded(YEAR)

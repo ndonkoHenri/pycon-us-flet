@@ -1,10 +1,10 @@
 """The Job listings page's harness, for its two test modules (#399, #400, #623).
 
-``tests/test_jobs_page.py`` (the rules, the cards and the states) and
-``tests/test_jobs_page_filter.py`` (the filter) take ``show``, ``sleeps`` and
-``focused`` by assignment (§3.1). The page runs in a real Flet session
-(``tests/harness.py``'s ``showing()``) on the recorded 2026 feed, with its debounce
-held by ``tests/timers.py``.
+`tests/test_jobs_page.py` (the rules, the cards and the states) and
+`tests/test_jobs_page_filter.py` (the filter) take `show`, `sleeps` and
+`focused` by assignment (§3.1). The page runs in a real Flet session
+(`tests/harness.py`'s `showing()`) on the recorded 2026 feed, with its debounce
+held by `tests/timers.py`.
 """
 
 from collections.abc import AsyncIterator
@@ -40,7 +40,7 @@ CARD = "jobs.listing."
 
 
 def listing(name: str) -> JobListing:
-    """Return the 2026 listing of the sponsor named ``name``."""
+    """Return the 2026 listing of the sponsor named `name`."""
     (found,) = [j for j in DATA.job_listings if j.sponsor_name == name]
     return found
 
@@ -83,7 +83,7 @@ async def pause(shown: Shown, sleeps: HeldSleeps) -> None:
 
 @pytest.fixture
 def sleeps(monkeypatch: pytest.MonkeyPatch) -> HeldSleeps:
-    """The page's debounce, held until a test's ``pause()`` (``tests/timers.py``)."""
+    """The page's debounce, held until a test's `pause()` (`tests/timers.py`)."""
     held = HeldSleeps()
     monkeypatch.setattr(screen, "asyncio", held)  # the jobs module's only
     return held
@@ -105,9 +105,9 @@ def focused(monkeypatch: pytest.MonkeyPatch) -> list[ft.TextField]:
 async def show(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch, sleeps: HeldSleeps
 ) -> AsyncIterator[Any]:
-    """Return a function that shows the page, with a ``conference`` (2026 by default).
+    """Return a function that shows the page, with a `conference` (2026 by default).
 
-    ``prefs`` sets the settings, large text say; by default the defaults.
+    `prefs` sets the settings, large text say; by default the defaults.
     """
     async with AsyncExitStack() as stack:
 

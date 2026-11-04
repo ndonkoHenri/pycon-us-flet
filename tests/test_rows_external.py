@@ -1,9 +1,9 @@
-"""Tests for the external rows: ``LinkTile`` with a URL (#83; ux.md §3.9; D-182).
+"""Tests for the external rows: `LinkTile` with a URL (#83; ux.md §3.9; D-182).
 
 A web row opens the in-app browser, a profile its app, a phone number or an email its
 app with Copy beside it. The services, the bound page and the lookups are
-``tests/row_tiles.py``'s; the in-app rows are ``test_rows.py``'s and the link rule
-``test_links.py``'s. What the in-app browser looks like is checked on devices (the PR).
+`tests/row_tiles.py`'s; the in-app rows are `test_rows.py`'s and the link rule
+`test_links.py`'s. What the in-app browser looks like is checked on devices (the PR).
 """
 
 from typing import cast
@@ -62,7 +62,7 @@ async def test_a_web_row_opens_in_the_in_app_browser(
 
 
 async def test_a_profile_row_opens_in_its_app(page: FakePage, svc: Services) -> None:
-    """A profile row with ``app=True`` opens its URL in the external app."""
+    """A profile row with `app=True` opens its URL in the external app."""
     await tap_async(tile_of(LinkTile("PyCon on Mastodon", PROFILE, app=True)))
     assert launcher(svc).launched == [(PROFILE, ft.LaunchMode.EXTERNAL_APPLICATION)]
 
@@ -104,7 +104,7 @@ async def test_a_phone_or_email_row_offers_copy_beside_it(
 async def test_a_phone_row_hands_the_number_to_the_phone_app(
     page: FakePage, svc: Services
 ) -> None:
-    """A phone row opens its ``tel:`` URL in the external app."""
+    """A phone row opens its `tel:` URL in the external app."""
     await tap_async(tile_of(LinkTile("Call the hotline", HOTLINE)))
     assert launcher(svc).launched == [(HOTLINE, ft.LaunchMode.EXTERNAL_APPLICATION)]
 
@@ -128,7 +128,7 @@ def test_the_copy_button_is_a_stop_of_its_own_with_an_identifier(
 
 
 def test_a_screen_can_name_the_copy_button_otherwise(page: FakePage) -> None:
-    """``copy_identifier`` names Copy where the screen's scheme differs (D-281)."""
+    """`copy_identifier` names Copy where the screen's scheme differs (D-281)."""
     row = LinkTile(
         "Call the hotline",
         HOTLINE,

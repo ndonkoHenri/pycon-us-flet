@@ -2,11 +2,11 @@
 
 Staff tools have no tab (D-16): staff reach them from a **Staff tools** section under
 More's profile row and a **Scan badges** card on Now (SHELL-06, SHELL-07, SHELL-11;
-ux.md §2.2, §5.1 item 4, §7.1). Both list ``built_entries()`` of the ``Account``
+ux.md §2.2, §5.1 item 4, §7.1). Both list `built_entries()` of the `Account`
 store's flags, only while a mock API URL is set and the account is signed in (D-51),
 so they come and go live with a sign-in, a sign-out or a flag refresh. The Lead
 scanner's and Door check's entries say the outbox's counts ("3 pending",
-``QUEUED_TOOLS``). The card
+`QUEUED_TOOLS`). The card
 opens the last tool opened in this process, else the first entry (D-421), under Now,
 so Back returns there.
 """
@@ -41,8 +41,8 @@ def entries_of(account: Account, *, mock_url: bool) -> tuple[StaffTool, ...]:
     """Return the tools the entry points list: none signed out or without a mock URL.
 
     Args:
-        account: The session's ``Account`` store.
-        mock_url: Whether a mock API URL is set (``Prefs.private_api_enabled``, D-51).
+        account: The session's `Account` store.
+        mock_url: Whether a mock API URL is set (`Prefs.private_api_enabled`, D-51).
     """
     if not (mock_url and account.signed_in):
         return ()
@@ -52,11 +52,11 @@ def entries_of(account: Account, *, mock_url: bool) -> tuple[StaffTool, ...]:
 def counts_of(tool: StaffTool, staff: Staff) -> str:
     """Return a tool's outbox counts in words ("3 pending"), or empty.
 
-    Only a tool of ``QUEUED_TOOLS`` says them: the outbox is per account (D-421).
+    Only a tool of `QUEUED_TOOLS` says them: the outbox is per account (D-421).
 
     Args:
         tool: The tool.
-        staff: The ``Staff`` store.
+        staff: The `Staff` store.
     """
     if tool.key not in QUEUED_TOOLS:
         return ""
@@ -78,12 +78,12 @@ def staff_section(
 ) -> list[ft.Control]:
     """Return More's Staff tools section: its header and a row per tool, or nothing.
 
-    Each row is one node (``LinkTile``), ``more.staff.<tool>``, read as its title,
+    Each row is one node (`LinkTile`), `more.staff.<tool>`, read as its title,
     its purpose and, on the Lead scanner, the outbox's counts.
 
     Args:
-        account: The session's ``Account`` store.
-        staff: The ``Staff`` store.
+        account: The session's `Account` store.
+        staff: The `Staff` store.
         mock_url: Whether a mock API URL is set (D-51).
     """
     entries = entries_of(account, mock_url=mock_url)
@@ -108,9 +108,9 @@ def staff_section(
 def ScanCard() -> ft.Control:
     """Now's Scan badges card, or nothing for an account without a staff tool.
 
-    A filled card holding one row (``LinkTile``, ``now.scan``): "Scan badges" over
+    A filled card holding one row (`LinkTile`, `now.scan`): "Scan badges" over
     the tool it opens and its counts, "Lead scanner · 3 pending". A tap pushes the
-    tool under Now (``StaffTool.now_route``).
+    tool under Now (`StaffTool.now_route`).
     """
     prefs = use_prefs()
     account = use_account()

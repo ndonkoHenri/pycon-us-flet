@@ -1,9 +1,9 @@
 """The year data of the Open spaces and Lightning talks pages, and its checks (D-205).
 
-``content.toml``'s optional ``[open_spaces]`` and ``[lightning_talks]`` tables build into
-the dataclasses below, through ``year_schema.build()``, as fields of ``config.Content``.
-``check_pages()`` then checks their rules, and ``check_https()`` and ``check_text()`` are the
-two checks ``config`` shares with them. Split from ``config.py`` at D-66's ~400 lines.
+`content.toml`'s optional `[open_spaces]` and `[lightning_talks]` tables build into
+the dataclasses below, through `year_schema.build()`, as fields of `config.Content`.
+`check_pages()` then checks their rules, and `check_https()` and `check_text()` are the
+two checks `config` shares with them. Split from `config.py` at D-66's ~400 lines.
 """
 
 from dataclasses import dataclass
@@ -64,15 +64,15 @@ class LightningTalksInfo:
 
 
 def check_https(url: str, file: str, key: str) -> None:
-    """Refuse a URL that is not ``https://`` with a host.
+    """Refuse a URL that is not `https://` with a host.
 
     Args:
         url: The value to check.
-        file: The data file it comes from, for the message (``2026/content.toml``).
+        file: The data file it comes from, for the message (`2026/content.toml`).
         key: Its key in that file, for the message.
 
     Raises:
-        YearDataError: The URL is not ``https://`` or has no host.
+        YearDataError: The URL is not `https://` or has no host.
     """
     parts = urlsplit(url)
     if parts.scheme != "https" or not parts.hostname:
@@ -99,11 +99,11 @@ def check_pages(
     lightning_talks: LightningTalksInfo | None,
     file: str,
 ) -> None:
-    """Check the two pages' tables: no blank text, ``https://`` links, a fold with doubts.
+    """Check the two pages' tables: no blank text, `https://` links, a fold with doubts.
 
     Args:
-        open_spaces: The ``[open_spaces]`` table, or None when the year has none.
-        lightning_talks: The ``[lightning_talks]`` table, or None when the year has none.
+        open_spaces: The `[open_spaces]` table, or None when the year has none.
+        lightning_talks: The `[lightning_talks]` table, or None when the year has none.
         file: The data file they come from, for the messages.
 
     Raises:

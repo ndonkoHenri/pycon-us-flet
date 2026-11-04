@@ -1,9 +1,9 @@
-"""The session rows harness: a list owner of ``SessionRow``s and ``NoticeRow``s (D-184).
+"""The session rows harness: a list owner of `SessionRow`s and `NoticeRow`s (D-184).
 
-``tests/test_session_rows.py`` and ``tests/test_session_rows_layout.py`` test the rows
-through it, taking its ``rendered`` fixture by assignment (``docs/testing-and-quality.md``
-§3.1), and ``tests/test_sessions.py`` puts its ``Owner`` under the screens it opens to
-test ``showing()`` itself. The session is ``tests/harness.py``'s ``showing()``; the
+`tests/test_session_rows.py` and `tests/test_session_rows_layout.py` test the rows
+through it, taking its `rendered` fixture by assignment (`docs/testing-and-quality.md`
+§3.1), and `tests/test_sessions.py` puts its `Owner` under the screens it opens to
+test `showing()` itself. The session is `tests/harness.py`'s `showing()`; the
 sessions are the recorded 2026 feed's.
 """
 
@@ -55,7 +55,7 @@ COFFEE = "break-Expo Hall AB-2026-05-15T08:00:00-07:00"
 LIST = (TALK, CHARLA, TUTORIAL, NOTICE, COFFEE)
 
 OWNER_RENDERS: list[None] = []
-"""One item per render of ``Owner``'s body: a test clears it and counts."""
+"""One item per render of `Owner`'s body: a test clears it and counts."""
 
 
 @ft.component
@@ -92,7 +92,7 @@ def Owner(session_ids: tuple[str, ...]) -> ft.Control:
 
 @dataclass
 class Rendered(Shown):
-    """A Flet session showing ``Owner``, and what its rows did."""
+    """A Flet session showing `Owner`, and what its rows did."""
 
     @property
     def prefs_service(self) -> MemoryPrefs:
@@ -106,7 +106,7 @@ class Rendered(Shown):
 
     @property
     def renders(self) -> list[str]:
-        """The session ids whose row bodies ran, in order (S2's ``ROW_RENDERS``)."""
+        """The session ids whose row bodies ran, in order (S2's `ROW_RENDERS`)."""
         return self.rows
 
     def star(self, session_id: str) -> ft.IconButton:
@@ -132,10 +132,10 @@ class Rendered(Shown):
 async def rendering(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> AsyncIterator[Rendered]:
-    """Yield ``Owner(LIST)`` rendered outside a Router, under the store providers.
+    """Yield `Owner(LIST)` rendered outside a Router, under the store providers.
 
-    The ``rendered`` fixture enters it with its test's own ``tmp_path`` and
-    ``monkeypatch``, as ``tests/session_detail.py``'s modules enter its ``rendering``.
+    The `rendered` fixture enters it with its test's own `tmp_path` and
+    `monkeypatch`, as `tests/session_detail.py`'s modules enter its `rendering`.
     """
     async with showing(
         lambda: Owner(LIST),
@@ -152,6 +152,6 @@ async def rendering(
 async def rendered(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> AsyncIterator[Rendered]:
-    """``Owner(LIST)`` in a real Flet session (``tests/row_sessions.py``)."""
+    """`Owner(LIST)` in a real Flet session (`tests/row_sessions.py`)."""
     async with rendering(tmp_path, monkeypatch) as shown:
         yield shown

@@ -1,8 +1,8 @@
 """Tests for what reaches staff who are not looking at the scan screen (#724, D-420).
 
-``ui/scan_feedback.py``'s haptics, announcements and wake lock, and the scan screen's
-sync chip, queue sheet and pauses (``ui/scan_screen.py``), in a real Flet session
-(``tests/scan_rig.py``) with the memory fakes of ``tests/fakes.py``. The pulses felt,
+`ui/scan_feedback.py`'s haptics, announcements and wake lock, and the scan screen's
+sync chip, queue sheet and pauses (`ui/scan_screen.py`), in a real Flet session
+(`tests/scan_rig.py`) with the memory fakes of `tests/fakes.py`. The pulses felt,
 the words spoken and the screen kept on are checked on devices (the PR).
 """
 
@@ -45,7 +45,7 @@ def wakelock(shown: harness.Shown) -> MemoryWakelock:
 
 
 async def click_node(shown: harness.Shown, identifier: str) -> None:
-    """Click the control that the ``Semantics`` with ``identifier`` wraps."""
+    """Click the control that the `Semantics` with `identifier` wraps."""
     content = shown.node(identifier).content
     assert content is not None
     await shown.click(content)
@@ -59,7 +59,7 @@ def sheet(shown: harness.Shown) -> ft.BottomSheet | None:
 
 
 async def close_sheet(shown: harness.Shown) -> None:
-    """Tap the open sheet's Close button (``staff.queue.close``)."""
+    """Tap the open sheet's Close button (`staff.queue.close`)."""
     current = sheet(shown)
     assert current is not None
     (close,) = [
@@ -139,7 +139,7 @@ async def test_a_failed_pulse_is_logged_and_the_result_still_shows(
 async def test_without_announcements_the_live_region_alone_says_it(
     show: Show,
 ) -> None:
-    """Android: nothing is announced; the panel stays a live region (``panel()``)."""
+    """Android: nothing is announced; the panel stays a live region (`panel()`)."""
     shown = await show()
     await enter(shown, "MOCK0001:v1")
     assert semantics(shown).announced == []
@@ -250,7 +250,7 @@ async def test_the_app_bar_s_chip_says_the_queue(show: Show) -> None:
 async def test_at_large_text_the_chip_heads_the_body_and_wraps(show: Show) -> None:
     """At large text the chip heads the body, its words free to wrap (#752).
 
-    A ``Chip`` kept one line and clipped "All synced"; the chip still opens the sheet.
+    A `Chip` kept one line and clipped "All synced"; the chip still opens the sheet.
     """
     shown = await show(
         prefs=Prefs(loaded=True, time_above=True), staff=Staff(pending=3)

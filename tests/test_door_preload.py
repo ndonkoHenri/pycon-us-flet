@@ -1,7 +1,7 @@
 """Tests for Door check's attendee-list preload (#765; DOOR-03, API-05; D-56, D-70).
 
-``screens/staff_door.py`` with ``screens/door_preload.py`` run in a real Flet session
-over the mock's own transport (``tests/door_rig.py``); a ``Gate`` holds each product's
+`screens/staff_door.py` with `screens/door_preload.py` run in a real Flet session
+over the mock's own transport (`tests/door_rig.py`); a `Gate` holds each product's
 call until the test lets it answer, so the loading states can be seen. Scanning is
 paused while the list loads ("Loading attendee list… 1 of 2"), then the line under the
 chip says "Ready, works offline · 3 attendees", or "Badges will be checked online" with
@@ -52,7 +52,7 @@ READY_THREE = "Ready, works offline, 3 attendees"
 
 
 class Gate(httpx.AsyncBaseTransport):
-    """``inner``, but each product's inventory call waits until it is let through."""
+    """`inner`, but each product's inventory call waits until it is let through."""
 
     def __init__(self, inner: httpx.AsyncBaseTransport) -> None:
         """Hold every inventory call; nothing answered or cancelled yet."""
@@ -62,7 +62,7 @@ class Gate(httpx.AsyncBaseTransport):
         self.cancelled: list[str] = []
 
     def gate(self, product: int | str) -> asyncio.Event:
-        """The event that lets ``product``'s call through."""
+        """The event that lets `product`'s call through."""
         return self.opened.setdefault(str(product), asyncio.Event())
 
     async def let(self, shown: Shown, *products: int) -> None:
@@ -72,7 +72,7 @@ class Gate(httpx.AsyncBaseTransport):
         await shown.settle()
 
     async def handle_async_request(self, request: httpx.Request) -> httpx.Response:
-        """Wait at a product's gate, noting a cancel, then let ``inner`` answer."""
+        """Wait at a product's gate, noting a cancel, then let `inner` answer."""
         path = request.url.path
         if "attendees_by_product_with_quantity" in path:
             product = path.rstrip("/").rsplit("/", 1)[1]

@@ -1,16 +1,16 @@
 """Where now is on the Schedule: today's now line, and what a jump to now left in view.
 
-``screens/schedule.py`` jumps to now (D-155, D-204) and ``screens/schedule_days.py``
+`screens/schedule.py` jumps to now (D-155, D-204) and `screens/schedule_days.py`
 lays out the day lists; these are the pieces they share:
 
-- ``NowMark`` and ``NowLine``: today's "Now · 10:42 AM" line, before the first slot still
-  to start; a jump lands on it when no slot is on (``NowPlace.target``);
-- ``Landing``, ``PENDING``, ``InView`` and ``shows_now()``: where the last jump left
+- `NowMark` and `NowLine`: today's "Now · 10:42 AM" line, before the first slot still
+  to start; a jump lands on it when no slot is on (`NowPlace.target`);
+- `Landing`, `PENDING`, `InView` and `shows_now()`: where the last jump left
   today's list, so the "Now" button hides while the list is near it;
-- ``Signals`` and ``jumps_by_itself()``: what the screen's handlers tell its jumps, and
+- `Signals` and `jumps_by_itself()`: what the screen's handlers tell its jumps, and
   whether showing a day jumps by itself (today's first display);
-- ``spoken_place()``: where a jump the user asked for landed, for a screen reader,
-  and ``landing_note()``, which says it to TalkBack (D-241).
+- `spoken_place()`: where a jump the user asked for landed, for a screen reader,
+  and `landing_note()`, which says it to TalkBack (D-241).
 """
 
 import asyncio
@@ -27,7 +27,7 @@ from pycon_us.services.errors import report_errors
 from pycon_us.ui.scrolling import anchored
 
 NOW_LINE = 2
-"""The now line's thickness in dp (ux.md §5.2): twice a slot's divider, in ``primary``."""
+"""The now line's thickness in dp (ux.md §5.2): twice a slot's divider, in `primary`."""
 
 SAID_S = 5.0
 """How long the landing note keeps its words, in seconds (D-241): long enough for
@@ -42,9 +42,9 @@ class NowMark:
     moves when a slot starts, the time once a minute.
 
     Attributes:
-        index: The slot the line sits above (``NowPlace.line``); the number of slots
+        index: The slot the line sits above (`NowPlace.line`); the number of slots
             puts it after the last.
-        time: The time it says, e.g. "10:42 AM" (``timefmt.time_label()``).
+        time: The time it says, e.g. "10:42 AM" (`timefmt.time_label()`).
     """
 
     index: int
@@ -54,11 +54,11 @@ class NowMark:
 def NowLine(
     time: str, day: date, on_measure: Callable[[date, str, float], None]
 ) -> ft.Control:
-    """Return today's now line: "Now · 10:42 AM" before a 2 dp ``primary`` line (D-204).
+    """Return today's now line: "Now · 10:42 AM" before a 2 dp `primary` line (D-204).
 
-    A memoised component keyed by ``NOW_KEY``, so a minute re-renders it alone and a
+    A memoised component keyed by `NOW_KEY`, so a minute re-renders it alone and a
     slot's start moves it rather than building a new one; an anchor above it carries
-    ``ScrollKey(NOW_KEY)``, where a jump lands when no slot is on (D-242). A screen reader
+    `ScrollKey(NOW_KEY)`, where a jump lands when no slot is on (D-242). A screen reader
     hears "Current time 10:42 AM"; not a live region, which would speak every minute.
 
     Args:
@@ -74,7 +74,7 @@ def NowLine(
 def _NowLine(
     time: str, day: date, on_measure: Callable[[date, str, float], None]
 ) -> ft.Control:
-    """The body of ``NowLine``; it runs only when the time changes (F34)."""
+    """The body of `NowLine`; it runs only when the time changes (F34)."""
 
     @report_errors
     def measured(e: ft.LayoutSizeChangeEvent[ft.LayoutControl]) -> None:
@@ -117,7 +117,7 @@ class Landing:
     """Where a jump to now left today's list, and what was on screen there (D-204).
 
     A scroll of the user's own while a jump is waiting ends it as its landing, since a
-    scroll end does not say who scrolled (the pinned ``ListView.scroll_to()`` returns
+    scroll end does not say who scrolled (the pinned `ListView.scroll_to()` returns
     nothing about where it got to); the next half-screen scroll corrects the button.
 
     Attributes:
@@ -147,7 +147,7 @@ class Landing:
         )
 
     def near(self, pixels: float, viewport: float) -> bool:
-        """Whether a list scrolled to ``pixels`` is within half a screen of the landing.
+        """Whether a list scrolled to `pixels` is within half a screen of the landing.
 
         A plain distance, not whether the place is on screen: a scroll offset alone
         does not say where a keyed item sits (a jump near the list's end stops short
@@ -159,14 +159,14 @@ class Landing:
 
 @dataclass(frozen=True)
 class Pending:
-    """A jump by itself is on its way to now; ``PENDING`` is the one value."""
+    """A jump by itself is on its way to now; `PENDING` is the one value."""
 
 
 PENDING = Pending()
 """What the Schedule knows of today's list while its first jump runs (D-204)."""
 
 type InView = Landing | Pending | None
-"""What the "Now" button knows of today's list: where a jump left it; ``PENDING``
+"""What the "Now" button knows of today's list: where a jump left it; `PENDING`
 while a jump by itself is on its way; None when it is nowhere in particular."""
 
 
@@ -179,7 +179,7 @@ def shows_now(
 ) -> bool:
     """Whether today's list is where "Now" goes, so the button hides (D-204).
 
-    ``PENDING`` counts: a first display's jump on a list already in place answers only
+    `PENDING` counts: a first display's jump on a list already in place answers only
     after its tries, and the button must not flash for those seconds.
 
     Args:
@@ -199,8 +199,8 @@ class Signals:
     """What the Schedule's handlers tell its jumps; one per mounted screen.
 
     Attributes:
-        ended: Set when the shown list's scroll ends (``jump_to_key()``).
-        settled: Set when ``Tabs`` reports a day, which it does once a switch has
+        ended: Set when the shown list's scroll ends (`jump_to_key()`).
+        settled: Set when `Tabs` reports a day, which it does once a switch has
             finished sliding, the one asked for from Python included.
         landing: Where the last jump left today's list; each scroll end of that list
             is measured against it.
@@ -214,9 +214,9 @@ class Signals:
 def jumps_by_itself(
     day: date, current: date, today_slots: tuple[Slot, ...], memory: ViewMemory
 ) -> bool:
-    """Whether showing ``day`` jumps to now unasked: today's first display (D-204).
+    """Whether showing `day` jumps to now unasked: today's first display (D-204).
 
-    Once per conference day in the process (``ViewMemory.jumped_on``, D-18), read when
+    Once per conference day in the process (`ViewMemory.jumped_on`, D-18), read when
     the day shows, since a jump may have run since the render.
     """
     return day == current and bool(today_slots) and memory.jumped_on != current
@@ -245,13 +245,13 @@ def landing_note(words: str) -> ft.Control:
     """Return where a jump the user asked for landed, as a polite live region (D-241).
 
     Flutter reports no announcements on Android (F13), so TalkBack hears the landing
-    through this node: each time ``words`` changes to a phrase, the engine sends a
+    through this node: each time `words` changes to a phrase, the engine sends a
     content change for it, which TalkBack reads without moving its focus off the
     "Now" button. Empty, it has nothing a reader could stop on, so it is only in
-    linear navigation while it holds words (``SAID_S``); the same words twice must
+    linear navigation while it holds words (`SAID_S`); the same words twice must
     pass through empty to be said again. 1 dp square at the list's top start, under
     the list: a node with no size is dropped from the tree, and the list takes any
-    touch there. iOS keeps ``announce_message()``: iOS takes announcements, so
+    touch there. iOS keeps `announce_message()`: iOS takes announcements, so
     it is the direct path there (D-241).
 
     Args:

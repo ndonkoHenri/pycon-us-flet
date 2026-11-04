@@ -1,8 +1,8 @@
 """Tests for the Map's Floor plans cards, its Job fair pane and its app bar (MAP-01..03).
 
-``Map`` runs in ``tests/map_view.py``'s harness over the 2026 feed and ``map.toml``.
-The tabs and the panes' places are ``test_map_tabs.py``'s, the Rooms pane's rows
-``test_map.py``'s. How the cards look and read is checked on devices (the PR).
+`Map` runs in `tests/map_view.py`'s harness over the 2026 feed and `map.toml`.
+The tabs and the panes' places are `test_map_tabs.py`'s, the Rooms pane's rows
+`test_map.py`'s. How the cards look and read is checked on devices (the PR).
 """
 
 import dataclasses
@@ -53,10 +53,10 @@ def test_a_plan_without_a_subtitle_is_read_by_its_name() -> None:
 
 
 async def test_job_fair_opens_with_its_card_and_the_tables(render: Render) -> None:
-    """``?tab=job-fair`` opens the fourth pane: the plan's card over the tables (MAP-04).
+    """`?tab=job-fair` opens the fourth pane: the plan's card over the tables (MAP-04).
 
-    The card is ``LocationCard``'s plan-only form, one button read as where it leads,
-    and a tap pushes the floor viewer at ``…/plan/job-fair``, without a pin (D-254).
+    The card is `LocationCard`'s plan-only form, one button read as where it leads,
+    and a tap pushes the floor viewer at `…/plan/job-fair`, without a pin (D-254).
     """
     shown = await render("/map?tab=job-fair")
     assert shown.tabs.selected_index == 3
@@ -100,7 +100,7 @@ async def test_a_table_row_opens_its_sponsor_and_back_returns_to_the_pane(
     await shown.click(row)
     await shown.settle()
     assert shown.routes()[-1] == "/map/sponsor/bloomberg"
-    # Back pops to the Map's own path (``parent_of()``, D-141); the pane is memory's.
+    # Back pops to the Map's own path (`parent_of()`, D-141); the pane is memory's.
     assert await shown.back() == "/map"
     assert pane_shown(shown) == "job-fair"
 
@@ -108,7 +108,7 @@ async def test_a_table_row_opens_its_sponsor_and_back_returns_to_the_pane(
 async def test_a_year_without_the_job_fair_plan_has_no_job_fair_tab(
     render: Render,
 ) -> None:
-    """Without a ``job-fair`` plan there is no pane; ``?tab=job-fair`` opens Rooms."""
+    """Without a `job-fair` plan there is no pane; `?tab=job-fair` opens Rooms."""
     plans = tuple(plan for plan in YEAR.map.plans if plan.id != "job-fair")
     year = dataclasses.replace(YEAR, map=dataclasses.replace(YEAR.map, plans=plans))
     assert [pane.slug for pane in screen.panes_of(year.map)] == [

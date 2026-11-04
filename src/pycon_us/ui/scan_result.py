@@ -1,15 +1,15 @@
 """The scan screen's result panel: an outcome in colour, icon and word (LEAD-09; D-65).
 
-ux.md §7.2's table: accepted is white on green with ``CHECK_CIRCLE``, a duplicate dark
-on amber with ``HISTORY``, a denial white on red with ``BLOCK``; queued offline and a
-code that is not a badge are neutral, with ``CLOUD_UPLOAD_OUTLINED`` and
-``ERROR_OUTLINE``; CoC's incident recorded and not recorded are neutral too, with
-``TASK_ALT`` and ``REMOVE_CIRCLE_OUTLINE`` (#760: a safety record is never a
+ux.md §7.2's table: accepted is white on green with `CHECK_CIRCLE`, a duplicate dark
+on amber with `HISTORY`, a denial white on red with `BLOCK`; queued offline and a
+code that is not a badge are neutral, with `CLOUD_UPLOAD_OUTLINED` and
+`ERROR_OUTLINE`; CoC's incident recorded and not recorded are neutral too, with
+`TASK_ALT` and `REMOVE_CIRCLE_OUTLINE` (#760: a safety record is never a
 check-in's green). The fills are fixed colours, the same in light and dark, each label
 at 4.5:1 or better on its fill; high contrast darkens the green and the red for 7:1
-(``tests/test_scan_screen.py``). Colour is never the only signal: the word and the
+(`tests/test_scan_screen.py`). Colour is never the only signal: the word and the
 icon say the outcome (ux.md §9). The panel stays until the next scan, or until a tool
-clears it (#762), and dims after ``DIM_AFTER`` seconds: its fill gives way to the
+clears it (#762), and dims after `DIM_AFTER` seconds: its fill gives way to the
 neutral one, so a new result stands out, while its icon and words stay; the line under
 it says how old it is, and when it clears.
 
@@ -17,11 +17,11 @@ At large text the icon sits above the words instead of beside them (#955).
 
 A result's **tags** (Door check's dietary needs and allergy, DOOR-05) are chips under
 the name, in a row that wraps: a warning (an allergy) first, larger, with
-``WARNING_AMBER`` and the card's colours swapped; the others outlined, with
-``RESTAURANT_OUTLINED``. They take the card's own colours, so they read on every fill
+`WARNING_AMBER` and the card's colours swapped; the others outlined, with
+`RESTAURANT_OUTLINED`. They take the card's own colours, so they read on every fill
 at its contrast (#767).
 
-``Shown`` is the result on the panel, and ``Posted`` one a tool got outside a scan,
+`Shown` is the result on the panel, and `Posted` one a tool got outside a scan,
 handed to the screen for it (#761).
 """
 
@@ -75,8 +75,8 @@ def fill_of(
 
     Args:
         outcome: How the scan ended.
-        high_contrast: HC is on screen (``Tokens.high_contrast``).
-        dimmed: The result is older than ``DIM_AFTER`` s: neutral, as queued is.
+        high_contrast: HC is on screen (`Tokens.high_contrast`).
+        dimmed: The result is older than `DIM_AFTER` s: neutral, as queued is.
     """
     fills = HC_FILLS if high_contrast else FILLS
     if dimmed or outcome not in fills:
@@ -85,7 +85,7 @@ def fill_of(
 
 
 def icon_color(outcome: ScanOutcome, label: ft.ColorValue) -> ft.ColorValue:
-    """Return the icon's colour: the label's, but ``error`` for a code to correct."""
+    """Return the icon's colour: the label's, but `error` for a code to correct."""
     return ft.Colors.ERROR if outcome is ScanOutcome.INVALID else label
 
 
@@ -99,17 +99,17 @@ def result_panel(
 ) -> ft.Control:
     """Return the panel's card: icon, word, name or code and details.
 
-    Before the first scan (``result`` None) it says the screen is ready. The card has
+    Before the first scan (`result` None) it says the screen is ready. The card has
     no semantics of its own: the live region around it is one node read as its lines
-    (``spoken()``), the icon decorative, so the result is said once, in words.
+    (`spoken()`), the icon decorative, so the result is said once, in words.
 
     Args:
         result: The last scan's result, or None before the first.
-        key: The scan's key: a new key is a new card, which ``AnimatedSwitcher``
+        key: The scan's key: a new key is a new card, which `AnimatedSwitcher`
             brings in; the same key re-renders the card in place (a dimming).
         tokens: The scheme's tokens, for high contrast's edge.
-        dimmed: The result is older than ``DIM_AFTER`` s.
-        large_text: The text is large for the width (``Prefs.time_above``): the icon
+        dimmed: The result is older than `DIM_AFTER` s.
+        large_text: The text is large for the width (`Prefs.time_above`): the icon
             goes above the words, which then have the card's whole width, or an
             allergy chip's "Allergy:" broke inside itself (#955).
     """
@@ -179,7 +179,7 @@ def result_panel(
 def tag_colors(
     tag: Tag, *, label: ft.ColorValue, fill: ft.ColorValue
 ) -> tuple[ft.ColorValue, ft.ColorValue | None]:
-    """Return a chip's (text, background) on a card of ``label`` on ``fill``.
+    """Return a chip's (text, background) on a card of `label` on `fill`.
 
     A plain chip is the card's label colour on the card, inside an edge of the same
     colour. A warning swaps them, the fill's colour on a label-coloured chip, so it
@@ -190,11 +190,11 @@ def tag_colors(
 
 
 def tag_chip(tag: Tag, *, label: ft.ColorValue, fill: ft.ColorValue) -> ft.Control:
-    """Return one tag as a chip: ``WARNING_AMBER`` and larger for a warning.
+    """Return one tag as a chip: `WARNING_AMBER` and larger for a warning.
 
     A 1 dp edge in the label's colour sets every chip apart, high contrast included
-    (D-306); the words wrap at large text (``expand_loose``). No semantics of its own:
-    the panel's label says the tags (``ScanResult.spoken``).
+    (D-306); the words wrap at large text (`expand_loose`). No semantics of its own:
+    the panel's label says the tags (`ScanResult.spoken`).
     """
     text, background = tag_colors(tag, label=label, fill=fill)
     if tag.warning:
@@ -300,7 +300,7 @@ class Shown:
 
     Attributes:
         result: What the handler, or the parse, returned.
-        at: When it came, in ``scan_screen.clock()`` seconds.
+        at: When it came, in `scan_screen.clock()` seconds.
         serial: Counts the results, so each one is a new card, even an equal one.
     """
 
@@ -311,9 +311,9 @@ class Shown:
 
 @dataclass(eq=False)
 class Posted:
-    """A result a tool got outside ``on_badge``, for the panel (#761).
+    """A result a tool got outside `on_badge`, for the panel (#761).
 
-    Handed over once: the screen takes it (``take()``), so the tool's state keeps no
+    Handed over once: the screen takes it (`take()`), so the tool's state keeps no
     copy after a clear (#762). Compared by identity: each one is new.
 
     Attributes:
@@ -331,5 +331,5 @@ class Posted:
 
 
 def post(last: Posted | None, result: ScanResult) -> Posted:
-    """Return the next ``Posted`` after ``last``: a tool's ``set_state`` update."""
+    """Return the next `Posted` after `last`: a tool's `set_state` update."""
     return Posted(result, last.serial + 1 if last is not None else 1)

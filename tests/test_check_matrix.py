@@ -1,6 +1,6 @@
-"""Tests for ``tools/check_matrix.py``, the feature matrix's check (D-04, #802).
+"""Tests for `tools/check_matrix.py`, the feature matrix's check (D-04, #802).
 
-The first test runs the check on the real ``docs/feature-matrix.md``, so the local checks
+The first test runs the check on the real `docs/feature-matrix.md`, so the local checks
 fail on a matrix edit that leaves the Counts tables stale; the others break a copy of it.
 """
 
@@ -15,13 +15,13 @@ IDS = catalog_ids()
 
 
 def edited(old: str, new: str) -> str:
-    """The real matrix with its one occurrence of ``old`` replaced by ``new``."""
+    """The real matrix with its one occurrence of `old` replaced by `new`."""
     assert TEXT.count(old) == 1, old
     return TEXT.replace(old, new)
 
 
 def row_of(id_: str) -> str:
-    """The real matrix's row line for feature ``id_``."""
+    """The real matrix's row line for feature `id_`."""
     return next(line for line in TEXT.splitlines() if line.startswith(f"| **{id_}** |"))
 
 

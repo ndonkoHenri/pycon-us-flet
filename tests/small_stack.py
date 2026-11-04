@@ -19,7 +19,7 @@ and in a place that differs per platform."""
 
 
 def on_a_small_stack[T](call: Callable[[], T]) -> T:
-    """Return ``call()``'s result (or raise its error) from a thread with a small stack."""
+    """Return `call()`'s result (or raise its error) from a thread with a small stack."""
     previous = threading.stack_size(512 * 1024)
     try:
         with ThreadPoolExecutor(max_workers=1) as pool:
@@ -29,10 +29,10 @@ def on_a_small_stack[T](call: Callable[[], T]) -> T:
 
 
 def nested_lists(depth: int) -> bytes:
-    """JSON arrays nested ``depth`` deep, the innermost one empty."""
+    """JSON arrays nested `depth` deep, the innermost one empty."""
     return b"[" * depth + b"]" * depth
 
 
 def nested_objects(depth: int) -> bytes:
-    """JSON objects nested ``depth`` deep: printing them takes more stack than parsing."""
+    """JSON objects nested `depth` deep: printing them takes more stack than parsing."""
     return b'{"a":' * depth + b"1" + b"}" * depth

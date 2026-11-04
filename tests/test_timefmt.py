@@ -1,6 +1,6 @@
 """Tests for conference-local days and time labels (D-35, D-43; DATA-12, SCHED-18).
 
-Every test runs under two machine time zones (``machine_tz``); the results must not change.
+Every test runs under two machine time zones (`machine_tz`); the results must not change.
 """
 
 from collections.abc import Callable
@@ -32,7 +32,7 @@ def test_day_bucket_changes_at_conference_midnight() -> None:
 
 
 def test_today_is_the_conference_date_not_the_device_date() -> None:
-    """``today()`` is the date in Long Beach while Kiritimati is already a day ahead."""
+    """`today()` is the date in Long Beach while Kiritimati is already a day ahead."""
     now = datetime(2026, 5, 15, 10, 0, tzinfo=UTC)  # 3:00 AM Friday in Long Beach
     assert now.astimezone(KIRITIMATI).date() == date(2026, 5, 16)
     assert timefmt.today(now, PACIFIC) == date(2026, 5, 15)
@@ -150,7 +150,7 @@ def test_a_day_tab_is_one_short_line_and_its_weekday_is_spelt_out() -> None:
 
 
 def test_a_weekday_is_named_in_full() -> None:
-    """``weekday_name()`` spells the weekday out: "Friday", "Monday"."""
+    """`weekday_name()` spells the weekday out: "Friday", "Monday"."""
     assert timefmt.weekday_name(date(2026, 5, 15)) == "Friday"
     assert timefmt.weekday_name(date(2026, 5, 18)) == "Monday"
 
@@ -238,7 +238,7 @@ AWARE = datetime(2026, 5, 15, 16, 0, tzinfo=UTC)
     ],
 )
 def test_naive_datetimes_are_refused(call: Callable[[], object]) -> None:
-    """The functions that take a zone raise ``ValueError`` for a naive datetime."""
+    """The functions that take a zone raise `ValueError` for a naive datetime."""
     with pytest.raises(ValueError, match="aware"):
         call()
 
@@ -295,12 +295,12 @@ def test_ago_label_says_just_now_for_a_time_after_now() -> None:
     ],
 )
 def test_seconds_ago_counts_seconds_under_a_minute(seconds: float, label: str) -> None:
-    """The scan screen's age: whole seconds under a minute, then ``ago_label``'s units."""
+    """The scan screen's age: whole seconds under a minute, then `ago_label`'s units."""
     assert timefmt.seconds_ago(seconds) == label
 
 
 def test_ago_label_refuses_naive_datetimes() -> None:
-    """``ago_label()`` raises ``ValueError`` for a naive datetime."""
+    """`ago_label()` raises `ValueError` for a naive datetime."""
     with pytest.raises(ValueError, match="aware"):
         timefmt.ago_label(NAIVE, pacific(15, 10, 0))
 

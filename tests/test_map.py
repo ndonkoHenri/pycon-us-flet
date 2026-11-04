@@ -1,9 +1,9 @@
 """Tests for the Map's Rooms pane (#100; ROOM-01, D-188, ux.md §5.8).
 
-``RoomsPane`` runs outside a renderer: its hooks are replaced, and a fake page is
+`RoomsPane` runs outside a renderer: its hooks are replaced, and a fake page is
 bound as Flet binds a session's page. The Map around it, its tabs and its app bar, is
-``test_map_tabs.py``'s. What is on in a room is
-``core.rooms.room_list`` (``test_rooms.py``); here, what the screen makes of it, its
+`test_map_tabs.py`'s. What is on in a room is
+`core.rooms.room_list` (`test_rooms.py`); here, what the screen makes of it, its
 states without data, and where a tap goes. How the list looks and reads is checked on
 devices (the PR).
 """
@@ -42,7 +42,7 @@ from tests.feeds import processed
 from tests.trees import descendants, texts
 
 STRIP = ft.Text("strip")
-"""What the test's ``StatusStrip`` stands in for."""
+"""What the test's `StatusStrip` stands in for."""
 
 PACIFIC = ZoneInfo("America/Los_Angeles")
 DURING = datetime(2026, 5, 15, 11, 10, tzinfo=PACIFIC)  # a talk in Room 103ABC
@@ -65,7 +65,7 @@ def page() -> Iterator[FakePage]:
 
 @pytest.fixture
 def svc(tmp_path: Path) -> Services:
-    """Return a session's services with the memory fakes, storing under ``tmp_path``."""
+    """Return a session's services with the memory fakes, storing under `tmp_path`."""
     storage = Storage(prefs=MemoryPrefs(), directory=tmp_path, year=2026)
     return Services(
         year=load_year(2026),
@@ -79,16 +79,16 @@ def svc(tmp_path: Path) -> Services:
 
 
 class FakeConference(SimpleNamespace):
-    """The parts of ``Conference`` the Map reads, and its refresh, recorded."""
+    """The parts of `Conference` the Map reads, and its refresh, recorded."""
 
     def __init__(self, data: ConferenceData | None, problem: str | None = None):
-        """Hold ``data`` and ``problem``, not refreshing, with no refresh counted."""
+        """Hold `data` and `problem`, not refreshing, with no refresh counted."""
         super().__init__(
             data=data, problem=problem, refreshing=False, asked=False, refreshes=0
         )
 
     def status(self, _info: object) -> str:
-        """Say ``refreshing`` only while a refresh the user asked for runs (D-181)."""
+        """Say `refreshing` only while a refresh the user asked for runs (D-181)."""
         return "refreshing" if self.refreshing and self.asked else "fresh"
 
     async def refresh(self, *args: object, **kwargs: object) -> None:
@@ -97,7 +97,7 @@ class FakeConference(SimpleNamespace):
 
 
 type Render = Callable[..., ft.ListView]
-"""The ``render`` fixture's function: the pane at a conference and a time."""
+"""The `render` fixture's function: the pane at a conference and a time."""
 
 SCROLLS: list[ft.OnScrollEvent] = []
 """Never written: the pane's lists are not scrolled here."""
@@ -105,7 +105,7 @@ SCROLLS: list[ft.OnScrollEvent] = []
 
 @pytest.fixture
 def minutes() -> list[int]:
-    """The ``use_minute()`` calls: one per render."""
+    """The `use_minute()` calls: one per render."""
     return []
 
 
@@ -116,7 +116,7 @@ def render(
     page: FakePage,
     minutes: list[int],
 ) -> Render:
-    """Render ``RoomsPane`` once at ``now`` and return its ``ListView``."""
+    """Render `RoomsPane` once at `now` and return its `ListView`."""
     monkeypatch.setattr(map_screen, "use_services", lambda: svc)
     monkeypatch.setattr(map_screen, "use_tokens", lambda: LIGHT_TOKENS)
     monkeypatch.setattr(map_screen, "use_minute", lambda: minutes.append(0) or 0)
@@ -136,7 +136,7 @@ def render(
 
 
 def rows_of(pane: ft.ListView) -> list[ft.Control]:
-    """Return the rows of the pane's ``ListView``, checking it is the Rooms pane's."""
+    """Return the rows of the pane's `ListView`, checking it is the Rooms pane's."""
     assert pane.key == "rooms"
     return list(pane.controls)
 
@@ -149,7 +149,7 @@ def headers(rows: list[ft.Control]) -> list[str]:
 
 
 def tiles(rows: list[ft.Control]) -> dict[str, ft.ListTile]:
-    """Each room row's ``ListTile``, by its semantics identifier."""
+    """Each room row's `ListTile`, by its semantics identifier."""
     found: dict[str, ft.ListTile] = {}
     for row in rows:
         if isinstance(row, ft.MergeSemantics) and isinstance(row.content, ft.Semantics):
@@ -166,7 +166,7 @@ def subtitle_lines(tile: ft.ListTile) -> list[str]:
 
 
 def empty_state(rows: list[ft.Control], identifier: str) -> ft.Semantics:
-    """Return the one ``Semantics`` node with ``identifier`` under ``rows``."""
+    """Return the one `Semantics` node with `identifier` under `rows`."""
     (state,) = [
         node
         for row in rows
@@ -177,7 +177,7 @@ def empty_state(rows: list[ft.Control], identifier: str) -> ft.Semantics:
 
 
 def button_of(rows: list[ft.Control]) -> ft.FilledTonalButton:
-    """Return the one ``FilledTonalButton`` under ``rows``."""
+    """Return the one `FilledTonalButton` under `rows`."""
     (button,) = [
         node
         for row in rows
@@ -251,7 +251,7 @@ def test_a_sprint_only_room_reads_sprints(render: Render, data: ConferenceData) 
 def test_a_tap_pushes_the_room_s_detail_on_the_map(
     render: Render, data: ConferenceData, page: FakePage
 ) -> None:
-    """Tapping a room row navigates to that room's detail under ``/map``."""
+    """Tapping a room row navigates to that room's detail under `/map`."""
     tile = tiles(rows_of(render(FakeConference(data))))[
         "map.room.pacific-ballroom-arena"
     ]

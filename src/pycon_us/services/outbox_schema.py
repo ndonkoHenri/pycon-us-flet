@@ -1,9 +1,9 @@
-"""The staff outbox's schema and its row mapping, for ``services/outbox_db.py`` (D-49, D-56).
+"""The staff outbox's schema and its row mapping, for `services/outbox_db.py` (D-49, D-56).
 
-The tables (architecture §12.1), their migrations by ``PRAGMA user_version``, the two
-queries with a Python twin in ``core/outbox.py``, the conversion between a stored
-record and ``core.outbox.Row``, and the write of a changed row that only lands while the
-record is at the row's revision (D-56). ``OutboxDb`` is their one user; split from it at
+The tables (architecture §12.1), their migrations by `PRAGMA user_version`, the two
+queries with a Python twin in `core/outbox.py`, the conversion between a stored
+record and `core.outbox.Row`, and the write of a changed row that only lands while the
+record is at the row's revision (D-56). `OutboxDb` is their one user; split from it at
 D-66's ~400 lines (#732, #755).
 """
 
@@ -25,7 +25,7 @@ def file_name(year: int) -> str:
         year: The conference year.
 
     Returns:
-        ``outbox-<year>.db``.
+        `outbox-<year>.db`.
     """
     return f"outbox-{year}.db"
 
@@ -58,10 +58,10 @@ CREATE UNIQUE INDEX IF NOT EXISTS outbox_idem ON outbox (idem_key)
 OUTBOX_V2 = """
 ALTER TABLE outbox ADD COLUMN maybe_sent INTEGER NOT NULL DEFAULT 0;
 """
-"""``Row.maybe_sent``: a send got no answer after the server may have had it (D-410)."""
+"""`Row.maybe_sent`: a send got no answer after the server may have had it (D-410)."""
 
 MIGRATIONS = (OUTBOX_V1, OUTBOX_V2)
-"""Each schema change, in order: a file at ``user_version`` n runs the ones after n."""
+"""Each schema change, in order: a file at `user_version` n runs the ones after n."""
 
 DUE_SQL = """
 SELECT o.* FROM outbox o
@@ -71,9 +71,9 @@ WHERE o.owner = :owner AND o.status = 'pending' AND o.next_at <= :now
        AND l.status = 'synced'))
 ORDER BY CASE o.kind WHEN 'lead' THEN 0 WHEN 'door' THEN 1 ELSE 2 END, o.created_at, o.id
 """
-"""The due rows in send order (§12.1); ``core.outbox.due()`` is its Python twin.
+"""The due rows in send order (§12.1); `core.outbox.due()` is its Python twin.
 
-``IS``, not ``=``: a sponsor's own lead and its note both have a NULL ``sponsor_id``."""
+`IS`, not `=`: a sponsor's own lead and its note both have a NULL `sponsor_id`."""
 
 DELETE_SYNCED_SQL = """
 DELETE FROM outbox WHERE owner = :owner AND status = 'synced'
@@ -81,14 +81,14 @@ DELETE FROM outbox WHERE owner = :owner AND status = 'synced'
            AND n.kind = 'note' AND n.key = outbox.key
            AND n.sponsor_id IS outbox.sponsor_id AND n.status <> 'synced'))
 """
-"""``core.outbox.forget_synced()`` in SQL: a synced lead stays while its note waits."""
+"""`core.outbox.forget_synced()` in SQL: a synced lead stays while its note waits."""
 
 
 COLUMNS = (
     "kind, key, payload_json, owner, sponsor_id, sponsor_name, status, tries, "
     "next_at, created_at, last_error, idem_key, maybe_sent"
 )
-"""The columns an insert or a save writes; ``revision`` counts edits on its own."""
+"""The columns an insert or a save writes; `revision` counts edits on its own."""
 VALUES = ":kind, :key, :payload_json, :owner, :sponsor_id, :sponsor_name, :status, "
 VALUES += ":tries, :next_at, :created_at, :last_error, :idem_key, :maybe_sent"
 
@@ -115,7 +115,7 @@ def to_params(row: Row) -> dict[str, object]:
 
 
 def to_row(record: sqlite3.Row) -> Row:
-    """Return a stored record as the ``Row`` that ``core.outbox`` works with."""
+    """Return a stored record as the `Row` that `core.outbox` works with."""
     return Row(
         kind=Kind(record["kind"]),
         key=record["key"],
@@ -136,7 +136,7 @@ def to_row(record: sqlite3.Row) -> Row:
 
 
 def migrate(connection: sqlite3.Connection) -> None:
-    """Run the migrations the file hasn't had, each with its ``user_version``, atomically."""
+    """Run the migrations the file hasn't had, each with its `user_version`, atomically."""
     (version,) = connection.execute("PRAGMA user_version").fetchone()
     for number, script in enumerate(MIGRATIONS[version:], start=version + 1):
         # executescript() runs in autocommit mode, so the script brings its own BEGIN:
@@ -151,7 +151,7 @@ def update(connection: sqlite3.Connection, row: Row, *, edit: bool = True) -> bo
 
     Args:
         connection: The connection, in a write transaction.
-        row: A stored row, changed from the record at ``row.revision``.
+        row: A stored row, changed from the record at `row.revision`.
         edit: Whether this is an enqueue's edit, which counts a new revision; a
             send's outcome or "Retry failed" leaves the revision as it is.
 

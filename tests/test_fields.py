@@ -1,8 +1,8 @@
-"""The shared field pieces: ``use_field_query()`` and ``found_count()`` (D-226).
+"""The shared field pieces: `use_field_query()` and `found_count()` (D-226).
 
 Search, Speakers and Sprints each test their own filter end to end; these tests pin
-the shared behaviour once, in a real Flet session (``tests/sessions.py``) with a probe
-component that renders a ``SearchField`` from the hook, as the screens do. The session
+the shared behaviour once, in a real Flet session (`tests/sessions.py`) with a probe
+component that renders a `SearchField` from the hook, as the screens do. The session
 records the texts it sends to the field, so a burst of keystrokes can be played as a
 busy host delivers it: Flutter's reports, the change events and the re-renders
 interleaved (D-243).
@@ -28,7 +28,7 @@ PUT = "abc"
 
 @dataclass
 class Probe:
-    """A component that renders a ``SearchField`` from ``use_field_query()``.
+    """A component that renders a `SearchField` from `use_field_query()`.
 
     Attributes:
         initial: The text the hook starts with.
@@ -85,7 +85,7 @@ def recording() -> tuple[Session, list[str]]:
     def send(message: Message) -> None:
         if isinstance(message.body, PatchControlBody):
             # An operation is [kind, node, property, value]; the probe's only
-            # control with a ``value`` is the field.
+            # control with a `value` is the field.
             ops: list[Any] = message.body.patch[1:]
             sent.extend(op[3] for op in ops if len(op) == 4 and op[2] == "value")
 
@@ -105,7 +105,7 @@ class Shown:
 
     @property
     def text_field(self) -> ft.TextField:
-        """The probe's one ``TextField``, from the session's current tree."""
+        """The probe's one `TextField`, from the session's current tree."""
         (text_field,) = find(self.session, ft.TextField)
         return text_field
 
@@ -114,7 +114,7 @@ class Shown:
         return find(self.session, ft.IconButton, lambda b: b.tooltip == CLEAR)
 
     def text_button(self, text: str) -> ft.TextButton:
-        """Return the one ``TextButton`` whose content is ``text``."""
+        """Return the one `TextButton` whose content is `text`."""
         (button,) = find(self.session, ft.TextButton, lambda b: b.content == text)
         return button
 
@@ -129,7 +129,7 @@ class Shown:
         self.session.apply_patch(self.text_field._i, {"value": text})
 
     async def burst(self, *texts: str) -> None:
-        """Type ``texts`` faster than the screen re-renders (#307).
+        """Type `texts` faster than the screen re-renders (#307).
 
         Flet applies each report as it arrives and runs each change event as a task
         of its own, so on a busy host a re-render for one keystroke can run after
@@ -147,7 +147,7 @@ class Shown:
         await settle()
 
     async def click(self, control: ft.Control) -> None:
-        """Click ``control`` as Flutter reports it, then let the session settle."""
+        """Click `control` as Flutter reports it, then let the session settle."""
         await self.session.dispatch_event(control._i, "click", None)
         await settle()
 
@@ -330,7 +330,7 @@ async def test_the_field_starts_with_the_initial_text(
 
 
 def field_of(control: ft.Control) -> ft.TextField:
-    """Return the ``TextField`` inside a ``SearchField``'s pill."""
+    """Return the `TextField` inside a `SearchField`'s pill."""
     stack = cast(ft.Stack, cast(ft.Container, control).content)
     merge = cast(ft.MergeSemantics, stack.controls[0])
     return cast(ft.TextField, cast(ft.Semantics, merge.content).content)
@@ -382,7 +382,7 @@ def test_the_count_has_one_padding_on_every_screen() -> None:
 async def test_put_replaces_the_text_and_puts_the_focus_back_in_the_field(
     shown: Shown,
 ) -> None:
-    """#941: ``put(text)`` sends the text, the filter follows it, and the field is focused."""
+    """#941: `put(text)` sends the text, the filter follows it, and the field is focused."""
     await shown.type("py")
     await shown.click(shown.text_button("Put back"))
     assert shown.sent == [PUT]

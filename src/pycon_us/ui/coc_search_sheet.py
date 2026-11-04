@@ -1,20 +1,20 @@
 """The CoC name search's look: the sheet, its rows and Find by name (#761; MASK-02).
 
-ux.md §7.3, D-439. A full-height modal ``BottomSheet`` over the scan screen, as the
+ux.md §7.3, D-439. A full-height modal `BottomSheet` over the scan screen, as the
 queue sheet:
 
-- a level-1 heading "Find attendee" with Close (``coc.search.close``);
-- "Search by name" (``coc.search``), focused as it opens, pinned above the rows;
+- a level-1 heading "Find attendee" with Close (`coc.search.close`);
+- "Search by name" (`coc.search`), focused as it opens, pinned above the rows;
 - before typing, "Type a name to search the attendee list."; no match, "No
   attendees match “x”" with Clear search; otherwise a live line ("3 attendees", or
-  "Showing 25. Refine your search." past the cap, ``coc.search.more``) and the rows,
-  one stop each (``coc.search.row.<index>``, never the access code): the name,
+  "Showing 25. Refine your search." past the cap, `coc.search.more`) and the rows,
+  one stop each (`coc.search.row.<index>`, never the access code): the name,
   "Badge: Maggie" when it differs, and the count in words with its level's icon,
   read as "Margaret Test, badge Maggie, 3 incidents on record".
 
-``find_button()`` is "Find by name" (``coc.find``), an ``OutlinedButton`` under the
-badge field, disabled with its reason. Built from data only: ``ui/coc_search.py``'s
-``use_find()`` keeps the search and the handlers.
+`find_button()` is "Find by name" (`coc.find`), an `OutlinedButton` under the
+badge field, disabled with its reason. Built from data only: `ui/coc_search.py`'s
+`use_find()` keeps the search and the handlers.
 """
 
 from collections.abc import Awaitable, Callable
@@ -53,7 +53,7 @@ class Finding:
 
     Attributes:
         typed: The field's text as Flutter last reported it.
-        query: ``typed`` once typing paused: what the rows match.
+        query: `typed` once typing paused: what the rows match.
         clears: Counts Clear search, so each one sends the empty text once.
         opening: This opening's token: a dismissal carries it, so a late one for an
             earlier sheet closes nothing.
@@ -99,7 +99,7 @@ def phrase(attendee: Attendee) -> str:
 
 
 def badge_of(attendee: Attendee) -> str:
-    """Return the badge's name when it differs from the name shown, else ``""``."""
+    """Return the badge's name when it differs from the name shown, else `""`."""
     name = display_name(attendee)
     return attendee.badge_name if attendee.badge_name != name else ""
 
@@ -118,7 +118,7 @@ def attendee_row(
 ) -> ft.Control:
     """Return one result: the name, "Badge: Maggie", the count with its level's icon.
 
-    One node, a button read as ``phrase()``; at least 48 dp tall (D-33). Its
+    One node, a button read as `phrase()`; at least 48 dp tall (D-33). Its
     identifier is its place in the list, never the access code (D-72); its key is
     the attendee object's, so a tap from a row new results replaced is dropped.
 
@@ -175,7 +175,7 @@ def results(
 
     Args:
         finding: The search: its query once typing paused.
-        matches: What ``search()`` found for it.
+        matches: What `search()` found for it.
         actions: The handlers: Clear search and a row's tap.
         tokens: The scheme's tokens.
     """
@@ -209,7 +209,7 @@ def find_sheet(
     Args:
         finding: The search.
         matches: What it found.
-        entry: The field's ``Ref``, made for each opening and Clear, and its text as
+        entry: The field's `Ref`, made for each opening and Clear, and its text as
             Flutter last reported it (D-243): never sent back over typing.
         actions: The handlers.
         tokens: The scheme's tokens; in high contrast a 1 dp edge draws the sheet.
@@ -259,7 +259,7 @@ def find_sheet(
 
 
 def find_button(reason: str | None, on_click: Callable[[], object]) -> ft.Control:
-    """Return "Find by name", in the buttons under the badge field; disabled while ``reason`` holds.
+    """Return "Find by name", in the buttons under the badge field; disabled while `reason` holds.
 
     A disabled button's tooltip is not read, so its name says why (#759's words:
     "Loading attendee list…", "CoC capture needs a connection").

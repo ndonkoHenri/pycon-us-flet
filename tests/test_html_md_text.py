@@ -2,7 +2,7 @@
 
 The text-only form for search, and Hypothesis's check that no visible character is lost
 and that no input raises. The named tests per tag and per boundary are
-``test_html_md.py``'s; the feed samples are ``test_html_md_feeds.py``'s.
+`test_html_md.py`'s; the feed samples are `test_html_md_feeds.py`'s.
 """
 
 import html

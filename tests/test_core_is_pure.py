@@ -1,12 +1,12 @@
-"""Guard D-67: ``pycon_us.core`` is pure Python and never imports Flet.
+"""Guard D-67: `pycon_us.core` is pure Python and never imports Flet.
 
 Two complementary checks keep this simple and honest:
 
-* a static scan finds ``flet`` / ``flet_*`` imports anywhere in a core module,
+* a static scan finds `flet` / `flet_*` imports anywhere in a core module,
   including inside functions;
 * a runtime check imports every core module in a fresh interpreter and asserts
   that no Flet module got loaded, which also catches transitive imports
-  (e.g. ``from .. import state``) and dynamic ones at import time.
+  (e.g. `from .. import state`) and dynamic ones at import time.
 """
 
 import ast
@@ -18,16 +18,16 @@ CORE = Path(__file__).resolve().parents[1] / "src" / "pycon_us" / "core"
 
 
 def is_flet(module: str) -> bool:
-    """Return whether ``module`` is Flet itself or a Flet extension package."""
+    """Return whether `module` is Flet itself or a Flet extension package."""
     top = module.split(".")[0]
     return top == "flet" or top.startswith("flet_")
 
 
 def imported_modules(path: Path) -> set[str]:
-    """Return the absolute module names that ``path`` imports statically.
+    """Return the absolute module names that `path` imports statically.
 
-    ``from a import b`` gives both ``a`` and ``a.b``, since ``b`` may be a submodule
-    (``from pycon_us.core import html_md``); a name that is not one does no harm.
+    `from a import b` gives both `a` and `a.b`, since `b` may be a submodule
+    (`from pycon_us.core import html_md`); a name that is not one does no harm.
     """
     tree = ast.parse(path.read_text(encoding="utf-8"), filename=str(path))
     names: set[str] = set()
@@ -41,7 +41,7 @@ def imported_modules(path: Path) -> set[str]:
 
 
 def test_core_never_imports_flet_statically() -> None:
-    """No core module imports ``flet`` or a ``flet_*`` package, even in a function."""
+    """No core module imports `flet` or a `flet_*` package, even in a function."""
     offenders = {
         str(path.relative_to(CORE)): sorted(
             name for name in imported_modules(path) if is_flet(name)
@@ -73,7 +73,7 @@ def test_importing_core_loads_no_flet_module() -> None:
 
 
 def test_static_scan_sees_both_import_forms(tmp_path: Path) -> None:
-    """The scan sees ``import flet`` and ``from flet_map import Map``, not ``json``."""
+    """The scan sees `import flet` and `from flet_map import Map`, not `json`."""
     module = tmp_path / "sample.py"
     module.write_text(
         "import flet as ft\nfrom flet_map import Map\nimport json\n", encoding="utf-8"
@@ -86,7 +86,7 @@ def test_static_scan_sees_both_import_forms(tmp_path: Path) -> None:
 
 
 def test_static_scan_sees_a_submodule_imported_from_its_package(tmp_path: Path) -> None:
-    """The scan sees the submodule in ``from pycon_us.core import html_md``."""
+    """The scan sees the submodule in `from pycon_us.core import html_md`."""
     module = tmp_path / "sample.py"
     module.write_text("from pycon_us.core import html_md\n", encoding="utf-8")
     assert "pycon_us.core.html_md" in imported_modules(module)

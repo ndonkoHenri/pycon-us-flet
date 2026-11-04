@@ -4,11 +4,11 @@ The header says where the conference stands, in the brand's indigo (one of D-28'
 identity moments): "Starts in 23 days", "Day 3 of 5 · Friday" with "First up today at
 9:00 AM", "Up next at 11:30 AM" or "That's a wrap for today", the sprints, then "See
 you next year".
-``season()`` and ``header_copy()`` are pure: they map Now & Next's phase (D-179) and
+`season()` and `header_copy()` are pure: they map Now & Next's phase (D-179) and
 the conference-local date to the words, so the tests hold them at fixed times;
-``StatusHeader`` draws them; ``up_next_when()`` words the next slot's start. Before
-and after the sessions, ``key_dates()`` lists the year's dates for the countdown and
-``sprints_link()`` opens the sprints, both from ``conference.toml`` (D-45). D-14, D-28.
+`StatusHeader` draws them; `up_next_when()` words the next slot's start. Before
+and after the sessions, `key_dates()` lists the year's dates for the countdown and
+`sprints_link()` opens the sprints, both from `conference.toml` (D-45). D-14, D-28.
 """
 
 from dataclasses import dataclass
@@ -36,7 +36,7 @@ from pycon_us.ui.rows import SUBTITLED_TOP, LinkTile
 from pycon_us.ui.scaffold import SectionHeader
 
 GOLD = "#FFD779"
-"""The brand's gold, for icons on the indigo only (6.2:1 on ``#3B3EA9``; ux.md §3.1)."""
+"""The brand's gold, for icons on the indigo only (6.2:1 on `#3B3EA9`; ux.md §3.1)."""
 
 ICON_SIZE = 32
 """The header's decorative icon, in dp."""
@@ -77,11 +77,11 @@ def season(
     Before the first start, the first day's own morning is already the conference:
     the attendee is on their way and wants what is first up. After the last end, the
     rest of that evening is still the last day's ("That's a wrap for today"); the
-    sprint days follow, from ``conference.toml`` (D-179 leaves them to Now).
+    sprint days follow, from `conference.toml` (D-179 leaves them to Now).
 
     Args:
-        phase: ``now_next().phase``.
-        day: The conference-local date (``timefmt.today()``).
+        phase: `now_next().phase`.
+        day: The conference-local date (`timefmt.today()`).
         data: The processed feed.
         info: The year's facts.
     """
@@ -124,16 +124,16 @@ def header_copy(
     use_24h: bool,
     device_offset: timedelta | None,
 ) -> HeaderCopy:
-    """Return what the status header says at ``now``.
+    """Return what the status header says at `now`.
 
     Args:
-        now_next: ``now_next(data, now)``.
-        now: ``clock.now()``.
+        now_next: `now_next(data, now)`.
+        now: `clock.now()`.
         data: The processed feed.
         info: The year's facts: dates, zone, venue.
         use_24h: The device's 24-hour setting.
-        device_offset: The device's UTC offset at ``now``
-            (``now.astimezone().utcoffset()``), for the zone note.
+        device_offset: The device's UTC offset at `now`
+            (`now.astimezone().utcoffset()`), for the zone note.
     """
     zone = info.zone
     day = today(now, zone)
@@ -190,7 +190,7 @@ def _day_line(now_next: NowNext, day: date, info: ConferenceInfo, use_24h: bool)
 
 
 def spoken(text: str) -> str:
-    """Return ``text`` as a screen reader should say it: "Up next, 11:30 AM".
+    """Return `text` as a screen reader should say it: "Up next, 11:30 AM".
 
     A " · " is read as a pause and a range's dash as "to": "May 13 to 19", "Wed, May
     13 to Sun, May 17".
@@ -204,7 +204,7 @@ def spoken(text: str) -> str:
 def header_phrase(name: str, copy: HeaderCopy) -> str:
     """Return what a screen reader says for the header: one phrase (D-33).
 
-    "PyCon US 2026. Day 3 of 5, Friday. First up today at 9:00 AM." (``spoken()``).
+    "PyCon US 2026. Day 3 of 5, Friday. First up today at 9:00 AM." (`spoken()`).
 
     Args:
         name: The conference's name, the header's first line.
@@ -221,18 +221,18 @@ def StatusHeader(
 ) -> ft.Control:
     """Return the status header: an indigo card that says where the conference stands.
 
-    Brand colour at an identity moment (D-28): the indigo ``#3B3EA9`` in both schemes,
-    as the light ``primary`` (white text, 8.6:1) and the dark ``primary_container``
-    (``#E1E0FF``, 6.7:1); its icon is decorative, in gold. One heading node, the first
-    under the bar's "Now" (level 2, D-211), read as ``header_phrase()``. In high
-    contrast the card is HC's ``primary`` (both containers equal it) and the icon takes
+    Brand colour at an identity moment (D-28): the indigo `#3B3EA9` in both schemes,
+    as the light `primary` (white text, 8.6:1) and the dark `primary_container`
+    (`#E1E0FF`, 6.7:1); its icon is decorative, in gold. One heading node, the first
+    under the bar's "Now" (level 2, D-211), read as `header_phrase()`. In high
+    contrast the card is HC's `primary` (both containers equal it) and the icon takes
     the text's colour: the gold was 1.03:1 on HC dark's yellow (D-306).
 
     Args:
         name: The conference's name, e.g. "PyCon US 2026".
         copy: What it says.
-        dark: The dark scheme is on screen (``Prefs.dark``).
-        high_contrast: A high-contrast scheme is on screen (``Tokens.high_contrast``).
+        dark: The dark scheme is on screen (`Prefs.dark`).
+        high_contrast: A high-contrast scheme is on screen (`Tokens.high_contrast`).
     """
     fill = ft.Colors.PRIMARY_CONTAINER if dark else ft.Colors.PRIMARY
     ink = ft.Colors.ON_PRIMARY_CONTAINER if dark else ft.Colors.ON_PRIMARY
@@ -300,7 +300,7 @@ def _title(title: str, color: str) -> ft.Control:
 def key_dates(info: ConferenceInfo) -> list[ft.Control]:
     """Return the countdown's key dates: the conference, the sprints and the venue.
 
-    From ``conference.toml`` (D-45): the days with tutorials and talks, then the
+    From `conference.toml` (D-45): the days with tutorials and talks, then the
     sprint days, then where it all happens. Each row is one node, read with its dates
     spoken ("Wed, May 13 to Sun, May 17").
 
@@ -349,8 +349,8 @@ def up_next_when(
     A later day is named by its date: "Sat, May 16 at 9:00 AM".
 
     Args:
-        slot: ``NowNext.up_next``.
-        now: ``clock.now()``.
+        slot: `NowNext.up_next`.
+        now: `clock.now()`.
         info: The year's facts: the zone.
         use_24h: The device's 24-hour setting.
     """

@@ -1,8 +1,8 @@
 """Request signing against vectors from Ionic's own code (D-52; API-01, AUTH-03).
 
-``tests/fixtures/ionic/signing.json`` was produced once by running Ionic's
-``buildRequestAuthHeaders`` under Node (``tools/capture_ionic_reference/README.md``).
-The client and the mock share ``core/signing.py``, so these outside vectors are what
+`tests/fixtures/ionic/signing.json` was produced once by running Ionic's
+`buildRequestAuthHeaders` under Node (`tools/capture_ionic_reference/README.md`).
+The client and the mock share `core/signing.py`, so these outside vectors are what
 would catch a mistake both sides make.
 """
 

@@ -1,13 +1,13 @@
 """The Developer screen's Reminders section: a test reminder in 5 s per category (DEV-06).
 
-``TestReminders`` is one row per kind of reminder the app sends, saved sessions and the
+`TestReminders` is one row per kind of reminder the app sends, saved sessions and the
 three kinds of conference moment, in D-198's shape, with one outcome line under them
 that says why a test reminder will or won't show: scheduled (exact, or inexact and maybe
 late), muted (that kind is off in the reminder settings), denied (the OS doesn't show the
 app's notifications) or not scheduled (the OS refused it). Without E3, as in the
 companion app, the rows are disabled and say "Not available in this build" (D-63).
 
-The reminder is ``services.reminders.TEST_ID`` (D-59), due 5 s after the real time,
+The reminder is `services.reminders.TEST_ID` (D-59), due 5 s after the real time,
 never the fake clock's: the OS fires it by its own clock. Its payload is the kind's
 route, so a tap opens what that kind's reminders are about (D-402).
 """
@@ -41,8 +41,8 @@ class Kind:
     """A kind of reminder the app sends, as its test row shows it.
 
     Attributes:
-        key: ``"session"``, or a moment's category, as
-            ``year_moments.EventReminder.category``.
+        key: `"session"`, or a moment's category, as
+            `year_moments.EventReminder.category`.
         name: Its name in the outcome's words, e.g. "Lightning talk reminders".
         title: The row's title, a verb first.
         icon: The row's icon: the page the kind opens, as More draws it.
@@ -99,8 +99,8 @@ def muted(settings: ReminderSettings, key: str) -> bool:
     """Return whether the user turned this kind of reminder off.
 
     Args:
-        settings: The reminder settings (``Prefs.reminders``).
-        key: A ``Kind.key``.
+        settings: The reminder settings (`Prefs.reminders`).
+        key: A `Kind.key`.
     """
     if key == "session":
         return settings.session_lead == 0
@@ -108,7 +108,7 @@ def muted(settings: ReminderSettings, key: str) -> bool:
 
 
 def reminder_for(kind: Kind, now: datetime) -> Reminder:
-    """Return the test reminder of ``kind``, due ``LEAD`` after ``now``.
+    """Return the test reminder of `kind`, due `LEAD` after `now`.
 
     Args:
         kind: The kind tested.
@@ -138,7 +138,7 @@ def denied(access: Access) -> Outcome:
 
 
 def muted_outcome(kind: Kind) -> Outcome:
-    """Return the outcome when the user turned ``kind`` off: nothing is scheduled."""
+    """Return the outcome when the user turned `kind` off: nothing is scheduled."""
     return f"Not scheduled: {kind.name.lower()} are off in Settings.", False
 
 
@@ -147,7 +147,7 @@ def scheduled(kind: Kind, result: TestResult) -> Outcome:
 
     Args:
         kind: The kind tested.
-        result: ``Scheduler.schedule_test()``'s answer.
+        result: `Scheduler.schedule_test()`'s answer.
     """
     opens = f"Tapping it opens {kind.place}."
     if result == "exact":
@@ -200,7 +200,7 @@ def TestReminders() -> ft.Control:
 def kind_row(
     kind: Kind, on_click: Callable[[], Coroutine[Any, Any, None]], unavailable: bool
 ) -> ft.Control:
-    """Return the row that tests ``kind``: what a tap on its reminder opens, or why not.
+    """Return the row that tests `kind`: what a tap on its reminder opens, or why not.
 
     Args:
         kind: The kind tested.

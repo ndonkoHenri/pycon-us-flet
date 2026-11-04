@@ -1,20 +1,20 @@
-"""Lightning talks (``/more/lightning-talks``): what they are, how to sign up, and when.
+"""Lightning talks (`/more/lightning-talks`): what they are, how to sign up, and when.
 
-The Tracks hub opens the same page as its child, ``/more/tracks/lightning-talks``, so
+The Tracks hub opens the same page as its child, `/more/tracks/lightning-talks`, so
 Back returns to the hub (D-207).
 
 One page where Ionic had two near-identical menu entries, a static page and a track
 list (EVT-03, SHELL-10). From the top:
 
-- a filled card with the year's copy (``content.toml``'s ``[lightning_talks]``, D-45):
+- a filled card with the year's copy (`content.toml`'s `[lightning_talks]`, D-45):
   what a lightning talk is, when and where they happen, and "Sign up for a lightning
   talk", which opens the site's sign-up in the in-app browser (the link rule, INFO-14),
   when the year has one;
 - "Think you can't do one?", a fold that starts collapsed, with the doubts people
-  give and their answers (``ui.fold.FoldTile``, the app's one fold, D-191);
+  give and their answers (`ui.fold.FoldTile`, the app's one fold, D-191);
 - "More about lightning talks", the site's page, in the in-app browser;
-- the lightning talks themselves by day, ``SessionRow``s with their stars (D-184), the
-  track page's memoised day items (``ui.day_groups``, D-153), without the "Lightning
+- the lightning talks themselves by day, `SessionRow`s with their stars (D-184), the
+  track page's memoised day items (`ui.day_groups`, D-153), without the "Lightning
   talks" badge every row would repeat (D-199).
 
 A year without the copy (2025) shows its sessions alone. Without data the sessions
@@ -144,13 +144,13 @@ def copy_card(copy: LightningTalksInfo, svc: Services) -> ft.Control:
     """Return the card that says what a lightning talk is, with the sign-up button.
 
     The button only when the year has a sign-up: no dead control (ux.md §1). A filled
-    card (M3's ``surface_container_highest``), its heading a level-2 heading (F40) and
-    its paragraphs in ``BODY_LARGE``, as descriptions are (ux.md §3.6); for
+    card (M3's `surface_container_highest`), its heading a level-2 heading (F40) and
+    its paragraphs in `BODY_LARGE`, as descriptions are (ux.md §3.6); for
     screen readers the heading, the paragraphs and the button are nodes of their own,
     the heading read first and alone (D-211). The
-    button leaves the app, so its icon is ``OPEN_IN_NEW`` and its name ends with
+    button leaves the app, so its icon is `OPEN_IN_NEW` and its name ends with
     "Opens in browser", on the text: an icon's label is read before the text (D-186);
-    it is a link, as an external row is (``links.external()``).
+    it is a link, as an external row is (`links.external()`).
 
     Args:
         copy: The year's copy.
@@ -222,7 +222,7 @@ def doubts_fold(
 ) -> ft.Control:
     """Return "Think you can't do one?": the doubts and their answers, folded.
 
-    The app's fold (``FoldTile``, D-191), controlled by the page's state, so a
+    The app's fold (`FoldTile`, D-191), controlled by the page's state, so a
     re-render (a star tap below) never folds it up again. Each doubt reads as one
     node: what people say, then the answer.
 
@@ -230,7 +230,7 @@ def doubts_fold(
         copy: The year's copy, with its doubts.
         expanded: Whether it is open; it starts collapsed (EVT-03).
         on_change: Where the page keeps whether it is open.
-        style: Its animation (``expand_style()``), none under reduced motion.
+        style: Its animation (`expand_style()`), none under reduced motion.
     """
     answers: list[ft.Control] = [
         ft.Semantics(

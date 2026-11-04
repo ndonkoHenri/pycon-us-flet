@@ -1,4 +1,4 @@
-"""Tests for ``ui/semantics.py``'s ``announce()``, every announcement's one way out.
+"""Tests for `ui/semantics.py`'s `announce()`, every announcement's one way out.
 
 It caps the wait for an answer iOS may never give (D-420, F276), and its logs hold the
 error's class, never the words (D-72). The sites' guards are in their own tests.
@@ -68,7 +68,7 @@ async def test_a_failed_announcement_logs_only_the_error_s_class(
 async def test_an_error_outside_the_service_errors_is_raised(
     logged: pytest.LogCaptureFixture,
 ) -> None:
-    """Only ``SERVICE_ERRORS`` are the platform's: a bug still reaches ``report_errors``."""
+    """Only `SERVICE_ERRORS` are the platform's: a bug still reaches `report_errors`."""
     semantics = MemorySemantics()
     semantics.announce_error = KeyError("bug")
     with pytest.raises(KeyError):
@@ -87,7 +87,7 @@ async def test_an_error_outside_the_service_errors_is_raised(
 async def test_an_announcement_goes_at_the_level_asked(
     kwargs: dict[str, ft.Assertiveness], level: ft.Assertiveness
 ) -> None:
-    """Polite unless the caller chooses, as ``scan_feedback`` does for what needs acting on."""
+    """Polite unless the caller chooses, as `scan_feedback` does for what needs acting on."""
     semantics = MemorySemantics()
     await announce(semantics, WORDS, **kwargs)
     assert semantics.levels == [level]

@@ -1,4 +1,4 @@
-"""Tests for ``ChangeLog``'s seen marks: ``mark_seen()`` and the unseen count (ux.md §6.4).
+"""Tests for `ChangeLog`'s seen marks: `mark_seen()` and the unseen count (ux.md §6.4).
 
 The batches are built by hand; the log file lives in a temporary directory, and
 SharedPreferences is the in-memory fake.
@@ -27,7 +27,7 @@ START = datetime(2026, 5, 16, 10, 30, tzinfo=LA)
 
 
 def moved(key: str) -> Change:
-    """A room change of session ``key``."""
+    """A room change of session `key`."""
     old = Listing("Talk", START, START + timedelta(minutes=30), "Room 101A")
     return Change(key, ChangeKind.ROOM, old, replace(old, location="Room 102A"))
 
@@ -41,7 +41,7 @@ OLDER = Batch(NOW - timedelta(hours=3), (moved("3"),))
 
 @pytest.fixture(autouse=True)
 def frozen_clock() -> Iterator[None]:
-    """Freeze ``clock.now()`` at ``NOW``, so a reload keeps the batches (14 days)."""
+    """Freeze `clock.now()` at `NOW`, so a reload keeps the batches (14 days)."""
     clock.set_test_now(NOW)
     yield
     clock.set_test_now(None)
@@ -49,7 +49,7 @@ def frozen_clock() -> Iterator[None]:
 
 @pytest.fixture
 def storage(tmp_path: Path) -> Storage:
-    """A 2026 ``Storage`` in ``tmp_path``, over in-memory SharedPreferences."""
+    """A 2026 `Storage` in `tmp_path`, over in-memory SharedPreferences."""
     return Storage(prefs=MemoryPrefs(), directory=tmp_path, year=2026)
 
 
@@ -102,7 +102,7 @@ async def test_a_batch_recorded_while_a_write_is_held_is_saved_after_it(
     """Writes take turns in order: one held in its thread cannot land over a newer one.
 
     The first seen mark's write is held mid-write; a refresh then records a batch and
-    a second write is asked for (``record()`` and ``mark_seen()`` share ``_save()``).
+    a second write is asked for (`record()` and `mark_seen()` share `_save()`).
     The second must wait for the first and save the log as it is then.
     """
     real = changes_file.write_batches
@@ -110,7 +110,7 @@ async def test_a_batch_recorded_while_a_write_is_held_is_saved_after_it(
     started: list[int] = []
 
     async def held_first(storage: Storage, batches: list[Batch]) -> bool:
-        """Write ``batches``; the first call waits for the test's release first."""
+        """Write `batches`; the first call waits for the test's release first."""
         started.append(len(batches))
         if len(started) == 1:
             await release.wait()
@@ -141,7 +141,7 @@ async def test_a_delete_waits_for_a_write_under_way_and_drops_the_queued_ones(
     release = asyncio.Event()
 
     async def held(storage: Storage, batches: list[Batch]) -> bool:
-        """Write ``batches`` once the test releases the writes."""
+        """Write `batches` once the test releases the writes."""
         await release.wait()
         return await real(storage, batches)
 

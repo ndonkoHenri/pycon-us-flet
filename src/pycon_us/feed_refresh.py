@@ -1,12 +1,12 @@
 """The feed refresh without its store: its words, its timings and its network step (D-231).
 
-``state.py``'s ``Conference`` runs refreshes and publishes what they bring; this module
+`state.py`'s `Conference` runs refreshes and publishes what they bring; this module
 holds what needs none of the store's fields. The words for the outcome: where the data
-came from (``Source``), why the last refresh failed (``Problem``) and what the status
-strip says (``Status``). The timings: when data turns stale (D-32, ``stale()``) and when
-the next automatic refresh is due (D-40, ``due()``). And one attempt at the network:
-``fetch()``, the ``feed_digest()`` that tells the published feed's bytes again (D-224),
-and ``log_unexpected()`` for a refresh that ends in a bug (D-71).
+came from (`Source`), why the last refresh failed (`Problem`) and what the status
+strip says (`Status`). The timings: when data turns stale (D-32, `stale()`) and when
+the next automatic refresh is due (D-40, `due()`). And one attempt at the network:
+`fetch()`, the `feed_digest()` that tells the published feed's bytes again (D-224),
+and `log_unexpected()` for a refresh that ends in a bug (D-71).
 """
 
 import asyncio
@@ -27,7 +27,7 @@ from pycon_us.services import api
 logger = logging.getLogger(__name__)
 
 type Source = Literal["none", "bundled", "cache", "network"]
-"""Where the published data came from; ``none`` until ``load_local`` publishes."""
+"""Where the published data came from; `none` until `load_local` publishes."""
 
 type Problem = Literal["offline", "server"]
 """Why the last refresh failed: no answer, or an answer that could not be used."""
@@ -47,13 +47,13 @@ and Schedule while they show (D-40)."""
 
 
 def stale(age: timedelta | None, info: ConferenceInfo) -> bool:
-    """Return whether data of ``age`` is stale by ``clock.now()`` (D-32).
+    """Return whether data of `age` is stale by `clock.now()` (D-32).
 
-    Stale when it is older than 6 h on a conference day (``first_day`` to ``last_day``
+    Stale when it is older than 6 h on a conference day (`first_day` to `last_day`
     in conference time) or 24 h on another day, or when there is no data (None).
 
     Args:
-        age: How old the data is, ``Conference.age()``.
+        age: How old the data is, `Conference.age()`.
         info: The year's facts: its dates and time zone.
     """
     if age is None:
@@ -67,13 +67,13 @@ def due(started_at: datetime | None) -> bool:
     """Return whether an automatic refresh is due, by when the last one started (D-40).
 
     Due when no refresh has started in this session (None), or the last one started
-    ``REFRESH_EVERY`` or more ago by ``clock.now()``, whatever its outcome: counted from
+    `REFRESH_EVERY` or more ago by `clock.now()`, whatever its outcome: counted from
     the last attempt, not the data's age, so a phone offline retries every 15 min, not
     on every check. A clock set back before the last start (the fake clock) makes it
     due too.
 
     Args:
-        started_at: When the last refresh started, ``Conference._started_at``.
+        started_at: When the last refresh started, `Conference._started_at`.
     """
     if started_at is None:
         return True
@@ -96,13 +96,13 @@ async def fetch(
     Args:
         url: The feed URL.
         year: The year's feed settings.
-        transport: The HTTP transport; tests pass an ``httpx.MockTransport``.
+        transport: The HTTP transport; tests pass an `httpx.MockTransport`.
         published: The digest of the published feed: bytes with that digest are not
             processed, and their data is None (D-224).
 
     Returns:
         The bytes, their digest and the processed feed (None when it is the published
-        one), or the ``Problem`` that stopped it (D-146).
+        one), or the `Problem` that stopped it (D-146).
     """
     try:
         raw = await api.fetch_feed(url, transport=transport)
@@ -122,7 +122,7 @@ def log_unexpected(task: asyncio.Task[None]) -> None:
     """Log a refresh that failed with an unexpected error, as soon as it ends (D-71).
 
     Without it, the error of a refresh nobody awaits would surface only when the finished
-    task is garbage collected, which ``Conference._task`` delays until the next refresh.
+    task is garbage collected, which `Conference._task` delays until the next refresh.
     """
     if not task.cancelled() and (error := task.exception()) is not None:
         logger.error("Feed refresh failed unexpectedly", exc_info=error)

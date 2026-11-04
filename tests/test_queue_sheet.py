@@ -1,6 +1,6 @@
 """The staff queue sheet: what it reads, what it shows and what its buttons do (#694).
 
-The rows are seeded into a real ``outbox-<year>.db`` in a temporary directory. How the
+The rows are seeded into a real `outbox-<year>.db` in a temporary directory. How the
 sheet looks is checked on devices (the PR).
 """
 
@@ -57,7 +57,7 @@ def seed(
     status: Status = Status.PENDING,
     maybe_sent: bool = False,
 ) -> Row:
-    """Store a lead row of ``owner``'s for ``code``, scanned at ``at``, in a status."""
+    """Store a lead row of `owner`'s for `code`, scanned at `at`, in a status."""
     decide = partial(
         outbox_enqueue.scan_lead,
         owner=owner,
@@ -78,7 +78,7 @@ def seed(
 
 
 def walk(root: Any) -> Iterator[Any]:
-    """Yield ``root`` and every control under it, through each slot a tile has."""
+    """Yield `root` and every control under it, through each slot a tile has."""
     yield root
     for name in ("content", "controls", "title", "subtitle", "leading", "trailing"):
         child = getattr(root, name, None)
@@ -88,7 +88,7 @@ def walk(root: Any) -> Iterator[Any]:
 
 
 def identified(root: ft.Control) -> dict[str, Any]:
-    """The control under each semantics identifier below ``root``."""
+    """The control under each semantics identifier below `root`."""
     return {
         c.identifier: c.content
         for c in walk(root)
@@ -97,12 +97,12 @@ def identified(root: ft.Control) -> dict[str, Any]:
 
 
 def words(control: Any) -> list[str]:
-    """Every text's words below ``control``, in order."""
+    """Every text's words below `control`, in order."""
     return [str(c.value) for c in walk(control) if isinstance(c, ft.Text)]
 
 
 def sheet(queue: Queue, staff: Staff | None = None, **state: Any) -> ft.BottomSheet:
-    """Build the sheet for ``queue`` with no-op handlers."""
+    """Build the sheet for `queue` with no-op handlers."""
     return queue_sheet(
         queue,
         SheetState(staff or Staff(), NOW, **state),
@@ -130,7 +130,7 @@ def test_the_owner_s_unsynced_rows_come_newest_first(db: OutboxDb) -> None:
 
 
 def test_the_confirmed_fold_keeps_only_the_latest(db: OutboxDb) -> None:
-    """At most ``CONFIRMED_SHOWN`` confirmed rows, the newest."""
+    """At most `CONFIRMED_SHOWN` confirmed rows, the newest."""
     for n in range(CONFIRMED_SHOWN + 2):
         seed(db, f"C{n}", at=NOW + n, status=Status.SYNCED)
     confirmed = read_queue(db, OWNER, others=False).confirmed
@@ -222,7 +222,7 @@ def test_a_flagged_row_says_it_may_be_recorded_twice_beside_an_icon(
 
 
 def test_a_check_in_the_server_refused_says_already_redeemed(db: OutboxDb) -> None:
-    """A 200 reply with ``errors`` syncs the row; the sheet says so and why (D-441)."""
+    """A 200 reply with `errors` syncs the row; the sheet says so and why (D-441)."""
     decide = partial(
         outbox_enqueue.admit,
         owner=OWNER,

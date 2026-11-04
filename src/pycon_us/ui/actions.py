@@ -1,13 +1,13 @@
 """Action rows and the line that says how an action ended, said in place (D-198, D-29, D-210).
 
-``action_row()`` is a two-line row that does something when tapped, a verb first and
+`action_row()` is a two-line row that does something when tapped, a verb first and
 what it touches below, as Developer's Data section (D-198) and Settings' Data section
-(P2-62) draw them; ``outcome_line()``, in ``padded()``, is the line under a group of
-them, or of buttons, that says what was done (an ``Outcome``), in place, since a result
-the user waits for appears in place (D-29); ``refreshed()`` is what Refresh now says
+(P2-62) draw them; `outcome_line()`, in `padded()`, is the line under a group of
+them, or of buttons, that says what was done (an `Outcome`), in place, since a result
+the user waits for appears in place (D-29); `refreshed()` is what Refresh now says
 once its refresh has ended, the same words on both pages (D-292). The Developer
 screen's Data section and Apply, Settings' Data section and About this app's Help us
-fix it section (#443) use them; moved here from ``screens/developer_ui.py`` so that
+fix it section (#443) use them; moved here from `screens/developer_ui.py` so that
 one screen does not import another's drawing.
 """
 
@@ -36,25 +36,25 @@ def action_row(
     trailing: ft.Control | None = None,
     slot: int | None = None,
 ) -> ft.Control:
-    """Return one action: a two-line ``ListTile``, one node named by both lines.
+    """Return one action: a two-line `ListTile`, one node named by both lines.
 
-    Its icons and title sit 14 dp from the top at every height, as a ``LinkTile`` with
+    Its icons and title sit 14 dp from the top at every height, as a `LinkTile` with
     a subtitle does (D-188). A disabled row says so to screen readers: its merged node
-    takes the tile's ``disabled`` (``named()``, D-214). Its icon and title take the
+    takes the tile's `disabled` (`named()`, D-214). Its icon and title take the
     disabled colour, but its second line, which says why, stays in
-    ``on_surface_variant``: at the disabled 38 % it is too faint to read (ux.md §9).
+    `on_surface_variant`: at the disabled 38 % it is too faint to read (ux.md §9).
 
     Args:
-        identifier: For UI flows, e.g. ``developer.reset_app``.
+        identifier: For UI flows, e.g. `developer.reset_app`.
         icon: The leading icon, outlined (D-27).
         title: What a tap does, a verb first.
         subtitle: What it touches, or why the row is disabled.
         on_click: The action.
         disabled: Whether the action is unavailable now.
-        color: The icon's and the title's colour: ``ERROR`` for Reset app.
+        color: The icon's and the title's colour: `ERROR` for Reset app.
         trailing: A decorative control at the end: Refresh now's ring while it runs.
         slot: The width the icon is centred in, so the title starts where a page's
-            other titles do: Settings' 48 dp, a radio's (``RADIO_WIDTH``); None for
+            other titles do: Settings' 48 dp, a radio's (`RADIO_WIDTH`); None for
             the bare 24 dp icon.
     """
     leading: ft.Control = ft.Icon(icon, color=None if disabled else color)
@@ -78,27 +78,27 @@ def action_row(
 
 
 def padded(control: ft.Control) -> ft.Container:
-    """Return ``control`` with the list's 16 dp sides and 8 dp above and below (ux.md §3.6)."""
+    """Return `control` with the list's 16 dp sides and 8 dp above and below (ux.md §3.6)."""
     return ft.Container(
         control, padding=ft.Padding.symmetric(horizontal=16, vertical=8)
     )
 
 
 ICON = 20
-"""The outcome icon's size at 100 %, in dp: one ``BODY_MEDIUM`` line (D-373)."""
+"""The outcome icon's size at 100 %, in dp: one `BODY_MEDIUM` line (D-373)."""
 
 
 def outcome_line(text: str, ok: bool, *, tokens: Tokens, slot: int = 24) -> ft.Control:
     """Return the line under a group of buttons: an icon and what was done.
 
-    Laid out as the screen's ``ListTile``s are, the icon in a slot as wide as theirs
-    (24 dp, or ``action_row()``'s ``slot``) and the words 16 dp after it, so they
+    Laid out as the screen's `ListTile`s are, the icon in a slot as wide as theirs
+    (24 dp, or `action_row()`'s `slot`) and the words 16 dp after it, so they
     start in the tiles' text column.
 
     Args:
         text: What was done, or why not, e.g. "Back to real time and the year's feed."
-        ok: Whether it went as asked: a check in ``success``, else a warning in
-            ``warning``; the words carry the meaning (ux.md §9).
+        ok: Whether it went as asked: a check in `success`, else a warning in
+            `warning`; the words carry the meaning (ux.md §9).
         tokens: The scheme's tokens.
         slot: The icon's slot: the width of the leading icons above it.
     """
@@ -143,7 +143,7 @@ def refreshed(problem: Problem | None) -> Outcome:
     schedule on screen stays.
 
     Args:
-        problem: ``Conference.problem`` after it: None when it published the feed.
+        problem: `Conference.problem` after it: None when it published the feed.
     """
     if problem is None:
         return ("Schedule updated from the feed.", True)

@@ -4,16 +4,16 @@ Time and place answer the attendee's first question (ux.md §1, §5.5), so they 
 before everything else about a session: the day and time, where the session stands now
 ("Starts in 25 min", "Happening now", "Ended"), the Pacific Time note when the device's
 clock differs (D-35), then one room tile that pushes room detail and, folded into a
-``FoldTile`` (D-354), the other rooms of a multi-room session (SESS-02). Each tile reads
+`FoldTile` (D-354), the other rooms of a multi-room session (SESS-02). Each tile reads
 as one phrase (D-33).
 
-A session in one room with a pin shows that room's ``LocationCard`` under the card
+A session in one room with a pin shows that room's `LocationCard` under the card
 (D-349): the room tile says what else is on there (room detail), the card where it is
 (the floor viewer); one node with both destinations could not be one phrase. A Job
-Fair row (``core.expo.is_job_fair()``, SESS-10) then shows the job fair plan's card, the
+Fair row (`core.expo.is_job_fair()`, SESS-10) then shows the job fair plan's card, the
 one the Map's Job fair pane and Job listings show (D-254): where the tables are.
 
-``StatusLine`` is a leaf component with its own minute tick, as ``StatusStrip`` is
+`StatusLine` is a leaf component with its own minute tick, as `StatusStrip` is
 (D-175): the time passing re-renders the line, not the screen around it.
 """
 
@@ -42,10 +42,10 @@ from pycon_us.ui.status_strip import use_minute
 def room_href(view_path: str, room: Room, session_id: str) -> str:
     """Return the location that pushes a room's detail, highlighting the session.
 
-    Room detail reads ``?highlight=`` once, to mark the row it came from (ROOM-03).
+    Room detail reads `?highlight=` once, to mark the row it came from (ROOM-03).
 
     Args:
-        view_path: The session's View path (``ft.use_view_path()``).
+        view_path: The session's View path (`ft.use_view_path()`).
         room: The room.
         session_id: The session shown.
     """
@@ -64,7 +64,7 @@ def WhenAndWhere(
 ) -> ft.Control:
     """Return the "When and where" card, then the room's and the job fair's cards.
 
-    The room's ``LocationCard`` when it has one; the job fair plan's on a Job Fair row.
+    The room's `LocationCard` when it has one; the job fair plan's on a Job Fair row.
 
     An outlined card (ux.md §5.5) of 56 dp+ list tiles, so each is a 48 dp target
     (D-33) that grows with the text. A place the feed has no room for is shown but
@@ -72,11 +72,11 @@ def WhenAndWhere(
 
     Args:
         session: The session.
-        where: Its places, from ``row_views.places()``.
+        where: Its places, from `row_views.places()`.
         year: The year's data: the zone and its name, the room's pin and the plans.
         view_path: The View's own path, so a room opens on top of it (D-17).
         use_24h: The device's 24-hour setting.
-        screen: The screen's name in the identifiers, ``<screen>.when`` and so on.
+        screen: The screen's name in the identifiers, `<screen>.when` and so on.
     """
     tiles = [_time_tile(session, year.conference, use_24h, screen)]
     if where.room is not None:
@@ -187,8 +187,8 @@ def OtherRooms(
 ) -> ft.Control:
     """The other rooms, folded: lightning talks and breaks list up to seven.
 
-    A component, so it holds whether it is open: a ``FoldTile`` (D-157's rule for
-    inputs), since one whose ``expanded`` was left to Flutter folded up again when the
+    A component, so it holds whether it is open: a `FoldTile` (D-157's rule for
+    inputs), since one whose `expanded` was left to Flutter folded up again when the
     user came back from a room's detail.
 
     Args:
@@ -227,14 +227,14 @@ def OtherRooms(
 def StatusLine(start: datetime, end: datetime) -> ft.Control:
     """Where a session stands now: "Starts in 25 min", "Happening now" or "Ended".
 
-    It ticks with ``use_minute()`` while it is mounted and the app is in the foreground
-    (D-40) and re-renders itself only; it reads ``clock.now()``, so the Developer fake
-    clock moves it too (D-43). It shows nothing when ``time_status()`` has nothing to
+    It ticks with `use_minute()` while it is mounted and the app is in the foreground
+    (D-40) and re-renders itself only; it reads `clock.now()`, so the Developer fake
+    clock moves it too (D-43). It shows nothing when `time_status()` has nothing to
     say, and screen readers hear the words ("Starts in 25 minutes").
 
     Args:
         start: When the session starts, as its time tile shows it
-            (``Session.display_start``).
+            (`Session.display_start`).
         end: When it ends.
     """
     svc = use_services()
@@ -252,7 +252,7 @@ def StatusLine(start: datetime, end: datetime) -> ft.Control:
 
 
 def _supporting(text: str) -> ft.Control:
-    """A tile's supporting line, in ``on_surface_variant`` (ux.md §3.9)."""
+    """A tile's supporting line, in `on_surface_variant` (ux.md §3.9)."""
     return ft.Text(
         text,
         theme_style=ft.TextThemeStyle.BODY_MEDIUM,

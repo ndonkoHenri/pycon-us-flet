@@ -1,7 +1,7 @@
 """Tests for the time column of a list's slots (D-158, D-200, D-216).
 
-``TimeGutter`` and ``TimeAbove`` are plain builders, checked as control trees.
-``GutterProbe`` renders in a real Flet session (``tests/sessions.py``), where its size
+`TimeGutter` and `TimeAbove` are plain builders, checked as control trees.
+`GutterProbe` renders in a real Flet session (`tests/sessions.py`), where its size
 events are dispatched as Flutter sends them; that Flutter reports the sizes this way is
 checked on devices (the PR).
 """
@@ -41,7 +41,7 @@ def test_the_gutter_is_a_level_3_heading_read_once() -> None:
 
 
 def gutter_columns(gutter: ft.Control) -> list[ft.Column]:
-    """Return the columns stacked in ``gutter``, checking it has no fixed width."""
+    """Return the columns stacked in `gutter`, checking it has no fixed width."""
     container = cast(ft.Semantics, gutter).content
     assert isinstance(container, ft.Container)
     assert container.width is None  # no fixed width: it grows with the text
@@ -51,7 +51,7 @@ def gutter_columns(gutter: ft.Control) -> list[ft.Column]:
 
 
 def texts(column: ft.Column) -> list[str | None]:
-    """Return the values of the texts in ``column``, in order."""
+    """Return the values of the texts in `column`, in order."""
     return [cast(ft.Text, t).value for t in column.controls]
 
 
@@ -142,7 +142,7 @@ def test_an_unmeasured_width_keeps_the_gutter() -> None:
 
 
 def test_the_time_above_is_one_heading_read_once_on_one_line() -> None:
-    """``TimeAbove`` is a level-3 heading read once, one line in the gutter's type."""
+    """`TimeAbove` is a level-3 heading read once, one line in the gutter's type."""
     above = TimeAbove("9:25 AM")
     assert isinstance(above, ft.Semantics)
     assert (above.header, above.heading_level) == (True, 3)  # as the gutter (D-211)
@@ -159,7 +159,7 @@ def test_the_time_above_is_one_heading_read_once_on_one_line() -> None:
 
 
 def test_beside_the_gutter_the_rows_take_the_rest_of_the_width() -> None:
-    """Beside the gutter, the rows are an expanding column in a top-aligned ``Row``."""
+    """Beside the gutter, the rows are an expanding column in a top-aligned `Row`."""
     rows = [ft.Text("a"), ft.Text("b")]
     slot = slot_layout("9:25 AM", rows, above=False)
     assert isinstance(slot, ft.Row)
@@ -172,7 +172,7 @@ def test_beside_the_gutter_the_rows_take_the_rest_of_the_width() -> None:
 
 
 def test_above_the_rows_they_take_the_slot_s_whole_width() -> None:
-    """With the time above, the slot is a ``Column``: the heading, then the rows."""
+    """With the time above, the slot is a `Column`: the heading, then the rows."""
     rows = [ft.Text("a"), ft.Text("b")]
     slot = slot_layout("9:25 AM", rows, above=True)
     assert isinstance(slot, ft.Column)
@@ -184,7 +184,7 @@ def test_above_the_rows_they_take_the_slot_s_whole_width() -> None:
 
 @pytest.mark.parametrize("above", [False, True])
 def test_a_slot_s_divider_sits_above_either_layout(above: bool) -> None:
-    """``TimeSlot`` puts a 1 dp divider above either layout only when asked to."""
+    """`TimeSlot` puts a 1 dp divider above either layout only when asked to."""
     rows = [ft.Text("a")]
     slot = TimeSlot("9:25 AM", rows, divider=True, above=above)
     assert isinstance(slot, ft.Column)
@@ -199,15 +199,15 @@ def test_a_slot_s_divider_sits_above_either_layout(above: bool) -> None:
 
 
 class Probed:
-    """A session showing ``GutterProbe`` under the Prefs provider, and its readers."""
+    """A session showing `GutterProbe` under the Prefs provider, and its readers."""
 
     def __init__(self) -> None:
-        """Start with default ``Prefs`` and no reader render counted."""
+        """Start with default `Prefs` and no reader render counted."""
         self.prefs = Prefs()
         self.renders = 0
 
     def root(self) -> ft.Control:
-        """Return the session's root: a reader of ``time_above`` and the probe."""
+        """Return the session's root: a reader of `time_above` and the probe."""
 
         @ft.component
         def Reader() -> ft.Control:
@@ -223,7 +223,7 @@ class Probed:
 
 
 async def test_the_probe_measures_the_widest_gutter_against_the_body() -> None:
-    """The probe sets ``time_above`` from both widths; readers re-render on a flip only.
+    """The probe sets `time_above` from both widths; readers re-render on a flip only.
 
     It measures an invisible "10:00 AM" in the gutter's padding, and a zero-height,
     unpositioned box for the body's width (F51).

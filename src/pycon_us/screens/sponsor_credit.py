@@ -2,10 +2,10 @@
 
 Sponsors who provide something are credited where it is: on the Wi-Fi page, and on
 Venue & hours' Quiet room card and Help & safety's Quiet room line. The year data names
-each sponsor by its slug (``content.toml``'s ``[sponsor_credits]``), which the tests
+each sponsor by its slug (`content.toml`'s `[sponsor_credits]`), which the tests
 and the snapshot tool check against the feed; Ionic guessed it from a substring of the
-name. The row is a ``LinkTile`` with the sponsor's logo that pushes its detail,
-``…/sponsor/<slug>``, over the page, so Back returns there (D-17), read as one phrase
+name. The row is a `LinkTile` with the sponsor's logo that pushes its detail,
+`…/sponsor/<slug>`, over the page, so Back returns there (D-17), read as one phrase
 ("Wi-Fi provided by Temporal, Partner sponsor, button"). A sponsor the current feed
 lacks, or no feed yet, hides the row: a credit without its sponsor's page would lead
 nowhere.
@@ -44,7 +44,7 @@ def SponsorCreditTile(
     Args:
         credit: The year's credit for this place; None when the year has none.
         what: What the sponsor provides, in sentence case: "Wi-Fi".
-        identifier: The row's semantics identifier: ``wifi.sponsor``.
+        identifier: The row's semantics identifier: `wifi.sponsor`.
     """
     data = use_conference().data
     view_path = ft.use_view_path()

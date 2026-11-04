@@ -1,11 +1,11 @@
 """The start sequence's fakes and fixtures, for its three test modules (#312).
 
-``test_app.py`` (the boot gate), ``test_app_handlers.py`` (the page's handlers) and
-``test_app_theme.py`` (the theme, the services and the slots layout) run ``bootstrap()``
+`test_app.py` (the boot gate), `test_app_handlers.py` (the page's handlers) and
+`test_app_theme.py` (the theme, the services and the slots layout) run `bootstrap()`
 against fakes: the in-memory SharedPreferences and SemanticsService of
-``tests/fakes.py``, a fake page, and ``api.fetch_feed`` replaced by a held ``Network``,
+`tests/fakes.py`, a fake page, and `api.fetch_feed` replaced by a held `Network`,
 so nothing reaches the network. A module takes the fixtures by assigning them to its own
-names, as ``docs/testing-and-quality.md`` §3.1 says.
+names, as `docs/testing-and-quality.md` §3.1 says.
 """
 
 import asyncio
@@ -61,7 +61,7 @@ def semantics() -> MemorySemantics:
 def svc(
     year: YearData, shared: MemoryPrefs, semantics: MemorySemantics, tmp_path: Path
 ) -> Services:
-    """Services for 2026 over the in-memory fakes, with files in ``tmp_path``."""
+    """Services for 2026 over the in-memory fakes, with files in `tmp_path`."""
     storage = Storage(prefs=shared, directory=tmp_path, year=2026)
     return Services(
         year=year,
@@ -76,14 +76,14 @@ def svc(
 
 @pytest.fixture
 def fake_page() -> FakePage:
-    """A fake page as ``main.prepare_first_page`` leaves it: theme crossfade off."""
+    """A fake page as `main.prepare_first_page` leaves it: theme crossfade off."""
     page = FakePage()
     page.theme_animation_style = NO_THEME_ANIMATION
     return page
 
 
 class Network:
-    """Stands in for ``api.fetch_feed``: held until released, then answers or fails."""
+    """Stands in for `api.fetch_feed`: held until released, then answers or fails."""
 
     def __init__(self) -> None:
         """Hold every fetch, with the recorded 2026 feed as the answer."""
@@ -92,7 +92,7 @@ class Network:
         self.urls: list[str] = []
 
     async def fetch_feed(self, url: str, **_: object) -> bytes:
-        """Record ``url``, wait for the release, then answer or raise."""
+        """Record `url`, wait for the release, then answer or raise."""
         self.urls.append(url)
         await self.released.wait()
         if isinstance(self.answer, Exception):
@@ -102,7 +102,7 @@ class Network:
 
 @pytest.fixture
 def network(monkeypatch: pytest.MonkeyPatch) -> Iterator[Network]:
-    """Put a held ``Network`` in place of ``api.fetch_feed``; release it after."""
+    """Put a held `Network` in place of `api.fetch_feed`; release it after."""
     network = Network()
     monkeypatch.setattr(api, "fetch_feed", network.fetch_feed)
     yield network
@@ -110,7 +110,7 @@ def network(monkeypatch: pytest.MonkeyPatch) -> Iterator[Network]:
 
 
 async def started(fake_page: FakePage, svc: Services) -> tuple[Conference, Prefs]:
-    """Run ``bootstrap()`` on new stores and return its Conference and Prefs."""
+    """Run `bootstrap()` on new stores and return its Conference and Prefs."""
     conference, prefs = Conference(), Prefs()
     await bootstrap(
         cast(ft.Page, fake_page),

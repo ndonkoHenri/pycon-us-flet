@@ -1,15 +1,15 @@
 """Turn the public feed into the conference model (D-41, D-42; DATA-01, DATA-13, DATA-24, DATA-26).
 
-``process()`` is the pipeline's one entry point. It decodes the JSON into frozen records
-(``core/records.py``), every id a string and every time an aware datetime in the conference
-zone; applies Ionic's processing rules (``core/rules.py``) to decide what becomes a
+`process()` is the pipeline's one entry point. It decodes the JSON into frozen records
+(`core/records.py`), every id a string and every time an aware datetime in the conference
+zone; applies Ionic's processing rules (`core/rules.py`) to decide what becomes a
 session; buckets the timeline's sessions into conference-local days and time groups; sorts
 the sponsorship levels once (DATA-22); and last converts the feed's HTML to Markdown and
 search text, once (D-130, D-140), reading the job listings' roles as it goes (D-278).
 
 Failures are split in two. A feed whose structure is wrong, or that nests too deep to read,
-raises ``FeedError``, so the caller keeps the data it has. A single bad record is skipped,
-recorded in ``ConferenceData.skipped`` and logged; it never blanks the schedule. Unknown
+raises `FeedError`, so the caller keeps the data it has. A single bad record is skipped,
+recorded in `ConferenceData.skipped` and logged; it never blanks the schedule. Unknown
 fields are ignored, so the feed can grow without breaking the app.
 """
 
@@ -66,12 +66,12 @@ def process(raw: bytes, settings: FeedSettings) -> ConferenceData:
         settings: The year's processing settings.
 
     Returns:
-        The model. Records that could not be read are listed in ``skipped``; records that
-        did not become sessions of their own, in ``dropped``.
+        The model. Records that could not be read are listed in `skipped`; records that
+        did not become sessions of their own, in `dropped`.
 
     Raises:
-        FeedError: The feed is not a JSON object with a ``schedule`` list, an optional
-            section is not a list, ``conference`` or its ``content`` is not an object, no
+        FeedError: The feed is not a JSON object with a `schedule` list, an optional
+            section is not a list, `conference` or its `content` is not an object, no
             schedule slot could be read, or its JSON or HTML nests too deep to read.
     """
     try:
@@ -84,7 +84,7 @@ def process(raw: bytes, settings: FeedSettings) -> ConferenceData:
 
 
 def _processed(raw: bytes, settings: FeedSettings) -> ConferenceData:
-    """Run the pipeline: ``process()`` without its guard."""
+    """Run the pipeline: `process()` without its guard."""
     started = time.perf_counter()
     document = _document(raw)
     sections = _sections(document)
@@ -278,9 +278,9 @@ def _converted(data: ConferenceData, site_url: str) -> ConferenceData:
 def _markdown_text(value: str) -> str:
     """Return the visible text of an open space's Markdown, for search (D-46, D-140).
 
-    A link keeps its text and loses its destination, and the ``*`` and backtick markers
-    go. ``_`` stays: in these descriptions it joins identifiers (``ic_ocr_cataloger``),
-    never emphasis. Then ``to_text`` collapses whitespace as for HTML.
+    A link keeps its text and loses its destination, and the `*` and backtick markers
+    go. `_` stays: in these descriptions it joins identifiers (`ic_ocr_cataloger`),
+    never emphasis. Then `to_text` collapses whitespace as for HTML.
     """
     shown = _MARKDOWN_LINK.sub(r"\1", value)
     return html_md.to_text(shown.replace("*", "").replace("`", ""))
@@ -298,7 +298,7 @@ def _document(raw: bytes) -> dict[str, object]:
 
 
 def _sections(document: dict[str, object]) -> dict[str, list[object]]:
-    """Return the lists we read: ``schedule`` and the optional sections."""
+    """Return the lists we read: `schedule` and the optional sections."""
     schedule = document.get("schedule")
     if not isinstance(schedule, list):
         raise FeedError("no 'schedule' list")
@@ -314,7 +314,7 @@ def _sections(document: dict[str, object]) -> dict[str, list[object]]:
 def _content(
     document: dict[str, object], skip: Callable[[str, object], None]
 ) -> dict[str, str]:
-    """Return the ``conference.content`` HTML blocks by key; both levels are optional.
+    """Return the `conference.content` HTML blocks by key; both levels are optional.
 
     A block that is not a string is skipped, like any other unreadable record. Keys and
     blocks bypass the record decoders, so their lone surrogates are replaced here (#152).
@@ -342,9 +342,9 @@ def _decode[T](
     skip: Callable[[str, object], None],
     taken: set[str] | None = None,
 ) -> list[T]:
-    """Return the records ``decode`` can read, the first of each id; ``skip`` the others.
+    """Return the records `decode` can read, the first of each id; `skip` the others.
 
-    ``taken`` holds the ids already read, when two lists share one id space; the ids read
+    `taken` holds the ids already read, when two lists share one id space; the ids read
     here are added to it.
     """
     taken = set() if taken is None else taken
@@ -381,7 +381,7 @@ def _days(sessions: Iterable[Session]) -> tuple[Day, ...]:
 
     Groups are keyed by their start instant, not by a display label, so every group has a
     start and sorting by it is total; Ionic's string keys left some groups without one.
-    The key is the start in UTC (``timefmt.instant``): starts in the conference zone
+    The key is the start in UTC (`timefmt.instant`): starts in the conference zone
     hash and compare by wall clock, which would merge 1:30 PDT and 1:30 PST into one
     group and put the repeated hour first on the night summer time ends (#535). A group
     keeps its start in the conference zone, its first session's.

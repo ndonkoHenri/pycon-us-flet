@@ -1,17 +1,17 @@
-"""A track's page (``/more/tracks/<slug>``): its sessions by day (SCHED-21, SCHED-22).
+"""A track's page (`/more/tracks/<slug>`): its sessions by day (SCHED-21, SCHED-22).
 
 An intro shows the track's badge as the schedule does, "New track" when it is new
 this year, the track's plural name as the page's heading (the app bar's title stays
 empty, as on session detail, D-186) and its legend line (EVT-04). Then
-every session of the track, by day under level-2 day headings (F40), as ``SessionRow``s
+every session of the track, by day under level-2 day headings (F40), as `SessionRow`s
 with their stars (D-184), without the badges the intro already shows (D-199):
-``track_sessions()``'s list, so the Posters track lists each
+`track_sessions()`'s list, so the Posters track lists each
 poster rather than the Posters row, and the Schedule's filter never applies, so the
 open spaces it hides by default show on their own page (D-20, D-178). No paging: each
-day is one memoised item of a lazy list (``ui.day_groups``, D-153), so a star tap
+day is one memoised item of a lazy list (`ui.day_groups`, D-153), so a star tap
 re-renders one day and one row.
 
-The slug is the registry's (``conference.toml``, DATA-29), never derived from a track
+The slug is the registry's (`conference.toml`, DATA-29), never derived from a track
 key: an unknown one shows the not-found state under the back arrow, with the hub as
 the way out (D-186). Without data the page loads and fails as the hub does (ux.md
 §4.1).
@@ -63,7 +63,7 @@ ADD_ALL = "Add all to My schedule"
 
 @ft.component
 def TrackPage() -> ft.View:
-    """``/more/tracks/<slug>``: the route's screen, ``TrackDetail`` for its slug.
+    """`/more/tracks/<slug>`: the route's screen, `TrackDetail` for its slug.
 
     Route params arrive quoted, as a link wrote them, and are unquoted here (D-42).
     """
@@ -75,7 +75,7 @@ def TrackDetail(slug: str) -> ft.View:
     """One track: its intro, then its sessions by day, each with its star.
 
     Args:
-        slug: The track's slug from the route (``Track.slug``), unquoted.
+        slug: The track's slug from the route (`Track.slug`), unquoted.
     """
     page = ft.context.page
     svc = use_services()
@@ -176,7 +176,7 @@ def TrackDetail(slug: str) -> ft.View:
 def offers_add_all(track: Track) -> bool:
     """Return whether the track's page offers "Add all to My schedule" (ux.md §5.10).
 
-    Not on the notices and breaks (the ``logistics`` group), whose rows have no star
+    Not on the notices and breaks (the `logistics` group), whose rows have no star
     to fill (D-31).
 
     Args:
@@ -188,7 +188,7 @@ def offers_add_all(track: Track) -> bool:
 def _menu(on_add_all: Callable[[], Awaitable[None]], svc: Services) -> ft.Control:
     """The app bar's overflow ("More options"): "Add all to My schedule" (D-209).
 
-    Its label wraps at 200 % text beside its icon (``menu_item()``, F47, D-233).
+    Its label wraps at 200 % text beside its icon (`menu_item()`, F47, D-233).
     """
     item = menu_item(
         ft.Icons.PLAYLIST_ADD, ADD_ALL, on_add_all, identifier=f"{SCREEN}.add_all"
@@ -218,7 +218,7 @@ def intro(
 ) -> ft.Control:
     """Return the page's intro: the badges, the track's name and its legend line.
 
-    The name is the page's heading (level 1, F40), a ``PageTitle`` as on session
+    The name is the page's heading (level 1, F40), a `PageTitle` as on session
     detail (D-186), rather than the app bar's title: a long name ("Trailblazing Python
     Security") was cut there at large text, while here it wraps.
 
@@ -226,8 +226,8 @@ def intro(
         track: The track.
         tokens: The scheme's tokens, for the badge's colours (D-150).
         spanish: Whether every session is in Spanish: "En Español" joins the track's
-            badge here, and leaves the rows (``shared_badges()``).
-        large_text: The text is large for the width (``Prefs.time_above``): the
+            badge here, and leaves the rows (`shared_badges()`).
+        large_text: The text is large for the width (`Prefs.time_above`): the
             name steps down (D-328).
     """
     badges = [TrackBadge(track.short, tokens.track_badge(track.key))]

@@ -1,7 +1,7 @@
 """Tests for the Markdown style sheet: its colours, fonts, headings and rule.
 
-D-116, D-152, D-197. The contrast helpers and ``resolved()`` are
-``tests/test_theme.py``'s.
+D-116, D-152, D-197. The contrast helpers and `resolved()` are
+`tests/test_theme.py`'s.
 """
 
 import dataclasses

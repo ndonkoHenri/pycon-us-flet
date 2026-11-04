@@ -1,8 +1,8 @@
-"""Tests for the white logo tile (``ui/logos.py``; EVT-05, SPON-01; D-202, D-262).
+"""Tests for the white logo tile (`ui/logos.py`; EVT-05, SPON-01; D-202, D-262).
 
 The tile is built without a renderer: these tests read the control tree it returns.
 How it looks is checked on devices (the PR), and the Sprints cards that use it in
-``tests/test_sprints.py``.
+`tests/test_sprints.py`.
 """
 
 import flet as ft
@@ -52,8 +52,8 @@ def test_a_logo_fits_the_tile_with_the_initials_for_when_it_cannot_load() -> Non
 def test_the_logo_and_the_initials_are_left_out_of_semantics() -> None:
     """Decorative: the name beside the tile is said, so neither the logo nor initials are.
 
-    Each part leaves itself out, and no ``Semantics`` wraps the tile: one with
-    ``exclude_semantics`` was still an empty, focusable node on Android (F81).
+    Each part leaves itself out, and no `Semantics` wraps the tile: one with
+    `exclude_semantics` was still an empty, focusable node on Android (F81).
     """
     image = only(logo_tile("Arcade", LOGO, size=56), ft.Image)
     assert image.exclude_from_semantics is True
@@ -79,7 +79,7 @@ def test_a_square_tile_takes_its_size_and_the_initials_fill_its_inset() -> None:
     """At 56 dp, the Sprints card's tile, the initials' circle is 42 dp across.
 
     That is the content box inside the 6 dp inset and the 1 dp edge, which Flutter's
-    ``Container`` adds to its padding.
+    `Container` adds to its padding.
     """
     tile = logo_tile("Arcade", None, size=56)
     container = plate(tile)

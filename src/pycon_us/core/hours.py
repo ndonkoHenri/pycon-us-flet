@@ -1,13 +1,13 @@
 """Venue hours and the open-now rule (MAP-09, DATA-23; D-282).
 
-The year's ``content.toml`` says when each venue service (registration, the information
-desk, the quiet room…) is open, as ``[[venue_hours]]`` entries the loader builds into the
-dataclasses below (``year_info`` checks their rules). ``hours_status()`` answers "is it
+The year's `content.toml` says when each venue service (registration, the information
+desk, the quiet room…) is open, as `[[venue_hours]]` entries the loader builds into the
+dataclasses below (`year_info` checks their rules). `hours_status()` answers "is it
 open now?" for every service at once: "Open now · until 6:00 PM", "Opens 7:30 AM", "Opens
 tomorrow at 7:30 AM", "Closed today", or nothing at all outside the days the venue's
-services open (``days()``), when no label would help.
+services open (`days()`), when no label would help.
 
-Every function is pure: ``now`` and the conference's zone are arguments (D-43). Opening
+Every function is pure: `now` and the conference's zone are arguments (D-43). Opening
 hours are local wall times on conference-local days, so a device in another zone still
 sees the venue's own hours, and an opening is half-open like a session (D-179): the
 opening minute is open, the closing minute closed.
@@ -36,7 +36,7 @@ class Opening:
     closes: dt.time
 
     def span(self, zone: dt.tzinfo) -> tuple[dt.datetime, dt.datetime]:
-        """Return when it opens and closes as aware instants in ``zone``."""
+        """Return when it opens and closes as aware instants in `zone`."""
         return (
             dt.datetime.combine(self.date, self.opens, tzinfo=zone),
             dt.datetime.combine(self.date, self.closes, tzinfo=zone),
@@ -45,14 +45,14 @@ class Opening:
 
 @dataclass(frozen=True)
 class ServiceHours:
-    """A venue service and when it is open, one ``[[venue_hours]]`` entry.
+    """A venue service and when it is open, one `[[venue_hours]]` entry.
 
     Attributes:
         service: The service's name, unique in the year ("Registration").
         location: Where it is, as the venue signs it ("Promenade Lobby (Main
             Entrance)"); empty when it has no place (a service the venue does not
             offer this year).
-        pin: The floor-plan pin that shows it, a ``map.toml`` key (checked there once
+        pin: The floor-plan pin that shows it, a `map.toml` key (checked there once
             the year has one); empty without one.
         note: One more line about it ("Extra T-shirts on Sunday, May 17, 11 AM to
             1 PM."); empty without one. A service with no hours of its own has one.
@@ -76,12 +76,12 @@ class HoursStatus:
     """What a service's status label says at an instant (MAP-09).
 
     Attributes:
-        kind: Where the service stands; ``"open"`` is drawn in ``live``.
+        kind: Where the service stands; `"open"` is drawn in `live`.
         label: What the screen shows: "Open now · until 6:00 PM", "Opens 7:30 AM",
             "Opens tomorrow at 7:30 AM", "Opens Thu, May 14 at 9:00 AM", "Closed today".
         spoken: The same for screen readers, with a comma for the "·" ("Open now,
             until 6:00 PM") and the day's name in full ("Opens Thursday, May 14 at
-            9:00 AM"); equal to ``label`` otherwise.
+            9:00 AM"); equal to `label` otherwise.
     """
 
     kind: HoursKind
@@ -97,7 +97,7 @@ def days(hours: Iterable[ServiceHours]) -> tuple[dt.date, ...]:
     """Return the days any service opens on, in order: the season the labels show in.
 
     Args:
-        hours: The year's ``venue_hours``.
+        hours: The year's `venue_hours`.
     """
     return tuple(sorted({opening.date for item in hours for opening in item.open}))
 
@@ -105,21 +105,21 @@ def days(hours: Iterable[ServiceHours]) -> tuple[dt.date, ...]:
 def hours_status(
     hours: Iterable[ServiceHours], now: dt.datetime, zone: dt.tzinfo, *, use_24h: bool
 ) -> Mapping[str, HoursStatus] | None:
-    """Return each service's status at ``now``, or None off-season.
+    """Return each service's status at `now`, or None off-season.
 
     Off-season is any conference-local day before the first or after the last of
-    ``days()``: before the venue opens and once it has closed for the year a label
+    `days()`: before the venue opens and once it has closed for the year a label
     would only say "Closed", so the page shows the hours alone. In season, every
     service with hours of its own has a status (one without hours has none):
 
-    - open now (``opens <= now < closes``): "Open now · until 6:00 PM";
+    - open now (`opens <= now < closes`): "Open now · until 6:00 PM";
     - else its next opening, later today: "Opens 7:30 AM"; on the next day:
       "Opens tomorrow at 7:30 AM"; on a later one: "Opens Thu, May 14 at 9:00 AM";
     - else, with no opening left in the season: "Closed today".
 
     Args:
-        hours: The year's ``venue_hours``.
-        now: The current instant, aware (``clock.now()``).
+        hours: The year's `venue_hours`.
+        now: The current instant, aware (`clock.now()`).
         zone: The conference's zone, in which the hours are written (D-43).
         use_24h: Whether the device shows 24-hour times (D-35).
 
@@ -127,7 +127,7 @@ def hours_status(
         The statuses by service name, in the year data's order; None off-season.
 
     Raises:
-        ValueError: ``now`` is naive.
+        ValueError: `now` is naive.
     """
     hours = tuple(hours)
     season = days(hours)

@@ -1,12 +1,12 @@
 """The Developer screen's Mock API section: the mock's base URL and its check (DEV-01, D-51).
 
-``MockApiSection`` is the field that turns the private-API features on (D-73's "mock API
-base URL"): **Save** checks the URL (``parse_mock_api_url()``), builds ``Services.api``
-on it and keeps it in ``pycon.dev`` (``Prefs.mock_api_url``); **Clear** turns them off
+`MockApiSection` is the field that turns the private-API features on (D-73's "mock API
+base URL"): **Save** checks the URL (`parse_mock_api_url()`), builds `Services.api`
+on it and keeps it in `pycon.dev` (`Prefs.mock_api_url`); **Clear** turns them off
 again, with no client left. While a URL is saved, **Check mock connection** sends one
-signed call and says whether the mock answered (``check_connection()``), so a device
+signed call and says whether the mock answered (`check_connection()`), so a device
 reaches the mock before any sign-in screen exists (#668). Every result is said in place,
-under the buttons (D-29, D-210). Apart from ``developer.py`` so that the screen stays
+under the buttons (D-29, D-210). Apart from `developer.py` so that the screen stays
 under about 400 lines (D-66), as the Data section is.
 """
 
@@ -28,7 +28,7 @@ from pycon_us.ui.semantics import named
 SAVE_IN_SIGHT = 480
 """How far below its text the URL field keeps in sight when it takes the focus, in dp:
 its helper, the Clear and Save row, the check row once a URL is saved and the outcome
-line, sized for large text as the feed URL's ``developer.APPLY_IN_SIGHT`` is (#108).
+line, sized for large text as the feed URL's `developer.APPLY_IN_SIGHT` is (#108).
 More than that one: the helper is longer and the check row comes between. At 200 % on
 Android, 304 dp left Save's "Saved: …" under the keyboard (#668). At 100 % the list
 only scrolls a little further."""
@@ -41,11 +41,11 @@ HELPER = (
 
 
 def with_mock_api_url(dev: dict[str, Any], url: str | None) -> dict[str, Any]:
-    """Return ``dev`` with the mock API URL set, or removed for None; the rest is kept.
+    """Return `dev` with the mock API URL set, or removed for None; the rest is kept.
 
     Args:
-        dev: The current ``Prefs.dev``.
-        url: The mock's base URL (``parse_mock_api_url()``), or None.
+        dev: The current `Prefs.dev`.
+        url: The mock's base URL (`parse_mock_api_url()`), or None.
     """
     options = {k: v for k, v in dev.items() if k != DEV_MOCK_API_URL}
     if url is not None:
@@ -57,13 +57,13 @@ async def use_url(svc: Services, prefs: Prefs, url: str | None) -> Outcome:
     """Put a mock API URL into effect, or none, keep it, and say what was done.
 
     The client is rebuilt before the save, so the re-render the save causes finds it
-    in place; both run under ``PrivateApi``'s lock, so a Save and a Clear pressed
+    in place; both run under `PrivateApi`'s lock, so a Save and a Clear pressed
     together end with the client and the stored URL of the last one (#668).
 
     Args:
-        svc: The session's services: ``private_api`` and the storage.
-        prefs: The ``Prefs`` store that keeps the URL in ``pycon.dev``.
-        url: The mock's base URL (``parse_mock_api_url()``), or None to turn it off.
+        svc: The session's services: `private_api` and the storage.
+        prefs: The `Prefs` store that keeps the URL in `pycon.dev`.
+        url: The mock's base URL (`parse_mock_api_url()`), or None to turn it off.
 
     Returns:
         The outcome line's state.
@@ -87,7 +87,7 @@ def MockApiSection() -> ft.Control:
     """The Mock API section: the URL field, Clear and Save, the check and the outcome.
 
     A component of its own: its field, its check in progress and its outcome are its
-    own state, and it re-renders with ``Prefs``, whose URL shows or hides the check.
+    own state, and it re-renders with `Prefs`, whose URL shows or hides the check.
     """
     svc = use_services()
     prefs = use_prefs()

@@ -1,4 +1,4 @@
-"""Tests for ``tools/device.py``: the commands it builds, and the owner's devices it refuses."""
+"""Tests for `tools/device.py`: the commands it builds, and the owner's devices it refuses."""
 
 from pathlib import Path
 
@@ -34,7 +34,7 @@ def test_android_prefs_leave_what_isnt_asked() -> None:
 
 
 def test_ios_prefs_set_all_four() -> None:
-    """The largest text, Bold Text, Increase Contrast and dark are ``simctl``'s four."""
+    """The largest text, Bold Text, Increase Contrast and dark are `simctl`'s four."""
     commands = device.ios_prefs("U", "max", True, True, True, False)
     assert commands[0][-2:] == ["content_size", "accessibility-extra-extra-extra-large"]
     assert commands[1][-3:] == ["EnhancedTextLegibilityEnabled", "-bool", "true"]
@@ -49,7 +49,7 @@ def test_ios_reset_returns_to_the_defaults() -> None:
 
 
 def test_every_text_size_exists_on_both_platforms() -> None:
-    """``--text`` offers one set of choices, so both tables have the same keys."""
+    """`--text` offers one set of choices, so both tables have the same keys."""
     assert set(device.IOS_TEXT) == set(device.ANDROID_TEXT)
 
 

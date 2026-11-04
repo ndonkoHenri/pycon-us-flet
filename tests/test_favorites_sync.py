@@ -1,9 +1,9 @@
 """Tests for the favourites sync against the mock (API-04, AUTH-12, SCHED-12; D-55, D-406).
 
-``FavoritesSync.run`` runs as ``App`` runs it, over the real ``Favorites`` and
-``Account`` stores, in-memory storage and the real client to the mock
-(``tools/mock_api/transport.py``). The reconcile itself is pinned, pure, by
-``test_favorites_sync_core.py``.
+`FavoritesSync.run` runs as `App` runs it, over the real `Favorites` and
+`Account` stores, in-memory storage and the real client to the mock
+(`tools/mock_api/transport.py`). The reconcile itself is pinned, pure, by
+`test_favorites_sync_core.py`.
 """
 
 import asyncio
@@ -31,7 +31,7 @@ from tools.mock_api.state import MockState
 from tools.mock_api.transport import mock_transport
 
 SEEDED = frozenset({"9001", "poster-detail-7"})
-"""The seeded ``attendee`` account's favourites on the mock."""
+"""The seeded `attendee` account's favourites on the mock."""
 
 SYNC_KEY = favorites_sync(2026).key
 """Where the sync state is saved for 2026."""
@@ -41,20 +41,20 @@ class Held(Recorder):
     """A transport to the mock that records each request and holds the chosen ones."""
 
     def __init__(self, inner: httpx.AsyncBaseTransport) -> None:
-        """Let every request through until ``hold`` names a method."""
+        """Let every request through until `hold` names a method."""
         super().__init__(inner)
         self.hold: str | None = None
         self.release = asyncio.Event()
 
     async def handle_async_request(self, request: httpx.Request) -> httpx.Response:
-        """Record the request, wait for ``release`` when its method is held, answer it."""
+        """Record the request, wait for `release` when its method is held, answer it."""
         self.sent.append(request)
         if request.method == self.hold:
             await self.release.wait()
         return await self.inner.handle_async_request(request)
 
     def methods(self) -> list[str]:
-        """The methods of the ``mobile_state`` calls sent so far, in order."""
+        """The methods of the `mobile_state` calls sent so far, in order."""
         return [r.method for r in self.sent if r.url.path.endswith("mobile_state/")]
 
 
@@ -81,7 +81,7 @@ class Rig:
         self.task.cancel()
 
     async def sign_in(self, role: str = "attendee") -> None:
-        """Sign the account in as the seeded ``role``."""
+        """Sign the account in as the seeded `role`."""
         outcome = await self.account.sign_in(
             self.api,
             self.storage,
@@ -92,7 +92,7 @@ class Rig:
         assert outcome is SignIn.SIGNED_IN
 
     def server(self, role: str = "attendee") -> frozenset[str]:
-        """The seeded ``role`` account's favourites on the mock now."""
+        """The seeded `role` account's favourites on the mock now."""
         return frozenset(account(self.state, role).favorites)
 
     def saved_state(self) -> str | None:
@@ -101,7 +101,7 @@ class Rig:
 
 
 async def until(check: Callable[[], bool], timeout: float = 3.0) -> None:
-    """Wait until ``check()`` holds, failing the test after ``timeout`` seconds."""
+    """Wait until `check()` holds, failing the test after `timeout` seconds."""
     async with asyncio.timeout(timeout):
         while not check():
             await asyncio.sleep(0.01)
@@ -146,7 +146,7 @@ class HeldPrefs(MemoryPrefs):
         arguments: dict[str, Any] | None = None,
         timeout: float | None = None,
     ) -> Any:
-        """Wait for ``release`` before a ``set`` of the held key, then answer it."""
+        """Wait for `release` before a `set` of the held key, then answer it."""
         if method_name == "set" and arguments and arguments["key"] == self.hold:
             await self.release.wait()
         return await super()._invoke_method(method_name, arguments, timeout)
@@ -165,9 +165,9 @@ async def start(
     tmp_path: Path,
     delay: float = 0.05,
 ) -> Rig:
-    """Start a session as ``bootstrap()`` does: load and restore, then run the sync.
+    """Start a session as `bootstrap()` does: load and restore, then run the sync.
 
-    ``delay`` is the debounce: the tests' short one unless a test needs it long.
+    `delay` is the debounce: the tests' short one unless a test needs it long.
     """
     storage = Storage(prefs=shared, directory=tmp_path, year=2026)
     credentials = CredentialStorage(secure=keystore)
@@ -297,7 +297,7 @@ async def test_an_unsent_edit_is_sent_at_the_next_start(
 
 
 async def test_a_clean_list_adopts_the_server_s_empty_list(rig: Rig) -> None:
-    """After the first sync, a server ``[]`` is a removal made elsewhere: adopted."""
+    """After the first sync, a server `[]` is a removal made elsewhere: adopted."""
     await synced(rig)
     account(rig.state, "attendee").favorites = []
     rig.sync.request()
@@ -370,7 +370,7 @@ async def test_sign_out_stops_the_sync_and_keeps_the_list(rig: Rig) -> None:
 
 
 async def test_an_expired_account_sends_nothing(rig: Rig) -> None:
-    """While the key is refused (``expired``) an edit waits, dirty, and nothing is sent."""
+    """While the key is refused (`expired`) an edit waits, dirty, and nothing is sent."""
     await synced(rig)
     rig.account.expired = True
     await rig.favorites.toggle(rig.storage, "e")
@@ -457,7 +457,7 @@ async def test_a_removal_during_the_first_patch_is_not_merged_back(rig: Rig) -> 
 
 
 def private_api_of(rig: Rig) -> PrivateApi:
-    """A ``PrivateApi`` holding the rig's client, as ``Services.private_api`` does."""
+    """A `PrivateApi` holding the rig's client, as `Services.private_api` does."""
     private_api = PrivateApi()
     private_api.client = rig.api
     return private_api

@@ -1,13 +1,13 @@
-"""Speakers (``/more/speakers``): the speaker directory, by letter, with a filter (SPKR-01).
+"""Speakers (`/more/speakers`): the speaker directory, by letter, with a filter (SPKR-01).
 
 Every directory speaker in D-46's order (by displayed name, folded), under a heading per
 letter, each row with its first session and "+1 more" when there are more (DATA-21). A
 filter field above the list narrows it as the user types, with search's matching: accents
 and case ignored, every word anywhere in the name (SPKR-02, D-180). A row pushes the
-speaker's detail (``…/speaker/<id>``, one drill level).
+speaker's detail (`…/speaker/<id>`, one drill level).
 
 A long list stays cheap the way S2's day lists do (D-153, D-154): the entries are built
-once per feed version, the list is a lazy ``ListView``, each letter is one memoised item
+once per feed version, the list is a lazy `ListView`, each letter is one memoised item
 and each row a memoised component keyed by speaker id, so a keystroke re-renders only the
 sections it changed and no row that stays. No paging and no loader: with data the whole
 list shows at once; without any (NEW-03) the skeleton shows until the first fetch has
@@ -161,7 +161,7 @@ def LetterSection(group: LetterGroup) -> ft.Control:
 @ft.memo
 @ft.component
 def _LetterSection(group: LetterGroup) -> ft.Control:
-    """The body of ``LetterSection``; it runs only when its group changes (F34)."""
+    """The body of `LetterSection`; it runs only when its group changes (F34)."""
     return ft.Column(
         [
             # A node of its own: else the heading's flag and letter join the list

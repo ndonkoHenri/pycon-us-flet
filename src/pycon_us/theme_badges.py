@@ -1,12 +1,12 @@
-"""The badges' colours (D-25, D-174; ux.md §3.4): ``BadgeColors`` and the track palette.
+"""The badges' colours (D-25, D-174; ux.md §3.4): `BadgeColors` and the track palette.
 
 A badge is tonal, a label on a fill of the track's own, or outlined, a label and a
-border in one colour on whatever surface it sits on. ``theme.py`` builds each scheme's
-badges into its ``Tokens`` from what is here: ``tonal()`` over the palette in light and
-dark, and outlines ``HC_BADGE_BORDER`` wide in high contrast (THEME-06, D-285).
-``ui/badges.py`` draws them.
+border in one colour on whatever surface it sits on. `theme.py` builds each scheme's
+badges into its `Tokens` from what is here: `tonal()` over the palette in light and
+dark, and outlines `HC_BADGE_BORDER` wide in high contrast (THEME-06, D-285).
+`ui/badges.py` draws them.
 
-Module of its own so that high contrast's tokens leave ``theme.py`` near D-66's 400
+Module of its own so that high contrast's tokens leave `theme.py` near D-66's 400
 lines.
 """
 
@@ -15,13 +15,13 @@ from dataclasses import dataclass
 
 @dataclass(frozen=True)
 class BadgeColors:
-    """The colours of one badge (D-25), as ``#RRGGBB``.
+    """The colours of one badge (D-25), as `#RRGGBB`.
 
     Attributes:
         text: The label's colour.
         fill: The pill's colour; None for an outlined badge, whose label and border
-            are both ``text``, on whatever surface the badge sits on.
-        border_width: The border's width in dp: 1, or ``HC_BADGE_BORDER`` in high
+            are both `text`, on whatever surface the badge sits on.
+        border_width: The border's width in dp: 1, or `HC_BADGE_BORDER` in high
             contrast (THEME-06).
     """
 

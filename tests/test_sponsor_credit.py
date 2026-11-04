@@ -1,10 +1,10 @@
-"""Tests for the sponsor credits (``screens/sponsor_credit.py``; #417, D-37, D-337).
+"""Tests for the sponsor credits (`screens/sponsor_credit.py`; #417, D-37, D-337).
 
 INFO-09, MAP-10: who provides the Wi-Fi and the quiet room is year data, a sponsor slug
 checked against the snapshot, credited on the Wi-Fi page, Venue & hours' Quiet room
 card and Help & safety's Quiet room line by a row that pushes the sponsor's detail. The
-pages run in a real Flet session (``tests/sessions.py``); the snapshot tool's check is
-in ``tests/test_update_snapshot.py``. How the rows look and read is checked on devices.
+pages run in a real Flet session (`tests/sessions.py`); the snapshot tool's check is
+in `tests/test_update_snapshot.py`. How the rows look and read is checked on devices.
 """
 
 import shutil
@@ -63,7 +63,7 @@ async def show(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> AsyncIterator
             view: str,
             data: ConferenceData | None,
         ) -> Shown:
-            """Render ``screen`` at ``view`` over ``data`` (None: no feed yet)."""
+            """Render `screen` at `view` over `data` (None: no feed yet)."""
             conference = (
                 Conference()
                 if data is None
@@ -85,7 +85,7 @@ async def show(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> AsyncIterator
 
 
 def without(data: ConferenceData, slug: str) -> ConferenceData:
-    """The feed with the sponsor ``slug`` taken out of its levels."""
+    """The feed with the sponsor `slug` taken out of its levels."""
     levels = tuple(
         replace(level, sponsors=tuple(s for s in level.sponsors if s.slug != slug))
         for level in data.sponsor_levels
@@ -122,7 +122,7 @@ def test_the_loader_refuses_a_credit_whose_sponsor_the_snapshot_lacks(
 
 
 def test_the_loader_refuses_a_credit_without_an_https_source(tmp_path: Path) -> None:
-    """A credit's source is a public ``https`` page, as a safety contact's is."""
+    """A credit's source is a public `https` page, as a safety contact's is."""
     shutil.copytree(config.DATA_DIR, tmp_path, dirs_exist_ok=True)
     path = tmp_path / "2026" / "content.toml"
     text = path.read_text(encoding="utf-8")

@@ -1,8 +1,8 @@
 """The endpoint table, its timeouts and the bytes on the wire, against Ionic (D-52, D-53).
 
-The table must match the contract README (which cites ``pycon-api.ts`` by line) and the
+The table must match the contract README (which cites `pycon-api.ts` by line) and the
 mock's routes; the queries and signatures must equal those Ionic's own code produced
-(``tests/fixtures/ionic/signing.json``).
+(`tests/fixtures/ionic/signing.json`).
 """
 
 import json
@@ -39,7 +39,7 @@ ROW = re.compile(
 
 
 def readme_endpoints() -> set[tuple[str, str, str, float]]:
-    """The README's endpoint rows as (name, method, path, timeout), ``<x>`` as ``{}``."""
+    """The README's endpoint rows as (name, method, path, timeout), `<x>` as `{}`."""
     rows = set()
     for line in README.read_text().splitlines():
         if found := ROW.match(line):
@@ -115,7 +115,7 @@ async def test_the_client_sends_what_ionic_sent(name: str) -> None:
 
 
 def test_the_door_query_names_products_and_the_door_mode() -> None:
-    """The door's ``fetch_products`` query lists product ids, unencoded, door mode."""
+    """The door's `fetch_products` query lists product ids, unencoded, door mode."""
     assert fetch_products_query("ABC123", [10, 11], door=True) == (
         "attendee_access_code=ABC123&product_pk_list=10,11&mode=door_check_mode"
     )
@@ -135,5 +135,5 @@ def test_the_door_query_names_products_and_the_door_mode() -> None:
 def test_the_servers_time_is_read_from_its_date(
     date: str | None, seconds: float | None
 ) -> None:
-    """A ``Date`` in any zone gives the same instant; a missing or bad one gives None."""
+    """A `Date` in any zone gives the same instant; a missing or bad one gives None."""
     assert server_time(date) == seconds

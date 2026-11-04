@@ -1,10 +1,10 @@
 """The Developer screen's fixtures and lookups, for its two test modules (#88; #623).
 
-``test_developer.py`` (the controls, the fields and the flags) and
-``test_developer_apply.py`` (Apply, Reset and the pickers) run ``Developer`` outside a
-renderer: its hooks and ``AppScaffold`` are replaced, and a fake page is bound as Flet
+`test_developer.py` (the controls, the fields and the flags) and
+`test_developer_apply.py` (Apply, Reset and the pickers) run `Developer` outside a
+renderer: its hooks and `AppScaffold` are replaced, and a fake page is bound as Flet
 binds a session's page. A module takes the fixtures by assigning them to its own names,
-as ``docs/testing-and-quality.md`` §3.1 says.
+as `docs/testing-and-quality.md` §3.1 says.
 """
 
 import inspect
@@ -51,7 +51,7 @@ def real_time() -> Iterator[None]:
 
 @pytest.fixture
 def page() -> Iterator[FakePage]:
-    """A ``FakePage`` bound as Flet binds a session's page."""
+    """A `FakePage` bound as Flet binds a session's page."""
     fake = FakePage()
     with bound(fake):
         yield fake
@@ -59,7 +59,7 @@ def page() -> Iterator[FakePage]:
 
 @pytest.fixture
 def svc(tmp_path: Path) -> Services:
-    """The session's services over in-memory fakes and a 2026 ``Storage``."""
+    """The session's services over in-memory fakes and a 2026 `Storage`."""
     storage = Storage(prefs=MemoryPrefs(), directory=tmp_path, year=2026)
     return Services(
         year=load_year(2026),
@@ -81,12 +81,12 @@ def prefs(monkeypatch: pytest.MonkeyPatch) -> Prefs:
 
 @pytest.fixture
 def conference() -> Conference:
-    """An empty ``Conference`` store."""
+    """An empty `Conference` store."""
     return Conference()
 
 
 class States:
-    """``ft.use_state`` for one component: the values, kept in call order."""
+    """`ft.use_state` for one component: the values, kept in call order."""
 
     def __init__(self) -> None:
         """Start with no values, at the first call's index."""
@@ -94,9 +94,9 @@ class States:
         self.index = 0
 
     def use_state(self, initial: Any) -> tuple[Any, Callable[[Any], None]]:
-        """Return the value at this call's index, made from ``initial`` the first time.
+        """Return the value at this call's index, made from `initial` the first time.
 
-        The setter writes that value in place; ``render`` resets the index first.
+        The setter writes that value in place; `render` resets the index first.
         """
         if self.index == len(self.values):
             self.values.append(initial() if callable(initial) else initial)
@@ -117,7 +117,7 @@ def render(
     conference: Conference,
     page: FakePage,
 ) -> Callable[[], dict[str, Any]]:
-    """Render ``Developer`` and return what it passed to ``AppScaffold``."""
+    """Render `Developer` and return what it passed to `AppScaffold`."""
     states = States()
     monkeypatch.setattr(ft, "use_state", states.use_state)
     monkeypatch.setattr(developer, "use_services", lambda: svc)
@@ -142,7 +142,7 @@ def render(
 
 
 def by_identifier(scaffold: dict[str, Any]) -> dict[str, ft.Control]:
-    """The controls under each ``developer.*`` identifier."""
+    """The controls under each `developer.*` identifier."""
     found: dict[str, ft.Control] = {}
 
     def visit(control: Any) -> None:
@@ -159,7 +159,7 @@ def by_identifier(scaffold: dict[str, Any]) -> dict[str, ft.Control]:
 
 
 def merged_identifiers(scaffold: dict[str, Any]) -> set[str]:
-    """The identifiers merged into their control's node: ``MergeSemantics(Semantics)``."""
+    """The identifiers merged into their control's node: `MergeSemantics(Semantics)`."""
     found: set[str] = set()
 
     def visit(control: Any) -> None:
@@ -189,7 +189,7 @@ def clock_picker_button(text_field: ft.TextField) -> ft.IconButton:
 
 
 def field(scaffold: dict[str, Any], identifier: str) -> ft.TextField:
-    """Return the ``TextField`` under ``identifier`` in a rendered scaffold."""
+    """Return the `TextField` under `identifier` in a rendered scaffold."""
     control = by_identifier(scaffold)[identifier]
     assert isinstance(control, ft.TextField)
     return control
@@ -198,7 +198,7 @@ def field(scaffold: dict[str, Any], identifier: str) -> ft.TextField:
 async def type_into(
     render: Callable[[], dict[str, Any]], identifier: str, text: str
 ) -> None:
-    """Type as Flutter reports it: the field's value first, then ``on_change``."""
+    """Type as Flutter reports it: the field's value first, then `on_change`."""
     text_field = field(render(), identifier)
     text_field.value = text
     cast(Callable[[object], None], text_field.on_change)(
@@ -207,7 +207,7 @@ async def type_into(
 
 
 async def press(render: Callable[[], dict[str, Any]], identifier: str) -> None:
-    """Render, then click the button under ``identifier`` and await its handler."""
+    """Render, then click the button under `identifier` and await its handler."""
     button = by_identifier(render())[identifier]
     assert isinstance(button, ft.FilledButton | ft.OutlinedButton)
     await cast(Any, button.on_click)()

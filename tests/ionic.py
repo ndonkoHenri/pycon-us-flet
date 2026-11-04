@@ -1,20 +1,20 @@
 """Ionic's captured output and the normaliser that compares it with ours (D-77; #66).
 
-``tools/capture_ionic_reference/`` ran Ionic's ``processData`` under Node on the recorded
-feeds and wrote what it made of them to ``tests/fixtures/ionic/<year>/``. This module only
+`tools/capture_ionic_reference/` ran Ionic's `processData` under Node on the recorded
+feeds and wrote what it made of them to `tests/fixtures/ionic/<year>/`. This module only
 reads those files, so neither CI nor contributors need Node.
 
 The normaliser:
 
-1. Both sides become the same ``Facts``: each session's name, track, location, shown
-   location, start, end, shown start (as Ionic's ``h:mm am`` label), linked speakers,
+1. Both sides become the same `Facts`: each session's name, track, location, shown
+   location, start, end, shown start (as Ionic's `h:mm am` label), linked speakers,
    author names, flags, and whether the timeline lists it; the timeline (day → time label
    → session ids); the rooms (slug → name and session ids); the speakers (id → name and
    session ids).
 2. A slot's rows (D-31) and a speaker's sessions are sets: they are sorted on both sides.
    The days, their groups, a room's sessions and the speaker directory keep their order.
-3. ``intended()`` adjusts Ionic's facts for each intended difference that applies to the
-   year (D-122, D-124, D-125, MAP-08); ``comparable_ours()`` leaves out 2025's nested
+3. `intended()` adjusts Ionic's facts for each intended difference that applies to the
+   year (D-122, D-124, D-125, MAP-08); `comparable_ours()` leaves out 2025's nested
    posters, which Ionic never read (D-121).
 """
 
@@ -51,8 +51,8 @@ class Facts:
     Attributes:
         sessions: Each session's facts, by id.
         timeline: Day → time label → session ids, sorted (D-31).
-        rooms: Slug → ``{"name", "sessions"}``, the sessions in the side's own order.
-        speakers: Id → ``{"name", "sessions"}``, the session ids sorted; in directory order.
+        rooms: Slug → `{"name", "sessions"}`, the sessions in the side's own order.
+        speakers: Id → `{"name", "sessions"}`, the session ids sorted; in directory order.
     """
 
     sessions: Table
@@ -63,18 +63,18 @@ class Facts:
 
 @cache
 def captured(year: int, name: str) -> Any:
-    """One of Ionic's fixture files for ``year``, as JSON (do not mutate it)."""
+    """One of Ionic's fixture files for `year`, as JSON (do not mutate it)."""
     return json.loads((IONIC / str(year) / f"{name}.json").read_text(encoding="utf-8"))
 
 
 def clock_label(moment: datetime, zone: ZoneInfo) -> str:
-    """Ionic's time label: ``9:00 am``, ``12:30 pm``."""
+    """Ionic's time label: `9:00 am`, `12:30 pm`."""
     local = moment.astimezone(zone)
     return f"{local.hour % 12 or 12}:{local.minute:02d} {'am' if local.hour < 12 else 'pm'}"
 
 
 def ionic_facts(year: int) -> Facts:
-    """Ionic's output for ``year``, as captured."""
+    """Ionic's output for `year`, as captured."""
     return Facts(
         sessions={
             s["id"]: {key: value for key, value in s.items() if key != "id"}
@@ -96,7 +96,7 @@ def ionic_facts(year: int) -> Facts:
 
 
 def our_facts(year: int) -> Facts:
-    """Our processed model for ``year``, in Ionic's shape."""
+    """Our processed model for `year`, in Ionic's shape."""
     data = processed(year)
     zone = load_year(year).conference.zone
 
@@ -137,7 +137,7 @@ def our_facts(year: int) -> Facts:
 
 
 def linked(data: ConferenceData, speaker_id: str) -> list[str]:
-    """The ids of the sessions that link ``speaker_id`` (DATA-15)."""
+    """The ids of the sessions that link `speaker_id` (DATA-15)."""
     return [s.id for s in data.sessions.values() if speaker_id in s.speaker_ids]
 
 
@@ -155,10 +155,10 @@ def nested_posters(year: int) -> tuple[set[str], set[str]]:
 
 
 def hall_names(year: int) -> Callable[[str], str]:
-    """D-122: how a room name, location or id Ionic wrote reads in our model of ``year``.
+    """D-122: how a room name, location or id Ionic wrote reads in our model of `year`.
 
-    Ionic wrote ``Expo `` before every ``Hall …`` room it moved into a location. 2026's
-    ``hall_prefix`` is the same; 2025's feed has none, so ours keeps ``Hall A``.
+    Ionic wrote `Expo ` before every `Hall …` room it moved into a location. 2026's
+    `hall_prefix` is the same; 2025's feed has none, so ours keeps `Hall A`.
     """
     prefix = settings(year).hall_prefix
     if prefix == IONIC_HALL_PREFIX:
@@ -168,7 +168,7 @@ def hall_names(year: int) -> Callable[[str], str]:
 
 
 def with_our_hall_names(facts: Facts, hall: Callable[[str], str]) -> Facts:
-    """D-122: Ionic's facts with ``hall`` applied to every room name, location and id."""
+    """D-122: Ionic's facts with `hall` applied to every room name, location and id."""
     rooms: Table = {}
     for room in facts.rooms.values():
         name = hall(room["name"])  # 2025: "Expo Hall A" joins "Hall A"
@@ -216,7 +216,7 @@ def lightning_talks_in_their_place(facts: Facts, place: str) -> Facts:
 
 
 def without_pseudo_speakers(facts: Facts) -> Facts:
-    """D-125: Ionic listed "Hosted by …" as a speaker; it stays text in ``speakerNames``."""
+    """D-125: Ionic listed "Hosted by …" as a speaker; it stays text in `speakerNames`."""
     pseudo = {i for i, sp in facts.speakers.items() if sp["name"].startswith(HOSTED_BY)}
     return replace(
         facts,
@@ -247,7 +247,7 @@ def rooms_by_start_then_name(facts: Facts) -> Facts:
 
 @cache
 def intended(year: int) -> Facts:
-    """Ionic's facts, adjusted for every intended difference that applies to ``year``."""
+    """Ionic's facts, adjusted for every intended difference that applies to `year`."""
     facts = with_our_hall_names(ionic_facts(year), hall_names(year))
     place = settings(year).lightning_talks_location
     if place != IONIC_LIGHTNING_TALKS_LOCATION:
@@ -282,7 +282,7 @@ def comparable_ours(year: int) -> Facts:
 
 
 def mismatches(ours: Table, theirs: Table) -> dict[str, tuple[Any, Any]]:
-    """The keys whose values differ, as ``(ours, Ionic's)``; a missing value is None."""
+    """The keys whose values differ, as `(ours, Ionic's)`; a missing value is None."""
     return {
         key: (ours.get(key), theirs.get(key))
         for key in ours.keys() | theirs.keys()

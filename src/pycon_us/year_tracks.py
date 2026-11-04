@@ -1,10 +1,10 @@
 """The track registry, the Tracks hub's own pages, and the registry's checks (D-228).
 
-``conference.toml``'s ``[[tracks]]`` build into ``Track`` below, through
-``year_schema.build()``, as ``config.ConferenceInfo.tracks`` (DATA-14, DATA-28, DATA-29).
-``check_tracks()`` then checks the registry's rules. ``HUB_PAGES`` and ``KEYNOTE_TRACKS``
+`conference.toml`'s `[[tracks]]` build into `Track` below, through
+`year_schema.build()`, as `config.ConferenceInfo.tracks` (DATA-14, DATA-28, DATA-29).
+`check_tracks()` then checks the registry's rules. `HUB_PAGES` and `KEYNOTE_TRACKS`
 name tracks by key, so they live here with the registry (D-207, D-217), free of Flet.
-Split from ``config.py`` at D-66's ~400 lines, as ``year_pages`` and ``year_keynotes``
+Split from `config.py` at D-66's ~400 lines, as `year_pages` and `year_keynotes`
 were.
 """
 
@@ -27,14 +27,14 @@ class Track:
 
     Attributes:
         key: The track as feed processing names it: the feed's kind with its first letter
-            upper-cased (``Ai``, ``Lightning-talks``, ``Open Space``).
-        short: The name on badges and rows (``AI``).
-        plural: The title of a list of its sessions (``Future of AI with Python``).
-        icon: The name of an outlined ``ft.Icons`` member (D-27).
-        group: Its group in the filter sheet, one of ``TRACK_GROUPS``.
-        slug: Its page's segment in ``/more/tracks/<slug>`` (DATA-29): written out,
-            never derived, so a key's spelling (``Ai``, ``Lightning-talks``) never
-            leaks into a route; lower case, words joined by ``-``.
+            upper-cased (`Ai`, `Lightning-talks`, `Open Space`).
+        short: The name on badges and rows (`AI`).
+        plural: The title of a list of its sessions (`Future of AI with Python`).
+        icon: The name of an outlined `ft.Icons` member (D-27).
+        group: Its group in the filter sheet, one of `TRACK_GROUPS`.
+        slug: Its page's segment in `/more/tracks/<slug>` (DATA-29): written out,
+            never derived, so a key's spelling (`Ai`, `Lightning-talks`) never
+            leaks into a route; lower case, words joined by `-`.
         legend: One line on what its sessions are, for the Tracks hub and the track's
             page (EVT-04): "Talks given in Spanish".
         new: Whether the track is new this year: the hub and its page show a "New
@@ -57,17 +57,17 @@ HUB_PAGES: dict[str, str | None] = {
     "open-spaces": "Open Space",
     "keynotes": "Keynote",
 }
-"""The Tracks hub's pages of their own, by segment under ``/more/tracks``, with the key of
+"""The Tracks hub's pages of their own, by segment under `/more/tracks`, with the key of
 the track each is the page of (the feed's kinds, DATA-14; the sprints are no track, D-126).
 
 More's pages, also the hub's children, so Back returns to the hub (D-207). The routes
-list them before ``:slug``, so the loader refuses a track slug that names another's page.
+list them before `:slug`, so the loader refuses a track slug that names another's page.
 Here, with the registry, the loader stays free of Flet.
 """
 
 KEYNOTE_TRACKS = ("Keynote", "Plenary")
-"""The tracks a ``[[keynotes]]`` entry's session can be of: the keynotes' own
-(``HUB_PAGES["keynotes"]``), and the plenaries', since the feed files the panels there.
+"""The tracks a `[[keynotes]]` entry's session can be of: the keynotes' own
+(`HUB_PAGES["keynotes"]`), and the plenaries', since the feed files the panels there.
 The loader and the snapshot tool refuse an entry on any other track (D-217)."""
 
 
@@ -75,8 +75,8 @@ def check_tracks(tracks: Iterable[Track], file: str) -> None:
     """Check the registry's rules: unique keys and slugs, hub pages, legends and groups.
 
     Args:
-        tracks: ``conference.toml``'s ``[[tracks]]``, in file order.
-        file: The file as errors name it, ``2026/conference.toml``.
+        tracks: `conference.toml`'s `[[tracks]]`, in file order.
+        file: The file as errors name it, `2026/conference.toml`.
 
     Raises:
         YearDataError: An entry breaks a rule; the message names the entry and the field.
@@ -111,10 +111,10 @@ def check_tracks(tracks: Iterable[Track], file: str) -> None:
 def _check_hub_page(track: Track, file: str, index: int) -> None:
     """Refuse a track slug that names a page of the hub's other than the track's own.
 
-    The hub's pages (``HUB_PAGES``) come before ``:slug`` under ``/more/tracks``
-    (D-207), so a track at ``sprints`` would have no page. A track with a page of its
+    The hub's pages (`HUB_PAGES`) come before `:slug` under `/more/tracks`
+    (D-207), so a track at `sprints` would have no page. A track with a page of its
     own keeps the page's segment as its slug: its hub row pushes
-    ``/more/tracks/<slug>``, which must be that page.
+    `/more/tracks/<slug>`, which must be that page.
     """
     own = next((seg for seg, key in HUB_PAGES.items() if key == track.key), None)
     if own is not None and track.slug != own:

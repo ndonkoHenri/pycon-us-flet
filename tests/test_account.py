@@ -1,8 +1,8 @@
 """Tests for the Account store's restore, sign-out and reset (STORE-03..05, #684).
 
-``account.py`` restores the saved account strictly at start, removes everything but
+`account.py` restores the saved account strictly at start, removes everything but
 the favourites on sign-out before it notifies, and Reset app takes the credentials too
-(D-198). Sign-in against the mock is ``test_account_sign_in.py``'s.
+(D-198). Sign-in against the mock is `test_account_sign_in.py`'s.
 """
 
 import logging
@@ -167,7 +167,7 @@ async def test_sign_out_removes_everything_but_the_favourites_before_it_notifies
     storage: Storage,
     credentials: CredentialStorage,
 ) -> None:
-    """The key, the secret and the account are gone when ``signed_in`` turns False.
+    """The key, the secret and the account are gone when `signed_in` turns False.
 
     The favourites stay (D-48), and so do what the session set and the Start
     screen setting, which is the device's, not the account's (#689).
@@ -186,7 +186,7 @@ async def test_sign_out_removes_everything_but_the_favourites_before_it_notifies
     seen: list[tuple[bool, bool]] = []
 
     def at_sign_out(_sender: object, name: str | None) -> None:
-        """Record, when ``signed_in`` changes, whether the account is still stored."""
+        """Record, when `signed_in` changes, whether the account is still stored."""
         if name == "signed_in":
             seen.append((ACCOUNT.key in shared.values, bool(keystore.values)))
 
@@ -260,7 +260,7 @@ def test_the_owner_is_the_lower_cased_email() -> None:
     ],
 )
 def test_what_is_no_account_is_refused(value: object) -> None:
-    """A profile needs an email, a nickname and a ``features`` object."""
+    """A profile needs an email, a nickname and a `features` object."""
     assert Profile.parse(value) is None
 
 

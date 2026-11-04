@@ -1,21 +1,21 @@
-"""Map (``/map``): Rooms, Floor plans, Expo and Job fair as tabs, one pane shown (MAP-01..04).
+"""Map (`/map`): Rooms, Floor plans, Expo and Job fair as tabs, one pane shown (MAP-01..04).
 
 The tab bar is the body's first row (U10's interim) and the selected pane alone sits
-under it, each pane with its own key, with no swipeable ``TabBarView``: its pages took
-a zoomed plan's horizontal pans (D-312, S7; U110). ``ViewMemory.map_tab`` keeps the
-pane and ``ViewMemory.map_offsets`` each pane's scroll, so another bottom tab and back
-finds both (D-18); ``/map?tab=job-fair`` opens a pane, an unknown value Rooms, and
-a pick puts its own ``?tab=`` in the route, so a return or a new session finds it. A
+under it, each pane with its own key, with no swipeable `TabBarView`: its pages took
+a zoomed plan's horizontal pans (D-312, S7; U110). `ViewMemory.map_tab` keeps the
+pane and `ViewMemory.map_offsets` each pane's scroll, so another bottom tab and back
+finds both (D-18); `/map?tab=job-fair` opens a pane, an unknown value Rooms, and
+a pick puts its own `?tab=` in the route, so a return or a new session finds it. A
 re-tap of the Map tab scrolls the pane shown (D-166). The overflow's "3D venue tour"
-opens ``map.toml``'s ``tour_url`` in the in-app browser (MAP-03, D-182). A year
+opens `map.toml`'s `tour_url` in the in-app browser (MAP-03, D-182). A year
 without plans shows the rooms alone, without a tab bar; one without booths no Expo; Job
-fair needs the year's ``job-fair`` plan (ux.md §5.8, §6.3). The Expo pane keeps its view,
-zoom, booth and List in ``ViewMemory`` instead of the Map's scroll, and a re-tap there does
+fair needs the year's `job-fair` plan (ux.md §5.8, §6.3). The Expo pane keeps its view,
+zoom, booth and List in `ViewMemory` instead of the Map's scroll, and a re-tap there does
 nothing.
 
-The panes: Rooms in ``screens/map_rooms.py``, Floor plans in ``screens/map_plans.py``,
-Expo in ``screens/expo_pane.py`` (its Map | List switch over ``screens/expo.py``'s hall
-and ``screens/expo_list.py``'s List, EXPO-01), Job fair in ``screens/map_job_fair.py``.
+The panes: Rooms in `screens/map_rooms.py`, Floor plans in `screens/map_plans.py`,
+Expo in `screens/expo_pane.py` (its Map | List switch over `screens/expo.py`'s hall
+and `screens/expo_list.py`'s List, EXPO-01), Job fair in `screens/map_job_fair.py`.
 """
 
 from dataclasses import dataclass
@@ -41,7 +41,7 @@ from pycon_us.ui.widths import LIST, capped, use_margin
 from pycon_us.year_map import JOB_FAIR_PLAN, MapData
 
 EXPO = "expo"
-"""The Expo pane's slug: its ``?tab=`` value, its key and its zoom's in ``ViewMemory``."""
+"""The Expo pane's slug: its `?tab=` value, its key and its zoom's in `ViewMemory`."""
 
 TOUR = "3D venue tour"
 """The overflow item that opens the venue's 3D tour (MAP-03)."""
@@ -52,7 +52,7 @@ class Pane:
     """One of the Map's panes, as its tab names it.
 
     Attributes:
-        slug: Its ``?tab=`` value, ``ViewMemory.map_tab`` and identifier key.
+        slug: Its `?tab=` value, `ViewMemory.map_tab` and identifier key.
         label: The tab's text.
     """
 
@@ -70,10 +70,10 @@ PANES = (
 
 
 def tab_href(slug: str) -> str:
-    """Return the location that opens the Map on a pane, e.g. ``/map?tab=floor-plans``.
+    """Return the location that opens the Map on a pane, e.g. `/map?tab=floor-plans`.
 
     Args:
-        slug: A ``Pane.slug``.
+        slug: A `Pane.slug`.
     """
     return f"/{SCREEN}?tab={slug}"
 
@@ -81,11 +81,11 @@ def tab_href(slug: str) -> str:
 def panes_of(data: MapData) -> tuple[Pane, ...]:
     """Return the panes the year has: each plan pane only when the year has its data.
 
-    Floor plans needs a floor plan (``floor_plans()``), Expo the booths, Job fair the
-    ``job-fair`` plan.
+    Floor plans needs a floor plan (`floor_plans()`), Expo the booths, Job fair the
+    `job-fair` plan.
 
     Args:
-        data: The year's ``map.toml``.
+        data: The year's `map.toml`.
     """
     has = {
         FLOOR_PLANS: bool(floor_plans(data.plans)),
@@ -96,14 +96,14 @@ def panes_of(data: MapData) -> tuple[Pane, ...]:
 
 
 def asked_pane(memory: ViewMemory, route: str, view_path: str) -> None:
-    """Remember the pane ``?tab=`` names, when the route addresses the Map itself.
+    """Remember the pane `?tab=` names, when the route addresses the Map itself.
 
     An unknown value is Rooms. A route that addresses another View (a floor viewer on
     top of the Map, a search over it) says nothing of the Map's pane.
 
     Args:
-        memory: The process's ``ViewMemory``.
-        route: ``page.route``, query included.
+        memory: The process's `ViewMemory`.
+        route: `page.route`, query included.
         view_path: The Map's View path.
     """
     if not is_top_view(route, view_path):
@@ -126,7 +126,7 @@ def Map() -> ft.View:
     _, set_switches = ft.use_state(0)  # a pick re-renders; the memory holds the pane
     seen = ft.use_ref("")
     # Each route once, so a pane the user picks is not undone by the same query; a
-    # route, since the floor viewer's way out pops it onto the Map (``?tab=``).
+    # route, since the floor viewer's way out pops it onto the Map (`?tab=`).
     if page.route != seen.current:
         seen.current = page.route
         asked_pane(memory, page.route, view_path)
@@ -157,10 +157,10 @@ def Map() -> ft.View:
     def changed(e: ft.Event[ft.Tabs]) -> None:
         memory.map_tab = slugs[e.control.selected_index]
         set_switches(lambda n: n + 1)
-        # The route follows the pick: a stale ``?tab=`` left in it would come back as
-        # Search's way back (``search_base``) or a new session's start
-        # (``last_location``) and undo the pick (D-18). Same View, no stack to grow:
-        # Back goes by ``parent_of()``, not by a history of routes (D-141).
+        # The route follows the pick: a stale `?tab=` left in it would come back as
+        # Search's way back (`search_base`) or a new session's start
+        # (`last_location`) and undo the pick (D-18). Same View, no stack to grow:
+        # Back goes by `parent_of()`, not by a history of routes (D-141).
         page.navigate(tab_href(memory.map_tab))
 
     pane: ft.Control
@@ -209,11 +209,11 @@ def map_tabs(
     margin: float,
     tab_ms: int,
 ) -> ft.Control:
-    """Return the tab bar over the one pane shown, with no ``TabBarView`` (D-312).
+    """Return the tab bar over the one pane shown, with no `TabBarView` (D-312).
 
     Flutter's tab bar reads each tab as its label, its place and its selection
-    ("Floor plans, Tab 2 of 2, selected"); its identifier is ``map.tab.<slug>``. One
-    line each, in a 56 dp tab that keeps the largest iOS text (``TAB_HEIGHT``), and
+    ("Floor plans, Tab 2 of 2, selected"); its identifier is `map.tab.<slug>`. One
+    line each, in a 56 dp tab that keeps the largest iOS text (`TAB_HEIGHT`), and
     a scrollable bar, as four panes (#23) fit no phone at large text.
 
     Args:
@@ -221,8 +221,8 @@ def map_tabs(
         selected: The index of the pane shown.
         pane: The pane shown, keyed by its slug.
         on_change: Called when the user picks a tab.
-        margin: The screen's side margin (``use_margin()``).
-        tab_ms: How long the indicator slides (``prefs.motion_ms()``).
+        margin: The screen's side margin (`use_margin()`).
+        tab_ms: How long the indicator slides (`prefs.motion_ms()`).
     """
     tabs: list[ft.Control] = [
         ft.Tab(
@@ -257,14 +257,14 @@ def map_tabs(
 
 
 def tour_menu(svc: Services, url: str) -> ft.Control:
-    """Return the overflow with "3D venue tour", which opens ``url`` (MAP-03).
+    """Return the overflow with "3D venue tour", which opens `url` (MAP-03).
 
     A web page by the link rule: the in-app browser, never an iframe pane, which took
     pans in Ionic (D-182). Read "3D venue tour, Opens in browser".
 
     Args:
         svc: The session's services, for the launcher.
-        url: The year's tour (``MapData.tour_url``).
+        url: The year's tour (`MapData.tour_url`).
     """
 
     @report_errors

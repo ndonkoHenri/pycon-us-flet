@@ -1,17 +1,17 @@
 """A lead note through the outbox: the note saved for a lead, and saving one (#742).
 
-LEAD-10, LEAD-11. The note sheet (``ui/lead_note_sheet.py``) prefills from
-``saved_note()``: the account's note row for the lead (its code and its sponsor, D-459),
-pending, failed or synced, its text parsed (``core/lead_notes.parse``), or None when the
-outbox can't be read (the sheet then stays closed). Its Save calls ``store()``, which
-enqueues the composed text as the lead's one ``note`` row
-(``core/outbox_enqueue.save_note``: a blank note is ignored, an edit is sent again,
-the row keeps its lead's sponsor), then ``confirm()``, which kicks the worker and says
+LEAD-10, LEAD-11. The note sheet (`ui/lead_note_sheet.py`) prefills from
+`saved_note()`: the account's note row for the lead (its code and its sponsor, D-459),
+pending, failed or synced, its text parsed (`core/lead_notes.parse`), or None when the
+outbox can't be read (the sheet then stays closed). Its Save calls `store()`, which
+enqueues the composed text as the lead's one `note` row
+(`core/outbox_enqueue.save_note`: a blank note is ignored, an edit is sent again,
+the row keeps its lead's sponsor), then `confirm()`, which kicks the worker and says
 how it went: "Note saved" once the note has synced, "Note saved. Will sync." while it
 is queued. A note waits for its lead (D-56), so a note on a lead still queued is said
 at once, without a wait; otherwise
-the wait is the capture's (``lead_capture.sent()``, at most ``WAIT_SECONDS``), driven
-by the worker's reports. The ``SyncWorker`` stays the only sender (D-407).
+the wait is the capture's (`lead_capture.sent()`, at most `WAIT_SECONDS`), driven
+by the worker's reports. The `SyncWorker` stays the only sender (D-407).
 """
 
 import time
@@ -95,10 +95,10 @@ def store(
     sponsor: LeadSponsor | None,
     clock: Callable[[], float] = time.time,
 ) -> Enqueued | None:
-    """Enqueue a lead's note as its composed text (``save_note``).
+    """Enqueue a lead's note as its composed text (`save_note`).
 
     Args:
-        db: The outbox (``Services.outbox``).
+        db: The outbox (`Services.outbox`).
         code: The lead's access code.
         note: The note as the sheet left it.
         owner: The signed-in account's lower-cased email.
@@ -107,7 +107,7 @@ def store(
         clock: The time of the save, epoch seconds as the worker's (D-407).
 
     Returns:
-        The decision: ``IGNORED`` for an empty note, else the stored row. None when
+        The decision: `IGNORED` for an empty note, else the stored row. None when
         the outbox could not store it (logged, D-120).
     """
     if db is None:
@@ -131,12 +131,12 @@ async def confirm(
 
     Args:
         db: The outbox.
-        staff: The ``Staff`` store: its counts, and its changes end the wait.
-        kick: Asks the worker for a pass (``Services.kick_sync``).
-        row: The note row ``store()`` stored.
+        staff: The `Staff` store: its counts, and its changes end the wait.
+        kick: Asks the worker for a pass (`Services.kick_sync`).
+        row: The note row `store()` stored.
 
     Returns:
-        ``NOTE_SAVED`` once synced, else ``WILL_SYNC``: the lead is still queued,
+        `NOTE_SAVED` once synced, else `WILL_SYNC`: the lead is still queued,
         offline, or the wait ran out.
     """
     staff.update_counts(db.counts(row.owner))

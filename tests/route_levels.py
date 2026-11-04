@@ -1,9 +1,9 @@
 """The Views the Router stacks for a location, for the route tests (#623).
 
-``test_routes.py`` (the route table) and ``test_routes_locations.py`` (Back, links,
+`test_routes.py` (the route table) and `test_routes_locations.py` (Back, links,
 view options, the top View and the start route) read a location's levels with the
-Router's own matcher (``_match_routes`` and ``_split_chain_into_view_levels`` in
-``flet/components/router.py``, internal), so a Flet bump that changes matching fails
+Router's own matcher (`_match_routes` and `_split_chain_into_view_levels` in
+`flet/components/router.py`, internal), so a Flet bump that changes matching fails
 there first.
 """
 
@@ -20,7 +20,7 @@ def view_levels(location: str) -> list[Level]:
     """Each View the Router stacks for location: its screen, path and own params.
 
     The Router gives a level the params accumulated up to it, so a drill level's
-    ``kind`` and ``ident`` are its own pair's (F6).
+    `kind` and `ident` are its own pair's (F6).
     """
     chain = _match_routes(ROUTES, location)
     assert chain is not None, f"no route matches {location}"

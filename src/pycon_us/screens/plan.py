@@ -1,27 +1,27 @@
-"""Floor viewer (``…/plan/<plan>``): one floor plan to zoom, with a pin (ROOM-05, MAP-05, INFO-13).
+"""Floor viewer (`…/plan/<plan>`): one floor plan to zoom, with a pin (ROOM-05, MAP-05, INFO-13).
 
 A pushed View (ux.md §6.1): the app bar names the plan and its overflow resets the
-view; the plan fills the body in ``ui/zoom.py``'s zoom layer, from the fitted plan to
+view; the plan fills the body in `ui/zoom.py`'s zoom layer, from the fitted plan to
 one image pixel per logical pixel (D-312), with a double tap for 2x or back to fit
 where nothing on it is tappable. The zoom buttons sit bottom-right, the single-pointer
 way to zoom (WCAG 2.5.1), read after the label card (#729).
 
-On the ``job-fair`` plan each printed table is a tap area, and ``?table=T8`` selects
-one with its card (``screens/plan_tables.py``, #464): no double tap there (D-312).
-``ViewMemory.plan_tables`` keeps the selection for a View rebuilt in a new session.
+On the `job-fair` plan each printed table is a tap area, and `?table=T8` selects
+one with its card (`screens/plan_tables.py`, #464): no double tap there (D-312).
+`ViewMemory.plan_tables` keeps the selection for a View rebuilt in a new session.
 
-``?pin=<key>`` (``use_query()``, U9 interim) marks a room or a venue spot of
-``map.toml``: a dot on the plan, placed from its percentages, the same size on screen
+`?pin=<key>` (`use_query()`, U9 interim) marks a room or a venue spot of
+`map.toml`: a dot on the plan, placed from its percentages, the same size on screen
 at every zoom, which pulses twice when the View opens and then stays still (D-34),
 still from the start under reduced motion (D-173). The label card under the plan,
 outside the zoom layer, names it at any zoom, and never grows over the pin
-(``screens/plan_label.py``, #793). ``ViewMemory.plan_pins`` keeps a View rebuilt in a
+(`screens/plan_label.py`, #793). `ViewMemory.plan_pins` keeps a View rebuilt in a
 new session (D-143) from pulsing again (D-18). An unknown pin, or one on
 another plan, shows no pin; an unknown plan shows its not-found state, whose way out
 is the Map's Floor plans tab (D-186, ux.md §4.6).
 
-``ExpoPlan`` is ``…/plan/expo`` in a year with booths: the expo hall, booths and all
-(``screens/expo.py``, EXPO-01), with no pin and no double tap (D-312). ``?booth=613``
+`ExpoPlan` is `…/plan/expo` in a year with booths: the expo hall, booths and all
+(`screens/expo.py`, EXPO-01), with no pin and no double tap (D-312). `?booth=613`
 opens it with that booth selected, or the List for a booth off the plan (EXPO-05).
 """
 
@@ -61,7 +61,7 @@ NOT_FOUND = "This floor plan isn't in this year's maps"
 OPEN_MAP = "Open the map"
 
 DOT_DP = 20
-"""The pin's dot, ``primary`` with an ``on_primary`` rim, so it shows on any plan."""
+"""The pin's dot, `primary` with an `on_primary` rim, so it shows on any plan."""
 
 RIM_DP = 3
 
@@ -92,11 +92,11 @@ def plan_label(plan: Plan, pin: Pin | None, table: str = "") -> str:
 
 
 def pin_on(plan: Plan | None, key: str, pins: dict[str, Pin]) -> Pin | None:
-    """Return the pin ``key`` names, when it is on ``plan``; else None.
+    """Return the pin `key` names, when it is on `plan`; else None.
 
     Args:
         plan: The plan shown, or None for an unknown plan.
-        key: The ``?pin=`` key, possibly empty.
+        key: The `?pin=` key, possibly empty.
         pins: The year's pins by key.
     """
     pin = pins.get(key)
@@ -111,7 +111,7 @@ def forget(memory: ViewMemory, view_path: str) -> None:
     the entry and stays still (D-18). Flet cancels a pulse still running first (F2).
 
     Args:
-        memory: The process's ``ViewMemory``.
+        memory: The process's `ViewMemory`.
         view_path: The floor viewer's View path.
     """
     memory.plan_pins.pop(view_path, None)
@@ -120,10 +120,10 @@ def forget(memory: ViewMemory, view_path: str) -> None:
 def forget_table(memory: ViewMemory, view_path: str) -> None:
     """The table effect's cleanup: a floor viewer that leaves forgets its table.
 
-    As ``forget()``: Back removes the entry, a replaced session never runs it (F30).
+    As `forget()`: Back removes the entry, a replaced session never runs it (F30).
 
     Args:
-        memory: The process's ``ViewMemory``.
+        memory: The process's `ViewMemory`.
         view_path: The floor viewer's View path.
     """
     memory.plan_tables.pop(view_path, None)
@@ -134,16 +134,16 @@ def pin_marker(
 ) -> ft.Control:
     """Return the pin: a dot on its point, with the ring that pulses around it.
 
-    The zoom layer scales what is on the plan; the pin scales back by ``1 / scale``
+    The zoom layer scales what is on the plan; the pin scales back by `1 / scale`
     about its centre, so it stays one size on screen and its centre on its point.
-    Decorative: the plan's ``semantics_label`` names the pin.
+    Decorative: the plan's `semantics_label` names the pin.
 
     Args:
         pin: The pin.
-        shown: The plan's fitted size (``ui.zoom_geometry.fitted()``).
+        shown: The plan's fitted size (`ui.zoom_geometry.fitted()`).
         scale: The viewer's scale.
         ring: Whether the ring is out, mid-pulse.
-        ring_ms: How long the ring takes out or back (``prefs.motion_ms()``).
+        ring_ms: How long the ring takes out or back (`prefs.motion_ms()`).
     """
     left, top = centred_on(pin.x, pin.y, shown, PIN_BOX)
     animation = ft.Animation(ring_ms, ft.AnimationCurve.EASE_OUT)
@@ -177,10 +177,10 @@ def pin_marker(
 
 @ft.component
 def PlanViewer(plan_id: str) -> ft.View:
-    """One floor plan, zoomable, with the pin ``?pin=`` names.
+    """One floor plan, zoomable, with the pin `?pin=` names.
 
     Args:
-        plan_id: The plan id (``map.toml``), unquoted.
+        plan_id: The plan id (`map.toml`), unquoted.
     """
     view_path = ft.use_view_path()
     svc = use_services()
@@ -355,12 +355,12 @@ def PlanViewer(plan_id: str) -> ft.View:
 
 @ft.component
 def ExpoPlan() -> ft.View:
-    """``…/plan/expo``: the expo hall pushed as a View, named by its plan (ux.md §6.2).
+    """`…/plan/expo`: the expo hall pushed as a View, named by its plan (ux.md §6.2).
 
     A year without booths has no hall: its expo plan, or its not-found state, is
-    ``PlanViewer``'s. The View's path keys the hall's zoom, so a switch to the List
-    and back puts it back, apart from the Map pane's (D-18). ``?booth=`` seeds the
-    pane (``expo_pane.seed()``).
+    `PlanViewer`'s. The View's path keys the hall's zoom, so a switch to the List
+    and back puts it back, apart from the Map pane's (D-18). `?booth=` seeds the
+    pane (`expo_pane.seed()`).
     """
     view_path = ft.use_view_path()  # before the return: no conditional hooks (D-70)
     query = use_query()

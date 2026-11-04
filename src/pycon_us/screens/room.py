@@ -1,18 +1,18 @@
-"""Room detail (``…/room/<slug>``): what is on in one room, day by day (ROOM-02, ROOM-03).
+"""Room detail (`…/room/<slug>`): what is on in one room, day by day (ROOM-02, ROOM-03).
 
 The app bar names the room. Under it, day tabs over swipeable day lists, one tab per
 day the room has sessions, today preselected (ux.md §5.9; the Schedule's tabs, the lists
-in ``screens/room_days.py``). Today's list starts with "Now in this room" while something
-is on there (``NowInRoom``, on the minute tick). Each day lists its time slots (D-31),
+in `screens/room_days.py`). Today's list starts with "Now in this room" while something
+is on there (`NowInRoom`, on the minute tick). Each day lists its time slots (D-31),
 whose rows leave out the room's own name, since the title already says it
-(``in_room``). A tap pushes the session, one drill level. Each list starts with the
-room's ``LocationCard`` when the room has a pin, which pushes the floor viewer at it
+(`in_room`). A tap pushes the session, one drill level. Each list starts with the
+room's `LocationCard` when the room has a pin, which pushes the floor viewer at it
 (ROOM-04, D-346); its pin pulses once per View.
 
-Opened from a session (``?highlight=<id>``, read once with ``use_query()`` until U9), the
+Opened from a session (`?highlight=<id>`, read once with `use_query()` until U9), the
 room opens on that session's day, scrolls its row to the top once and lights it up for
-``HIGHLIGHT_S`` (ROOM-03). Back from a detail pushed over the room finds it as it was:
-the effect ran once, and the query is not read again. ``ViewMemory.room_highlights``
+`HIGHLIGHT_S` (ROOM-03). Back from a detail pushed over the room finds it as it was:
+the effect ran once, and the query is not read again. `ViewMemory.room_highlights`
 keeps a View rebuilt in a new session (D-143) from doing it again (D-18).
 
 An unknown slug shows the not-found state under the back arrow (D-186). A sprint-only
@@ -69,11 +69,11 @@ def highlight_of(query: Mapping[str, str], room: Room | None) -> str | None:
     Ionic compared a number with a string, and its highlight never showed (ROOM-03).
 
     Args:
-        query: The View's options (``use_query()``), already unquoted.
+        query: The View's options (`use_query()`), already unquoted.
         room: The room, or None when the feed has no such room.
 
     Returns:
-        The session id, or None without ``?highlight=``, for an id that is not in this
+        The session id, or None without `?highlight=`, for an id that is not in this
         room (a stale or hand-made link), or without a room.
     """
     wanted = query.get("highlight", "")
@@ -89,7 +89,7 @@ def forget(memory: ViewMemory, view_path: str, session_id: str | None) -> None:
     a highlight still running first (F2).
 
     Args:
-        memory: The process's ``ViewMemory``.
+        memory: The process's `ViewMemory`.
         view_path: The room View's path.
         session_id: The session it highlights, or None.
     """
@@ -103,7 +103,7 @@ def opening_day(days: list[date], highlighted: date | None, current: date) -> da
     Args:
         days: The days the room has sessions, in order; at least one.
         highlighted: The day of the session the room was opened from, if any.
-        current: Today, in conference time (``clock.now()``, D-43).
+        current: Today, in conference time (`clock.now()`, D-43).
     """
     if highlighted is not None and highlighted in days:
         return highlighted
@@ -115,7 +115,7 @@ def RoomDetail(room_slug: str) -> ft.View:
     """One room: what is on there now, then its sessions by day and time slot.
 
     Args:
-        room_slug: The room's slug (``slugs.slugify_room``), unquoted.
+        room_slug: The room's slug (`slugs.slugify_room`), unquoted.
     """
     page = ft.context.page
     view_path = ft.use_view_path()
@@ -285,10 +285,10 @@ def RoomDetail(room_slug: str) -> ft.View:
 def location(
     data: MapData, room_name: str, pulsed: set[str], *, active: bool = True
 ) -> list[ft.Control]:
-    """Return the room's ``LocationCard``, or nothing for a room without a pin.
+    """Return the room's `LocationCard`, or nothing for a room without a pin.
 
     Args:
-        data: The year's ``map.toml``.
+        data: The year's `map.toml`.
         room_name: The room's name as the feed writes it, which finds its pin.
         pulsed: The View's pins already pulsed: each day's list builds the card, and
             its pin pulses on the first shown only.
@@ -307,7 +307,7 @@ def list_head(located: list[ft.Control], *more: ft.Control) -> ft.Control | None
     """Return what heads a day's list: the location card, then "Now", or None.
 
     Args:
-        located: The room's location card, or nothing (``location()``).
+        located: The room's location card, or nothing (`location()`).
         *more: Today's "Now in this room".
     """
     heads = [*located, *more]
@@ -344,12 +344,12 @@ def sprint_room_state(page: ft.Page) -> ft.Control:
 def NowInRoom(room: Room, *, use_24h: bool) -> ft.Control:
     """Return "Now in this room": the session on there now, linked, or nothing (ROOM-02).
 
-    A leaf component on the minute tick (``use_minute()``, D-175), so the screen around
+    A leaf component on the minute tick (`use_minute()`, D-175), so the screen around
     it does not re-render every minute, and the Developer fake clock drives it. What is
-    on follows Now & Next's rule (``rooms.room_now``, D-179), as the Map's "Now:" line.
+    on follows Now & Next's rule (`rooms.room_now`, D-179), as the Map's "Now:" line.
 
-    One ``LinkTile`` that opens the session: its name cut at three lines, as a row's
-    title is (ux.md §3.6), its time in ``Tokens.live`` (and a place given elsewhere,
+    One `LinkTile` that opens the session: its name cut at three lines, as a row's
+    title is (ux.md §3.6), its time in `Tokens.live` (and a place given elsewhere,
     the two in a wrapping row as a row's meta, D-184), and "and 1 more" on a line of
     its own when several are on (D-188's form), at the head of today's list. A pointer
     to the session's row below, which has the star (D-194). A divider closes it.

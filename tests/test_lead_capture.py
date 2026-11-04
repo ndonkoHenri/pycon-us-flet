@@ -1,7 +1,7 @@
-"""Tests for ``lead_capture.capture()``: a lead through the outbox, its result at once.
+"""Tests for `lead_capture.capture()`: a lead through the outbox, its result at once.
 
-Each test signs a real ``Account`` in to the in-process mock (``tests/sync_rig.py``),
-runs a real ``SyncWorker`` loop, and scans through ``capture()`` as the Lead scanner
+Each test signs a real `Account` in to the in-process mock (`tests/sync_rig.py`),
+runs a real `SyncWorker` loop, and scans through `capture()` as the Lead scanner
 does (#741; LEAD-07, LEAD-09, STORE-11; D-426). The mock checks every signature and
 counts every lead it records, so "captured once" is the mock's own count.
 """
@@ -52,11 +52,11 @@ SAMPLE = LeadSponsor("3", "Sample Systems")
 
 
 class Scanner:
-    """The Lead scanner's side of a rig: a running worker and ``capture()`` calls.
+    """The Lead scanner's side of a rig: a running worker and `capture()` calls.
 
     Attributes:
         rig: The signed-in session.
-        worker: The worker, the outbox's only sender; None until ``start()``.
+        worker: The worker, the outbox's only sender; None until `start()`.
     """
 
     def __init__(self, rig: Rig) -> None:
@@ -66,7 +66,7 @@ class Scanner:
         self._task: asyncio.Task[None] | None = None
 
     def start(self) -> None:
-        """Run the worker's loop, as ``supervise()`` does for a signed-in account."""
+        """Run the worker's loop, as `supervise()` does for a signed-in account."""
         self.worker = self.rig.worker()
         self._task = asyncio.create_task(self.worker.run())
 
@@ -79,7 +79,7 @@ class Scanner:
     async def scan(
         self, badge: Badge = ADA, sponsor: LeadSponsor | None = None
     ) -> ScanResult:
-        """Scan ``badge`` as the signed-in account, for ``sponsor`` (None: its own)."""
+        """Scan `badge` as the signed-in account, for `sponsor` (None: its own)."""
 
         def kick() -> None:
             """Ask the running worker for a pass; without one, nothing listens."""
@@ -105,7 +105,7 @@ def rig(db: OutboxDb, storage: Storage, credentials: CredentialStorage) -> Rig:
 
 @pytest.fixture
 async def scanner(rig: Rig) -> AsyncIterator[Scanner]:
-    """A scanner over ``rig`` with its worker running, stopped afterwards."""
+    """A scanner over `rig` with its worker running, stopped afterwards."""
     scanning = Scanner(rig)
     scanning.start()
     yield scanning
@@ -314,7 +314,7 @@ async def test_the_tenth_refusal_fails_the_row_and_says_retry_from_the_queue(
 async def test_a_lost_answer_says_may_be_recorded_twice_and_loses_nothing(
     db: OutboxDb, storage: Storage, credentials: CredentialStorage
 ) -> None:
-    """Non-idempotent with ``lost_response``: queued and flagged, then synced (D-57)."""
+    """Non-idempotent with `lost_response`: queued and flagged, then synced (D-57)."""
     rig = Rig(db, storage, credentials, "non_idempotent")
     scanner = Scanner(rig)
     scanner.start()

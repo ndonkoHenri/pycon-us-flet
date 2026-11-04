@@ -1,13 +1,13 @@
 """Invariants of the processed feed, and the reviewed snapshot of it (D-77; DATA-17, SCHED-19).
 
 Each invariant runs on every recorded feed (2025 and 2026) under both machine zones. The
-invariants themselves live in ``tools/feed_invariants.py``, which ``tools/check_feed.py``
+invariants themselves live in `tools/feed_invariants.py`, which `tools/check_feed.py`
 runs on the live feed every week; each returns its problems, so a test here asserts the
 list is empty. The snapshot is a readable outline of *our* processed model, one line per
-session, compared with ``tests/fixtures/snapshots/outline-<year>.json``. After a deliberate
-change, run ``uv run pytest tests/test_feed_invariants.py --snapshot-update`` and explain
+session, compared with `tests/fixtures/snapshots/outline-<year>.json`. After a deliberate
+change, run `uv run pytest tests/test_feed_invariants.py --snapshot-update` and explain
 the diff in the PR. Ionic's own processing output is compared in
-``test_ionic_reference.py`` (#66).
+`test_ionic_reference.py` (#66).
 """
 
 from collections.abc import Callable
@@ -110,7 +110,7 @@ def test_job_listings_name_a_sponsor(year: int) -> None:
 
 
 def test_every_invariant_has_a_test_here(year: int) -> None:
-    """The weekly check runs ``INVARIANTS``; each of them must also guard the fixtures."""
+    """The weekly check runs `INVARIANTS`; each of them must also guard the fixtures."""
     tests = {
         name.removeprefix("test_")
         for name, value in globals().items()

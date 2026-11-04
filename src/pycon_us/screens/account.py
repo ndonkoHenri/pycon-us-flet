@@ -1,20 +1,20 @@
-"""Account (``/more/account``): who is signed in, what the account can do, and sign-out.
+"""Account (`/more/account`): who is signed in, what the account can do, and sign-out.
 
 ux.md §7.1 (AUTH-09, AUTH-10, AUTH-11, SHELL-13): the initials avatar, the nickname
 and the email; "Connected to the local mock server"; the role flags that are on as
 read-only chips, read as one list ("No staff tools on this account" without one);
-whether My schedule has reached the account (``Account.favorites_dirty``, D-406);
+whether My schedule has reached the account (`Account.favorites_dirty`, D-406);
 "Speaker Discord" for a speaker, a public PSF page in the in-app browser, disabled
 offline with the reason (D-411); and Sign out. Mounting it refreshes the role flags
 (D-403); once the server refused the key, it says so with "Sign in again", pushed
 under it so a sign-in comes back here.
 
 Sign out first tries once to send My schedule's unsent changes
-(``FavoritesSync.flush()``), then asks: "Sign out? Your saved sessions stay on this
+(`FavoritesSync.flush()`), then asks: "Sign out? Your saved sessions stay on this
 device.", with a line when the changes could not be sent (D-411); with the account's
 unsynced staff rows, "3 scans haven't synced. Sign out anyway?", with Sync now, and
 the rows stay under their owner (D-414). Signing out awaits every removal
-(``Account.sign_out``), then returns to More with "Signed out"; the favourites and
+(`Account.sign_out`), then returns to More with "Signed out"; the favourites and
 every setting stay (D-48). Ionic signed out at once and wiped the local
 favourites. It talks only to the local mock (D-51): with no mock URL, or signed out,
 the page shows a state instead.
@@ -60,7 +60,7 @@ ACCESS = (
     ("mask_violation", "Code of Conduct", ft.Icons.SHIELD_OUTLINED),
     ("is_speaker", "Speaker", ft.Icons.RECORD_VOICE_OVER_OUTLINED),
 )
-"""Each role flag's ``Account`` field, its chip's words and its icon, in chip order."""
+"""Each role flag's `Account` field, its chip's words and its icon, in chip order."""
 
 NO_ACCESS = "No staff tools on this account"
 """What the Access section says when no flag is on."""
@@ -190,7 +190,7 @@ def account_body(
     """Return the signed-in page's rows, top to bottom (ux.md §7.1).
 
     Args:
-        account: The signed-in ``Account``.
+        account: The signed-in `Account`.
         svc: The session's services: the year's Discord page, the launcher.
         view_path: The page's own path, under which "Sign in again" pushes.
         online: Whether the device has a connection, for Speaker Discord.
@@ -283,7 +283,7 @@ def who(account: Account) -> ft.Control:
 
 
 def access_of(account: Account) -> list[str]:
-    """Return the chips' words for the flags that are on, in ``ACCESS`` order."""
+    """Return the chips' words for the flags that are on, in `ACCESS` order."""
     return [label for field, label, _ in ACCESS if getattr(account, field)]
 
 
@@ -320,7 +320,7 @@ def access_chips(account: Account) -> ft.Control:
 def access_chip(label: str, icon: ft.IconData) -> ft.Control:
     """Return one read-only chip: M3's chip shape, outlined, with its icon.
 
-    Drawn, not an ``ft.Chip``: Flutter shows a chip with no handler as disabled,
+    Drawn, not an `ft.Chip`: Flutter shows a chip with no handler as disabled,
     greyed out, and these say what the account can do, in full colour.
     """
     return ft.Container(
@@ -361,7 +361,7 @@ def discord(svc: Services, url: str, *, online: bool) -> ft.Control:
 
     Args:
         svc: The session's services, for the launcher.
-        url: The year's page (``speaker_discord_url``).
+        url: The year's page (`speaker_discord_url`).
         online: Whether the device has a connection.
     """
 

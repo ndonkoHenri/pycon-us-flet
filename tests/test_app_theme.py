@@ -1,6 +1,6 @@
 """Tests for the app's theme mode, its services and the boot gate's slots layout.
 
-The fakes are ``tests/app_start.py``'s (D-69, D-147).
+The fakes are `tests/app_start.py`'s (D-69, D-147).
 """
 
 import asyncio
@@ -53,7 +53,7 @@ def test_the_theme_mode_follows_the_appearance_setting(
 async def test_read_accessibility_counts_either_motion_flag(
     semantics: MemorySemantics,
 ) -> None:
-    """The ``reduce_motion`` flag alone, which iOS reports, turns reduced motion on."""
+    """The `reduce_motion` flag alone, which iOS reports, turns reduced motion on."""
     prefs = Prefs()
     semantics.features["reduce_motion"] = True  # iOS reports this one (F13)
     await read_accessibility(semantics, prefs)
@@ -63,9 +63,9 @@ async def test_read_accessibility_counts_either_motion_flag(
 def test_services_are_built_for_the_active_year_in_the_data_directory(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """``Services.create`` uses the active year, the data directory and the memory.
+    """`Services.create` uses the active year, the data directory and the memory.
 
-    The new services start open, and ``close()`` closes them.
+    The new services start open, and `close()` closes them.
     """
     monkeypatch.setenv("FLET_APP_STORAGE_DATA", str(tmp_path))
     memory = ViewMemory()
@@ -127,7 +127,7 @@ def test_the_boot_gate_waits_for_the_settings_and_the_slots_layout(
 def test_app_seeds_the_layout_from_the_page_width_and_follows_its_resizes(
     fake_page: FakePage, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """``App`` gives the Router a ``Layout`` seeded from ``page.width`` that follows resizes.
+    """`App` gives the Router a `Layout` seeded from `page.width` that follows resizes.
 
     D-277: a first screen opened in landscape shows the rail, and a rotation flips it.
     """
@@ -137,7 +137,7 @@ def test_app_seeds_the_layout_from_the_page_width_and_follows_its_resizes(
     provided: list[Layout] = []
 
     def layout_ctx(value: Layout, body: Callable[[], object]) -> object:
-        """Record the ``Layout`` handed to the provider, then render its body."""
+        """Record the `Layout` handed to the provider, then render its body."""
         provided.append(value)
         return body()
 

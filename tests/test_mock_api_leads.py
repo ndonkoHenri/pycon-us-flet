@@ -1,8 +1,8 @@
 """The mock API's Code of Conduct and lead-retrieval endpoints (API-08..API-10).
 
-``mask_violations/*`` and ``lead_retrieval/*`` as ``tools/mock_api/README.md``
+`mask_violations/*` and `lead_retrieval/*` as `tools/mock_api/README.md`
 describes them, and how each capture semantics counts a repeat (D-57). The role gates
-are pinned with the check-in ones in ``tests/test_mock_api_check_in.py``.
+are pinned with the check-in ones in `tests/test_mock_api_check_in.py`.
 """
 
 import pytest
@@ -28,7 +28,7 @@ ADA_DATA = {
 
 
 def test_the_coc_directory_lists_every_attendee_in_the_envelope() -> None:
-    """``{code, data}`` with each attendee's names and incident count."""
+    """`{code, data}` with each attendee's names and incident count."""
     state = state_at()
     status, body = call(state, "GET", "mask_violations/attendees/", "coc")
     assert status == 200
@@ -44,7 +44,7 @@ def test_the_coc_directory_lists_every_attendee_in_the_envelope() -> None:
 
 
 def test_made_up_attendees_follow_the_seeded_four_in_the_directory() -> None:
-    """``attendees=3000`` serves 3,004: ``MOCK0005`` onwards, fake, with a spread."""
+    """`attendees=3000` serves 3,004: `MOCK0005` onwards, fake, with a spread."""
     state = MockState.from_seed(now=Clock(), attendees=3000)
     status, body = call(state, "GET", "mask_violations/attendees/", "coc")
     assert status == 200 and isinstance(body, dict)
@@ -71,7 +71,7 @@ def test_the_same_count_makes_the_same_attendees() -> None:
 
 
 def test_a_badge_scan_records_an_incident_and_returns_the_count() -> None:
-    """The scan GET records one incident and replies ``{code, data}``."""
+    """The scan GET records one incident and replies `{code, data}`."""
     state = state_at()
     endpoint = f"mask_violations/capture/?{ADA}"
     assert call(state, "GET", endpoint, "coc") == (
@@ -82,14 +82,14 @@ def test_a_badge_scan_records_an_incident_and_returns_the_count() -> None:
 
 
 def test_the_scan_query_is_percent_decoded() -> None:
-    """``encodeURIComponent``'s escapes are decoded before the lookup."""
+    """`encodeURIComponent`'s escapes are decoded before the lookup."""
     state = state_at()
     endpoint = "mask_violations/capture/?attendee_access_code=MOCK%30001"
     assert call(state, "GET", endpoint, "coc")[0] == 200
 
 
 def test_repeated_scans_within_a_minute_count_once_when_idempotent() -> None:
-    """Per-frame GETs record one incident per ``COC_DEDUPE`` seconds (D-57)."""
+    """Per-frame GETs record one incident per `COC_DEDUPE` seconds (D-57)."""
     clock = Clock()
     state = state_at("idempotent", clock)
     endpoint = f"mask_violations/capture/?{ADA}"
@@ -113,7 +113,7 @@ def test_repeated_scans_each_count_when_not_idempotent() -> None:
 
 
 def test_a_forced_report_always_records_its_notes() -> None:
-    """The name search's POST with ``force`` records each time, notes included."""
+    """The name search's POST with `force` records each time, notes included."""
     state = state_at("idempotent")
     report = {
         "attendee_access_code": "MOCK0002",
@@ -129,7 +129,7 @@ def test_a_forced_report_always_records_its_notes() -> None:
 
 
 def test_an_unforced_report_without_notes_dedupes_like_a_scan() -> None:
-    """A POST without ``force`` follows the scan's semantics; ``notes`` is optional."""
+    """A POST without `force` follows the scan's semantics; `notes` is optional."""
     state = state_at("idempotent")
     report = {"attendee_access_code": "MOCK0002"}
     call(state, "POST", "mask_violations/capture/", "coc", report)
@@ -191,7 +191,7 @@ def test_the_sponsor_list_is_bare_with_one_name_json_quoted() -> None:
 
 
 def test_a_sponsor_captures_a_lead_for_its_own_sponsor() -> None:
-    """No ``sponsor_id``: the lead goes to the account's sponsor; ``{code, data}``."""
+    """No `sponsor_id`: the lead goes to the account's sponsor; `{code, data}`."""
     state = state_at()
     assert call(state, "GET", f"lead_retrieval/capture/?{ADA_BADGE}", "sponsor") == (
         200,
@@ -201,7 +201,7 @@ def test_a_sponsor_captures_a_lead_for_its_own_sponsor() -> None:
 
 
 def test_staff_capture_a_lead_on_behalf_of_the_sponsor_they_name() -> None:
-    """Door staff send ``sponsor_id`` (a string, as Ionic stores it)."""
+    """Door staff send `sponsor_id` (a string, as Ionic stores it)."""
     state = state_at()
     endpoint = f"lead_retrieval/capture/?{ADA_BADGE}&sponsor_id=2"
     assert call(state, "GET", endpoint, "staff")[0] == 200
@@ -296,7 +296,7 @@ def test_a_note_is_recorded_for_a_captured_lead() -> None:
 def test_a_repeated_note_is_recorded_once_only_when_idempotent(
     capture: Capture, notes: list[str]
 ) -> None:
-    """The resend after a lost reply records nothing under ``idempotent``; an edit does."""
+    """The resend after a lost reply records nothing under `idempotent`; an edit does."""
     state = state_at(capture)
     call(state, "GET", f"lead_retrieval/capture/?{ADA_BADGE}", "sponsor")
     for text in ("a", "a", "b"):
@@ -309,7 +309,7 @@ def test_a_repeated_note_is_recorded_once_only_when_idempotent(
 
 
 def test_staff_note_a_lead_for_the_sponsor_named_and_the_path_is_decoded() -> None:
-    """Staff send ``sponsor_id``; the app's encoded path segment is decoded."""
+    """Staff send `sponsor_id`; the app's encoded path segment is decoded."""
     state = state_at()
     call(state, "GET", f"lead_retrieval/capture/?{ADA_BADGE}&sponsor_id=2", "staff")
     payload = {"accessCode": "MOCK0001", "note": "Notes: hi", "sponsor_id": "2"}
@@ -331,7 +331,7 @@ def test_staff_note_a_lead_for_the_sponsor_named_and_the_path_is_decoded() -> No
 def test_a_bad_note_is_refused_and_records_nothing(
     code: str, payload: dict[str, object], status: int
 ) -> None:
-    """A note needs its lead, a matching ``accessCode`` and a note string."""
+    """A note needs its lead, a matching `accessCode` and a note string."""
     state = state_at()
     call(state, "GET", f"lead_retrieval/capture/?{ADA_BADGE}", "sponsor")
     endpoint = f"lead_retrieval/{code}/note/"

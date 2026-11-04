@@ -1,9 +1,9 @@
-"""Tests for the sponsors door staff scan for: ``core/lead_sponsors.py`` and its fetch.
+"""Tests for the sponsors door staff scan for: `core/lead_sponsors.py` and its fetch.
 
-``parse_sponsors`` reads ``lead_sponsors``' reply as Ionic did, without its bugs (API-09):
+`parse_sponsors` reads `lead_sponsors`' reply as Ionic did, without its bugs (API-09):
 quotes stripped from names, ids kept as strings, bad entries left out; the filter finds
 by name or booth among 150 sponsors (LEAD-05's "usable with 100+"); the saved choice
-round-trips through ``pycon.staff_2026_sponsor`` (STORE-11). ``fetch_sponsors`` runs against
+round-trips through `pycon.staff_2026_sponsor` (STORE-11). `fetch_sponsors` runs against
 the mock over its real transport, signed in as the seeded staff account.
 """
 
@@ -25,7 +25,7 @@ EXAMPLE = LeadSponsor("1", "Example Corp", "101", "https://example.com/logo.png"
 
 
 def test_names_lose_their_quotes_and_entries_sort_by_name() -> None:
-    """One ``"`` goes from each end, as Ionic's ``/^"|"$/``; the list sorts by name."""
+    """One `"` goes from each end, as Ionic's `/^"|"$/`; the list sorts by name."""
     reply = {
         "sponsors": [
             {"id": 3, "name": "Sample Systems"},
@@ -82,7 +82,7 @@ def test_a_repeated_id_keeps_the_first_entry() -> None:
 
 @pytest.mark.parametrize("reply", [None, [], {}, {"sponsors": {}}, {"data": []}])
 def test_a_reply_without_a_sponsors_list_is_refused(reply: object) -> None:
-    """Not ``{"sponsors": [...]}``: a ``TypeError``, which the fetch makes an error."""
+    """Not `{"sponsors": [...]}`: a `TypeError`, which the fetch makes an error."""
     with pytest.raises(TypeError):
         parse_sponsors(reply)
 
@@ -102,7 +102,7 @@ def test_the_mock_s_sponsors_parse_sorted_and_unquoted() -> None:
 
 
 def generated(count: int) -> tuple[LeadSponsor, ...]:
-    """Return ``count`` sponsors, "Sponsor 000" at booth 1000 onwards, and Sample Systems."""
+    """Return `count` sponsors, "Sponsor 000" at booth 1000 onwards, and Sample Systems."""
     return parse_sponsors(
         {
             "sponsors": [
@@ -131,7 +131,7 @@ def test_a_blank_filter_keeps_the_list_itself() -> None:
 
 
 def test_the_choice_round_trips_without_its_booth() -> None:
-    """``{id, name, logo_url}`` is kept; the booth is not (the chip shows none)."""
+    """`{id, name, logo_url}` is kept; the booth is not (the chip shows none)."""
     stored = to_stored(EXAMPLE)
     assert stored == {
         "id": "1",
@@ -162,7 +162,7 @@ async def test_fetch_sponsors_reads_the_mock_signed_in_as_staff() -> None:
 
 
 async def test_a_reply_without_sponsors_is_an_api_error() -> None:
-    """A 200 that isn't a sponsors list is an ``ApiError`` the picker says it couldn't load."""
+    """A 200 that isn't a sponsors list is an `ApiError` the picker says it couldn't load."""
     client = client_for(replying(200, b'{"data": []}'))
     with pytest.raises(ApiError):
         await fetch_sponsors(client)
@@ -170,7 +170,7 @@ async def test_a_reply_without_sponsors_is_an_api_error() -> None:
 
 
 async def test_an_account_without_a_lead_flag_is_refused() -> None:
-    """The mock answers 403 to the attendee: an ``ApiError``, not a list."""
+    """The mock answers 403 to the attendee: an `ApiError`, not a list."""
     client, _, _ = await signed_in("attendee")
     with pytest.raises(ApiError) as caught:
         await fetch_sponsors(client)

@@ -2,9 +2,9 @@
 
 How the page looks, at 200 % text and in dark mode, is checked on devices (the PR);
 here, what it shows, says and does: the highlight's parsing, its one scroll and its
-fade. The day lists and "Now in this room" are ``test_room_days.py``'s, an unknown room
-and the location card ``test_room_location.py``'s; the harness is
-``tests/room_view.py``'s.
+fade. The day lists and "Now in this room" are `test_room_days.py`'s, an unknown room
+and the location card `test_room_location.py`'s; the harness is
+`tests/room_view.py`'s.
 """
 
 from datetime import date, datetime
@@ -110,7 +110,7 @@ async def test_opened_from_a_session_the_room_shows_its_day_and_scrolls_to_it_on
 async def test_only_the_scrolled_day_s_list_builds_every_row(render: Render) -> None:
     """Only the highlighted day's list is built in full and listens to its scroll.
 
-    ``scroll_to`` reaches only a built item (F32): that list is built in full (D-154).
+    `scroll_to` reaches only a built item (F32): that list is built in full (D-154).
     """
     room = await render(highlighted(TACHYON))
     lists = room.day_lists()
@@ -125,7 +125,7 @@ async def test_only_the_scrolled_day_s_list_builds_every_row(render: Render) -> 
 async def test_the_row_is_lit_then_the_highlight_fades(render: Render) -> None:
     """The row is lit at once, stays lit while its wait runs, then fades.
 
-    The box animates over 250 ms, and the wait, ``HIGHLIGHT_S``, is asked for once.
+    The box animates over 250 ms, and the wait, `HIGHLIGHT_S`, is asked for once.
     """
     room = await render(highlighted(TACHYON))
     box = room.lit_box()
@@ -163,7 +163,7 @@ async def test_a_row_alone_in_its_slot_is_lit_with_its_time(render: Render) -> N
 
 
 def _inside(node: ft.Control, ancestor: ft.Control) -> bool:
-    """Whether ``node`` renders under ``ancestor``, through components too."""
+    """Whether `node` renders under `ancestor`, through components too."""
     parent = node.parent
     while parent is not None:
         if parent is ancestor:
@@ -270,7 +270,7 @@ async def test_a_highlight_of_another_room_s_session_is_ignored(
 def test_the_lit_row_s_text_keeps_its_contrast(dark: bool) -> None:
     """On the lit fill both text colours keep 4.5:1, and the fill shows on the surface.
 
-    In light and in dark: dark ``primary_container`` put the supporting text at 3.7:1
+    In light and in dark: dark `primary_container` put the supporting text at 3.7:1
     (D-194).
     """
     scheme = DARK_SCHEME if dark else LIGHT_SCHEME
@@ -281,7 +281,7 @@ def test_the_lit_row_s_text_keeps_its_contrast(dark: bool) -> None:
 
 
 def _blend(color: str, under: str, opacity: float) -> str:
-    """Return ``color`` at ``opacity`` over ``under``, as ``#RRGGBB``."""
+    """Return `color` at `opacity` over `under`, as `#RRGGBB`."""
     channels = [
         round(
             opacity * int(color[i : i + 2], 16)

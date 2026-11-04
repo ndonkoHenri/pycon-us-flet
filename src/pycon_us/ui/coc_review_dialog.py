@@ -1,7 +1,7 @@
 """The CoC review dialog's look: who it is, what happened, then Record (#760; MASK-03).
 
 ux.md §7.3. A scanned badge never records by itself (MASK-04): it opens this modal
-``AlertDialog``, scrollable so Record stays in reach at 200 % text, with
+`AlertDialog`, scrollable so Record stays in reach at 200 % text, with
 
 - a level-1 heading "Record an incident", the dialog's first stop;
 - the name (or the code), "Badge: Grace S." when the badge says another, and the
@@ -9,12 +9,12 @@ ux.md §7.3. A scanned badge never records by itself (MASK-04): it opens this mo
   in the loaded attendee list" and may still be recorded (D-434): the server knows
   the badge, and a 404 says otherwise, here;
 - "What happened?", a multi-line field of at most 2000 characters with its counter
-  (``coc.review.notes``), and under it, after a failed Record, why
-  (``coc.review.problem``, a live region; on iOS ``ui/coc_review.py`` announces it);
-- Cancel (``coc.review.cancel``) and Record incident (``coc.review.record``), which
+  (`coc.review.notes`), and under it, after a failed Record, why
+  (`coc.review.problem`, a live region; on iOS `ui/coc_review.py` announces it);
+- Cancel (`coc.review.cancel`) and Record incident (`coc.review.record`), which
   shows a ring and "Recording…", disabled, while the call is out; Cancel stays enabled.
 
-Built from data only: ``ui/coc_review.py``'s ``use_review()`` keeps the ``Review`` and
+Built from data only: `ui/coc_review.py`'s `use_review()` keeps the `Review` and
 the handlers.
 """
 
@@ -63,7 +63,7 @@ class Review:
     Attributes:
         code: The attendee's access code, what the record is sent with.
         name: The display name, or the code when the directory lacks it.
-        badge_name: The badge's name when it differs from ``name``, else ``""``.
+        badge_name: The badge's name when it differs from `name`, else `""`.
         incidents: The incidents on record as the directory says, or None when the
             loaded directory lacks the code.
         sending: The call is out: Record is disabled with a ring.
@@ -81,7 +81,7 @@ class Review:
 
 
 def review_of(code: str, attendee: Attendee | None) -> Review:
-    """Return a new review of ``code``, named from the directory's row when it has one.
+    """Return a new review of `code`, named from the directory's row when it has one.
 
     Args:
         code: The scanned access code.
@@ -116,7 +116,7 @@ def review_dialog(
     tokens: Tokens,
     live: bool = True,
 ) -> ft.AlertDialog:
-    """Return the review dialog for ``review`` (ux.md §7.3).
+    """Return the review dialog for `review` (ux.md §7.3).
 
     Args:
         review: The badge and where its Record is.
@@ -184,7 +184,7 @@ def review_dialog(
 
 
 def _line(words: str) -> ft.Control:
-    """Return a line of the dialog in ``BODY_MEDIUM`` and ``on_surface_variant``."""
+    """Return a line of the dialog in `BODY_MEDIUM` and `on_surface_variant`."""
     return ft.Text(
         words,
         theme_style=ft.TextThemeStyle.BODY_MEDIUM,
@@ -197,8 +197,8 @@ def count_line(incidents: int, tokens: Tokens) -> ft.Control:
 
     Args:
         incidents: The incidents on record.
-        tokens: The scheme's tokens: a notice is in ``warning``, a high count in
-            ``error``, none in ``on_surface_variant``.
+        tokens: The scheme's tokens: a notice is in `warning`, a high count in
+            `error`, none in `on_surface_variant`.
     """
     return ft.Semantics(
         identifier="coc.review.count",
@@ -217,8 +217,8 @@ def count_row(incidents: int, tokens: Tokens) -> ft.Row:
 
     Args:
         incidents: The incidents on record.
-        tokens: The scheme's tokens: a notice is in ``warning``, a high count in
-            ``error``, none in ``on_surface_variant``.
+        tokens: The scheme's tokens: a notice is in `warning`, a high count in
+            `error`, none in `on_surface_variant`.
     """
     level = count_level(incidents)
     color = {

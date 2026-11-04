@@ -1,10 +1,10 @@
 """Tests for Welcome, the first-run page (#423; SHELL-02, STORE-07; D-36, D-287).
 
-``welcome_copy()`` is pure, so its words are pinned at fixed days for two years.
-``Welcome`` runs outside a renderer: its hooks are replaced and a fake page is bound
+`welcome_copy()` is pure, so its words are pinned at fixed days for two years.
+`Welcome` runs outside a renderer: its hooks are replaced and a fake page is bound
 as Flet binds a session's page. How it looks and reads on a screen is checked on
 devices (the PR); where the start route sends a session is
-``test_routes_locations.py``'s.
+`test_routes_locations.py`'s.
 """
 
 import inspect
@@ -108,7 +108,7 @@ def test_the_thanks_line_shows_once_the_last_day_is_over(
 
 @pytest.fixture
 def page() -> Iterator[FakePage]:
-    """A ``FakePage`` at ``/``, bound as the page Flet's handlers see."""
+    """A `FakePage` at `/`, bound as the page Flet's handlers see."""
     fake = FakePage()
     with bound(fake):
         yield fake
@@ -122,7 +122,7 @@ def shared() -> MemoryPrefs:
 
 @pytest.fixture
 def svc(shared: MemoryPrefs, tmp_path: Path) -> Services:
-    """The 2026 ``Services`` over in-memory prefs and device services."""
+    """The 2026 `Services` over in-memory prefs and device services."""
     return Services(
         year=load_year(2026),
         storage=Storage(prefs=shared, directory=tmp_path, year=2026),
@@ -136,7 +136,7 @@ def svc(shared: MemoryPrefs, tmp_path: Path) -> Services:
 
 @pytest.fixture
 def prefs() -> Prefs:
-    """Fresh ``Prefs``: Welcome not yet seen."""
+    """Fresh `Prefs`: Welcome not yet seen."""
     return Prefs()
 
 
@@ -144,7 +144,7 @@ def prefs() -> Prefs:
 def render(
     monkeypatch: pytest.MonkeyPatch, svc: Services, prefs: Prefs, page: FakePage
 ) -> Iterator[Callable[[], ft.View]]:
-    """Return a function that renders ``Welcome`` on a winter day before 2026's conference.
+    """Return a function that renders `Welcome` on a winter day before 2026's conference.
 
     The clock is frozen on 2026-01-10 and lifted after the test.
     """
@@ -168,7 +168,7 @@ def start_button(view: ft.View) -> ft.FilledButton:
 
 
 async def tap(button: ft.FilledButton) -> None:
-    """Call a button's ``on_click``, as a tap does."""
+    """Call a button's `on_click`, as a tap does."""
     assert button.on_click is not None
     await cast(Callable[[], Any], button.on_click)()
 
@@ -176,7 +176,7 @@ async def tap(button: ft.FilledButton) -> None:
 def test_the_page_is_a_purple_root_without_a_bar(render: Callable[[], ft.View]) -> None:
     """Full-bleed purple in every scheme, no bar of either kind, the roots' key (D-142).
 
-    Its body sits in a ``SafeArea``, clear of the notch and the system bars.
+    Its body sits in a `SafeArea`, clear of the notch and the system bars.
     """
     view = render()
     assert (view.route, view.bgcolor, view.padding) == ("/", BOOT_COLOR, 0)
@@ -189,7 +189,7 @@ def test_the_page_is_a_purple_root_without_a_bar(render: Callable[[], ft.View]) 
 def test_the_status_bar_s_icons_are_white_over_the_purple_in_every_scheme(
     render: Callable[[], ft.View],
 ) -> None:
-    """A toolbar-less purple ``AppBar`` under a white style, light and dark (U85).
+    """A toolbar-less purple `AppBar` under a white style, light and dark (U85).
 
     The View's own style is the theme's, dark icons in a light scheme (F105); this
     strip is the frontmost region at the status bar, so its style wins.
@@ -304,7 +304,7 @@ def test_get_started_is_a_named_button_at_least_48_dp_tall(
 async def test_get_started_saves_that_welcome_was_seen_and_goes_to_now(
     render: Callable[[], ft.View], prefs: Prefs, shared: MemoryPrefs, page: FakePage
 ) -> None:
-    """Get started stores ``pycon.onboarded`` and replaces the route with Now."""
+    """Get started stores `pycon.onboarded` and replaces the route with Now."""
     await tap(start_button(render()))
     assert shared.values == {"pycon.onboarded": True}
     assert prefs.onboarded is True

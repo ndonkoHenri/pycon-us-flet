@@ -1,8 +1,8 @@
 """Tests for the location helpers (SHELL-04; D-17, D-19, D-287).
 
 Back, a drill's link, a location's view options, which View is the top one, and where
-a new session starts. The route table itself is tested in ``test_routes.py``; both read
-a location's Views with ``tests/route_levels.py``.
+a new session starts. The route table itself is tested in `test_routes.py`; both read
+a location's Views with `tests/route_levels.py`.
 """
 
 import inspect
@@ -93,7 +93,7 @@ def test_back_from_search_results_walks_back_through_search_to_its_opener() -> N
 
 
 def test_drill_href_quotes_the_whole_id_into_one_segment() -> None:
-    """``drill_href`` quotes the whole id, slashes included, into one path segment."""
+    """`drill_href` quotes the whole id, slashes included, into one path segment."""
     assert drill_href("/now", "session", "poster detail+1") == (
         "/now/session/poster%20detail%2B1"
     )
@@ -135,7 +135,7 @@ def test_any_id_round_trips_through_its_link_and_back(
     ],
 )
 def test_query_of_reads_the_view_options(location: str, options: dict) -> None:
-    """``query_of`` reads a location's options, unquoted, the last of a repeated key."""
+    """`query_of` reads a location's options, unquoted, the last of a repeated key."""
     assert query_of(location) == options
 
 
@@ -220,7 +220,7 @@ def test_a_plain_start_opens_welcome_until_it_is_done(last_location: str) -> Non
 def test_start_sends_a_plain_start_to_welcome_until_it_is_done(
     monkeypatch: pytest.MonkeyPatch, onboarded: bool, target: str
 ) -> None:
-    """``Start`` reads ``Prefs.onboarded``: Welcome first, then where the user was."""
+    """`Start` reads `Prefs.onboarded`: Welcome first, then where the user was."""
     memory = ViewMemory(last_location="/now/session/42")
     effects: list[Callable[[], None]] = []
     monkeypatch.setattr(
@@ -262,7 +262,7 @@ def test_a_reminder_tap_wins_over_every_start_target(
 ) -> None:
     """A tapped reminder opens its route whatever else the start would pick (D-396).
 
-    Without one, the start goes where ``start_target()`` says: Welcome, the last
+    Without one, the start goes where `start_target()` says: Welcome, the last
     location, or search's opener.
     """
     assert (
@@ -272,12 +272,12 @@ def test_a_reminder_tap_wins_over_every_start_target(
 
 
 def test_start_opens_the_held_tap_and_takes_it(monkeypatch: pytest.MonkeyPatch) -> None:
-    """``Start`` takes the ``Scheduler``'s held tap and goes there, even on a first run."""
+    """`Start` takes the `Scheduler`'s held tap and goes there, even on a first run."""
     memory = ViewMemory(last_location="/now/session/42")
     reminders = SimpleNamespace(tapped=TAP)
 
     def take_tap() -> str:
-        """Hand over the held tap once, as ``Scheduler.take_tap()`` does."""
+        """Hand over the held tap once, as `Scheduler.take_tap()` does."""
         route, reminders.tapped = reminders.tapped, ""
         return route
 

@@ -1,28 +1,28 @@
-"""Expo hall (Map › Expo, ``…/plan/expo``): the plan, a hit area per booth (EXPO-01, MAP-01).
+"""Expo hall (Map › Expo, `…/plan/expo`): the plan, a hit area per booth (EXPO-01, MAP-01).
 
-``ExpoHall`` is the floor viewer's zoom layer (``ui/zoom.py``) over the expo plan, with
-a booth layer as S7 chose (D-312): one positioned ``Container`` per booth of
-``map.toml``, faintly outlined at every zoom, in ``Semantics(button=True)`` named
+`ExpoHall` is the floor viewer's zoom layer (`ui/zoom.py`) over the expo plan, with
+a booth layer as S7 chose (D-312): one positioned `Container` per booth of
+`map.toml`, faintly outlined at every zoom, in `Semantics(button=True)` named
 "Booth 613, Bloomberg", "Booth 726, 4 exhibitors" or "Booth 407, Python Software
 Foundation" (D-254), in number order. No double-tap detector, which would delay every
 booth's tap; the zoom buttons are the single-pointer way to zoom (WCAG 2.5.1). The plan
-sits on ``surface``, the scaffold's, where Ionic letterboxed it in black (ux.md §6.2).
+sits on `surface`, the scaffold's, where Ionic letterboxed it in black (ux.md §6.2).
 
 A tap selects its booth without zooming: a see-through amber fill and a dark outline,
-both theme tokens that high contrast changes (``Tokens.booth_fill``, ``booth_outline``;
+both theme tokens that high contrast changes (`Tokens.booth_fill`, `booth_outline`;
 3 dp there), which pulse twice (D-34), never under reduced motion (D-173). Without
-the feed the booths are there, named by number. ``ViewMemory.expo_booth`` keeps the
-selection for the Expo pane and ``…/plan/expo`` alike, and the Expo pane keeps its zoom
-in ``ViewMemory.map_zooms``, put back once it is laid out (D-312, D-18).
+the feed the booths are there, named by number. `ViewMemory.expo_booth` keeps the
+selection for the Expo pane and `…/plan/expo` alike, and the Expo pane keeps its zoom
+in `ViewMemory.map_zooms`, put back once it is laid out (D-312, D-18).
 
 The booth layer and each booth are memoised components given values only (D-153,
-F150): the selection, the pulse and the zoom live in ``ExpoHall``, above them, so a
+F150): the selection, the pulse and the zoom live in `ExpoHall`, above them, so a
 change of selection re-renders two booths, a pulse one, and a zoom none.
 
-The selected booth's card (``screens/booth_card.py``, #403) sits at the bottom of the
-``Stack`` with the zoom buttons above it, so both stay in reach; its Close clears the
-selection. A booth picked from the List or a ``?booth=`` link (``reveal``) is brought
-into view above its card once that is measured (``screens/expo_camera.py``, D-377).
+The selected booth's card (`screens/booth_card.py`, #403) sits at the bottom of the
+`Stack` with the zoom buttons above it, so both stay in reach; its Close clears the
+selection. A booth picked from the List or a `?booth=` link (`reveal`) is brought
+into view above its card once that is measured (`screens/expo_camera.py`, D-377).
 """
 
 import asyncio
@@ -47,7 +47,7 @@ from pycon_us.ui.zoom_geometry import Size, Transform
 from pycon_us.year_map import EXPO_PLAN, Booth, Plan
 
 SCREEN = "expo"
-"""The screen's name in its semantics identifiers: ``expo.booth.613`` (decisions §M)."""
+"""The screen's name in its semantics identifiers: `expo.booth.613` (decisions §M)."""
 
 FILL_OPACITY = 0.55
 """How much of the amber covers a selected booth: its printed name still shows."""
@@ -74,7 +74,7 @@ PULSE_MS = 300
 """Each half of a pulse, up or back (ux.md §3.8's range)."""
 
 type OnSelect = Callable[[str], None]
-"""Selects the booth of a number: ``ExpoHall``'s one handler for every booth."""
+"""Selects the booth of a number: `ExpoHall`'s one handler for every booth."""
 
 
 def booth_phrase(item: ExpoBooth) -> str:
@@ -97,11 +97,11 @@ def booth_phrase(item: ExpoBooth) -> str:
 
 
 def booth_box(booth: Booth, shown: Size) -> tuple[float, float, float, float]:
-    """Return a booth's ``left``, ``top``, ``width`` and ``height`` on the fitted plan.
+    """Return a booth's `left`, `top`, `width` and `height` on the fitted plan.
 
     Args:
         booth: The booth, its rectangle in ratios of the plan.
-        shown: The plan's fitted size (``ui.zoom_geometry.fitted()``).
+        shown: The plan's fitted size (`ui.zoom_geometry.fitted()`).
     """
     width, height = shown
     return booth.x * width, booth.y * height, booth.w * width, booth.h * height
@@ -114,7 +114,7 @@ def placed_booths(
 
     Args:
         data: The processed feed, or None before the first fetch.
-        booths: The year's booths (``MapData.booths``).
+        booths: The year's booths (`MapData.booths`).
     """
     if data is not None:
         return expo_booths(data, booths).booths
@@ -138,10 +138,10 @@ def booth_spot(
         item: The booth and its exhibitors.
         shown: The plan's fitted size.
         tokens: The scheme's tokens: a memoised component reads no context (F150).
-        on_select: ``ExpoHall``'s handler, the same function on every render.
+        on_select: `ExpoHall`'s handler, the same function on every render.
         selected: Whether it is the selected booth.
         flash: Whether its fill is at the top of a pulse.
-        pulse_ms: How long its fill takes to change (``prefs.motion_ms()``).
+        pulse_ms: How long its fill takes to change (`prefs.motion_ms()`).
     """
     # ft.component's typing (its ParamSpec) leaves out the key= its wrapper takes.
     return _BoothSpot(
@@ -168,7 +168,7 @@ def _BoothSpot(
     flash: bool,
     pulse_ms: int,
 ) -> ft.Control:
-    """The body of ``booth_spot()``: it runs only when its props change (F34)."""
+    """The body of `booth_spot()`: it runs only when its props change (F34)."""
     number = item.booth.number
     left, top, width, height = booth_box(item.booth, shown)
 
@@ -229,7 +229,7 @@ def BoothLayer(
         booths: The booths with their exhibitors, the same tuple for the same feed.
         shown: The plan's fitted size.
         tokens: The scheme's tokens.
-        on_select: ``ExpoHall``'s handler.
+        on_select: `ExpoHall`'s handler.
         selected: The selected booth's number; empty for none.
         flash: Whether the selected booth is at the top of a pulse.
         pulse_ms: How long a booth's fill takes to change.
@@ -265,10 +265,10 @@ def expo_label(plan: Plan) -> str:
 def ExpoHall(zoom_key: str = "", reveal: str = "") -> ft.Control:
     """The expo plan with its booths: tap one to select it (EXPO-01, ux.md §6.2).
 
-    The year must have booths, so it has the expo plan (``check_map()``).
+    The year must have booths, so it has the expo plan (`check_map()`).
 
     Args:
-        zoom_key: The pane's slug, under which ``ViewMemory.map_zooms`` keeps its
+        zoom_key: The pane's slug, under which `ViewMemory.map_zooms` keeps its
             zoom; empty for a View that keeps it only while it is open.
         reveal: The number of a booth picked elsewhere, to bring into view when it
             is still the selected one (D-377); empty for none.

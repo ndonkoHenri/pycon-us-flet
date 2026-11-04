@@ -1,37 +1,37 @@
-"""The Lead scanner (``/more/staff/lead``): the shared scan screen, capturing leads.
+"""The Lead scanner (`/more/staff/lead`): the shared scan screen, capturing leads.
 
-The first mount of ``ui/scan_screen.py``'s ``ScanScreen`` (LEAD-01, LEAD-09, LEAD-14;
+The first mount of `ui/scan_screen.py`'s `ScanScreen` (LEAD-01, LEAD-09, LEAD-14;
 D-416). It re-checks its rule on every render (architecture §12.4): an account
-without ``lead_retrieval`` or ``door_check``, a signed-out session or no mock URL
+without `lead_retrieval` or `door_check`, a signed-out session or no mock URL
 (D-51) sees "Not available for this account", so a deep link cannot bypass it. It is
-mounted at ``/now/staff/lead`` too, for Now's Scan badges card, and records itself as
+mounted at `/now/staff/lead` too, for Now's Scan badges card, and records itself as
 the last tool opened, which that card opens next (D-421).
 
-Past the rule, the account's consent (``SCANNER_CONSENT``, LEAD-04) is read from
-storage as the scanner opens, and until it is given ``lead_consent.py``'s page shows
+Past the rule, the account's consent (`SCANNER_CONSENT`, LEAD-04) is read from
+storage as the scanner opens, and until it is given `lead_consent.py`'s page shows
 instead (D-423): the scan screen is not mounted, so a HID scanner's typing goes
-nowhere. A badge scanned is captured through the outbox (``lead_capture.capture()``,
+nowhere. A badge scanned is captured through the outbox (`lead_capture.capture()`,
 D-426): queued, sent by the sync worker, and the row's state read back as the result,
 for the sponsor chosen when it was scanned (STORE-11).
 
-Staff who scan for a sponsor (``scans_for_sponsor()``, LEAD-05, LEAD-06) choose it on
-``lead_sponsor.py``'s picker, pushed at ``…/staff/lead/sponsor``. The choice
-(``staff_sponsor()``) is read with the consent, and again whenever the location changes,
+Staff who scan for a sponsor (`scans_for_sponsor()`, LEAD-05, LEAD-06) choose it on
+`lead_sponsor.py`'s picker, pushed at `…/staff/lead/sponsor`. The choice
+(`staff_sponsor()`) is read with the consent, and again whenever the location changes,
 so it is current when the picker goes back (D-425); scanning waits for that read
 ("Checking the sponsor…"), so no row takes the old one (#873). With none, the picker
 opens by itself once, and the scan screen is paused ("Choose a sponsor to start
 scanning") with a "Choose sponsor" button; with one, a "For: Example Corp" chip
-(``lead.sponsor_chip``) heads the screen and opens the picker. A sponsor's own account
+(`lead.sponsor_chip`) heads the screen and opens the picker. A sponsor's own account
 sees none of these.
 
-After a capture (or a queued scan) the result has "Add note" (``lead.add_note``), and
-after a duplicate "Open lead" (``lead.open_lead``): both open ``ui/lead_note_sheet.py``'s
+After a capture (or a queued scan) the result has "Add note" (`lead.add_note`), and
+after a duplicate "Open lead" (`lead.open_lead`): both open `ui/lead_note_sheet.py`'s
 sheet for that lead, the sponsor it was scanned for whatever is chosen since (D-459),
 prefilled with its saved note (#742, LEAD-10). Scanning is paused while it is open
 ("Paused while the note is open"), and the focus goes back to the field when it closes.
 
-Under the field, "Leads (42)" (``lead.leads``, the account's lead rows, read again as
-the outbox changes) pushes ``staff_leads.py``'s list at ``…/staff/lead/leads`` (#743,
+Under the field, "Leads (42)" (`lead.leads`, the account's lead rows, read again as
+the outbox changes) pushes `staff_leads.py`'s list at `…/staff/lead/leads` (#743,
 D-428): a page of its own rather than a tab, so this screen stays as the four tools
 share it and a HID scanner never types into the list's search.
 """
@@ -81,11 +81,11 @@ OPEN_LEAD = "Open lead"
 
 @dataclass(frozen=True)
 class Read:
-    """The staff keys as ``LeadTool`` last read them.
+    """The staff keys as `LeadTool` last read them.
 
     Attributes:
         owner: The account they were read for; another's never stand (D-423).
-        arrival: ``LeadTool``'s token for the location they were read at; another's
+        arrival: `LeadTool`'s token for the location they were read at; another's
             means a new read is on its way (D-425).
         consent: Whether it agreed to scan only with consent.
         sponsor: The sponsor it scans for, or None (staff only, LEAD-05).
@@ -113,7 +113,7 @@ def LeadScanner() -> ft.Control:
 
 @ft.component
 def LeadTool(*, owner: str, for_sponsor: bool) -> ft.Control:
-    """The scan screen once ``owner`` has consented; else the consent page (LEAD-04).
+    """The scan screen once `owner` has consented; else the consent page (LEAD-04).
 
     The answer counts only for the owner it was read for: another account's never
     stands for this one's, even for a render (D-423). Until it is read, an empty page
@@ -122,8 +122,8 @@ def LeadTool(*, owner: str, for_sponsor: bool) -> ft.Control:
     a consent kept for the session after a failed save stays given.
 
     Args:
-        owner: The signed-in account (``Account.owner``).
-        for_sponsor: It scans for a sponsor it chooses (``scans_for_sponsor()``).
+        owner: The signed-in account (`Account.owner`).
+        for_sponsor: It scans for a sponsor it chooses (`scans_for_sponsor()`).
     """
     page = ft.context.page
     view_path = ft.use_view_path()
@@ -219,7 +219,7 @@ def sponsor_chip(sponsor: LeadSponsor, on_click: ft.ControlEventHandler) -> ft.C
     """Return the "For: Example Corp" chip that heads the scan screen (LEAD-06).
 
     One node, a button read "Scanning for Example Corp, change sponsor"; it opens the
-    picker (``context_chip()``, whose text wraps at 200 %).
+    picker (`context_chip()`, whose text wraps at 200 %).
 
     Args:
         sponsor: The sponsor chosen.
@@ -296,7 +296,7 @@ def lead_actions(shown: Shown, open_note: OpenNote) -> list[ft.Control]:
 
 
 def given(last: Read | None, owner: str) -> bool:
-    """Whether ``owner``'s consent was given in this visit, kept after a failed save.
+    """Whether `owner`'s consent was given in this visit, kept after a failed save.
 
     Args:
         last: The keys as last read, or None.

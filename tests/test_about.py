@@ -1,6 +1,6 @@
-"""Tests for About PyCon US (``screens/about.py``; #414, INFO-02, INFO-05, D-28).
+"""Tests for About PyCon US (`screens/about.py`; #414, INFO-02, INFO-05, D-28).
 
-The page runs in a real Flet session (``tests/sessions.py``) over the bundled year data,
+The page runs in a real Flet session (`tests/sessions.py`) over the bundled year data,
 with and without a feed; the band's colours are checked against every scheme. How it
 looks, wraps at 200 % and reads to screen readers is checked on devices (the PR).
 """
@@ -35,7 +35,7 @@ async def show(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> AsyncIterator
         async def render(
             *, year: int = 2026, feed: int | None = 2026, theme: Appearance = "light"
         ) -> Shown:
-            """Render the page with ``year``'s data, ``feed``'s feed and a theme."""
+            """Render the page with `year`'s data, `feed`'s feed and a theme."""
             conference = (
                 Conference()
                 if feed is None
@@ -82,7 +82,7 @@ async def test_a_2025_year_shows_2025_s_dates_and_city(show: Show) -> None:
 
 
 async def test_the_feed_s_about_text_shows_as_markdown(show: Show) -> None:
-    """The feed's ``about`` block is the page's text, as selectable Markdown."""
+    """The feed's `about` block is the page's text, as selectable Markdown."""
     page = await show()
     (text,) = page.find(ft.Markdown)
     assert "largest annual gathering" in str(text.value)
@@ -144,7 +144,7 @@ async def test_the_website_row_says_it_opens_in_the_browser_and_does(
 async def test_the_band_is_the_brand_indigo_with_its_ink_in_each_scheme(
     show: Show, theme: Appearance, fill: ft.Colors, ink: ft.Colors
 ) -> None:
-    """The band takes the indigo's roles: ``primary`` in light, its container in dark."""
+    """The band takes the indigo's roles: `primary` in light, its container in dark."""
     card = card_of(await show(theme=theme))
     assert card.bgcolor == fill
     column = cast(ft.Column, card.content)
@@ -152,7 +152,7 @@ async def test_the_band_is_the_brand_indigo_with_its_ink_in_each_scheme(
 
 
 def role(scheme: ft.ColorScheme, name: ft.Colors) -> str:
-    """The hex a scheme gives a colour role, e.g. ``primary_container``."""
+    """The hex a scheme gives a colour role, e.g. `primary_container`."""
     return cast(str, getattr(scheme, name.name.lower()))
 
 

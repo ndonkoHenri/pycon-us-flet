@@ -1,9 +1,9 @@
-"""Tests for the status strip: ``StatusStrip``'s line, layout and refreshes (D-200).
+"""Tests for the status strip: `StatusStrip`'s line, layout and refreshes (D-200).
 
-The strip's body runs outside a renderer, with the fixtures of ``tests/strip.py`` and
-``tests/chrome.py``: the hooks it calls (``ft.use_effect``, ``ft.use_state`` and the
-store hooks) are replaced by ``Hooks``, and a fake page is bound as Flet binds a
-session's page. Its minute tick is ``test_status_strip_ticks.py``'s. What the strip
+The strip's body runs outside a renderer, with the fixtures of `tests/strip.py` and
+`tests/chrome.py`: the hooks it calls (`ft.use_effect`, `ft.use_state` and the
+store hooks) are replaced by `Hooks`, and a fake page is bound as Flet binds a
+session's page. Its minute tick is `test_status_strip_ticks.py`'s. What the strip
 looks like at 200 % text is checked on devices (#76's, #87's and #195's PRs).
 """
 
@@ -88,7 +88,7 @@ def test_the_schedule_line_names_the_source_and_its_age() -> None:
 def test_the_schedule_line_counts_the_age_to_the_clock_the_app_reads(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """Without a ``now`` the age runs to ``clock.now()``, which a fake clock moves."""
+    """Without a `now` the age runs to `clock.now()`, which a fake clock moves."""
     monkeypatch.setattr(clock, "now", lambda: FETCHED + timedelta(days=2))
     assert schedule_line("network", FETCHED) == "From the feed, updated 2 days ago"
 

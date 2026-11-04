@@ -1,9 +1,9 @@
 """Host checks for the S4 route table: per-level params, Back targets and depths.
 
-Run from this folder with ``uv run python check_routes.py``. It matches locations
-with the Router's own matcher (``flet.components.router._match_routes``, internal,
-used here only as evidence) against the reproducer's ``ROUTES``, and checks the
-pure helpers in ``src/routes.py``. Exits non-zero on the first failure.
+Run from this folder with `uv run python check_routes.py`. It matches locations
+with the Router's own matcher (`flet.components.router._match_routes`, internal,
+used here only as evidence) against the reproducer's `ROUTES`, and checks the
+pure helpers in `src/routes.py`. Exits non-zero on the first failure.
 """
 
 import sys

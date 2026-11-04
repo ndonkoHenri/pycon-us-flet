@@ -49,7 +49,7 @@ class S6Reminders(ft.Service):
         return await self._invoke_method("request_permission")
 
     async def permission_status(self) -> dict[str, bool | None]:
-        """Return ``enabled`` (notifications) and ``exact`` (Android exact alarms)."""
+        """Return `enabled` (notifications) and `exact` (Android exact alarms)."""
         return await self._invoke_method("permission_status")
 
     async def request_exact(self) -> bool | None:
@@ -66,11 +66,11 @@ class S6Reminders(ft.Service):
         payload: str | None = None,
         exact: bool = False,
     ) -> str | None:
-        """Show a notification at the aware instant ``at``, even with the app closed.
+        """Show a notification at the aware instant `at`, even with the app closed.
 
         Returns:
             None when scheduled, else the platform error code (for example
-            ``exact_alarms_not_permitted``).
+            `exact_alarms_not_permitted`).
         """
         if at.tzinfo is None:
             raise ValueError("at must be timezone-aware")

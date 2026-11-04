@@ -1,6 +1,6 @@
-"""Tests for the conference moments (``year_moments.py``; #381, D-274, NOTIF-05).
+"""Tests for the conference moments (`year_moments.py`; #381, D-274, NOTIF-05).
 
-The sign-up moments are ``content.toml`` entries, written by hand with their public
+The sign-up moments are `content.toml` entries, written by hand with their public
 source; the keynotes' and panels' are derived from the feed, 15 minutes before each
 starts, so a keynote the feed moves takes its moment along.
 """
@@ -43,14 +43,14 @@ def data_dir(tmp_path: Path) -> Path:
 
 
 def edit(path: Path, old: str, new: str) -> None:
-    """Replace the first ``old`` in ``path`` with ``new``; ``old`` must be there."""
+    """Replace the first `old` in `path` with `new`; `old` must be there."""
     text = path.read_text(encoding="utf-8")
     assert old in text, f"{old!r} not in {path.name}"
     path.write_text(text.replace(old, new, 1), encoding="utf-8")
 
 
 def derived(year: int, *, use_24h: bool = False) -> tuple[EventReminder, ...]:
-    """The keynote moments of ``year``'s recorded feed and year data."""
+    """The keynote moments of `year`'s recorded feed and year data."""
     data = load_year(year)
     return keynote_moments(
         processed(year), data.content.keynotes, data.conference.zone, use_24h=use_24h

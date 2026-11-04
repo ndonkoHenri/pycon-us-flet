@@ -1,6 +1,6 @@
-"""``ui/hooks.py``'s two hooks, in a real Flet session (#909).
+"""`ui/hooks.py`'s two hooks, in a real Flet session (#909).
 
-A coroutine effect needs neither: ``tests/test_flet_effects.py`` pins that Flet cancels
+A coroutine effect needs neither: `tests/test_flet_effects.py` pins that Flet cancels
 it on unmount and that a state setter called after the unmount renders nothing.
 """
 
@@ -29,7 +29,7 @@ async def test_use_mounted_holds_true_until_the_unmount() -> None:
 
     @ft.component
     def Root() -> ft.Control:
-        """Return the child while ``shown`` is 1, else an empty column."""
+        """Return the child while `shown` is 1, else an empty column."""
         shown, set_shown = ft.use_state(1)
         setters["root"] = set_shown
         return ft.Column([Child()] if shown else [])

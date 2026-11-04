@@ -1,13 +1,13 @@
 """What changed between two processed feeds: the change log's diff (D-47, NEW-04).
 
-``diff(old, new)`` compares the sessions of two feeds by id (D-42) and says what an
+`diff(old, new)` compares the sessions of two feeds by id (D-42) and says what an
 attendee would notice: a session added or removed, or one whose time, room or title
 changed. It reads only what each side's model holds, so it is pure, and both sides are
 always parsed by the current code from raw bytes (the cache keeps them, D-47): a change of
 the parser can never show up as a change of the schedule.
 
-Sessions of the collapsed kinds (``rules.COLLAPSED_KINDS``) are left out. A collapsed
-break or poster row's id holds its start (``<kind>-<room>-<start>``, D-123), so a moved
+Sessions of the collapsed kinds (`rules.COLLAPSED_KINDS`) are left out. A collapsed
+break or poster row's id holds its start (`<kind>-<room>-<start>`, D-123), so a moved
 break would read as one removed and one added. Poster details copy their Posters row's
 time and place and have no row of their own (DATA-07), so a moved Posters row would read
 as all of them changed at once, and a missing one as all of them removed.
@@ -54,11 +54,11 @@ class Listing:
     dropped it (D-255).
 
     Attributes:
-        title: The cleaned name (``Session.name``).
-        start: The start a row shows (``Session.display_start``). It moves with
-            ``Session.start``; the Job Fair's is 30 minutes earlier (DATA-11).
+        title: The cleaned name (`Session.name`).
+        start: The start a row shows (`Session.display_start`). It moves with
+            `Session.start`; the Job Fair's is 30 minutes earlier (DATA-11).
         end: The end.
-        location: The room text; several rooms are joined by ", " (``Session.location``).
+        location: The room text; several rooms are joined by ", " (`Session.location`).
     """
 
     title: str
@@ -97,7 +97,7 @@ class Change:
 
 
 def _listing(session: Session) -> Listing:
-    """Return what the diff compares of ``session``.
+    """Return what the diff compares of `session`.
 
     Args:
         session: A session of either feed.
@@ -111,13 +111,13 @@ def _listing(session: Session) -> Listing:
 
 
 def diff(old: ConferenceData, new: ConferenceData) -> list[Change]:
-    """Return what changed from ``old`` to ``new``, session by session.
+    """Return what changed from `old` to `new`, session by session.
 
-    Sessions are matched by id. A session only in ``new`` is added, one only in ``old``
+    Sessions are matched by id. A session only in `new` is added, one only in `old`
     removed; one in both gives a change for each of its time (shown start or end),
     location and title that differ. Breaks, Posters rows and posters are left out (see
     the module's docstring). The changes are ordered by the session's new start (the old
-    one for a removal), then id, then kind (``ChangeKind``'s order), so the same two feeds
+    one for a removal), then id, then kind (`ChangeKind`'s order), so the same two feeds
     always give the same list. Ids compare as text, not numbers: "1142" comes before
     "142", and "142" before "51". The same feed on both sides gives an empty list.
 

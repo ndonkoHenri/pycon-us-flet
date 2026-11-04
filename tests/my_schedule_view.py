@@ -1,14 +1,14 @@
 """My schedule's saved sessions, times and harness, for its three test modules (#312).
 
-``test_my_schedule.py`` (the agenda and its overlaps), ``test_my_schedule_ended.py``
-(what has ended, removal and Undo) and ``test_my_schedule_states.py`` (the states and
+`test_my_schedule.py` (the agenda and its overlaps), `test_my_schedule_ended.py`
+(what has ended, removal and Undo) and `test_my_schedule_states.py` (the states and
 the dropped sessions' notice) run the screen in a real Flet session
-(``tests/harness.py``'s ``showing()``), as the rows do in ``test_session_rows.py``: the
+(`tests/harness.py`'s `showing()`), as the rows do in `test_session_rows.py`: the
 store providers above it, a star tap as a dispatched click, Flet's own scheduler
-re-rendering what changed. ``AppScaffold`` is the harness's stand-in and the status
+re-rendering what changed. `AppScaffold` is the harness's stand-in and the status
 strip a placeholder (both have their own tests), and the minute tick is a hook the test
-moves by hand, with ``clock.now()`` fixed. A module takes the fixtures by assigning them
-to its own names, as ``docs/testing-and-quality.md`` §3.1 says.
+moves by hand, with `clock.now()` fixed. A module takes the fixtures by assigning them
+to its own names, as `docs/testing-and-quality.md` §3.1 says.
 """
 
 from collections.abc import AsyncIterator, Callable, Iterator
@@ -79,24 +79,24 @@ NBSP = "\N{NO-BREAK SPACE}"
 
 
 def name(session_id: str) -> str:
-    """The name of session ``session_id`` in the 2026 feed."""
+    """The name of session `session_id` in the 2026 feed."""
     return processed(2026).sessions[session_id].name
 
 
 @dataclass
 class Shown(harness.Shown):
-    """The harness's ``Shown`` (``tests/harness.py``) on My schedule."""
+    """The harness's `Shown` (`tests/harness.py`) on My schedule."""
 
     strips: list[dict[str, Any]] = field(default_factory=list)
-    """The arguments of each ``StatusStrip`` the screen placed."""
+    """The arguments of each `StatusStrip` the screen placed."""
     slots: list[str] = field(default_factory=list)
     """The slots day sections built, by gutter label: a day body builds each of its."""
     minutes: list[Callable[[int], None]] = field(default_factory=list)
-    """The minute hook's setter on each render: ``tick()`` calls the last one."""
+    """The minute hook's setter on each render: `tick()` calls the last one."""
 
     @property
     def prefs_service(self) -> MemoryPrefs:
-        """The ``MemoryPrefs`` behind the session's storage."""
+        """The `MemoryPrefs` behind the session's storage."""
         return cast(MemoryPrefs, self.storage.prefs)
 
     @property
@@ -109,7 +109,7 @@ class Shown(harness.Shown):
         self.minutes[-1](len(self.minutes))
 
     def phrase(self, session_id: str) -> str:
-        """The spoken phrase of the row of ``session_id``: its node's label."""
+        """The spoken phrase of the row of `session_id`: its node's label."""
         return str(self.node(f"my_schedule.session.{session_id}").label)
 
     def shown(self) -> list[str]:
@@ -134,7 +134,7 @@ class Shown(harness.Shown):
         ]
 
     def fold(self, identifier: str) -> Fold:
-        """The ``FoldTile`` whose header is ``my_schedule.<identifier>``."""
+        """The `FoldTile` whose header is `my_schedule.<identifier>`."""
         return fold_named(self.controls, f"my_schedule.{identifier}")
 
     def folded(self, identifier: str) -> list[str]:
@@ -147,18 +147,18 @@ class Shown(harness.Shown):
         ]
 
     def root(self) -> ft.ListView:
-        """The screen's one ``ListView``."""
+        """The screen's one `ListView`."""
         (found,) = self.find(ft.ListView)
         return found
 
     async def tap_star(self, session_id: str) -> None:
-        """Click the star of the row of ``session_id``."""
+        """Click the star of the row of `session_id`."""
         star = self.node(f"my_schedule.favorite.{session_id}").content
         assert isinstance(star, ft.IconButton)
         await self.click(star)
 
     async def toggle_fold(self, identifier: str, expanded: bool) -> None:
-        """Open or close the fold ``identifier`` with a tap on its header."""
+        """Open or close the fold `identifier` with a tap on its header."""
         found = self.fold(identifier)
         assert found.expanded is not expanded
         await self.click(found.header)
@@ -168,10 +168,10 @@ _PARTS = ("content", "leading", "title", "subtitle", "trailing")
 
 
 def _walk(node: Any, *, folds: bool = False) -> Iterator[ft.Control]:
-    """Yield the controls under ``node`` in reading order, through components' bodies.
+    """Yield the controls under `node` in reading order, through components' bodies.
 
-    A component's rendered body is its ``_b`` (Flet's ``Component``, at the D-81
-    pin). A fold's header is yielded, what it holds only if ``folds`` is set.
+    A component's rendered body is its `_b` (Flet's `Component`, at the D-81
+    pin). A fold's header is yielded, what it holds only if `folds` is set.
     """
     if isinstance(node, list):
         for item in node:
@@ -206,7 +206,7 @@ class Setup:
 
 @pytest.fixture
 def setup() -> Setup:
-    """The default ``Setup``, which a test's own fixtures change."""
+    """The default `Setup`, which a test's own fixtures change."""
     return Setup()
 
 
@@ -214,10 +214,10 @@ def setup() -> Setup:
 async def shown(
     setup: Setup, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> AsyncIterator[Shown]:
-    """Show My schedule in a Flet session as ``setup`` says.
+    """Show My schedule in a Flet session as `setup` says.
 
     The day sections' slots, the status strips and the minute hook's setters are
-    recorded on the ``Shown``, and the skeleton is a placeholder.
+    recorded on the `Shown`, and the skeleton is a placeholder.
     """
     if setup.data:
         conference = Conference(data=processed(2026), source="bundled", version=1)

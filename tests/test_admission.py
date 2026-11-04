@@ -1,10 +1,10 @@
-"""Tests for the door's attendee list: ``core/admission.py`` and ``door_inventory.py``.
+"""Tests for the door's attendee list: `core/admission.py` and `door_inventory.py`.
 
-``merge()`` sums quantities per code and product, keeps an attendee's details sticky
-and leaves out malformed rows (DOOR-03, API-05). ``decide()`` reads a scan against the
-list and the account's door rows; ``admitted()`` and ``redeem_errors()`` read a row
-(DOOR-04, STORE-12, D-441). ``load_inventory()`` runs one
-``INVENTORY`` call per product against the mock's own transport, signed with the
+`merge()` sums quantities per code and product, keeps an attendee's details sticky
+and leaves out malformed rows (DOOR-03, API-05). `decide()` reads a scan against the
+list and the account's door rows; `admitted()` and `redeem_errors()` read a row
+(DOOR-04, STORE-12, D-441). `load_inventory()` runs one
+`INVENTORY` call per product against the mock's own transport, signed with the
 seeded staff account's key, and reports each one that finishes; a 404 or a timeout
 fails that product alone (D-120).
 """
@@ -131,7 +131,7 @@ def test_a_malformed_row_is_left_out(row: object) -> None:
 
 @pytest.mark.parametrize("reply", [None, {}, {"id": "MOCK0001"}, "[]"])
 def test_a_reply_that_is_not_a_list_is_refused(reply: object) -> None:
-    """Not the documented list: a ``TypeError``, which fails the product."""
+    """Not the documented list: a `TypeError`, which fails the product."""
     with pytest.raises(TypeError):
         merge(Inventory(), 10, reply)
 
@@ -147,14 +147,14 @@ class Faulty(httpx.AsyncBaseTransport):
         self.inner = mock_transport(state_at())
 
     async def handle_async_request(self, request: httpx.Request) -> httpx.Response:
-        """Raise ``ReadTimeout`` for product 12, else let the mock answer."""
+        """Raise `ReadTimeout` for product 12, else let the mock answer."""
         if request.url.path.endswith("/12/"):
             raise httpx.ReadTimeout("timed out", request=request)
         return await self.inner.handle_async_request(request)
 
 
 def staff_client(transport: httpx.AsyncBaseTransport) -> ApiClient:
-    """A client over ``transport`` signed with the seeded staff account's key."""
+    """A client over `transport` signed with the seeded staff account's key."""
     who = seeded(state_at(), "staff")
     return client_for(transport, Login(who.key, who.secret))
 
@@ -209,7 +209,7 @@ TUTORIALS = merge(merge(Inventory(), 10, [ADA, LINUS]), 11, [GRACE])
 
 
 def door_row(code: str, *products: int, status: Status = Status.PENDING) -> Row:
-    """A door row checking ``code`` in to ``products``, one each, in a status."""
+    """A door row checking `code` in to `products`, one each, in a status."""
     payload: dict[str, object] = {"attendee_access_code": code}
     for product in products:
         payload[f"product-redeem-{product}"] = product
@@ -230,7 +230,7 @@ def door_row(code: str, *products: int, status: Status = Status.PENDING) -> Row:
 
 
 def test_a_code_on_the_list_is_known_with_what_it_bought_of_the_session() -> None:
-    """Linus bought two of product 10: known, ``((10, 2),)``; not already."""
+    """Linus bought two of product 10: known, `((10, 2),)`; not already."""
     assert decide(TUTORIALS, "MOCK0003", (10, 11), []) == Admission(
         True, ((10, 2),), False
     )
@@ -255,7 +255,7 @@ def test_another_code_s_or_kind_s_rows_never_make_it_already() -> None:
 
 
 def test_admitted_reads_a_row_s_products_from_its_payload() -> None:
-    """Every ``product-redeem-<id>`` key, and no quantity key."""
+    """Every `product-redeem-<id>` key, and no quantity key."""
     assert admitted(door_row("MOCK0001", 10, 11)) == {10, 11}
 
 

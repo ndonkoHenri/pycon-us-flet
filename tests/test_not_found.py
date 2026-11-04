@@ -1,12 +1,12 @@
-"""Tests for ``NotFound``, the View of an unknown location (#83, #385; D-270).
+"""Tests for `NotFound`, the View of an unknown location (#83, #385; D-270).
 
-The details' own not-found states are tested with their screens (``test_session_actions.py``,
-#90; ``test_room.py``, #101; ``test_speaker.py``, #99; ``test_tracks.py``, #102).
-``AppScaffold``'s Back rules for it are tested in ``test_scaffold.py``, and that the
+The details' own not-found states are tested with their screens (`test_session_actions.py`,
+#90; `test_room.py`, #101; `test_speaker.py`, #99; `test_tracks.py`, #102).
+`AppScaffold`'s Back rules for it are tested in `test_scaffold.py`, and that the
 table's catch-all reaches it only for a location nothing else matches in
-``test_routes.py``.
+`test_routes.py`.
 
-It runs outside a renderer, with ``tests/chrome.py``'s hooks and fake page. Every
+It runs outside a renderer, with `tests/chrome.py`'s hooks and fake page. Every
 empty state names a way out (ux.md §4.6): for a location the app does not have, Now.
 """
 
@@ -34,14 +34,14 @@ year, svc, page, conference, hooks = (
 
 
 def not_found_at(hooks: Hooks, page: FakePage, location: str) -> ft.View:
-    """Build ``NotFound``'s View as the Router does for an unknown location."""
+    """Build `NotFound`'s View as the Router does for an unknown location."""
     hooks.view_path = location
     page.route = location
     return inspect.unwrap(routes.NotFound)()
 
 
 def tap(button: ft.FilledTonalButton) -> None:
-    """Call a button's ``on_click``, as a tap does."""
+    """Call a button's `on_click`, as a tap does."""
     assert button.on_click is not None
     cast(Callable[[], None], button.on_click)()
 

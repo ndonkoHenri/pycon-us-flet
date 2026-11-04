@@ -1,6 +1,6 @@
 """Keep a mock on this checkout's own port, past the command that starts it.
 
-Usage, from the checkout's root::
+Usage, from the checkout's root:
 
     uv run python -m tools.mock_api.own start [server options, e.g. --fault lost_response]
     uv run python -m tools.mock_api.own url android|ios
@@ -8,8 +8,8 @@ Usage, from the checkout's root::
 
 The default port 8000 is everyone's, so a parallel agent's flows would land on someone
 else's mock. Here the port comes from the checkout's path, and stays until the checkout
-goes. A second ``start`` keeps the running mock and its state; ``stop`` then ``start`` is
-a clean slate (``docs/development.md`` §6).
+goes. A second `start` keeps the running mock and its state; `stop` then `start` is
+a clean slate (`docs/development.md` §6).
 """
 
 import argparse
@@ -58,7 +58,7 @@ def free_port(root: Path) -> int:
 
 
 def url(port: int, platform: str) -> str:
-    """Return ``MOCK_URL`` for a device on this machine: an emulator reaches it differently."""
+    """Return `MOCK_URL` for a device on this machine: an emulator reaches it differently."""
     return f"http://{EMULATOR_HOST if platform == 'android' else 'localhost'}:{port}"
 
 
@@ -77,7 +77,7 @@ def start(state: Path, options: list[str]) -> int:
 
     Args:
         state: The folder for its pid and log.
-        options: Passed to ``tools.mock_api.server`` when it starts here; a running mock
+        options: Passed to `tools.mock_api.server` when it starts here; a running mock
             keeps the options it has, and this says so.
     """
     alive = running(state)

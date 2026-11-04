@@ -2,7 +2,7 @@
 
 D-306; THEME-06; ux.md §3.2, §3.3, §9. HC has one surface, so each part that a tint
 set apart from the page (the bars, the selected pill, chips, fields, bands, notes,
-frames and circles) takes a line in ``outline`` there, and keeps its fill elsewhere.
+frames and circles) takes a line in `outline` there, and keeps its fill elsewhere.
 The status strip's lines are tested with the strip, the skeleton's with the skeleton.
 """
 
@@ -80,7 +80,7 @@ def never(*_: object) -> None:
 def test_hc_rings_the_selected_pill_at_3_to_1_on_every_tab(
     dark: bool, bar: str
 ) -> None:
-    """The bar's and the rail's selected pill has a 2 dp ring in ``outline``.
+    """The bar's and the rail's selected pill has a 2 dp ring in `outline`.
 
     A non-text cue at 3:1 or more on the surface for every destination, More's too,
     whose icon has no filled form; the colour is a hex, as a component theme resolves
@@ -107,7 +107,7 @@ def test_the_pill_alone_is_below_3_to_1_in_hc(dark: bool) -> None:
 
 @pytest.mark.parametrize("dark", [False, True], ids=SCHEMES)
 def test_hc_outlines_every_chip_selected_or_not(dark: bool) -> None:
-    """Every chip has a 1 dp ``outline`` border in HC; the selected fill is 1.2:1."""
+    """Every chip has a 1 dp `outline` border in HC; the selected fill is 1.2:1."""
     built = hc_theme(dark)
     assert built.chip_theme is not None and built.chip_theme.border_side is not None
     side = built.chip_theme.border_side
@@ -132,7 +132,7 @@ def test_standard_themes_keep_material_s_pill_and_chips(dark: bool) -> None:
 def test_in_hc_a_line_separates_the_app_bar_from_the_page(
     hooks: Hooks, page: FakePage, tokens: Tokens, location: str
 ) -> None:
-    """In HC a View's body opens with a 1 dp ``outline`` line, right under its bar.
+    """In HC a View's body opens with a 1 dp `outline` line, right under its bar.
 
     The bar keeps the page's colour when a list scrolls under it there (D-306).
     """
@@ -178,7 +178,7 @@ async def test_a_contrast_change_keeps_the_body_mounted(
 
     @ft.component
     def Passthrough(body: ft.Control) -> ft.Control:
-        """``Shown`` without its content line."""
+        """`Shown` without its content line."""
         return body
 
     @ft.component
@@ -212,7 +212,7 @@ async def test_a_contrast_change_keeps_the_body_mounted(
 
 
 def field_border(high_contrast: bool) -> ft.BorderSide:
-    """Return the side of a ``SearchField``'s pill, with or without HC."""
+    """Return the side of a `SearchField`'s pill, with or without HC."""
     holder = SearchField(
         value="",
         on_change=never,
@@ -233,7 +233,7 @@ def field_border(high_contrast: bool) -> ft.BorderSide:
 
 
 def test_in_hc_a_search_field_is_ringed_in_outline() -> None:
-    """In HC the field's pill has a 1 dp ``outline`` ring, focused or not."""
+    """In HC the field's pill has a 1 dp `outline` ring, focused or not."""
     side = field_border(True)
     assert (side.width, side.color) == (1, ft.Colors.OUTLINE)
 
@@ -244,7 +244,7 @@ def test_outside_hc_a_search_field_has_no_line() -> None:
 
 
 def test_hc_border_is_a_1_dp_outline_only_in_hc() -> None:
-    """Notes, frames and notice tiles take ``hc_border()``: 1 dp in HC, else none."""
+    """Notes, frames and notice tiles take `hc_border()`: 1 dp in HC, else none."""
     assert hc_border(True) == ft.Border.all(1, ft.Colors.OUTLINE)
     assert hc_border(False) is None
 
@@ -304,7 +304,7 @@ def test_now_s_header_icon_takes_the_ink_in_hc(
 ) -> None:
     """The header's icon is gold on the indigo, the header's ink in HC (D-306).
 
-    The gold was 1.03:1 on HC dark's yellow ``primary``.
+    The gold was 1.03:1 on HC dark's yellow `primary`.
     """
     copy = HeaderCopy(Season.CONFERENCE, "Day 3 of 5 · Friday", "Long Beach")
     header = StatusHeader("PyCon US 2026", copy, dark=dark, high_contrast=high_contrast)
@@ -313,13 +313,13 @@ def test_now_s_header_icon_takes_the_ink_in_hc(
 
 
 def test_gold_all_but_disappears_on_hc_dark_s_yellow() -> None:
-    """Why the HC rule: gold on HC dark's ``primary`` is under 3:1."""
+    """Why the HC rule: gold on HC dark's `primary` is under 3:1."""
     assert contrast_ratio(GOLD, "#FFD60A") < NON_TEXT
 
 
 @pytest.mark.parametrize("high_contrast", [False, True], ids=["standard", "hc"])
 def test_the_filter_sheet_is_outlined_only_in_hc(high_contrast: bool) -> None:
-    """In HC the sheet has a 1 dp ``outline`` edge with M3's 28 dp top corners."""
+    """In HC the sheet has a 1 dp `outline` edge with M3's 28 dp top corners."""
     sheet = filter_sheet(
         INFO,
         (),
@@ -344,7 +344,7 @@ def test_the_filter_sheet_is_outlined_only_in_hc(high_contrast: bool) -> None:
 
 @pytest.mark.parametrize("lines", [False, True])
 def test_a_fold_keeps_material_s_lines_only_when_asked(lines: bool) -> None:
-    """With ``lines`` an open fold draws a line above and below it, in ``outline``."""
+    """With `lines` an open fold draws a line above and below it, in `outline`."""
     line = ft.BorderSide(1, ft.Colors.OUTLINE)
     for expanded in (False, True):
         fold = FoldTile(

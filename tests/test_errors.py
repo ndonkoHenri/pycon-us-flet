@@ -1,9 +1,9 @@
 """Tests for the last-resort error net (D-71).
 
-``report_errors`` is checked on sync and async callables against a fake page bound as
+`report_errors` is checked on sync and async callables against a fake page bound as
 Flet binds a session's page to a handler's context; that Flet then keeps the session
 alive is checked on devices (the PR). The logging setup (D-72) is
-``test_errors_logging.py``'s.
+`test_errors_logging.py`'s.
 """
 
 import ast
@@ -28,7 +28,7 @@ from tests.fake_page import FakePage, bound
 
 @pytest.fixture
 def page() -> Iterator[FakePage]:
-    """A fake page bound to ``ft.context.page``, as during a handler or an effect."""
+    """A fake page bound to `ft.context.page`, as during a handler or an effect."""
     fake = FakePage()
     with bound(fake):
         yield fake
@@ -51,12 +51,12 @@ def snack_text(page: FakePage) -> str:
 
 
 def fail(event: object) -> None:
-    """A handler that raises ``ValueError("bad value")``."""
+    """A handler that raises `ValueError("bad value")`."""
     raise ValueError("bad value")
 
 
 async def fail_async(event: object) -> None:
-    """An async handler that raises ``ValueError("bad value")`` after a yield."""
+    """An async handler that raises `ValueError("bad value")` after a yield."""
     await asyncio.sleep(0)
     raise ValueError("bad value")
 
@@ -86,7 +86,7 @@ async def test_an_async_handler_that_raises_is_logged_with_its_traceback_and_ret
 ) -> None:
     """A raising async handler returns None and logs an error naming it, with traceback.
 
-    The logged exception is the handler's ``ValueError``.
+    The logged exception is the handler's `ValueError`.
     """
     assert await report_errors(fail_async)(object()) is None
 
@@ -169,7 +169,7 @@ async def test_an_async_handler_that_succeeds_returns_its_value(page: FakePage) 
 async def test_cancelled_error_is_re_raised_and_not_reported(
     page: FakePage, caplog: pytest.LogCaptureFixture
 ) -> None:
-    """A ``CancelledError`` from a handler is raised again, neither shown nor logged."""
+    """A `CancelledError` from a handler is raised again, neither shown nor logged."""
 
     async def cancelled() -> None:
         raise asyncio.CancelledError
@@ -200,7 +200,7 @@ async def test_cancelling_a_wrapped_effect_task_still_cancels_it(
 
 
 def test_base_exceptions_other_than_exception_pass_through(page: FakePage) -> None:
-    """A ``KeyboardInterrupt`` passes through the net, and nothing is shown."""
+    """A `KeyboardInterrupt` passes through the net, and nothing is shown."""
 
     def interrupted() -> None:
         raise KeyboardInterrupt
@@ -213,7 +213,7 @@ def test_base_exceptions_other_than_exception_pass_through(page: FakePage) -> No
 def test_the_wrapper_keeps_what_flet_reads_to_call_a_handler() -> None:
     """The wrapper keeps the handler's async-ness, parameter count, name and doc.
 
-    ``inspect.unwrap`` also finds the handler behind it.
+    `inspect.unwrap` also finds the handler behind it.
     """
 
     async def no_args() -> None:
@@ -236,7 +236,7 @@ def test_the_wrapper_keeps_what_flet_reads_to_call_a_handler() -> None:
 
 
 def test_generator_functions_are_refused_when_wrapped() -> None:
-    """Wrapping a generator or an async generator function raises ``TypeError``."""
+    """Wrapping a generator or an async generator function raises `TypeError`."""
 
     def generator():
         yield
@@ -255,7 +255,7 @@ def test_an_error_with_no_page_to_show_it_on_is_still_logged(
 ) -> None:
     """An error with no page to show it on is logged, then the failure to show it.
 
-    No page is in the context: ``ft.context.page`` raises, as in a replaced session
+    No page is in the context: `ft.context.page` raises, as in a replaced session
     (F30).
     """
     assert report_errors(fail)(object()) is None
@@ -276,14 +276,14 @@ NETTED = [
 ]
 """Modules whose nested functions are all handlers or effect setups (D-163).
 
-``app.py`` is left out on purpose: its nested ``router()`` is a provider's child
+`app.py` is left out on purpose: its nested `router()` is a provider's child
 builder, not a handler, so review checks that module's wrapping instead.
 """
 
 
 @pytest.mark.parametrize("path", NETTED, ids=lambda p: p.name)
 def test_every_handler_and_effect_a_screen_defines_is_wrapped(path: Path) -> None:
-    """Every function nested in another, in a netted module, has ``report_errors``.
+    """Every function nested in another, in a netted module, has `report_errors`.
 
     Screens, the route table and main() define functions only to hand them to Flet as
     handlers or effects, so one without the net would end the session when it raises.

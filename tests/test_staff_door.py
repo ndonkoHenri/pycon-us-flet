@@ -1,13 +1,13 @@
 """Tests for Door check's route and its session picker (#764; DOOR-01, DOOR-02; D-433).
 
-``screens/staff_door.py``'s ``DoorCheck`` and ``screens/door_session.py``'s
-``SessionPicker`` run in a real Flet session (``tests/harness.py``) over the mock's own
+`screens/staff_door.py`'s `DoorCheck` and `screens/door_session.py`'s
+`SessionPicker` run in a real Flet session (`tests/harness.py`) over the mock's own
 transport, signed with the seeded staff account's key, so the catalog is what the mock's
-``handle()`` answers; a switch takes the transport offline. One test's sessions share
+`handle()` answers; a switch takes the transport offline. One test's sessions share
 one SharedPreferences, so a second render is a relaunch. The picker lists the door's
 categories, then a category's sessions by day, saves a tap and goes back; Door check is
 paused until a session is chosen, opens the picker once by itself, then heads the
-screen with the session's chip, and a scan checks in (#766). Only ``door_check``
+screen with the session's chip, and a scan checks in (#766). Only `door_check`
 accounts reach either.
 """
 
@@ -61,7 +61,7 @@ def listing(shown: Shown) -> list[str]:
     found: list[str] = []
 
     def walk(control: object) -> None:
-        """Note the headings and rows under ``control``, depth first."""
+        """Note the headings and rows under `control`, depth first."""
         if isinstance(control, ft.Semantics):
             if control.header:
                 found.append(f"h{control.heading_level} {' '.join(texts(control))}")
@@ -207,7 +207,7 @@ async def test_a_catalog_of_swag_only_says_none_are_available(show: Show) -> Non
 async def test_only_door_staff_reach_door_check_and_its_picker(
     show: Show, view: str, account: Account
 ) -> None:
-    """A ``lead_retrieval``-only account, others and a signed-out session are refused."""
+    """A `lead_retrieval`-only account, others and a signed-out session are refused."""
     shown = await show(view, account)
     assert NOT_AVAILABLE in shown.texts()
     assert not shown.nodes("scan.entry")
@@ -310,12 +310,12 @@ async def test_every_component_keeps_its_hooks_from_reading_to_scanning(
     """Each render runs all its component's hooks, from the read to the chip (D-70).
 
     The stand-in scaffold calls a hook, as the real one does: called from
-    ``DoorTool``'s reading branch only, it would leave a hook unused after the read.
+    `DoorTool`'s reading branch only, it would leave a hook unused after the read.
     """
     stand_in = harness._scaffold
 
     def scaffold(**kwargs: Any) -> ft.Control:
-        """Call a hook, as ``AppScaffold`` does, then stand in for it."""
+        """Call a hook, as `AppScaffold` does, then stand in for it."""
         ft.use_state(0)
         return stand_in(**kwargs)
 

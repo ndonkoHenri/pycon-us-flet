@@ -1,7 +1,7 @@
 """The change log's batches and their JSON form (D-47, D-255; NEW-04).
 
 Batches hold real changes: the diff of a recorded feed and a copy with named edits
-(``tests/feeds.py``), so every kind, both sides and both years' zones go through the file
+(`tests/feeds.py`), so every kind, both sides and both years' zones go through the file
 format the app writes.
 """
 
@@ -47,7 +47,7 @@ NOW = datetime(2026, 5, 16, 17, 42, tzinfo=UTC)
 
 @cache
 def year_changes(year: int) -> tuple[Change, ...]:
-    """Changes of four kinds on ``year``'s recorded feed: added, removed, room and title.
+    """Changes of four kinds on `year`'s recorded feed: added, removed, room and title.
 
     One talk is moved and renamed, so it has two changes; the addition copies it under
     a new id; another talk is removed.
@@ -64,7 +64,7 @@ def year_changes(year: int) -> tuple[Change, ...]:
 
 
 def batch(year: int, *, seen: bool = False, at: datetime = NOW) -> Batch:
-    """A batch of ``year_changes(year)`` detected at ``at``."""
+    """A batch of `year_changes(year)` detected at `at`."""
     return Batch(detected_at=at, changes=year_changes(year), seen=seen)
 
 
@@ -126,7 +126,7 @@ def test_text_beyond_ascii_is_kept_as_utf_8() -> None:
 
 
 def test_no_batches_is_an_empty_list() -> None:
-    """An empty log is written as ``[]`` and read back as no batches."""
+    """An empty log is written as `[]` and read back as no batches."""
     assert encode_batches([]) == b"[]"
     assert decode_batches(b"[]", UTC) == []
 
@@ -165,7 +165,7 @@ def test_a_file_that_is_not_a_json_list_gives_nothing_and_a_log(
 
 
 def with_kind(kind: bytes) -> bytes:
-    """A log of one batch whose one change has ``kind``, as raw JSON, as its kind."""
+    """A log of one batch whose one change has `kind`, as raw JSON, as its kind."""
     return (
         b'[{"detected_at": "2026-05-16T17:42:00+00:00", "seen": false, "changes": '
         b'[{"id": "51", "kind": %b, "old": null, "new": null}]}]' % kind
@@ -204,7 +204,7 @@ def test_no_depth_of_nesting_raises(
 
 
 def broken(edit: Any) -> list[dict[str, Any]]:
-    """Three good 2026 batches with ``edit`` applied to the second's JSON."""
+    """Three good 2026 batches with `edit` applied to the second's JSON."""
     entries = stored(
         encode_batches([batch(2026, at=NOW - timedelta(hours=n)) for n in range(3)])
     )
@@ -213,7 +213,7 @@ def broken(edit: Any) -> list[dict[str, Any]]:
 
 
 def change_of(entry: dict[str, Any], kind: str) -> dict[str, Any]:
-    """The change of ``kind`` in a batch's JSON."""
+    """The change of `kind` in a batch's JSON."""
     return next(change for change in entry["changes"] if change["kind"] == kind)
 
 
@@ -286,7 +286,7 @@ def test_trim_keeps_exactly_fourteen_days() -> None:
 
 
 def test_trim_keeps_the_order_and_a_batch_from_the_future() -> None:
-    """Trimming keeps the given order, and a batch after ``now`` (a clock set back)."""
+    """Trimming keeps the given order, and a batch after `now` (a clock set back)."""
     later = batch(2026, at=NOW + timedelta(days=2))
     older = batch(2026, at=NOW - timedelta(days=13))
     assert trim([older, later], NOW) == [older, later]

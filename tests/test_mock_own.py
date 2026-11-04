@@ -1,4 +1,4 @@
-"""Tests for ``tools/mock_api/own.py``, with the real server on a real port (#985)."""
+"""Tests for `tools/mock_api/own.py`, with the real server on a real port (#985)."""
 
 import socket
 import time
@@ -20,7 +20,7 @@ def state(tmp_path: Path) -> Iterator[Path]:
 
 
 def _gone(port: int) -> bool:
-    """Wait for ``port`` to close and return whether it did."""
+    """Wait for `port` to close and return whether it did."""
     deadline = time.monotonic() + 10
     while time.monotonic() < deadline:
         if not own._answers(port):
@@ -90,7 +90,7 @@ def test_stale_pid_file_counts_as_gone(state: Path) -> None:
 def test_url_needs_a_running_mock(
     state: Path, capsys: pytest.CaptureFixture[str]
 ) -> None:
-    """``url`` before ``start`` says what to do rather than printing a dead URL."""
+    """`url` before `start` says what to do rather than printing a dead URL."""
     with pytest.raises(SystemExit, match="start it first"):
         own.main(["url", "ios"], state)
     assert capsys.readouterr().out == ""

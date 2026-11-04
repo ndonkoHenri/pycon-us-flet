@@ -2,8 +2,8 @@
 
 DATA-04..07, DATA-14, DATA-27, SCHED-19. Each test asserts a concrete case of the
 recorded 2025 or 2026 feed, or of a copy of it with one record changed, under two machine
-time zones (``machine_tz``). A session's name, place, flags, people and rooms are
-``test_rules_details.py``'s, which shares this module's helpers.
+time zones (`machine_tz`). A session's name, place, flags, people and rooms are
+`test_rules_details.py`'s, which shares this module's helpers.
 """
 
 import logging
@@ -28,7 +28,7 @@ EASTERN = ZoneInfo("America/New_York")
 
 
 def pacific(day: int, hour: int, minute: int = 0) -> datetime:
-    """May ``day``, 2026, at ``hour``:``minute``, Pacific time."""
+    """May `day`, 2026, at `hour`:`minute`, Pacific time."""
     return datetime(2026, 5, day, hour, minute, tzinfo=PACIFIC)
 
 
@@ -75,7 +75,7 @@ def test_posters_plenary_is_dropped_as_a_copy_of_the_posters_row() -> None:
 
 
 def test_blank_slots_are_dropped() -> None:
-    """A slot of kind ``blank``, or named ``Slot``, is dropped as blank."""
+    """A slot of kind `blank`, or named `Slot`, is dropped as blank."""
 
     def blank(doc: dict[str, Any]) -> None:
         doc["schedule"][4]["kind"] = "blank"  # 196, "Registration Desk Opens"

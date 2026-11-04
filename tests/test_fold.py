@@ -1,8 +1,8 @@
-"""``ui.fold.FoldTile``: one screen-reader stop per fold, its state said in its label (#332).
+"""`ui.fold.FoldTile`: one screen-reader stop per fold, its state said in its label (#332).
 
-Flutter's ``ExpansionTile`` put a focus-blocked live region labelled "Collapsed" around
+Flutter's `ExpansionTile` put a focus-blocked live region labelled "Collapsed" around
 its header on Android, and TalkBack gave that label a stop of its own (D-354). The
-app's own fold is a ``ListTile`` merged with its identifier, whose chevron says the
+app's own fold is a `ListTile` merged with its identifier, whose chevron says the
 state; the screens' tests check how each one opens and stays open.
 """
 
@@ -18,7 +18,7 @@ from tests.trees import descendants
 
 
 def build(*, expanded: bool, changes: list[bool] | None = None) -> Fold:
-    """Return the parts of a fold of two rows, recording each change in ``changes``."""
+    """Return the parts of a fold of two rows, recording each change in `changes`."""
     seen = [] if changes is None else changes
     found = as_fold(
         FoldTile(
@@ -40,7 +40,7 @@ def build(*, expanded: bool, changes: list[bool] | None = None) -> Fold:
 def test_the_header_is_one_node_with_its_identifier() -> None:
     """D-214, D-354: the identifier and the header merge into one node, a live region.
 
-    No ``Semantics`` sits between the merge and the tile but the live region, so
+    No `Semantics` sits between the merge and the tile but the live region, so
     nothing but the header can take a stop of its own; the rows are outside it.
     """
     fold = build(expanded=False)
@@ -67,7 +67,7 @@ def test_folded_it_says_collapsed_and_hides_its_rows() -> None:
 
 
 def test_open_it_says_expanded_and_shows_its_rows_on_its_fill() -> None:
-    """Read "<title>, Expanded"; the chevron turns up and the icons take ``primary``."""
+    """Read "<title>, Expanded"; the chevron turns up and the icons take `primary`."""
     fold = build(expanded=True)
     assert fold.said == EXPANDED
     assert fold.body.visible is True

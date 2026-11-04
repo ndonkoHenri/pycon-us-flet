@@ -2,8 +2,8 @@
 
 On the 720 x 1600, 280-dpi AVD the buttons' column covered the lower 11 px of booth
 709 at 1x, and on the iPhone 17 the whole of it. The hall sizes are the ones measured
-on those devices; the arithmetic is ``screens/expo_layout.py``'s and the booths'
-rectangles ``screens/expo_camera.py``'s, so a change of either is caught here.
+on those devices; the arithmetic is `screens/expo_layout.py`'s and the booths'
+rectangles `screens/expo_camera.py`'s, so a change of either is caught here.
 """
 
 import pytest
@@ -35,9 +35,9 @@ HALLS = {
 
 
 def buttons_rect(box: Size) -> Rect:
-    """Where the zoom buttons sit with no card: at the bottom right, ``EDGE`` in.
+    """Where the zoom buttons sit with no card: at the bottom right, `EDGE` in.
 
-    In their column (48 x 160 dp) or their row (160 x 48 dp), as ``card_layout()``
+    In their column (48 x 160 dp) or their row (160 x 48 dp), as `card_layout()`
     lays them out for the hall at the fitted plan.
     """
     row, _ = card_layout(box[1], 0.0, crowded=over_plan(box, fitted(box, NATURAL)))

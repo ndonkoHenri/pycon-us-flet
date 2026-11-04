@@ -1,8 +1,8 @@
 """Tests for when the Schedule jumps and for its "Now" button (#89, D-204, D-224).
 
-The screen renders in ``tests/schedule_view.py``'s harness, with the minute tick moved
-by hand (``Shown.at``) and each jump recorded (``Shown.jumps``). The jump itself is in
-``test_schedule_jump.py``.
+The screen renders in `tests/schedule_view.py`'s harness, with the minute tick moved
+by hand (`Shown.at`) and each jump recorded (`Shown.jumps`). The jump itself is in
+`test_schedule_jump.py`.
 """
 
 import asyncio
@@ -290,7 +290,7 @@ async def test_a_refresh_that_brings_the_same_feed_re_renders_nothing(
     """A refresh with the same feed re-renders no slot or row and keeps "Now" hidden.
 
     #290, D-224: the start refresh over the cache re-rendered every slot, remounting
-    each ``ScrollKey`` box, and brought "Now" back over the now line; a changed feed
+    each `ScrollKey` box, and brought "Now" back over the now line; a changed feed
     still brings it back (D-204).
     """
     storage = Storage(prefs=MemoryPrefs(), directory=tmp_path, year=2026)
@@ -315,7 +315,7 @@ async def test_a_refresh_that_brings_the_same_feed_re_renders_nothing(
 
 
 def _serving(body: bytes) -> httpx.MockTransport:
-    """A transport that answers every request with ``body``."""
+    """A transport that answers every request with `body`."""
     return httpx.MockTransport(lambda _: httpx.Response(200, content=body))
 
 

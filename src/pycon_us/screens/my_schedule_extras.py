@@ -1,11 +1,11 @@
 """My schedule's extras (ux.md §5.6): the app bar's overflow and the all-over notice.
 
 - **The overflow** ("More options", D-289): Export to calendar (.ics), every saved
-  session still in the schedule in one file, ``pycon-us-<year>-my-schedule.ics``, each
+  session still in the schedule in one file, `pycon-us-<year>-my-schedule.ics`, each
   event with its alarm at the reminders' lead (SESS-05, D-401). It goes to the calendar
-  by session detail's Add to calendar route (``services.calendar``, D-272): iOS's "Add
+  by session detail's Add to calendar route (`services.calendar`, D-272): iOS's "Add
   All" sheet, or Android's save dialog and a SnackBar. Only with something to export.
-  Then Reminder settings, in a build with E3: Settings at ``/my-schedule/settings``,
+  Then Reminder settings, in a build with E3: Settings at `/my-schedule/settings`,
   so Back returns here (D-401). With neither item, the screen shows no overflow.
 - **The all-over notice** heads the list when every saved session has ended (D-191).
 - **The dropped notice** heads it when some saved sessions are no longer in the
@@ -13,7 +13,7 @@
   what changed" (Schedule changes) when the change log holds one's removal, and
   "Forget it" or "Forget them".
 
-The screen itself is ``screens/my_schedule.py``; these left it to keep it near 400
+The screen itself is `screens/my_schedule.py`; these left it to keep it near 400
 lines (D-66).
 """
 
@@ -55,7 +55,7 @@ SEE_CHANGES = "See what changed"
 
 
 def export_slug(year: int) -> str:
-    """Return the export's file name without ``.ics``: ``pycon-us-2026-my-schedule``.
+    """Return the export's file name without `.ics`: `pycon-us-2026-my-schedule`.
 
     The year keeps one year's export from looking like another's in the Files app.
 
@@ -74,16 +74,16 @@ def ScheduleMenu(
     Export is disabled while the calendar's sheet or the save dialog is up, so a
     second tap does not serve or save the file twice; in place, so the button and the
     item keep their nodes and the screen reader's focus comes back to the button when
-    the menu closes (D-182, D-225). Its label wraps at 200 % text (``menu_item()``,
-    D-233). Whatever happens is said by ``add_to_calendar()``, on this View (D-210);
+    the menu closes (D-182, D-225). Its label wraps at 200 % text (`menu_item()`,
+    D-233). Whatever happens is said by `add_to_calendar()`, on this View (D-210);
     the export's alarms come at the reminders' lead (D-401).
 
     Args:
-        sessions: Every saved session still in the schedule (``Agenda.sessions``):
+        sessions: Every saved session still in the schedule (`Agenda.sessions`):
             Export only with one at least.
         settings: Whether to offer Reminder settings: a build with E3 (D-401). The
             caller shows the menu only with an item in it.
-        source: My schedule's ``__name__``, for View source, always last (D-461).
+        source: My schedule's `__name__`, for View source, always last (D-461).
     """
     page = ft.context.page
     svc = use_services()
@@ -160,7 +160,7 @@ def all_over(
             container=True,
             live_region=True,
             # One explicit label in reading order, as the dropped notice (D-329): a
-            # heading Semantics inside would conflict on ``enabled`` (F42), become a
+            # heading Semantics inside would conflict on `enabled` (F42), become a
             # child node, and be read after the body.
             label="\n".join(t for t in (ALL_OVER, body) if t is not None),
             header=True,
@@ -227,14 +227,14 @@ def forget_label(count: int) -> str:
 
 
 def logged(dropped: Collection[str], batches: Iterable[Batch]) -> bool:
-    """Return whether the change log holds the removal of one of ``dropped`` (D-329).
+    """Return whether the change log holds the removal of one of `dropped` (D-329).
 
     Only then does Schedule changes say anything about them, so only then does the
     notice link there: the log keeps 14 days and is deleted with a feed URL change.
 
     Args:
         dropped: The saved ids the feed no longer lists.
-        batches: The change log's batches (``ChangeLog.batches``).
+        batches: The change log's batches (`ChangeLog.batches`).
     """
     return any(
         change.kind is ChangeKind.REMOVED and change.id in dropped
@@ -251,24 +251,24 @@ def dropped_notice(
 ) -> ft.Control:
     """Return the notice that heads the list when some saved sessions were dropped.
 
-    Compact and start-aligned on the fold tile's text column, as ``all_over()``: the
+    Compact and start-aligned on the fold tile's text column, as `all_over()`: the
     saved sessions still in the schedule stay the content (D-329). Its words are one
     live-region node, a level-2 heading whose label is the title then the body, so
     the label changes when the count does and a screen reader says it.
 
     The label is explicit and the texts are left out of the semantics tree, because
-    a merge of the texts reads the body first. Flet's ``Semantics`` always states
-    ``enabled`` (F42), and two configurations that both state it conflict
-    (``Tristate.hasConflict``), so a heading ``Semantics`` inside the live region
+    a merge of the texts reads the body first. Flet's `Semantics` always states
+    `enabled` (F42), and two configurations that both state it conflict
+    (`Tristate.hasConflict`), so a heading `Semantics` inside the live region
     becomes a child node; the live region keeps the body as its own label, and a
     merge puts a node's own label before its children's (D-329).
 
-    With ``count`` 0 it is the same node, quiet: a hidden 1 dp node with no words.
+    With `count` 0 it is the same node, quiet: a hidden 1 dp node with no words.
     The list always has it, so the node exists before the first dropped session:
     Android's engine sends a live region's change only for a node it had in its
     previous update (F61, D-241), and a notice that mounted with its words would go
-    unsaid. Empty is not enough to be quiet: Flet's ``Semantics`` always states
-    ``enabled``, which makes the node focusable on Android, a blank TalkBack stop
+    unsaid. Empty is not enough to be quiet: Flet's `Semantics` always states
+    `enabled`, which makes the node focusable on Android, a blank TalkBack stop
     (F95). Hidden, Android keeps the node but leaves it out of the tree a reader
     walks; the update that shows it also changes its label, so it is announced.
 
@@ -276,7 +276,7 @@ def dropped_notice(
         count: How many saved ids the feed no longer lists; 0 for the quiet node.
         on_forget: What "Forget them" does: unsave those ids, with Undo.
         on_see_changes: What "See what changed" does, while the change log holds one
-            of the removals (``logged()``); None leaves the button out.
+            of the removals (`logged()`); None leaves the button out.
     """
     shown = count > 0
     title, body = (dropped_title(count), dropped_body(count)) if shown else ("", "")

@@ -1,8 +1,8 @@
-"""Tests for the reminder plan (``services/reminders.py``; #427, D-59, D-222, NEW-05).
+"""Tests for the reminder plan (`services/reminders.py`; #427, D-59, D-222, NEW-05).
 
-Every case runs at a fixed ``now`` over a recorded feed: the plan is pure, so what it
-returns is all there is to check until E3's ``apply()`` schedules it. The in-app
-Banner's ``due_session()`` (``ui/reminder_banner.py``) is pure too, and tested here.
+Every case runs at a fixed `now` over a recorded feed: the plan is pure, so what it
+returns is all there is to check until E3's `apply()` schedules it. The in-app
+Banner's `due_session()` (`ui/reminder_banner.py`) is pure too, and tested here.
 """
 
 from dataclasses import replace
@@ -49,7 +49,7 @@ def data() -> ConferenceData:
 
 
 def moments(year: int, data: ConferenceData) -> tuple[EventReminder, ...]:
-    """Every conference moment of ``year``: the hand-written sign-ups and the keynotes."""
+    """Every conference moment of `year`: the hand-written sign-ups and the keynotes."""
     year_data = load_year(year)
     derived = keynote_moments(
         data, year_data.content.keynotes, year_data.conference.zone, use_24h=False
@@ -65,7 +65,7 @@ def planned(
     *,
     use_24h: bool = False,
 ) -> list[Reminder]:
-    """The 2026 plan for ``favorites`` with every 2026 moment offered."""
+    """The 2026 plan for `favorites` with every 2026 moment offered."""
     return plan(
         data,
         favorites,
@@ -84,7 +84,7 @@ def planned(
 def test_a_saved_session_is_reminded_its_lead_before_it_starts(
     data: ConferenceData, lead: SessionLead
 ) -> None:
-    """One reminder per saved session, ``lead`` minutes before, opening it in My schedule."""
+    """One reminder per saved session, `lead` minutes before, opening it in My schedule."""
     reminders = planned(data, [TALK], replace(ALL_OFF, session_lead=lead))
     start = data.sessions[TALK].display_start
     assert reminders == [
@@ -247,10 +247,10 @@ def test_no_session_id_collides_with_a_moment_or_the_test_reminder(year: int) ->
 # ------------------------------------------------------------------ the in-app Banner
 
 TALK_START = datetime(2026, 5, 16, 10, 30, tzinfo=ZONE)
-"""When ``TALK`` starts, as the app shows it."""
+"""When `TALK` starts, as the app shows it."""
 
 SAME_TIME = "51"
-"""Another 2026 talk at ``TALK``'s time, in Grand Ballroom B."""
+"""Another 2026 talk at `TALK`'s time, in Grand Ballroom B."""
 
 
 def test_a_saved_session_is_due_from_ten_minutes_before_its_start(

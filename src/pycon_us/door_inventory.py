@@ -1,9 +1,9 @@
-"""Door check's attendee list: one ``INVENTORY`` call per chosen session, awaited (#765).
+"""Door check's attendee list: one `INVENTORY` call per chosen session, awaited (#765).
 
-``load_inventory()`` sends the calls together (``asyncio.gather``) and reports each one
+`load_inventory()` sends the calls together (`asyncio.gather`) and reports each one
 that finishes, so the screen can say "Loading attendee list… 2 of 5" and start scanning
 only once every call has answered (DOOR-03; Ionic fired them without awaiting). A
-product whose call fails is listed in ``Loaded.failed`` and the others are kept, so the
+product whose call fails is listed in `Loaded.failed` and the others are kept, so the
 screen says "Badges will be checked online" with Retry (D-120). Cancelling the load
 cancels every call. Nothing is logged or written: the list holds names, dietary needs
 and allergies, and stays in the caller's memory (D-56, D-72).
@@ -18,7 +18,7 @@ from pycon_us.services.api import ApiClient, ApiError, NetworkError
 from pycon_us.services.endpoints import INVENTORY
 
 type OnProgress = Callable[[int, int], None]
-"""Told ``(done, total)`` each time a product's call finishes, failed ones included."""
+"""Told `(done, total)` each time a product's call finishes, failed ones included."""
 
 
 @dataclass(frozen=True)
@@ -41,9 +41,9 @@ async def load_inventory(
     """Load who bought each product, all at once (API-05, 20 s each).
 
     Args:
-        api: ``Services.api``, signed in with the ``door_check_in`` flag.
+        api: `Services.api`, signed in with the `door_check_in` flag.
         product_ids: The chosen sessions' product ids.
-        on_progress: Told ``(done, total)`` as each call finishes.
+        on_progress: Told `(done, total)` as each call finishes.
 
     Returns:
         The merged list and the products that failed: no answer, a refusal or a

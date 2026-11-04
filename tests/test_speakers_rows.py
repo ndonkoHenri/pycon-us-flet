@@ -1,6 +1,6 @@
 """Tests for the Speakers screen's headings, rows, taps and states without data (#98).
 
-The screen runs in ``tests/speakers_view.py``'s harness.
+The screen runs in `tests/speakers_view.py`'s harness.
 """
 
 from dataclasses import replace
@@ -135,7 +135,7 @@ async def test_a_feed_without_speakers_says_none_are_announced(
 async def test_a_new_feed_version_rebuilds_the_list_and_its_filter(
     render: Render,
 ) -> None:
-    """The memo keys on ``Conference.version``: a refresh must reach the list."""
+    """The memo keys on `Conference.version`: a refresh must reach the list."""
     full = processed(2026)
     (mike,) = [e for e in ALL if e.speaker.name == "Mike Müller"]
     speakers = {k: v for k, v in full.speakers.items() if k != mike.speaker.id}

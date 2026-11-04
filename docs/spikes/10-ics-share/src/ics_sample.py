@@ -1,9 +1,9 @@
 """The hand-written calendar file the #364 spike shares.
 
-Two events on 2026-10-22, in UTC as D-62 prescribes: a talk with a ``VALARM``
+Two events on 2026-10-22, in UTC as D-62 prescribes: a talk with a `VALARM`
 ten minutes before, and a break without one. The text exercises what
-``core/ics.py`` will produce: CRLF line ends, escaped commas, semicolons and
-newlines, a line folded at 75 octets, a stable ``UID`` and a ``DTSTAMP``.
+`core/ics.py` will produce: CRLF line ends, escaped commas, semicolons and
+newlines, a line folded at 75 octets, a stable `UID` and a `DTSTAMP`.
 """
 
 LINES = [

@@ -1,7 +1,7 @@
 """Ionic's title cleaning: names, their room suffix and their flags (DATA-08..10).
 
-The feed's slot names carry more than a title: Markdown, a ``(Room)`` suffix, a
-"Keynote — " prefix, ", pre-registration required" and ", En Español". ``clean_title``
+The feed's slot names carry more than a title: Markdown, a `(Room)` suffix, a
+"Keynote — " prefix, ", pre-registration required" and ", En Español". `clean_title`
 takes them apart with the one regex table below, in Ionic's order.
 """
 
@@ -32,7 +32,7 @@ class Title:
 
     Attributes:
         name: The title to show.
-        room: The ``(Room)`` that ended a plenary-like name; empty when there was none.
+        room: The `(Room)` that ended a plenary-like name; empty when there was none.
         pre_registered: Whether attending needs registration (DATA-09).
         spanish: Whether it is given in Spanish (DATA-10).
     """
@@ -46,9 +46,9 @@ class Title:
 def plain_text(name: str) -> str:
     """Return a slot name as text: links and code spans keep their text, tags go, entities decode.
 
-    Ionic ran ``markdownToTxt`` on names. The feeds use links there, two code spans in 2025
+    Ionic ran `markdownToTxt` on names. The feeds use links there, two code spans in 2025
     (``Reimplementing the module `itertools` for fun and profit``, found by comparing with
-    Ionic's own output, #66) and one ``<s>…</s>`` in 2025 (D-125: names strip tags and keep
+    Ionic's own output, #66) and one `<s>…</s>` in 2025 (D-125: names strip tags and keep
     their text).
     """
     text = _CODE_SPAN.sub(_code_span_text, _MARKDOWN_LINK.sub(r"\1", name))
@@ -68,7 +68,7 @@ def _code_span_text(match: re.Match[str]) -> str:
 
 
 def trailing_room(name: str) -> tuple[str, str]:
-    """Split a ``(Room)`` suffix off a name: ``("Lunch", "Hall AB")``, or ``(name, "")``."""
+    """Split a `(Room)` suffix off a name: `("Lunch", "Hall AB")`, or `(name, "")`."""
     if match := _TRAILING_ROOM.search(name):
         return name[: match.start()].strip(), match[1]
     return name, ""
@@ -77,12 +77,12 @@ def trailing_room(name: str) -> tuple[str, str]:
 def clean_title(name: str, kind: str) -> Title:
     """Take a slot's name apart, in Ionic's order.
 
-    1. Markdown and tags become text (``plain_text``).
-    2. Pre-registration: the name holds ``pre-registration`` (and is cut at
+    1. Markdown and tags become text (`plain_text`).
+    2. Pre-registration: the name holds `pre-registration` (and is cut at
        ", pre-registration"), or the slot is a tutorial or a summit other than Typing.
-    3. A plenary, keynote, lightning-talks or event name loses its ``(Room)`` suffix and
+    3. A plenary, keynote, lightning-talks or event name loses its `(Room)` suffix and
        its kind as a prefix ("Keynote — Ada Lovelace" → "Ada Lovelace").
-    4. Spanish: a ``charla``, or "en español" (with or without the tilde, any case) in the
+    4. Spanish: a `charla`, or "en español" (with or without the tilde, any case) in the
        name, which is cut from it.
 
     Args:

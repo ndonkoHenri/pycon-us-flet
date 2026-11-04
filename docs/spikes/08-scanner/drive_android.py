@@ -5,19 +5,19 @@ Start the emulator with gRPC and the badge QR as the scene's wall poster:
     emulator -avd <avd> -read-only -no-audio -no-boot-anim -port <port> -grpc <grpc-port> \
         -camera-back virtualscene -virtualscene-poster wall=$PWD/src/qr.png
 
-then install the release APK with the camera granted (``adb install -g``) and run
+then install the release APK with the camera granted (`adb install -g`) and run
 
     uv run --with grpcio-tools python drive_android.py <serial> <grpc-port> <check> [...]
 
-Checks: ``cold`` (5 cold starts facing the QR: mount to first detection), ``rate``
-(20 s facing it: detections per second), ``turn`` (start facing away, turn to the
-QR: turn to first detection), ``background`` (Home for 10 s facing the QR, then
+Checks: `cold` (5 cold starts facing the QR: mount to first detection), `rate`
+(20 s facing it: detections per second), `turn` (start facing away, turn to the
+QR: turn to first detection), `background` (Home for 10 s facing the QR, then
 back: detections while away, resume to first detection, camera clients),
-``cycles`` (50 pause/resume cycles facing the QR, then a detection), ``gate``
-(the app's error lines in logcat). Each prints one ``S8-DRIVER`` line per result.
+`cycles` (50 pause/resume cycles facing the QR, then a detection), `gate`
+(the app's error lines in logcat). Each prints one `S8-DRIVER` line per result.
 
 The scene puts the wall poster at (-0.807, 0.320, 5.316), turned -150° (the
-emulator's ``resources/Toren1BD.posters``); the device faces it from
+emulator's `resources/Toren1BD.posters`); the device faces it from
 (-0.5, 0, 3) turned 180°.
 """
 
@@ -89,7 +89,7 @@ def face(pose: tuple[list[float], list[float]]) -> None:
 
 
 def lines() -> list[str]:
-    """Return the app's ``S8`` lines from logcat."""
+    """Return the app's `S8` lines from logcat."""
     return [
         line
         for line in adb("logcat", "-d", "-s", "flet.python:I").splitlines()
@@ -98,12 +98,12 @@ def lines() -> list[str]:
 
 
 def field(line: str, name: str) -> str:
-    """Return one ``name=value`` field of an ``S8`` line."""
+    """Return one `name=value` field of an `S8` line."""
     return re.search(rf"{name}=(\S+)", line).group(1)
 
 
 def wait_for(event: str, after: int, timeout: float = 30) -> list[str]:
-    """Wait until an ``S8 <event>`` line appears after the first ``after`` lines."""
+    """Wait until an `S8 <event>` line appears after the first `after` lines."""
     end = time.monotonic() + timeout
     while time.monotonic() < end:
         new = [line for line in lines()[after:] if f"S8 {event} " in line]
@@ -138,14 +138,14 @@ def report(check: str, **values: object) -> None:
 
 
 def camera_clients() -> int:
-    """Count the app's entries under "Active Camera Clients" in ``dumpsys media.camera``."""
+    """Count the app's entries under "Active Camera Clients" in `dumpsys media.camera`."""
     out = adb("shell", "dumpsys", "media.camera")
     active = out.split("Active Camera Clients:")[1].split("]")[0]
     return active.count(f"Client Package Name: {PKG}")
 
 
 def pss_kb() -> int:
-    """Return the app's total PSS in kB (``dumpsys meminfo``)."""
+    """Return the app's total PSS in kB (`dumpsys meminfo`)."""
     out = adb("shell", "dumpsys", "meminfo", PKG)
     return int(re.search(r"TOTAL PSS:\s+(\d+)", out).group(1))
 

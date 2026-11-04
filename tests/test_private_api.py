@@ -1,8 +1,8 @@
 """Tests for the session's private-API client and the mock API URL (D-51, #668).
 
-``services/private_api.py`` builds ``Services.api`` only while a mock URL is set, checks
-the Developer field and runs the connection check; the stored URL is ``Prefs``'. The
-check runs against the mock itself, through ``tools/mock_api/transport.py``.
+`services/private_api.py` builds `Services.api` only while a mock URL is set, checks
+the Developer field and runs the connection check; the stored URL is `Prefs`'. The
+check runs against the mock itself, through `tools/mock_api/transport.py`.
 """
 
 import asyncio
@@ -37,7 +37,7 @@ def recorder() -> Recorder:
 
 
 async def connected(transport: httpx.AsyncBaseTransport, url: str = MOCK) -> ApiClient:
-    """Return the client a ``PrivateApi`` over ``transport`` builds on ``url``."""
+    """Return the client a `PrivateApi` over `transport` builds on `url`."""
     private_api = PrivateApi(transport)
     await private_api.connect(url, 2026)
     assert private_api.client is not None
@@ -104,7 +104,7 @@ def test_no_url_or_a_wrong_one_leaves_the_private_api_off(value: object) -> None
 
 
 async def test_there_is_no_client_until_a_url_is_set() -> None:
-    """A fresh ``PrivateApi`` has no client, so nothing can send a request (D-51)."""
+    """A fresh `PrivateApi` has no client, so nothing can send a request (D-51)."""
     private_api = PrivateApi()
     assert (private_api.client, private_api.base_url) == (None, None)
     await private_api.connect(None, 2026)
@@ -181,7 +181,7 @@ async def test_a_clear_during_a_save_leaves_no_client(recorder: Recorder) -> Non
 async def test_the_check_says_connected_when_the_mock_answers(
     recorder: Recorder,
 ) -> None:
-    """Signed out, one signed ``check_features`` gets the mock's 401: it is there."""
+    """Signed out, one signed `check_features` gets the mock's 401: it is there."""
     assert await check_connection(await connected(recorder)) == (CONNECTED, True)
     (request,) = recorder.sent
     assert request.url.raw_path == b"/2026/api/v1/user/check_features/"
@@ -221,7 +221,7 @@ async def test_the_check_says_when_another_server_answers() -> None:
 async def test_the_check_says_when_another_server_answers_alike(
     status: int, body: object, said: str
 ) -> None:
-    """Only the mock's signed-out 401 or a ``features`` reply is a connection.
+    """Only the mock's signed-out 401 or a `features` reply is a connection.
 
     Another 401 (an auth proxy) or another JSON body (a wrong port) is said as the
     error, not as connected.
@@ -233,7 +233,7 @@ async def test_the_check_says_when_another_server_answers_alike(
 
 
 async def test_the_check_says_connected_on_a_features_reply() -> None:
-    """Signed in (#35), the mock's 200 ``{"features": {...}}`` is a connection."""
+    """Signed in (#35), the mock's 200 `{"features": {...}}` is a connection."""
     body = json.dumps({"features": {"lead_retrieval": False}}).encode()
     transport = replying(200, body)
     assert await check_connection(await connected(transport)) == (CONNECTED, True)

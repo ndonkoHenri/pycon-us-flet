@@ -1,16 +1,16 @@
 """The hook guard: every hook runs on every render, in the same order (D-70 rule 4; #613).
 
 Flet matches a component's hooks by their call order, so a hook that runs on one
-render and not the next shifts every hook after it. #540's ``use_margin()`` called
-``ft.use_view_path()`` only from 600 dp: a rotation across 600 dp gave one screen a
-``RefHook`` where it had kept a subscription, and Flet's update loop stopped for the
+render and not the next shifts every hook after it. #540's `use_margin()` called
+`ft.use_view_path()` only from 600 dp: a rotation across 600 dp gave one screen a
+`RefHook` where it had kept a subscription, and Flet's update loop stopped for the
 session (#606, U111). The rule had only review to keep it; this test walks the source.
 
-A hook is any call to a ``use_*`` name: Flet's (``ft.use_state()``) and the app's own
-(``use_margin()``), which call hooks. The guard checks the bodies of components
-(``@ft.component``) and of ``use_*`` functions, and flags a hook under an ``if``, a
-loop, a ``match`` case, a ``try``, a conditional expression, the right side of
-``and``/``or``, or a comprehension, and a hook after a ``return`` that may end the
+A hook is any call to a `use_*` name: Flet's (`ft.use_state()`) and the app's own
+(`use_margin()`), which call hooks. The guard checks the bodies of components
+(`@ft.component`) and of `use_*` functions, and flags a hook under an `if`, a
+loop, a `match` case, a `try`, a conditional expression, the right side of
+`and`/`or`, or a comprehension, and a hook after a `return` that may end the
 body early. Nested functions are other scopes: a handler runs no hooks, and a nested
 component is checked on its own.
 """
@@ -21,7 +21,7 @@ from pathlib import Path
 import pycon_us
 
 SRC = Path(pycon_us.__file__).parent
-"""The app's package, ``src/pycon_us``, every module of which the guard walks."""
+"""The app's package, `src/pycon_us`, every module of which the guard walks."""
 
 FIXTURES = Path(__file__).parent / "fixtures" / "hooks"
 """Old code the guard must flag."""
@@ -31,7 +31,7 @@ SCOPES = (ast.FunctionDef, ast.AsyncFunctionDef, ast.Lambda, ast.ClassDef)
 
 
 def is_hook(node: ast.Call) -> bool:
-    """Whether a call is a hook's: ``use_x()`` or ``module.use_x()``.
+    """Whether a call is a hook's: `use_x()` or `module.use_x()`.
 
     Args:
         node: The call.
@@ -57,7 +57,7 @@ def runs_hooks(func: ast.FunctionDef | ast.AsyncFunctionDef) -> bool:
 
 
 def returns(node: ast.AST) -> bool:
-    """Whether a statement holds a ``return`` of its own body, not a nested function's.
+    """Whether a statement holds a `return` of its own body, not a nested function's.
 
     Args:
         node: The statement.
@@ -77,7 +77,7 @@ class Finder:
         self.found: list[tuple[int, str]] = []
 
     def block(self, statements: list[ast.stmt], conditional: bool) -> None:
-        """Visit a sequence of statements; those after a ``return`` are conditional.
+        """Visit a sequence of statements; those after a `return` are conditional.
 
         Args:
             statements: The block, in order.
@@ -88,7 +88,7 @@ class Finder:
             conditional = conditional or returns(statement)
 
     def visit(self, node: ast.AST, conditional: bool) -> None:
-        """Visit a node, recording each hook call reached while ``conditional``.
+        """Visit a node, recording each hook call reached while `conditional`.
 
         Args:
             node: A statement or an expression.
@@ -161,13 +161,13 @@ class Finder:
 
 
 def conditional_hooks(source: str) -> list[str]:
-    """The hooks in a module's components and ``use_*`` functions that may not run.
+    """The hooks in a module's components and `use_*` functions that may not run.
 
     Args:
         source: The module's Python source.
 
     Returns:
-        ``"<function>:<line> <hook>"`` for each, in source order.
+        `"<function>:<line> <hook>"` for each, in source order.
     """
     found = []
     for node in ast.walk(ast.parse(source)):
@@ -181,7 +181,7 @@ def conditional_hooks(source: str) -> list[str]:
 
 
 def test_every_hook_in_the_app_runs_on_every_render() -> None:
-    """No component or ``use_*`` function in ``src/pycon_us`` calls a hook conditionally."""
+    """No component or `use_*` function in `src/pycon_us` calls a hook conditionally."""
     found = [
         f"{path.relative_to(SRC)} {entry}"
         for path in sorted(SRC.rglob("*.py"))
@@ -191,7 +191,7 @@ def test_every_hook_in_the_app_runs_on_every_render() -> None:
 
 
 def test_the_guard_flags_540_s_use_margin() -> None:
-    """The ``and`` that froze the app on a rotation (#606) fails the guard."""
+    """The `and` that froze the app on a rotation (#606) fails the guard."""
     source = (FIXTURES / "use_margin_540.py.txt").read_text()
     assert conditional_hooks(source) == ["use_margin:17 ft.use_view_path"]
 
@@ -236,7 +236,7 @@ def Page(items, ready):
 
 
 def test_the_guard_passes_unconditional_hooks_and_other_scopes() -> None:
-    """Hooks at a body's top level, in an ``if``'s test, in a ``with`` or in handlers pass."""
+    """Hooks at a body's top level, in an `if`'s test, in a `with` or in handlers pass."""
     source = """
 @ft.memo
 @ft.component

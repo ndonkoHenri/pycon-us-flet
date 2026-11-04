@@ -6,8 +6,8 @@ versions, the device, the schedule data and its age, the clock and time zones, t
 Developer options in effect, and a few settings and counts. About this app and Help &
 safety share it (#443).
 
-Two halves: ``gather_facts()`` reads the ``Facts`` from the page, the stores and the
-build; ``diagnostics_text()`` writes them, a pure function. The facts hold nothing
+Two halves: `gather_facts()` reads the `Facts` from the page, the stores and the
+build; `diagnostics_text()` writes them, a pure function. The facts hold nothing
 personal to begin with: whether a custom feed URL is set, never the URL; how many
 sessions are saved, never which. As a net under that, every value is written on one
 line, with its email addresses and URLs replaced (D-196's rule for the log).
@@ -61,28 +61,28 @@ _EXPANDED_FROM = 840
 
 @dataclass(frozen=True)
 class Facts:
-    """What the diagnostics text says, read once by ``gather_facts()``.
+    """What the diagnostics text says, read once by `gather_facts()`.
 
     Attributes:
-        app_version: The app's version: ``pycon_us.__version__`` (D-83), or a
+        app_version: The app's version: `pycon_us.__version__` (D-83), or a
             packaged build's own (D-386).
         build_number: A packaged build's number, or None (D-386).
-        python: The Python version, e.g. ``3.14.0``.
-        flet: The Flet version, ``FLET_VERSION`` while the app builds from source.
-        platform: The page's platform, e.g. ``android``.
+        python: The Python version, e.g. `3.14.0`.
+        flet: The Flet version, `FLET_VERSION` while the app builds from source.
+        platform: The page's platform, e.g. `android`.
         device: The device's make and model, and whether it is an emulator or a
             simulator; None when the platform did not say.
-        os: The OS and its version, e.g. ``Android 15 (API 35)``; None when the
+        os: The OS and its version, e.g. `Android 15 (API 35)`; None when the
             platform did not say.
         embedded: A packaged build, not the companion app or a desktop host (F14).
-        year: The conference year (``config.YEAR``).
+        year: The conference year (`config.YEAR`).
         source: Where the published schedule came from.
-        feed_digest: The published feed's SHA-256 (``Conference.digest``), or None.
+        feed_digest: The published feed's SHA-256 (`Conference.digest`), or None.
         fetched_at: When the published schedule was fetched (aware), or None.
-        zone: The conference's IANA time zone, e.g. ``America/Los_Angeles``.
+        zone: The conference's IANA time zone, e.g. `America/Los_Angeles`.
         device_offset: The device's UTC offset now (the host's in the companion app).
         fake_clock_from: The fake clock's start (aware), or None for real time.
-        now: The app's time, ``clock.now()``: the fake clock's when it is on.
+        now: The app's time, `clock.now()`: the fake clock's when it is on.
         written_at: The real time the facts were read (aware).
         custom_feed_url: A Developer feed URL is in effect; the URL itself never is
             a fact.
@@ -118,16 +118,16 @@ class Facts:
 
 
 def diagnostics_text(facts: Facts) -> str:
-    """Return the diagnostics text: one ``Name: value`` line per fact, 19 lines.
+    """Return the diagnostics text: one `Name: value` line per fact, 19 lines.
 
     Times are ISO 8601 in the conference's zone, with their offset, and the device's
     offset has an ASCII sign too ("UTC-07:00"). Every value is
-    kept on one line and cut at ``MAX_VALUE`` characters, and its email addresses and
-    URLs are written ``<email>`` and ``<url>``, so a value the app does not control
+    kept on one line and cut at `MAX_VALUE` characters, and its email addresses and
+    URLs are written `<email>` and `<url>`, so a value the app does not control
     (a device's model) cannot add a line or carry an address.
 
     Args:
-        facts: What to say, from ``gather_facts()``.
+        facts: What to say, from `gather_facts()`.
     """
     zone = ZoneInfo(facts.zone)
 
@@ -178,9 +178,9 @@ async def gather_facts(
 ) -> Facts:
     """Read the facts the diagnostics text says, from the platform, the stores and the build.
 
-    Asks the platform for the device (``page.get_device_info()``) and, in a packaged
-    build, for its build (``read_build()``); when one fails, the text says "unknown" or
-    "none" there and the rest is still read. Call it from an ``async``
+    Asks the platform for the device (`page.get_device_info()`) and, in a packaged
+    build, for its build (`read_build()`); when one fails, the text says "unknown" or
+    "none" there and the rest is still read. Call it from an `async`
     handler (D-70).
 
     Args:
@@ -257,8 +257,8 @@ def _schedule_line(source: Source, digest: bytes | None) -> str:
     """Return the schedule's line: where it came from and which feed it is.
 
     Args:
-        source: ``Conference.source``.
-        digest: ``Conference.digest``; its first ``_FEED_DIGITS`` hex digits name it.
+        source: `Conference.source`.
+        digest: `Conference.digest`; its first `_FEED_DIGITS` hex digits name it.
     """
     if source == "none" or digest is None:
         return "none yet"
@@ -268,12 +268,12 @@ def _schedule_line(source: Source, digest: bytes | None) -> str:
 def _offset_line(offset: timedelta) -> str:
     """Return the device's UTC offset in ISO 8601 with an ASCII sign, e.g. "UTC-07:00".
 
-    Not ``timefmt.utc_offset_label()``, whose typographic minus suits the Developer
+    Not `timefmt.utc_offset_label()`, whose typographic minus suits the Developer
     screen but not text pasted into an issue: a search for "-07:00" or "UTC-" must
-    find it, as it finds the other lines' ``isoformat()`` offsets. Zero is "UTC+00:00".
+    find it, as it finds the other lines' `isoformat()` offsets. Zero is "UTC+00:00".
 
     Args:
-        offset: ``Facts.device_offset``.
+        offset: `Facts.device_offset`.
     """
     sign = "-" if offset < timedelta(0) else "+"
     minutes = abs(int(offset.total_seconds())) // 60
@@ -301,13 +301,13 @@ def _saved_line(count: int | None) -> str:
     """Return the saved sessions' line: how many, or that the list could not be read.
 
     Args:
-        count: ``Facts.saved_sessions``.
+        count: `Facts.saved_sessions`.
     """
     return "unknown (the saved list could not be read)" if count is None else str(count)
 
 
 def _clean(value: str) -> str:
-    """Return ``value`` on one line, cut at ``MAX_VALUE``, without emails or URLs.
+    """Return `value` on one line, cut at `MAX_VALUE`, without emails or URLs.
 
     Args:
         value: A fact's value as written.

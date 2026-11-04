@@ -1,7 +1,7 @@
 """The mock API's check-in endpoints: door check and swag pickup (API-05..API-07).
 
-``check_in/redeemable``, ``attendees_by_product_with_quantity``, ``fetch_products`` and
-``redeem_products`` as ``tools/mock_api/README.md`` describes them, under both capture
+`check_in/redeemable`, `attendees_by_product_with_quantity`, `fetch_products` and
+`redeem_products` as `tools/mock_api/README.md` describes them, under both capture
 semantics (D-57). The role gates of every staff endpoint are pinned here too.
 """
 
@@ -23,7 +23,7 @@ FETCH_QUERY = (
     "category_pk_list=3",
     "mode=redemption_mode",
 )
-"""A swag ``fetch_products`` query's parameters, in Ionic's order."""
+"""A swag `fetch_products` query's parameters, in Ionic's order."""
 
 STAFF_ENDPOINTS = [
     ("GET", "check_in/redeemable/", "door_check_in"),
@@ -45,7 +45,7 @@ STAFF_ENDPOINTS = [
     ),
     ("POST", "lead_retrieval/MOCK0001/note/", "lead"),
 ]
-"""Every staff endpoint, with the flag it needs (``lead``: lead retrieval or door)."""
+"""Every staff endpoint, with the flag it needs (`lead`: lead retrieval or door)."""
 
 DOOR_ROLES = {"door_check_in": "staff", "mask_violation": "coc", "lead": "sponsor"}
 """A seeded role that holds each gate's flag."""
@@ -64,7 +64,7 @@ def door_payload(code: str, scanned_at: str, **quantities: int) -> dict[str, obj
 
 
 def swag_payload(code: str, validator: str, **quantities: int) -> dict[str, object]:
-    """A swag payload as Ionic builds it: a validator (maybe ``""``), ids as strings."""
+    """A swag payload as Ionic builds it: a validator (maybe `""`), ids as strings."""
     payload: dict[str, object] = {
         "attendee_access_code": code,
         "badge_validator": validator,
@@ -77,7 +77,7 @@ def swag_payload(code: str, validator: str, **quantities: int) -> dict[str, obje
 
 
 def fetch(state: MockState, query: str, role: str = "staff") -> tuple[int, object]:
-    """``fetch_products`` with the query exactly as Ionic interpolates it."""
+    """`fetch_products` with the query exactly as Ionic interpolates it."""
     return call(state, "GET", f"check_in/fetch_products/?{query}", role)
 
 
@@ -100,7 +100,7 @@ def test_the_seed_has_door_and_swag_products_and_badged_attendees() -> None:
 def test_every_staff_endpoint_is_signed_and_role_gated(
     method: str, endpoint: str, gate: str
 ) -> None:
-    """No key is 401; a role without the flag is 403 ``{code, error}``; with it, not."""
+    """No key is 401; a role without the flag is 403 `{code, error}`; with it, not."""
     state = state_at()
     assert call(state, method, endpoint)[0] == 401
     assert call(state, method, endpoint, "attendee") == (
@@ -114,13 +114,13 @@ def test_every_staff_endpoint_is_signed_and_role_gated(
 
 
 def test_the_never_called_attendees_by_product_is_not_served() -> None:
-    """Ionic's unused ``attendees_by_product/<id>/`` is a 404 (API-05)."""
+    """Ionic's unused `attendees_by_product/<id>/` is a 404 (API-05)."""
     state = state_at()
     assert call(state, "GET", "check_in/attendees_by_product/10/", "staff")[0] == 404
 
 
 def test_redeemable_lists_every_category_and_product_bare() -> None:
-    """The reply is bare ``{redeemable_categories, redeemable_products}``."""
+    """The reply is bare `{redeemable_categories, redeemable_products}`."""
     state = state_at()
     status, body = call(state, "GET", "check_in/redeemable/", "staff")
     assert status == 200
@@ -135,7 +135,7 @@ def test_redeemable_lists_every_category_and_product_bare() -> None:
 
 
 def test_inventory_lists_who_bought_a_product_with_their_dietary_needs() -> None:
-    """A bare list of buyers: access code as ``id``, quantity bought, dietary fields."""
+    """A bare list of buyers: access code as `id`, quantity bought, dietary fields."""
     state = state_at()
     endpoint = "check_in/attendees_by_product_with_quantity/10/"
     assert call(state, "GET", endpoint, "staff") == (
@@ -295,7 +295,7 @@ def test_a_door_redemption_redeems_once_then_reports_already_redeemed() -> None:
 
 
 def test_a_swag_redemption_takes_string_ids_and_an_empty_validator() -> None:
-    """Swag sends ids as strings and ``""`` for a missing validator; both work."""
+    """Swag sends ids as strings and `""` for a missing validator; both work."""
     state = state_at()
     payload = swag_payload("MOCK0001", "", p30=2, p40=1)
     status, body = call(state, "POST", "check_in/redeem_products/", "staff", payload)
@@ -395,13 +395,13 @@ def test_a_repeated_redemption_is_applied_twice_when_not_idempotent() -> None:
 
 
 def test_an_unknown_capture_semantics_is_refused() -> None:
-    """``MockState`` only models the two semantics D-57 names."""
+    """`MockState` only models the two semantics D-57 names."""
     with pytest.raises(ValueError, match="capture"):
         MockState(2026, [], capture="sometimes")  # type: ignore[arg-type]
 
 
 async def test_the_unencoded_fetch_query_survives_httpx_and_the_transport() -> None:
-    """Ionic's raw ``a,b`` list goes through httpx unchanged and signs as sent."""
+    """Ionic's raw `a,b` list goes through httpx unchanged and signs as sent."""
     state = state_at()
     staff = account(state, "staff")
     path = (

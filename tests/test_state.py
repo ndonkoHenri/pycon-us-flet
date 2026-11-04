@@ -1,6 +1,6 @@
 """Tests for the Conference store: cache-first load and single-flight refresh (DATA-01, DATA-02).
 
-The feeds, transports and fixtures are ``tests/feed_store.py``'s.
+The feeds, transports and fixtures are `tests/feed_store.py`'s.
 """
 
 import asyncio
@@ -63,7 +63,7 @@ async def test_without_a_cache_the_bundled_snapshot_is_published(
 async def test_the_digest_names_the_published_feed(
     storage: Storage, year: YearData
 ) -> None:
-    """``digest`` is None before a publish, then the SHA-256 of the published bytes (D-271)."""
+    """`digest` is None before a publish, then the SHA-256 of the published bytes (D-271)."""
     assert Conference().digest is None
     conference = await loaded(storage, year)
     assert conference.digest == feed_digest(year.read_snapshot().raw)
@@ -197,7 +197,7 @@ async def test_a_refresh_after_the_last_one_ended_makes_a_new_request(
 async def test_refreshing_is_set_while_the_request_is_in_flight(
     storage: Storage, year: YearData
 ) -> None:
-    """``refreshing`` is True while the request is in flight, and False after it."""
+    """`refreshing` is True while the request is in flight, and False after it."""
     conference = await loaded(storage, year)
     feed = HeldFeed()
 
@@ -263,7 +263,7 @@ async def test_a_failed_refresh_keeps_the_data_and_the_cache_and_says_why(
 async def test_a_good_refresh_clears_the_last_problem(
     storage: Storage, year: YearData
 ) -> None:
-    """A good refresh after a failed one clears the problem: the status is ``fresh``."""
+    """A good refresh after a failed one clears the problem: the status is `fresh`."""
     conference = await loaded(storage, year)
     await conference.refresh(
         storage, year, transport=failing(httpx.ConnectError("offline"))
@@ -294,7 +294,7 @@ async def test_a_feed_that_cannot_be_cached_is_still_published(
 async def test_a_publish_notifies_subscribers_and_the_task_does_not(
     storage: Storage, year: YearData
 ) -> None:
-    """Loading and refreshing notify subscribers of their fields, never of ``_task``."""
+    """Loading and refreshing notify subscribers of their fields, never of `_task`."""
     conference = Conference()
     assert isinstance(conference, ft.Observable)
     changes: list[str | None] = []

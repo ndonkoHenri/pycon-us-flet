@@ -1,16 +1,16 @@
-"""Developer (``/more/developer``): the options for testing and demos (DEV-01, D-73).
+"""Developer (`/more/developer`): the options for testing and demos (DEV-01, D-73).
 
 The fake clock, in conference time, with a date picker and a time picker
-(``developer_clock.py``); the time zone; the feed URL; and the capability flags,
-read-only (``capabilities.py``, D-63); the mock API URL is ``developer_api.py``'s
+(`developer_clock.py`); the time zone; the feed URL; and the capability flags,
+read-only (`capabilities.py`, D-63); the mock API URL is `developer_api.py`'s
 (D-51). Apply puts the clock and the feed URL into effect
-at once and saves them in ``pycon.dev``, so they hold across launches; Reset returns to
+at once and saves them in `pycon.dev`, so they hold across launches; Reset returns to
 real time and the year's feed (D-187). The screen is always available when not embedded,
 and in a packaged build once unlocked in About this app; a warning-tone "Developer" chip
 at its top marks it (ux.md §5.13). Its Data section (Refresh now, Clear cached feed,
-Share log, Reset app) is ``developer_data.py``'s (D-198), with the Staff queue and
-Clear staff data rows of ``developer_staff.py`` under it (D-412, D-414); its Reminders
-section, a test reminder per kind, is ``developer_reminders.py``'s (DEV-06, D-402).
+Share log, Reset app) is `developer_data.py`'s (D-198), with the Staff queue and
+Clear staff data rows of `developer_staff.py` under it (D-412, D-414); its Reminders
+section, a test reminder per kind, is `developer_reminders.py`'s (DEV-06, D-402).
 """
 
 from datetime import datetime, timedelta
@@ -261,7 +261,7 @@ def locked(margin: float) -> ft.Control:
     """Return the body shown before the unlock: how to unlock, and the way there.
 
     Args:
-        margin: The screen's side margin (``ui.widths.use_margin()``).
+        margin: The screen's side margin (`ui.widths.use_margin()`).
     """
     return ft.ListView(
         [
@@ -284,7 +284,7 @@ def capability_row(name: str, available: bool) -> ft.Control:
 
     Args:
         name: The capability, e.g. "Reminders".
-        available: Its constant in ``capabilities.py``.
+        available: Its constant in `capabilities.py`.
     """
     return ft.ListTile(
         leading=ft.Icon(
@@ -320,12 +320,12 @@ def applied(fake_now: datetime | None, feed_url: str | None, zone_name: str) -> 
 def developer_chip(color: str) -> ft.Control:
     """Return the warning-tone "Developer" mark at the top of the page (ux.md §5.13).
 
-    A chip's look without a ``Chip``: a Chip with no handler is drawn disabled (faded
-    label) at the pin, and a mark is not a control (ux.md §3.9, as ``TrackBadge``).
+    A chip's look without a `Chip`: a Chip with no handler is drawn disabled (faded
+    label) at the pin, and a mark is not a control (ux.md §3.9, as `TrackBadge`).
     Text only, as a badge: a fixed-size icon looked lost beside the label at 200 % text.
 
     Args:
-        color: ``Tokens.warning``: the label and the outline.
+        color: `Tokens.warning`: the label and the outline.
     """
     return ft.Container(
         padding=ft.Padding.symmetric(horizontal=8, vertical=4),
@@ -343,7 +343,7 @@ def zone_line(zone_name: str, zone_key: str, now: datetime) -> str:
     Args:
         zone_name: The conference zone's display name, e.g. "Pacific Time".
         zone_key: Its IANA key, e.g. "America/Los_Angeles".
-        now: ``clock.now()``; the device's offset is the one at that instant.
+        now: `clock.now()`; the device's offset is the one at that instant.
     """
     offset = now.astimezone().utcoffset() or timedelta(0)
     return f"{zone_name} ({zone_key}). This device: {utc_offset_label(offset)}."

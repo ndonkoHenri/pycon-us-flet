@@ -1,8 +1,8 @@
-"""Tests for the scan screen's clearing, ``ui/scan_clear.py`` (#762; MASK-05, O-7).
+"""Tests for the scan screen's clearing, `ui/scan_clear.py` (#762; MASK-05, O-7).
 
-The screen runs around the rig's recording handler (``tests/scan_rig.py``) with its
+The screen runs around the rig's recording handler (`tests/scan_rig.py`) with its
 clock and the clear's timer held. A tool that asks for it has its result cleared
-``clear_after`` seconds after the result shows and when the app goes to the
+`clear_after` seconds after the result shows and when the app goes to the
 background; the panel then says "Ready to scan" as no live region, so the clear is
 not said. A tool that asks for neither keeps its result as before.
 """
@@ -71,7 +71,7 @@ async def test_a_new_result_restarts_the_timer(
 async def test_the_background_clears_the_result(
     show: Show, rig: Rig, timer: Timer
 ) -> None:
-    """``pause`` clears at once; the resume shows "Ready to scan"; scanning goes on."""
+    """`pause` clears at once; the resume shows "Ready to scan"; scanning goes on."""
     rig.clear_in_background = True
     shown = await show()
     await enter(shown, "MOCK0001:v1")

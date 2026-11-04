@@ -1,10 +1,10 @@
-"""Tests for the Tracks hub and the track pages (``screens/tracks.py``, ``track.py``; #102).
+"""Tests for the Tracks hub and the track pages (`screens/tracks.py`, `track.py`; #102).
 
 SCHED-21, SCHED-22, EVT-04, DATA-29, SHELL-10. The hub's sections and counts are plain
 functions over the recorded feeds; the screens run in a real Flet session under the
-store providers (``tests/harness.py``'s ``showing()``). The slugs' loader rules are in
-``tests/test_config_tracks.py``; ``track_sessions()`` itself in
-``tests/test_timeline_tracks.py``.
+store providers (`tests/harness.py`'s `showing()`). The slugs' loader rules are in
+`tests/test_config_tracks.py`; `track_sessions()` itself in
+`tests/test_timeline_tracks.py`.
 How the pages look, wrap at 200 % and read to screen readers is checked on devices (the
 PR).
 """
@@ -41,7 +41,7 @@ DATA = processed(2026)
 
 
 def track(slug: str):
-    """Return the 2026 track at ``slug``, which must exist."""
+    """Return the 2026 track at `slug`, which must exist."""
     found = INFO.track_for_slug(slug)
     assert found is not None, slug
     return found
@@ -150,7 +150,7 @@ type Show = Callable[..., Awaitable[Shown]]
 async def show(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> AsyncIterator[Show]:
     """Provide an async function that renders a screen in a real Flet session.
 
-    It takes the screen and an optional ``Conference`` (the 2026 feed by default).
+    It takes the screen and an optional `Conference` (the 2026 feed by default).
     """
     async with AsyncExitStack() as stack:
 
@@ -175,7 +175,7 @@ async def show(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> AsyncIterator
 
 
 def page_of(slug: str) -> Callable[[], ft.Control]:
-    """Return a screen function that builds the track page at ``slug``."""
+    """Return a screen function that builds the track page at `slug`."""
     return lambda: track_screen.TrackDetail(slug)
 
 
@@ -217,7 +217,7 @@ async def test_the_keynotes_row_counts_the_panels_its_page_lists(show: Show) -> 
 async def test_every_track_row_pushes_its_slug_under_the_hub(
     show: Show, slug: str
 ) -> None:
-    """A track row pushes ``/more/tracks/<slug>``, whose parent is the hub.
+    """A track row pushes `/more/tracks/<slug>`, whose parent is the hub.
 
     ux.md §5.10, D-207: one rule for every row, checked on the talks row and the three
     tracks with pages of their own; the route table opens the keynotes', lightning

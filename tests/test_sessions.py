@@ -1,7 +1,7 @@
-"""Tests for the screen harness itself: ``tests/harness.py``'s ``showing()`` (#253).
+"""Tests for the screen harness itself: `tests/harness.py`'s `showing()` (#253).
 
 A test may open several screens at once (the Tracks tests do, through an
-``AsyncExitStack``). What each one records, its row bodies (D-153) and its titles, and
+`AsyncExitStack`). What each one records, its row bodies (D-153) and its titles, and
 the View path it reads, must be its own: a second screen must not chain its records
 through the first one's (#287's review).
 """
@@ -24,7 +24,7 @@ from tests.row_sessions import LIST, TALK, Owner
 YEAR = load_year(2026)
 
 probe = ModuleType("probe")
-"""A screen's module, whose ``AppScaffold`` ``showing()`` replaces."""
+"""A screen's module, whose `AppScaffold` `showing()` replaces."""
 
 
 def AppScaffold(**_: object) -> ft.Control:
@@ -54,7 +54,7 @@ type Open = Callable[[str], Awaitable[Shown]]
 async def open_screen(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> AsyncIterator[Open]:
-    """Return open(name): a ``Screen(name)`` at ``/<name>``, open until the test ends."""
+    """Return open(name): a `Screen(name)` at `/<name>`, open until the test ends."""
     async with AsyncExitStack() as stack:
 
         async def open_(name: str) -> Shown:
@@ -77,7 +77,7 @@ async def open_screen(
 
 
 async def tap_star(shown: Shown, session_id: str) -> None:
-    """Tap the star on ``session_id``'s row of ``shown``."""
+    """Tap the star on `session_id`'s row of `shown`."""
     star = shown.node(f"test.favorite.{session_id}").content
     assert isinstance(star, ft.IconButton)
     await shown.click(star)

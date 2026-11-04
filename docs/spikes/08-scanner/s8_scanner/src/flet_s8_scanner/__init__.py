@@ -13,7 +13,7 @@ __all__ = ["BarcodeFormat", "DetectEvent", "ErrorEvent", "S8Scanner"]
 
 
 class BarcodeFormat(Enum):
-    """Dart ``BarcodeFormat.name`` values; QR is all the app needs."""
+    """Dart `BarcodeFormat.name` values; QR is all the app needs."""
 
     QR_CODE = "qrCode"
     ALL = "all"
@@ -29,7 +29,7 @@ class DetectEvent(ft.Event["S8Scanner"]):
 
 @dataclass
 class ErrorEvent(ft.Event["S8Scanner"]):
-    """The camera could not start: ``code`` is the Dart ``MobileScannerErrorCode`` name."""
+    """The camera could not start: `code` is the Dart `MobileScannerErrorCode` name."""
 
     code: str | None = None
     message: str | None = None

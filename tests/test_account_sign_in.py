@@ -1,8 +1,8 @@
 """Tests for signing in to the mock account (STORE-04, AUTH-02, D-54, #684).
 
-``Account.sign_in`` sends ``authenticate`` through the real client to the mock
-(``tools/mock_api/transport.py``), saves the key, the secret and the account before
-``signed_in`` turns True, and returns how it ended; the client then signs with the
+`Account.sign_in` sends `authenticate` through the real client to the mock
+(`tools/mock_api/transport.py`), saves the key, the secret and the account before
+`signed_in` turns True, and returns how it ended; the client then signs with the
 store's key. The account outlives a mock URL that is cleared or changed (D-398).
 """
 
@@ -37,7 +37,7 @@ shared, storage, keystore, credentials = (
 )
 
 ROLES = ("attendee", "speaker", "sponsor", "staff", "coc", "all")
-"""Every seeded account (``tests/fixtures/mock/seed.json``)."""
+"""Every seeded account (`tests/fixtures/mock/seed.json`)."""
 
 
 @pytest.fixture
@@ -48,27 +48,27 @@ def state() -> MockState:
 
 @pytest.fixture
 def recorder(state: MockState) -> Recorder:
-    """A transport to ``state`` that keeps every request sent through it."""
+    """A transport to `state` that keeps every request sent through it."""
     return Recorder(mock_transport(state))
 
 
 def client(transport: httpx.AsyncBaseTransport, store: Account) -> ApiClient:
-    """A client over ``transport`` that signs with ``store``'s credentials, as the app's."""
+    """A client over `transport` that signs with `store`'s credentials, as the app's."""
     return ApiClient(
         BASE_URL, 2026, store.credentials, transport=transport, now=lambda: NOW
     )
 
 
 class Held(Recorder):
-    """A transport to the mock that holds each request until ``release`` is set."""
+    """A transport to the mock that holds each request until `release` is set."""
 
     def __init__(self, inner: httpx.AsyncBaseTransport) -> None:
-        """Hold requests to ``inner``, which answers them once released."""
+        """Hold requests to `inner`, which answers them once released."""
         super().__init__(inner)
         self.release = asyncio.Event()
 
     async def handle_async_request(self, request: httpx.Request) -> httpx.Response:
-        """Record the request, wait for ``release``, then let the mock answer."""
+        """Record the request, wait for `release`, then let the mock answer."""
         self.sent.append(request)
         await self.release.wait()
         return await self.inner.handle_async_request(request)
@@ -82,7 +82,7 @@ async def sign_in(
     role: str = "all",
     password: str | None = None,
 ) -> SignIn:
-    """Sign ``store`` in as the seeded ``role``, with its password unless one is given."""
+    """Sign `store` in as the seeded `role`, with its password unless one is given."""
     return await store.sign_in(
         client(transport, store),
         storage,
@@ -147,12 +147,12 @@ async def test_every_write_lands_before_signed_in_turns_true(
     storage: Storage,
     credentials: CredentialStorage,
 ) -> None:
-    """Whoever reads ``signed_in`` finds what a relaunch would (STORE-04, AUTH-02)."""
+    """Whoever reads `signed_in` finds what a relaunch would (STORE-04, AUTH-02)."""
     store = Account()
     seen: list[tuple[list[str], bool]] = []
 
     def at_sign_in(_sender: object, name: str | None) -> None:
-        """Record what is stored when ``signed_in`` changes."""
+        """Record what is stored when `signed_in` changes."""
         if name == "signed_in":
             seen.append((list(keystore.journal), ACCOUNT.key in shared.values))
 
@@ -169,7 +169,7 @@ async def test_a_wrong_password_is_wrong_credentials_and_stores_nothing(
     storage: Storage,
     credentials: CredentialStorage,
 ) -> None:
-    """The mock's 401 is the user's mistake, kept in ``error`` for the screen."""
+    """The mock's 401 is the user's mistake, kept in `error` for the screen."""
     store = Account()
     outcome = await sign_in(store, recorder, storage, credentials, password="nope")
     assert outcome is SignIn.WRONG_CREDENTIALS
@@ -258,7 +258,7 @@ async def test_one_sign_in_at_a_time(
 async def test_signed_out_the_client_sends_no_key(
     recorder: Recorder, storage: Storage, credentials: CredentialStorage
 ) -> None:
-    """After a sign-out a signed call goes without ``X-API-Key``, and the mock refuses it."""
+    """After a sign-out a signed call goes without `X-API-Key`, and the mock refuses it."""
     store = Account()
     api = client(recorder, store)
     await store.sign_in(api, storage, credentials, "all@example.com", "mock-all")
@@ -334,8 +334,8 @@ async def test_a_sign_in_killed_mid_write_never_pairs_two_accounts(
 ) -> None:
     """The old profile goes before the new secrets come, so a relaunch is signed out.
 
-    ``all`` is saved, restored or not (a failed read keeps it stored); a sign-in as
-    ``attendee`` dies after its secrets are written but before its profile is.
+    `all` is saved, restored or not (a failed read keeps it stored); a sign-in as
+    `attendee` dies after its secrets are written but before its profile is.
     """
     accounts.save_account(
         shared,
@@ -351,7 +351,7 @@ async def test_a_sign_in_killed_mid_write_never_pairs_two_accounts(
     assert store.signed_in is not restore_failed
 
     async def killed(*_args: object) -> bool:
-        """Stand for the app dying while ``pycon.account`` is written."""
+        """Stand for the app dying while `pycon.account` is written."""
         raise asyncio.CancelledError
 
     monkeypatch.setattr(Storage, "set", killed)  # Storage is frozen

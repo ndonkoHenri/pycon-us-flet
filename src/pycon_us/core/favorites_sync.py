@@ -1,8 +1,8 @@
-"""How the favourites and the account's ``mobile_state`` agree after a pull (D-55, D-406).
+"""How the favourites and the account's `mobile_state` agree after a pull (D-55, D-406).
 
-Pure: ``services/favorites_sync.py`` reads the server's list, asks ``reconcile()`` what
+Pure: `services/favorites_sync.py` reads the server's list, asks `reconcile()` what
 to keep and whether to push, then does it. Three states say what the device knows
-(``SyncState``); the state is saved per year, so a kill never forgets an unsent edit
+(`SyncState`); the state is saved per year, so a kill never forgets an unsent edit
 or a first sync that has not happened yet.
 """
 
@@ -12,16 +12,16 @@ from enum import StrEnum
 
 
 class SyncState(StrEnum):
-    """What the server has of this device's favourites, as saved in ``favorites_sync``."""
+    """What the server has of this device's favourites, as saved in `favorites_sync`."""
 
     MERGE = "merge"
     """The first sync after a sign-in has not happened: the next pull takes the union,
-    so no local id is lost (Ionic replaced the local list, ``[]`` included)."""
+    so no local id is lost (Ionic replaced the local list, `[]` included)."""
     DIRTY = "dirty"
     """A local edit has not reached the server: the next pull keeps the local list and
     pushes it, so an unsent edit is never overwritten."""
     CLEAN = "clean"
-    """The server had this device's last list: the next pull adopts the server's, ``[]``
+    """The server had this device's last list: the next pull adopts the server's, `[]`
     included, since a difference is then an edit made elsewhere."""
 
 
@@ -31,7 +31,7 @@ class Reconciled:
 
     Attributes:
         keep: The ids the device keeps.
-        push: Whether ``keep`` is sent to the server (a full-list PATCH).
+        push: Whether `keep` is sent to the server (a full-list PATCH).
     """
 
     keep: frozenset[str]
@@ -39,10 +39,10 @@ class Reconciled:
 
 
 def server_ids(reply: object) -> frozenset[str] | None:
-    """Return the ids of a ``mobile_state`` reply, integers as their decimal strings.
+    """Return the ids of a `mobile_state` reply, integers as their decimal strings.
 
     Args:
-        reply: The decoded reply, ``{"favorites": [...]}`` (``tools/mock_api``).
+        reply: The decoded reply, `{"favorites": [...]}` (`tools/mock_api`).
 
     Returns:
         The ids, or None when the reply is not that shape: a list of strings and
@@ -64,11 +64,11 @@ def reconcile(
 
     Args:
         local: The device's ids now, edits made during the pull included.
-        server: The ids the server sent (``server_ids()``).
-        state: The saved ``SyncState``, read after the pull's reply.
+        server: The ids the server sent (`server_ids()`).
+        state: The saved `SyncState`, read after the pull's reply.
 
     Returns:
-        ``MERGE``: the union. ``DIRTY``: the local list. ``CLEAN``: the server's
+        `MERGE`: the union. `DIRTY`: the local list. `CLEAN`: the server's
         list. Pushed whenever it differs from the server's.
     """
     local, server = frozenset(local), frozenset(server)

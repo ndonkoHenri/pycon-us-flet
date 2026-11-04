@@ -1,8 +1,8 @@
 """Tests for the markup conversion at the end of feed processing (D-130, D-140; DATA-23..25).
 
-``feed.process()`` converts every HTML field once, after Ionic's rules, and keeps the raw
-HTML beside the Markdown. The converter itself is tested in ``test_html_md.py`` and on
-the feeds' values in ``test_html_md_feeds.py`` (which also checks that no tag is left
+`feed.process()` converts every HTML field once, after Ionic's rules, and keeps the raw
+HTML beside the Markdown. The converter itself is tested in `test_html_md.py` and on
+the feeds' values in `test_html_md_feeds.py` (which also checks that no tag is left
 outside code); these tests check the wiring, on the recorded 2025 and 2026 feeds.
 """
 
@@ -27,7 +27,7 @@ TAG = re.compile(r"</?[a-zA-Z][^>]*>")
 
 @cache
 def site_url(year: int) -> str:
-    """The site URL that ``year``'s relative links resolve against."""
+    """The site URL that `year`'s relative links resolve against."""
     return settings(year).site_url
 
 
@@ -76,7 +76,7 @@ def test_poster_descriptions_are_markdown(year: int) -> None:
 def test_sprint_and_job_descriptions_are_markdown(year: int) -> None:
     """Every sprint and job listing is kept, its description converted to Markdown.
 
-    A job listing that is a placeholder, such as OpenEDG's ``N/A``, has none (D-278).
+    A job listing that is a placeholder, such as OpenEDG's `N/A`, has none (D-278).
     """
     data = processed(year)
     assert len(data.sprints) == len(document(year).get("sprints", []))
@@ -136,7 +136,7 @@ def test_open_space_search_text_has_no_markdown_markup(year: int) -> None:
 
 
 def test_open_space_search_text_keeps_link_text_without_destinations() -> None:
-    """2026's pytest open space links ``[pytest](pytest.org)`` and bolds a phrase."""
+    """2026's pytest open space links `[pytest](pytest.org)` and bolds a phrase."""
     session = processed(2026).sessions["9086"]
     assert "[pytest](pytest.org) is great" in session.description
     assert "pytest is great" in session.search_text
@@ -164,7 +164,7 @@ def test_search_text_ignores_accents_and_case() -> None:
 
 
 def test_the_rules_read_the_raw_description() -> None:
-    """Rule 16 runs last: Ionic's placeholder rule sees ``<p></p>`` as a description."""
+    """Rule 16 runs last: Ionic's placeholder rule sees `<p></p>` as a description."""
 
     def empty_paragraph(doc: dict[str, Any]) -> None:
         slot = next(s for s in doc["schedule"] if str(s["conf_key"]) == "130")
@@ -195,7 +195,7 @@ def test_each_distinct_value_converts_once(monkeypatch: pytest.MonkeyPatch) -> N
 def test_conversion_time_counts_in_the_processing_log(
     monkeypatch: pytest.MonkeyPatch, caplog: pytest.LogCaptureFixture
 ) -> None:
-    """D-109 and D-130: ``Feed processed in N ms`` includes the conversion."""
+    """D-109 and D-130: `Feed processed in N ms` includes the conversion."""
     clock = SimpleNamespace(now=0.0)
 
     def slow(value: str, site_url: str) -> str:
@@ -227,7 +227,7 @@ def test_a_content_block_that_is_not_text_is_skipped() -> None:
 
 
 def test_a_feed_without_content_has_none() -> None:
-    """A feed without a ``conference`` object has no content and skips nothing."""
+    """A feed without a `conference` object has no content and skips nothing."""
     data = process(changed(2026, lambda doc: doc.pop("conference")), settings(2026))
     assert data.content == {} and data.content_md == {}
     assert data.skipped == ()
@@ -246,6 +246,6 @@ def test_a_feed_without_content_has_none() -> None:
 def test_conference_content_of_the_wrong_type_raises_feed_error(
     change: Any, problem: str
 ) -> None:
-    """A ``conference`` or ``content`` that is not an object raises ``FeedError``."""
+    """A `conference` or `content` that is not an object raises `FeedError`."""
     with pytest.raises(FeedError, match=problem):
         process(changed(2026, change), settings(2026))

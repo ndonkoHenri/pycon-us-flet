@@ -1,15 +1,15 @@
-"""Capture request-signing vectors from Ionic's own ``buildRequestAuthHeaders`` (D-52; #662).
+"""Capture request-signing vectors from Ionic's own `buildRequestAuthHeaders` (D-52; #662).
 
 Run it by hand, rarely: only when the Ionic reference moves or a case is added.
-It needs Node and npm; CI and the tests never run it, they only read its output::
+It needs Node and npm; CI and the tests never run it, they only read its output:
 
     uv run python tools/capture_ionic_reference/capture_signing.py --ionic excluded/pycon-us-mobile
 
-It copies Ionic's ``pycon-api.ts`` unchanged into a work directory, with the stand-ins
-``capture.py`` uses for Angular, RxJS, Ionic storage, Capacitor, ``UserData`` and the
-environment, installs the ``sha1-uint8array`` version of Ionic's ``package-lock.json``
-there, bundles ``signing_driver.ts`` with the pinned esbuild and runs it under Node. The
-cases and the headers Ionic computed for them go to ``tests/fixtures/ionic/signing.json``,
+It copies Ionic's `pycon-api.ts` unchanged into a work directory, with the stand-ins
+`capture.py` uses for Angular, RxJS, Ionic storage, Capacitor, `UserData` and the
+environment, installs the `sha1-uint8array` version of Ionic's `package-lock.json`
+there, bundles `signing_driver.ts` with the pinned esbuild and runs it under Node. The
+cases and the headers Ionic computed for them go to `tests/fixtures/ionic/signing.json`,
 with their provenance. Nothing is installed into the repository.
 """
 
@@ -22,7 +22,7 @@ from pathlib import Path
 from capture import ESBUILD, HERE, OUTPUT, REPO, command, copy, ionic_commit
 
 IONIC_FILES = ("src/app/providers/pycon-api.ts", "tsconfig.json")
-"""Ionic's files that ``buildRequestAuthHeaders`` needs, copied unchanged."""
+"""Ionic's files that `buildRequestAuthHeaders` needs, copied unchanged."""
 
 STAND_INS = {
     "signing_driver.ts": "signing_driver.ts",
@@ -40,7 +40,7 @@ STUBBED_PACKAGES = (
     "rxjs",
     "rxjs/operators",
 )
-"""The packages ``stubs.ts`` stands in for; ``buildRequestAuthHeaders`` uses none of them."""
+"""The packages `stubs.ts` stands in for; `buildRequestAuthHeaders` uses none of them."""
 
 HASH_PACKAGE = "sha1-uint8array"
 """The one third-party code the signature runs through: Ionic's SHA-1."""
@@ -87,7 +87,7 @@ def prepare(ionic: Path, work: Path) -> str:
     """Lay out the work directory, install Ionic's SHA-1 package and bundle the driver.
 
     Returns:
-        The ``sha1-uint8array`` version installed: the one Ionic's lock file resolves.
+        The `sha1-uint8array` version installed: the one Ionic's lock file resolves.
     """
     for name in IONIC_FILES:
         copy(ionic / name, work / name)

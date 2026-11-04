@@ -1,13 +1,13 @@
 """Door check's headcount: "42 checked in" under the session chip (DOOR-06, D-442).
 
 What it counts is D-442's rule: the signed-in account's check-ins on this device for
-the chosen session's products, read from the outbox (``core/admission.headcount()``),
+the chosen session's products, read from the outbox (`core/admission.headcount()`),
 so the distinct codes among its door rows, pending, synced or failed, whose products
 overlap the session's. It therefore survives a restart and a trip to another tool,
 comes back when the session is chosen again, and never moves on "Already checked in",
 which reads the same rows (STORE-12). It is per device: the API has no total.
 
-``use_headcount()`` reads it again whenever the outbox changes (``Staff.revision``,
+`use_headcount()` reads it again whenever the outbox changes (`Staff.revision`,
 bumped after each admission and each sync pass). A failed read says so and is never
 shown as 0 (D-120). The line is one node, not a live region: the result panel already
 says each scan, so the count isn't said after every one (#767).
@@ -26,7 +26,7 @@ from pycon_us.staff import use_staff
 WORDS = " checked in"
 """What follows the number on the line."""
 WORDS_SIZE = 24
-"""The words' size, ``HEADLINE_SMALL``'s; the number keeps ``DISPLAY_SMALL``."""
+"""The words' size, `HEADLINE_SMALL`'s; the number keeps `DISPLAY_SMALL`."""
 UNAVAILABLE = "Check-in count unavailable"
 """What the line says when the outbox can't be read (D-120)."""
 
@@ -58,7 +58,7 @@ def read_headcount(
     """Read the count from the account's rows: 0 without products, None on a failure.
 
     Args:
-        db: The outbox (``Services.outbox``); None can't be read.
+        db: The outbox (`Services.outbox`); None can't be read.
         owner: The account.
         product_ids: The session's products.
     """
@@ -74,11 +74,11 @@ def headcount_words(count: int | None) -> str:
 
 
 def headcount_line(count: int | None) -> ft.Control:
-    """Return the headcount, its number large (``DISPLAY_SMALL``), as one node.
+    """Return the headcount, its number large (`DISPLAY_SMALL`), as one node.
 
-    The node is ``door.headcount``, read "42 checked in for this session"; a failed read
-    is a plain line in ``error``. The words are smaller than the number, so "checked"
-    fits a phone's line at iOS's largest text, where ``DISPLAY_SMALL`` broke it in two
+    The node is `door.headcount`, read "42 checked in for this session"; a failed read
+    is a plain line in `error`. The words are smaller than the number, so "checked"
+    fits a phone's line at iOS's largest text, where `DISPLAY_SMALL` broke it in two
     (#828); they wrap between words.
 
     Args:

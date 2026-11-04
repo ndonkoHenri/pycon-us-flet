@@ -1,25 +1,25 @@
-r"""Convert the feed's HTML fields to Markdown for ``ft.Markdown``, and to text for search.
+r"""Convert the feed's HTML fields to Markdown for `ft.Markdown`, and to text for search.
 
-The rules are D-114 and D-115 (S3, ``docs/spikes/03-html-markdown.md``; DATA-25, SESS-06):
+The rules are D-114 and D-115 (S3, `docs/spikes/03-html-markdown.md`; DATA-25, SESS-06):
 
-- A value is parsed with stdlib ``html.parser`` into a small tree, then rendered. Tags
-  outside the S3 census are unwrapped (their text stays where it was); ``script`` and
-  ``style`` are dropped with their text. Whitespace collapses as in a browser; only
-  ``br`` breaks a line.
+- A value is parsed with stdlib `html.parser` into a small tree, then rendered. Tags
+  outside the S3 census are unwrapped (their text stays where it was); `script` and
+  `style` are dropped with their text. Whitespace collapses as in a browser; only
+  `br` breaks a line.
 - A value with no tag is plain text: blank lines separate paragraphs and a single
   newline is a hard break.
 - Text is escaped with numeric character references, never backslashes: Flet's
-  ``Markdown`` always adds LaTeX syntax (F27), whose ``\(`` and ``\[`` openers a
-  backslash escape would create, and GFM reads ``~x~`` and ``:name:``. Code spans are raw.
-- Links are joined to the year's site URL, and only ``http``, ``https`` and ``mailto``
+  `Markdown` always adds LaTeX syntax (F27), whose `\(` and `\[` openers a
+  backslash escape would create, and GFM reads `~x~` and `:name:`. Code spans are raw.
+- Links are joined to the year's site URL, and only `http`, `https` and `mailto`
   become links. A bare URL in text becomes an explicit link, so GFM's autolinks never
   decide where it ends.
 
-``to_text`` gives the visible text with no markup, for search (D-46).
+`to_text` gives the visible text with no markup, for search (D-46).
 
 This module holds the HTML side: the tree, its blocks and the walk over inline elements.
 The Markdown they become, escaped text, emphasis, links and code spans, is
-``markdown_inline`` (D-201).
+`markdown_inline` (D-201).
 """
 
 import re
@@ -40,7 +40,7 @@ from pycon_us.core.markdown_inline import (
     paragraph,
 )
 
-# ``URL`` and ``URL_TRAILER`` are here for ``jobs.py``: it finds a bare URL by the same
+# `URL` and `URL_TRAILER` are here for `jobs.py`: it finds a bare URL by the same
 # rule (D-114), and only this module may import the inline layer (D-201).
 __all__ = ["DROPPED_TAGS", "HEADINGS", "URL", "URL_TRAILER", "to_markdown", "to_text"]
 
@@ -70,12 +70,12 @@ class _Element:
 
 
 class _TreeBuilder(HTMLParser):
-    """Builds an ``_Element`` tree, tolerating unclosed and stray end tags.
+    """Builds an `_Element` tree, tolerating unclosed and stray end tags.
 
     Unknown tags never enter the tree, so their children land in their parent: that is
-    what unwrapping means (D-114). ``script`` and ``style`` are skipped with their text.
+    what unwrapping means (D-114). `script` and `style` are skipped with their text.
     An emphasis or code element that directly follows one of the same kind continues it
-    (D-131): rendered apart, their markers would touch and show literally (``*a**b*``).
+    (D-131): rendered apart, their markers would touch and show literally (`*a**b*`).
     """
 
     def __init__(self) -> None:
@@ -119,7 +119,7 @@ class _TreeBuilder(HTMLParser):
 
 
 def _kind(tag: str) -> str:
-    """Tags that render the same are one kind: ``b`` and ``strong`` are both ``**``."""
+    """Tags that render the same are one kind: `b` and `strong` are both `**`."""
     return _EMPHASIS.get(tag, tag)
 
 
@@ -131,7 +131,7 @@ def to_markdown(value: str, site_url: str) -> str:
         site_url: The year's site URL, which relative links are joined to.
 
     Returns:
-        Markdown for ``ft.Markdown(extension_set=GITHUB_WEB)``; empty for an empty field.
+        Markdown for `ft.Markdown(extension_set=GITHUB_WEB)`; empty for an empty field.
     """
     if not _HAS_TAG.search(value):
         return _plain_to_markdown(value)
@@ -141,8 +141,8 @@ def to_markdown(value: str, site_url: str) -> str:
 def to_text(value: str) -> str:
     """Return a field's visible text, with no markup, for search (D-46).
 
-    Blocks and line breaks become spaces, so words never join; link targets, ``script``
-    and ``style`` are left out. Whitespace runs become one space.
+    Blocks and line breaks become spaces, so words never join; link targets, `script`
+    and `style` are left out. Whitespace runs become one space.
 
     Args:
         value: The field: HTML, or plain text when it has no tag.
@@ -276,7 +276,7 @@ def _item_body(blocks: list[str]) -> str:
 def _inline(
     node: _Element | str, site_url: str, *, in_link: bool = False
 ) -> list[Token]:
-    r"""Render inline content as tokens: Markdown text, ``\n`` for a break, and emphasis."""
+    r"""Render inline content as tokens: Markdown text, `\n` for a break, and emphasis."""
     if isinstance(node, str):
         return [escape(_HTML_SPACE.sub(" ", node), linkify=not in_link)]
     tag = node.tag

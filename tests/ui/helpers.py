@@ -1,10 +1,10 @@
 """Helpers for the UI flows. They drive the app only through its own UI (D-78).
 
-``flet test`` always runs in device mode: the app runs on the emulator or simulator, and
-the flow drives it through ``flet_app.tester``, a ``RemoteTester``. That tester finds
+`flet test` always runs in device mode: the app runs on the emulator or simulator, and
+the flow drives it through `flet_app.tester`, a `RemoteTester`. That tester finds
 controls and taps them, but cannot drag, scroll or tap at a point (F21), and a
-``Finder`` only counts matches (testing-and-quality.md §5.1, §13). So the helpers poll
-with ``pump()`` until a finder matches (or stops matching), and flows tap by finder.
+`Finder` only counts matches (testing-and-quality.md §5.1, §13). So the helpers poll
+with `pump()` until a finder matches (or stops matching), and flows tap by finder.
 """
 
 import asyncio
@@ -31,23 +31,23 @@ START_TIMEOUT = 180.0
 launch unpacks Python before it starts, slowly on a busy host's emulator."""
 
 RETAP_SECONDS = 1.0
-"""How long ``tap_until`` waits for a tap's effect before it taps again."""
+"""How long `tap_until` waits for a tap's effect before it taps again."""
 
 SHEET_SETTLE = ft.Duration(seconds=2)
 """Time for a sheet's slide or a day tab's on a slow debug build, in or out."""
 
 PLATFORM = os.environ.get("FLET_TEST_PLATFORM", "")
-"""``android`` or ``ios``, set by ``flet test``."""
+"""`android` or `ios`, set by `flet test`."""
 
 DEVICE = os.environ.get("FLET_TEST_DEVICE", "")
-"""The emulator's or simulator's id, ``flet test``'s ``-d``."""
+"""The emulator's or simulator's id, `flet test`'s `-d`."""
 
 SCREENSHOTS = Path("build") / "ui" / PLATFORM
-"""Where ``screenshot()`` saves each step's image; ``flet test`` runs from the repo root."""
+"""Where `screenshot()` saves each step's image; `flet test` runs from the repo root."""
 
 
 def remote(flet_app: ftt.FletTestApp) -> RemoteTester:
-    """Return the app's tester, which ``flet test`` makes a ``RemoteTester`` (D-78)."""
+    """Return the app's tester, which `flet test` makes a `RemoteTester` (D-78)."""
     tester = flet_app.tester
     assert isinstance(tester, RemoteTester), "UI flows run with flet test (device mode)"
     return tester
@@ -62,11 +62,11 @@ async def wait_for(
     count: int | None = None,
     timeout: float = TIMEOUT,
 ) -> Finder:
-    """Pump frames until ``find()`` matches a control, or matches none when ``gone``.
+    """Pump frames until `find()` matches a control, or matches none when `gone`.
 
     Args:
         t: The tester.
-        find: Runs a finder, e.g. ``lambda: t.find_by_text("More")``.
+        find: Runs a finder, e.g. `lambda: t.find_by_text("More")`.
         what: The control, for the failure message.
         gone: Wait for the control to leave the screen instead (a covered View is
             offstage once its push has finished, so finders skip it).
@@ -95,13 +95,13 @@ async def wait_for(
 async def wait_until(
     t: RemoteTester, met: Callable[[], bool], what: str, *, timeout: float = TIMEOUT
 ) -> None:
-    """Pump frames until ``met()`` holds: for what the host sees, not the screen.
+    """Pump frames until `met()` holds: for what the host sees, not the screen.
 
-    For example a request that reached a fixture's server (``SilentFeed.requests``).
+    For example a request that reached a fixture's server (`SilentFeed.requests`).
 
     Args:
         t: The tester.
-        met: The condition, e.g. ``lambda: feed.requests > asked``.
+        met: The condition, e.g. `lambda: feed.requests > asked`.
         what: What is awaited, for the failure message.
         timeout: Seconds before the step fails.
     """
@@ -116,7 +116,7 @@ async def wait_until(
 async def wait_for_id(
     t: RemoteTester, identifier: str, *, gone: bool = False, timeout: float = TIMEOUT
 ) -> Finder:
-    """Wait for a control with this semantics identifier (``<screen>.<element>``)."""
+    """Wait for a control with this semantics identifier (`<screen>.<element>`)."""
     return await wait_for(
         t,
         lambda: t.find_by_semantics_identifier(identifier),
@@ -171,14 +171,14 @@ async def open_tab(t: RemoteTester, tab: str) -> None:
     are on screen: a tap on the leaving one is lost (#108 lost a My schedule tap that
     way on the iOS simulator, and a More tap on the Android emulator while Now
     re-rendered for a new fake clock). So the tab is tapped once one bar shows, and
-    again every ``RETAP_SECONDS`` until its root's title shows (a tap on the tab
+    again every `RETAP_SECONDS` until its root's title shows (a tap on the tab
     already shown only scrolls its root to the top, D-166); the switch is over when
     the title shows with one bar again (D-170).
 
     Args:
         t: The tester, on a tab root.
-        tab: The tab's key, as in ``app.nav.<tab>`` and ``<tab>.title``, e.g.
-            ``my_schedule``.
+        tab: The tab's key, as in `app.nav.<tab>` and `<tab>.title`, e.g.
+            `my_schedule`.
     """
     nav = f"app.nav.{tab}"
 
@@ -210,18 +210,18 @@ async def tap_until(
     *,
     timeout: float = TIMEOUT,
 ) -> None:
-    """Tap ``target`` until ``done()`` matches: for a tap an animation can swallow.
+    """Tap `target` until `done()` matches: for a tap an animation can swallow.
 
     A SnackBar's action slides in for 250 ms, and a tap on it before it has arrived
     is lost (#197). Rather than wait a fixed time, the tap is repeated, every
-    ``RETAP_SECONDS`` while its effect has not shown, until it shows. A tap on a list
+    `RETAP_SECONDS` while its effect has not shown, until it shows. A tap on a list
     that is still scrolling only stops the scroll, the same way. Only for a target
     that acts once, as a SnackBar's action does, or whose second tap changes
     nothing, as Developer's Apply of the same values.
 
     Args:
         t: The tester.
-        target: Finds the control to tap, e.g. ``lambda: t.find_by_text("Undo")``.
+        target: Finds the control to tap, e.g. `lambda: t.find_by_text("Undo")`.
         done: Finds what the tap brings, e.g. the row an Undo restores.
         what: The step, for the failure message.
         timeout: Seconds before the step fails.
@@ -244,8 +244,8 @@ async def tap_until(
 async def enter_text_id(t: RemoteTester, identifier: str, text: str) -> None:
     """Replace the text of the field with this identifier, as typing it would.
 
-    ``RemoteTester.enter_text`` focuses the field (its ``TextField`` under the
-    identifier's node) and hands it the whole text at once, so ``on_change`` runs once.
+    `RemoteTester.enter_text` focuses the field (its `TextField` under the
+    identifier's node) and hands it the whole text at once, so `on_change` runs once.
     """
     await t.enter_text((await wait_for_id(t, identifier)).first, text)
     await t.pump(STEP)
@@ -297,10 +297,10 @@ async def answer_primer_not_now(t: RemoteTester) -> None:
     """Answer the reminders primer with Not now, after a fresh install's first star (D-395).
 
     The sheet opens only while the OS can still ask: a fresh install on Android 13 or later,
-    or on iOS, as ``flet test`` gives the flows' devices. It covers what the flow taps
+    or on iOS, as `flet test` gives the flows' devices. It covers what the flow taps
     next. Not now asks the OS nothing and leaves session reminders off.
 
-    A tap while the sheet slides in is lost, as a SnackBar's is (``tap_until()``), so the
+    A tap while the sheet slides in is lost, as a SnackBar's is (`tap_until()`), so the
     tap repeats until the sheet has gone. The button can go between the look and a repeated
     tap, which then fails with nothing to tap, so only the next look decides.
     """
@@ -333,7 +333,7 @@ async def tap_back_arrow(t: RemoteTester) -> None:
 async def press_system_back(t: RemoteTester) -> None:
     """Press Android's Back key, which the app gets as a view pop (D-17, D-141).
 
-    ``RemoteTester`` cannot send it, so ``adb`` does, on the device ``flet test``
+    `RemoteTester` cannot send it, so `adb` does, on the device `flet test`
     targets. iOS has no Back key; its edge swipe needs a drag (F21) and stays a manual
     check (testing-and-quality.md §9).
     """
@@ -343,10 +343,10 @@ async def press_system_back(t: RemoteTester) -> None:
 
 
 async def screenshot(name: str) -> None:
-    """Save the screen as ``build/ui/<platform>/<name>.png``, a record of the step.
+    """Save the screen as `build/ui/<platform>/<name>.png`, a record of the step.
 
     Not a golden: nothing compares it (goldens arrive in P4, testing-and-quality.md §6).
-    The device's own tools take it: ``RemoteTester.take_screenshot`` works once per run
+    The device's own tools take it: `RemoteTester.take_screenshot` works once per run
     on Android, where its second call fails ("Surface already converted to an image").
     """
     SCREENSHOTS.mkdir(parents=True, exist_ok=True)
@@ -358,11 +358,11 @@ async def screenshot(name: str) -> None:
 
 
 async def screenshot_on_failure() -> None:
-    """Save ``timed-out-<flow>.png``, what the screen showed instead, if the device lets us.
+    """Save `timed-out-<flow>.png`, what the screen showed instead, if the device lets us.
 
-    Named after the flow (pytest's ``PYTEST_CURRENT_TEST``), so a run with several
+    Named after the flow (pytest's `PYTEST_CURRENT_TEST`), so a run with several
     failures keeps each one's picture. A step often times out because the app or the
-    device went away, and then ``adb`` or ``simctl`` fails too: that failure must not
+    device went away, and then `adb` or `simctl` fails too: that failure must not
     hide the step's own message.
     """
     current = os.environ.get("PYTEST_CURRENT_TEST", "")
@@ -384,6 +384,6 @@ async def run(*command: str) -> bytes:
 
 
 def adb() -> str:
-    """Return ``adb``: on ``PATH``, else in ``$ANDROID_HOME`` or Android Studio's SDK."""
+    """Return `adb`: on `PATH`, else in `$ANDROID_HOME` or Android Studio's SDK."""
     sdk = os.environ.get("ANDROID_HOME") or str(Path.home() / "Library/Android/sdk")
     return shutil.which("adb") or str(Path(sdk) / "platform-tools" / "adb")

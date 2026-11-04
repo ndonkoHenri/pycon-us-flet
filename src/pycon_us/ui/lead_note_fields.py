@@ -1,7 +1,7 @@
 """The lead note sheet's choices: Interest's segmented button, Follow-up's chips (LEAD-10).
 
 ux.md §7.3. Words and an icon for each choice, never an emoji (Ionic's modal used them,
-and screen readers read them oddly). ``ui/lead_note_sheet.py`` lays them out; split
+and screen readers read them oddly). `ui/lead_note_sheet.py` lays them out; split
 from it at D-66's ~400 lines (#755).
 """
 
@@ -40,7 +40,7 @@ def interest_button(
     """Return Hot · Warm · Cold; none selected allowed, so a second tap clears it.
 
     Each segment is read as its label, a button and its state; its identifier
-    (``lead.note.interest.<value>``) is merged into the segment's node, as the Expo's.
+    (`lead.note.interest.<value>`) is merged into the segment's node, as the Expo's.
     """
     return ft.SegmentedButton(
         segments=[
@@ -65,7 +65,7 @@ def follow_up_chip(
 ) -> ft.Control:
     """Return a follow-up's filter chip: its icon, or the check mark once selected.
 
-    One node with its identifier (``lead.note.follow_up.<key>``), read with its
+    One node with its identifier (`lead.note.follow_up.<key>`), read with its
     label and whether it is selected (Flutter's chip says it).
     """
 

@@ -1,22 +1,22 @@
-"""The zoom layer of a floor plan: ``use_zoom()``, ``zoom_layer()`` and ``zoom_buttons()``.
+"""The zoom layer of a floor plan: `use_zoom()`, `zoom_layer()` and `zoom_buttons()`.
 
-A plan is an ``Image(fit=CONTAIN)`` in a ``Stack`` with what is drawn on it (a pin, and
-later the expo's booths), inside an ``InteractiveViewer(min_scale=1, max_scale=natural
-/ displayed)``: zoom never goes below the fitted plan, and at most one image pixel fills
-one logical pixel (D-312, S7). The viewer's size comes from ``on_size_change``; the
+A plan is an `Image(fit=CONTAIN)` in a `Stack` with what is drawn on it (a pin, and
+later the expo's booths), inside an `InteractiveViewer(min_scale=1, max_scale=natural
+/ displayed)`: zoom never goes below the fitted plan, and at most one image pixel fills
+one logical pixel (D-312, S7). The viewer's size comes from `on_size_change`; the
 plan's fitted size, its maximum zoom and where a point of it lands follow from it
-(``fitted()``, ``max_scale()``, ``centred_on()``), pure functions the tests pin, in
-``ui/zoom_geometry.py``.
+(`fitted()`, `max_scale()`, `centred_on()`), pure functions the tests pin, in
+`ui/zoom_geometry.py`.
 
 Every viewer has the zoom buttons, the single-pointer way to zoom (WCAG 2.5.1). At the
-pin, ``zoom()`` scales about the plan's top-left corner, so each zoom pans back to keep
-its focus in place (``refocus()``, F76) until U56 (#472). A double tap (2x, or back to
+pin, `zoom()` scales about the plan's top-left corner, so each zoom pans back to keep
+its focus in place (`refocus()`, F76) until U56 (#472). A double tap (2x, or back to
 fit) is only for plans with nothing to tap: its detector delays every single tap
 (D-312). A resize (a rotation) lowers the maximum zoom and moves the viewer's bounds
-without clamping its transform, so ``use_zoom()`` zooms back down to the maximum and
-pans back inside the bounds (``into_bounds()``, #588). A pane that leaves and comes
-back keeps its zoom through ``on_transform`` and ``Zoom.restore()`` (D-312, D-18).
-Every duration goes through ``prefs.motion_ms()`` (D-173).
+without clamping its transform, so `use_zoom()` zooms back down to the maximum and
+pans back inside the bounds (`into_bounds()`, #588). A pane that leaves and comes
+back keeps its zoom through `on_transform` and `Zoom.restore()` (D-312, D-18).
+Every duration goes through `prefs.motion_ms()` (D-173).
 """
 
 from collections.abc import Awaitable, Callable
@@ -71,18 +71,18 @@ async def read(viewer: ft.InteractiveViewer) -> Transform:
 
 @dataclass
 class Zoom:
-    """A zoom layer's state and actions, from ``use_zoom()``.
+    """A zoom layer's state and actions, from `use_zoom()`.
 
     Attributes:
-        viewer: The ``InteractiveViewer``, once mounted.
+        viewer: The `InteractiveViewer`, once mounted.
         natural: The image's size, in pixels.
-        box: The viewer's size, ``(0, 0)`` before its first layout.
+        box: The viewer's size, `(0, 0)` before its first layout.
         scale: The viewer's last reported scale, 1 at fit.
-        reset_ms: Reset view's duration: ``RESET_MS``, or 0 under reduced motion.
+        reset_ms: Reset view's duration: `RESET_MS`, or 0 under reduced motion.
         tapped_at: Where the last double tap went down, kept across renders (a pin's
             pulse can render between its down and its up).
-        resized: The viewer's ``on_size_change`` handler.
-        transformed: The viewer's ``on_transform_changed`` handler.
+        resized: The viewer's `on_size_change` handler.
+        transformed: The viewer's `on_transform_changed` handler.
     """
 
     viewer: ft.Ref[ft.InteractiveViewer]
@@ -96,12 +96,12 @@ class Zoom:
 
     @property
     def shown(self) -> Size:
-        """The plan's fitted size in the viewer (``fitted()``)."""
+        """The plan's fitted size in the viewer (`fitted()`)."""
         return fitted(self.box, self.natural)
 
     @property
     def max_scale(self) -> float:
-        """The viewer's maximum zoom (``max_scale()``)."""
+        """The viewer's maximum zoom (`max_scale()`)."""
         return max_scale(self.natural[0], self.shown[0])
 
     @property
@@ -115,7 +115,7 @@ class Zoom:
         return self.scale * AT_FIT >= self.max_scale
 
     async def zoom_by(self, factor: float, focus: Size | None = None) -> None:
-        """Zoom by ``factor``, keeping ``focus`` (by default the centre) in place.
+        """Zoom by `factor`, keeping `focus` (by default the centre) in place.
 
         Args:
             factor: Over 1 zooms in, under 1 out; the viewer clamps the result.
@@ -143,13 +143,13 @@ class Zoom:
     async def restore(self, to: Transform) -> None:
         """Put back a transform the viewer reported before: reset, zoom, pan (D-312).
 
-        ``zoom()`` keeps the translation at the reset's 0 and ``pan()`` moves in the
-        plan's units (F76), so ``pan(x / s, y / s)`` lands on ``(x, y)``; until U3's
-        ``set_transform``, two or three frames show the steps. The scale is held to
+        `zoom()` keeps the translation at the reset's 0 and `pan()` moves in the
+        plan's units (F76), so `pan(x / s, y / s)` lands on `(x, y)`; until U3's
+        `set_transform`, two or three frames show the steps. The scale is held to
         today's maximum, which a rotation may have lowered.
 
         Args:
-            to: The transform to put back, as ``on_transform_changed`` reported it.
+            to: The transform to put back, as `on_transform_changed` reported it.
         """
         if self.viewer.current is None:
             return
@@ -163,12 +163,12 @@ class Zoom:
 def use_zoom(
     natural: Size, *, on_transform: Callable[[Transform], None] | None = None
 ) -> Zoom:
-    """Return a zoom layer's state for an image of ``natural`` size (a hook).
+    """Return a zoom layer's state for an image of `natural` size (a hook).
 
     Args:
-        natural: The image's width and height, in pixels (``map.toml``'s).
+        natural: The image's width and height, in pixels (`map.toml`'s).
         on_transform: Called with each transform the viewer reports, for a pane
-            that keeps its zoom in ``ViewMemory`` (D-312); None for none.
+            that keeps its zoom in `ViewMemory` (D-312); None for none.
     """
     prefs = use_prefs()
     viewer = ft.use_memo(ft.Ref[ft.InteractiveViewer], [])
@@ -224,15 +224,15 @@ def zoom_layer(
     *,
     double_tap: bool,
 ) -> ft.Control:
-    """Return the plan in its ``InteractiveViewer``, filling the space it is given.
+    """Return the plan in its `InteractiveViewer`, filling the space it is given.
 
-    The plan's ``Stack`` is its fitted size, centred, so what ``layers`` place from
-    the plan's percentages (``centred_on()``) lands on the plan at every zoom.
+    The plan's `Stack` is its fitted size, centred, so what `layers` place from
+    the plan's percentages (`centred_on()`) lands on the plan at every zoom.
 
     Args:
-        zoom: The layer's state (``use_zoom()``).
-        src: The plan's image, relative to ``src/assets/`` (``Plan.image``). No
-            ``cache_width``: the zoom is there for the detail it would drop (D-312).
+        zoom: The layer's state (`use_zoom()`).
+        src: The plan's image, relative to `src/assets/` (`Plan.image`). No
+            `cache_width`: the zoom is there for the detail it would drop (D-312).
         label: What a screen reader says of the plan, e.g. "Concourse level floor
             plan, Room 104C marked": the layers are not read.
         layers: What is drawn on the plan, positioned in the fitted plan's units.
@@ -287,10 +287,10 @@ def zoom_button(
     """Return one zoom button: a 48 dp tonal icon button, named by its tooltip.
 
     Args:
-        identifier: For UI flows, e.g. ``plan.zoom_in``; merged with the button.
+        identifier: For UI flows, e.g. `plan.zoom_in`; merged with the button.
         icon: The button's icon.
         tooltip: Its name, e.g. "Zoom in".
-        on_click: What it does, wrapped in ``report_errors`` by the caller.
+        on_click: What it does, wrapped in `report_errors` by the caller.
         disabled: Whether it can do nothing at this zoom.
     """
     return named(
@@ -310,13 +310,13 @@ def zoom_buttons(zoom: Zoom, screen: str, *, row: bool = False) -> ft.Control:
     """Return the zoom buttons, in a column: zoom in, zoom out, reset view.
 
     The single-pointer alternative to a pinch (WCAG 2.5.1), 48 dp each, named by
-    their tooltips and merged with their identifiers (``<screen>.zoom_in``,
-    ``.zoom_out``, ``.reset``; D-214). A button that can do nothing at this zoom is
+    their tooltips and merged with their identifiers (`<screen>.zoom_in`,
+    `.zoom_out`, `.reset`; D-214). A button that can do nothing at this zoom is
     disabled, and says so.
 
     Args:
-        zoom: The layer's state (``use_zoom()``).
-        screen: The screen's name in the identifiers, e.g. ``plan``.
+        zoom: The layer's state (`use_zoom()`).
+        screen: The screen's name in the identifiers, e.g. `plan`.
         row: Lay them in a row instead, for a pane too short for the column (D-370).
     """
 

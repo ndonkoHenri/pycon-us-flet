@@ -1,8 +1,8 @@
 """Tests for the Prefs store: load, save and checked values (STORE-08..10).
 
-SharedPreferences is the in-memory fake from ``tests/fakes.py``; Flet's own type check in
-``SharedPreferences.set`` still runs. The OS facts and Developer options are
-``test_prefs_values.py``'s.
+SharedPreferences is the in-memory fake from `tests/fakes.py`; Flet's own type check in
+`SharedPreferences.set` still runs. The OS facts and Developer options are
+`test_prefs_values.py`'s.
 """
 
 import json
@@ -32,12 +32,12 @@ def shared() -> MemoryPrefs:
 
 @pytest.fixture
 def store(shared: MemoryPrefs, tmp_path: Path) -> Storage:
-    """The 2026 storage over ``shared`` and a temporary directory."""
+    """The 2026 storage over `shared` and a temporary directory."""
     return Storage(prefs=shared, directory=tmp_path, year=2026)
 
 
 async def loaded(store: Storage) -> Prefs:
-    """A new ``Prefs`` loaded from ``store``."""
+    """A new `Prefs` loaded from `store`."""
     prefs = Prefs()
     await prefs.load(store)
     return prefs
@@ -153,7 +153,7 @@ async def test_unreadable_preferences_read_as_their_defaults(
 
 
 async def test_load_leaves_the_boot_gate_to_its_caller(store: Storage) -> None:
-    """Loading leaves ``loaded`` False: its caller opens the boot gate."""
+    """Loading leaves `loaded` False: its caller opens the boot gate."""
     assert (await loaded(store)).loaded is False
 
 

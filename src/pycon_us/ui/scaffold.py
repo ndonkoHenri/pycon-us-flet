@@ -1,16 +1,16 @@
-"""The chrome every screen shares: ``AppScaffold``, the headings, ``search_button()``.
+"""The chrome every screen shares: `AppScaffold`, the headings, `search_button()`.
 
-``AppScaffold`` builds each screen's View (architecture §5.5): a surface ``AppBar`` with
+`AppScaffold` builds each screen's View (architecture §5.5): a surface `AppBar` with
 the screen's title, left-aligned and always visible (D-10, D-28), the Material back arrow
-on pushed Views, the bottom bar or, from 600 dp, the rail (``ui.navigation``) and the
+on pushed Views, the bottom bar or, from 600 dp, the rail (`ui.navigation`) and the
 Back rules on tab roots (D-13, D-17, D-142, D-144, D-277), and the body in a
-``SafeArea`` (D-12, D-113). The status- and navigation-bar style comes from the theme
-(``theme.overlay_style()``, D-151): Flet's ``AppBar`` applies it, so a screen never sets
-one. The 720/840 dp content widths are each screen's own, ``ui.widths.use_margin()``
-(D-305): the screen builds its list before it calls ``AppScaffold``.
+`SafeArea` (D-12, D-113). The status- and navigation-bar style comes from the theme
+(`theme.overlay_style()`, D-151): Flet's `AppBar` applies it, so a screen never sets
+one. The 720/840 dp content widths are each screen's own, `ui.widths.use_margin()`
+(D-305): the screen builds its list before it calls `AppScaffold`.
 
-``SectionHeader`` is the heading of a group of rows; a detail page's own title is
-``ui.page_title.PageTitle`` (D-328). The status strip and the minute tick are ``ui.status_strip`` (D-200).
+`SectionHeader` is the heading of a group of rows; a detail page's own title is
+`ui.page_title.PageTitle` (D-328). The status strip and the minute tick are `ui.status_strip` (D-200).
 """
 
 import asyncio
@@ -59,11 +59,11 @@ def AppScaffold(
 
     A plain builder that calls hooks, so a screen calls it exactly once per render, in
     every branch (hooks are unconditional, D-70). It records the top View's route for
-    the start route (D-143), places the body in ``Shown``, which logs D-112's content
-    line (D-165), and puts ``GutterProbe`` under it, which tells the lists whether a
+    the start route (D-143), places the body in `Shown`, which logs D-112's content
+    line (D-165), and puts `GutterProbe` under it, which tells the lists whether a
     slot's time fits beside its rows (D-216). It also makes every route change, a
     warm deep link's included, close the open dialogs and sheets first
-    (``ui.modals``, D-291).
+    (`ui.modals`, D-291).
 
     On a tab root the View gets the bottom bar (D-144), with a 1 dp line above it in
     high contrast, where the bar is the page's own colour (THEME-06), or from 600 dp the
@@ -73,35 +73,35 @@ def AppScaffold(
     root other than Now goes to Now, and Back on Now is left to the system, which leaves
     the app (D-17, D-142). Back on a pushed View closes a dialog, a picker, a sheet or a
     menu open over it, and only then pops the View (D-208). An unknown location's View
-    (``unknown``) is a one-View stack like a root but with the back arrow, and Back
+    (`unknown`) is a one-View stack like a root but with the back arrow, and Back
     there goes to Now too (D-270).
 
     Args:
         title: The screen's name: the app bar's title and, for screen readers, the
             page's level-1 heading (D-211). On a tab root it carries the identifier
-            ``<tab>.title`` for UI flows (D-170). Empty on a detail page whose own
+            `<tab>.title` for UI flows (D-170). Empty on a detail page whose own
             title, in the page, is its level-1 heading (ux.md §5.5): no heading then.
-        source: The screen's ``__name__``, for View source: once ``SOURCE_URL`` is
+        source: The screen's `__name__`, for View source: once `SOURCE_URL` is
             set, the bar ends in an overflow with that one item (D-461). None on a
             screen whose own menu lists the item, so a bar never has two overflows.
-        body: What the View shows under the app bar, usually an ``expand=True``
-            ``ListView``; it is placed in a ``SafeArea``, clear of the notch, the
+        body: What the View shows under the app bar, usually an `expand=True`
+            `ListView`; it is placed in a `SafeArea`, clear of the notch, the
             home indicator and the navigation bar in either orientation.
-        actions: The app bar's actions, e.g. ``search_button()``; each icon-only one
+        actions: The app bar's actions, e.g. `search_button()`; each icon-only one
             has a tooltip, its accessible name (D-27).
         on_retap: A tab root's action when its active tab is tapped again, on the
-            bar or the rail, usually the one ``ui.navigation.use_scroll_to_top()``
+            bar or the rail, usually the one `ui.navigation.use_scroll_to_top()`
             returns; ignored on pushed Views, which have neither.
         fab: The screen's floating action button, if any: the Schedule's "Now"
             (ux.md §5.2). The body leaves room for it at its end.
-        unknown: The View of a location no route has (``routes.NotFound``): its
+        unknown: The View of a location no route has (`routes.NotFound`): its
             arrow, the Back key and the predictive gesture go to Now, as a root's
             Back does, and it is never where a new session returns (D-143, D-270).
         still_bar: Keep the app bar's colour whatever scrolls in the body: for a
             screen whose page never scrolls under the bar, only a box inside it, such
-            as the floor viewer's label card. Flutter's ``AppBar`` takes any scroll
+            as the floor viewer's label card. Flutter's `AppBar` takes any scroll
             in the body at depth 0 for the page's, and Flet has no
-            ``notification_predicate`` to say otherwise (F297, D-447).
+            `notification_predicate` to say otherwise (F297, D-447).
 
     Returns:
         The View for this route level.
@@ -226,21 +226,21 @@ def AppScaffold(
 def beside_rail(
     root: str, on_select: Select, wide: bool, shown: ft.Control
 ) -> ft.Control:
-    """Return a tab root's body beside its rail, which shows only when ``wide``.
+    """Return a tab root's body beside its rail, which shows only when `wide`.
 
     The rail stays in the tree, hidden, under 600 dp: the body keeps its place, so
     crossing 600 dp rebuilds neither it nor the screen's components and Flutter's
     state under it, such as a list's scroll (D-18, D-277). Under 600 dp the hidden
     rail is no widget at all (Flet's Dart side leaves out a control that is not
-    ``visible``), and the body fills the row as it filled the ``SafeArea``: the phone
+    `visible`), and the body fills the row as it filled the `SafeArea`: the phone
     layout is the same, pixel for pixel. The row stretches its children to its height:
-    the rail needs a bounded one, and the body had the ``SafeArea``'s.
+    the rail needs a bounded one, and the body had the `SafeArea`'s.
 
     Args:
-        root: The tab root, one of ``TAB_ROOTS``.
+        root: The tab root, one of `TAB_ROOTS`.
         on_select: The rail's tap handler, the bar's too.
-        wide: Whether the window is 600 dp wide or wider (``Layout.wide``).
-        shown: The screen's body in its ``Shown``; it has ``expand=True``.
+        wide: Whether the window is 600 dp wide or wider (`Layout.wide`).
+        shown: The screen's body in its `Shown`; it has `expand=True`.
     """
     return ft.Row(
         [Rail(root, on_select, wide), shown],
@@ -252,12 +252,12 @@ def beside_rail(
 def bar_divider(visible: bool) -> ft.Control:
     """Return the 1 dp line that separates a bar from the page in HC (THEME-06, D-306).
 
-    High contrast has one surface, so the ``NavigationBar`` and the ``AppBar``, even
-    with a list scrolled under it, are the page's colour; a line in ``outline`` draws
+    High contrast has one surface, so the `NavigationBar` and the `AppBar`, even
+    with a list scrolled under it, are the page's colour; a line in `outline` draws
     the edge that a tint draws elsewhere. Neither Material bar has a border of its own
-    (Flet's ``NavigationBar.border`` is the Cupertino bar's, and an ``AppBar`` shape
+    (Flet's `NavigationBar.border` is the Cupertino bar's, and an `AppBar` shape
     would draw all four sides), so the line opens the View's body, right under the app
-    bar, and closes a tab root's, right above the bottom bar: the ``Scaffold`` gives
+    bar, and closes a tab root's, right above the bottom bar: the `Scaffold` gives
     the body no inset under an app bar, nor above a bottom bar.
 
     A hidden line is no widget at all (Flet's Dart side leaves it out), so outside HC
@@ -272,13 +272,13 @@ def bar_divider(visible: bool) -> ft.Control:
 
 @ft.component
 def Shown(body: ft.Control) -> ft.Control:
-    """Return ``body`` unchanged, and log D-112's content line once per feed version.
+    """Return `body` unchanged, and log D-112's content line once per feed version.
 
-    The line is ``Content shown: <source> feed, version <n>``, logged from the first
-    screen that renders a version (``Services.shown_versions``, D-165), through
-    ``log_when_shown()``. It is a component of
-    its own so that only it reads ``Conference``: a refresh re-renders this leaf, which
-    hands back the same ``body``, and not the screen around it.
+    The line is `Content shown: <source> feed, version <n>`, logged from the first
+    screen that renders a version (`Services.shown_versions`, D-165), through
+    `log_when_shown()`. It is a component of
+    its own so that only it reads `Conference`: a refresh re-renders this leaf, which
+    hands back the same `body`, and not the screen around it.
 
     Args:
         body: The screen's body.
@@ -309,7 +309,7 @@ async def log_when_shown(storage: Storage, source: Source, version: int) -> None
     line is logged (a proxy: S1 saw it 0.2-0.3 s after the pixels).
 
     Args:
-        storage: The session's ``Storage``.
+        storage: The session's `Storage`.
         source: Where the shown feed came from.
         version: The shown feed version.
     """
@@ -322,12 +322,12 @@ def search_button(memory: ViewMemory, scope: str) -> ft.Control:
 
     It records the opener's location, query included, so Back from search returns
     there, and clears the last query, so each search starts empty (D-193). A deep
-    link to search has no button: ``screens.search.record_opening()`` records the
+    link to search has no button: `screens.search.record_opening()` records the
     same from the last location as the Search View mounts (D-291).
 
     Args:
-        memory: The process's ``ViewMemory``.
-        scope: ``all``, ``sessions``, ``speakers`` or ``rooms``.
+        memory: The process's `ViewMemory`.
+        scope: `all`, `sessions`, `speakers` or `rooms`.
     """
     page = ft.context.page
 
@@ -370,13 +370,13 @@ def SectionHeader(
             under a level-2 heading (search's days under "Sessions", D-193).
         top: The space above it: 16 dp where it opens a group in a list; 0 on a
             detail page, whose list already puts 24 dp between sections.
-        theme_style: Its type: ``TITLE_SMALL``, or ``TITLE_MEDIUM`` for a heading that
+        theme_style: Its type: `TITLE_SMALL`, or `TITLE_MEDIUM` for a heading that
             holds headings of its own (search's "Sessions" over its days, D-193).
-        color: Its colour role: ``primary``, or ``on_surface`` with ``TITLE_MEDIUM``.
+        color: Its colour role: `primary`, or `on_surface` with `TITLE_MEDIUM`.
         leading: A decorative mark before the text, such as Now's live dot: a
             control without a label (a shape, an unlabelled icon), so the heading
-            still reads as ``text``.
-        spoken: What a screen reader says instead of ``text``, when it differs:
+            still reads as `text`.
+        spoken: What a screen reader says instead of `text`, when it differs:
             "Up next, 11:30 AM" for "Up next · 11:30 AM".
     """
     label: ft.Control = ft.Text(

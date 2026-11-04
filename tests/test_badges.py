@@ -1,9 +1,9 @@
 """Tests for the badges (THEME-08, SCHED-20; D-25): the pill, and which a session shows.
 
-The colours' contrast is in ``tests/test_theme_badges.py``; here, that a badge draws them
-and always carries a name from ``track_name()`` (DATA-28). How badges look is checked on
+The colours' contrast is in `tests/test_theme_badges.py`; here, that a badge draws them
+and always carries a name from `track_name()` (DATA-28). How badges look is checked on
 devices (the PR). The sessions are the recorded 2026 feed's. The star's tests are in
-``tests/test_favorite.py`` (D-267).
+`tests/test_favorite.py` (D-267).
 """
 
 from dataclasses import replace
@@ -58,7 +58,7 @@ def label(badge: ft.Control) -> str:
 def session_badges(
     session: Session, info: ConferenceInfo, tokens: theme.Tokens
 ) -> list[ft.Control]:
-    """A session's badges drawn as a row draws them: its specs as ``TrackBadge``s."""
+    """A session's badges drawn as a row draws them: its specs as `TrackBadge`s."""
     specs = badge_specs(session, info, tokens)
     return [TrackBadge(text, colors) for text, colors in specs]
 
@@ -129,7 +129,7 @@ def test_a_talk_shows_its_track(data: ConferenceData, info: ConferenceInfo) -> N
 def test_track_names_come_from_track_name(
     data: ConferenceData, info: ConferenceInfo, session_id: str, expected: str
 ) -> None:
-    """A track badge says the name ``track_name()`` gives, such as AI, not the key."""
+    """A track badge says the name `track_name()` gives, such as AI, not the key."""
     session = data.sessions[session_id]
     assert labels(session, info)[0] == expected == info.track_name(session.track)
 
@@ -195,7 +195,7 @@ def test_a_session_without_a_track_shows_no_empty_pill(
 def test_a_recent_change_adds_changed_last_outlined_in_its_token(
     data: ConferenceData, info: ConferenceInfo
 ) -> None:
-    """Changed follows the session's own badges, outlined in ``Tokens.changed`` (D-315)."""
+    """Changed follows the session's own badges, outlined in `Tokens.changed` (D-315)."""
     specs = badge_specs(data.sessions[TUTORIAL], info, theme.LIGHT_TOKENS, changed=True)
     assert [label for label, _ in specs][-1] == CHANGED
     assert specs[-1][1] == theme.LIGHT_TOKENS.changed

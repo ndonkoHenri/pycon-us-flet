@@ -1,10 +1,10 @@
 """Room detail's day lists and the lit row (ROOM-02, ROOM-03; ux.md §5.9).
 
-``screens/room.py`` owns the screen: the stores, the day tabs (the Schedule's
-``day_tab()``), the highlight's effect and "Now in this room". Here is what it places in
-each ``TabBarView`` page: ``day_list()``, a day's time slots (D-31, ``TimeSlot``: a
-``TimeGutter`` beside the slot's ``SessionRow``s and ``NoticeRow``s), with the row the
-room was opened from keyed for the jump (``ui.scrolling.jump_to_key()``) and lit: its
+`screens/room.py` owns the screen: the stores, the day tabs (the Schedule's
+`day_tab()`), the highlight's effect and "Now in this room". Here is what it places in
+each `TabBarView` page: `day_list()`, a day's time slots (D-31, `TimeSlot`: a
+`TimeGutter` beside the slot's `SessionRow`s and `NoticeRow`s), with the row the
+room was opened from keyed for the jump (`ui.scrolling.jump_to_key()`) and lit: its
 whole slot when it has the slot to itself.
 """
 
@@ -32,11 +32,11 @@ SCREEN = "room"
 """The screen's name in its semantics identifiers (decisions §M)."""
 
 HIGHLIGHT_OPACITY = 0.16
-"""The share of ``primary`` in the lit row's fill, which the contrast test blends."""
+"""The share of `primary` in the lit row's fill, which the contrast test blends."""
 
 HIGHLIGHT = ft.Colors.with_opacity(HIGHLIGHT_OPACITY, ft.Colors.PRIMARY)
-"""The lit row's fill: a ``primary`` tint over the surface, close to ``primary_container``
-in light. Dark ``primary_container`` would put the rows' supporting text at 3.7:1; on
+"""The lit row's fill: a `primary` tint over the surface, close to `primary_container`
+in light. Dark `primary_container` would put the rows' supporting text at 3.7:1; on
 the tint it reads 5.0:1 in light and 5.9:1 in dark (D-194)."""
 
 UNLIT = ft.Colors.with_opacity(0, ft.Colors.PRIMARY)
@@ -44,7 +44,7 @@ UNLIT = ft.Colors.with_opacity(0, ft.Colors.PRIMARY)
 
 
 def row_key(session_id: str) -> str:
-    """Return the ``ScrollKey`` value of a session's row on a room's page (ux.md §5.9)."""
+    """Return the `ScrollKey` value of a session's row on a room's page (ux.md §5.9)."""
     return f"session-{session_id}"
 
 
@@ -74,18 +74,18 @@ def day_list(
     Args:
         views: The day's row views, in the room's order (by start, then name).
         info: The year's facts: the zone and the track registry.
-        favorites: The saved ids (``Favorites.ids``).
-        changes: Every session's recent changes (``use_recent_changes()``).
-        on_toggle: The screen's one star handler (``use_favorite_toggle()``).
+        favorites: The saved ids (`Favorites.ids`).
+        changes: Every session's recent changes (`use_recent_changes()`).
+        on_toggle: The screen's one star handler (`use_favorite_toggle()`).
         tokens: The scheme's tokens (D-150).
         use_24h: Whether the device uses the 24-hour clock.
-        time_above: Put each slot's time above its rows (``Prefs.time_above``,
+        time_above: Put each slot's time above its rows (`Prefs.time_above`,
             D-216).
         reveal: The session whose row the room was opened from, if this View shows it:
-            that row gets its ``ScrollKey`` and the highlight.
+            that row gets its `ScrollKey` and the highlight.
         lit: Whether the highlight is on.
-        fade_ms: How long it fades out, through ``prefs.motion_ms()``.
-        margin: The screen's side margin (``ui.widths.use_margin()``, D-305).
+        fade_ms: How long it fades out, through `prefs.motion_ms()`.
+        margin: The screen's side margin (`ui.widths.use_margin()`, D-305).
         list_ref: The list's ref, for the list that scrolls to the row.
         on_scroll: Its scroll handler, which reads each scroll's end.
         head: What comes before the slots: today's "Now in this room".
@@ -142,9 +142,9 @@ def day_list(
 def _lit(row: ft.Control, key: str, *, on: bool, ms: int) -> ft.Control:
     """Wrap the row the room was opened from, or its slot: the scroll target, lit.
 
-    An anchor at the top of the box carries the ``ScrollKey`` (a plain key is never
-    registered for ``scroll_to``), so the row keeps its nodes (D-242); the box carries
-    the tint, which fades out in ``ms``; at 0, under reduced motion (D-173), the
+    An anchor at the top of the box carries the `ScrollKey` (a plain key is never
+    registered for `scroll_to`), so the row keeps its nodes (D-242); the box carries
+    the tint, which fades out in `ms`; at 0, under reduced motion (D-173), the
     highlight simply goes.
     """
     return ft.Container(

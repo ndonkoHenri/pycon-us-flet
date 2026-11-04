@@ -1,6 +1,6 @@
 """Tests for the booth card under the expo plan (#403; EXPO-03, D-254).
 
-The Map's Expo pane runs as ``tests/test_expo_hall.py`` runs it, over the 2026 feed:
+The Map's Expo pane runs as `tests/test_expo_hall.py` runs it, over the 2026 feed:
 a tap on a booth shows its card at the bottom of the hall, under the zoom buttons. How
 the card looks, that it wraps at 200 % text and what TalkBack and VoiceOver say are
 checked on devices (the PR).
@@ -24,7 +24,7 @@ open_at = links.open_at
 
 
 def card(shown: ExpoShown) -> ft.Semantics:
-    """The card's head, ``expo.card``: one node in a live region."""
+    """The card's head, `expo.card`: one node in a live region."""
     return shown.node(f"{expo.SCREEN}.card")
 
 

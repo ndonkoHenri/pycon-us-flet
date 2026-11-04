@@ -1,6 +1,6 @@
 """Tests for the Conference store's status, the data's age and its automatic refreshes.
 
-The feeds, transports and fixtures are ``tests/feed_store.py``'s.
+The feeds, transports and fixtures are `tests/feed_store.py`'s.
 """
 
 import asyncio
@@ -76,7 +76,7 @@ def test_data_goes_stale_after_6_hours_on_conference_days_and_24_otherwise(
 
 
 def test_an_age_from_a_clock_set_back_is_zero(year: YearData) -> None:
-    """A fetch time after now, as from a clock set back, gives age 0 and ``fresh``."""
+    """A fetch time after now, as from a clock set back, gives age 0 and `fresh`."""
     conference = Conference(fetched_at=NOW + timedelta(hours=1))
 
     assert conference.age() == timedelta(0)
@@ -84,7 +84,7 @@ def test_an_age_from_a_clock_set_back_is_zero(year: YearData) -> None:
 
 
 def test_without_data_the_status_is_stale(year: YearData) -> None:
-    """With no fetch time, the age is None and the status ``stale``."""
+    """With no fetch time, the age is None and the status `stale`."""
     conference = Conference()
 
     assert conference.age() is None
@@ -94,7 +94,7 @@ def test_without_data_the_status_is_stale(year: YearData) -> None:
 async def test_a_refresh_the_user_asked_for_outranks_the_last_problem(
     storage: Storage, year: YearData
 ) -> None:
-    """While a refresh the user asked for runs, the status is ``refreshing``."""
+    """While a refresh the user asked for runs, the status is `refreshing`."""
     conference = await loaded(storage, year)
     await conference.refresh(
         storage, year, transport=failing(httpx.ConnectError("offline"))
@@ -119,7 +119,7 @@ async def test_a_refresh_the_user_asked_for_outranks_the_last_problem(
 async def test_an_automatic_refresh_is_due_until_one_has_started(
     storage: Storage, year: YearData
 ) -> None:
-    """An automatic refresh is due until ``start_refresh_if_due()`` starts one."""
+    """An automatic refresh is due until `start_refresh_if_due()` starts one."""
     conference = await loaded(storage, year)
     assert conference.refresh_due()
 
@@ -234,13 +234,13 @@ async def test_an_automatic_refresh_that_fails_keeps_the_data_and_the_cache(
 
 
 class StatusLog:
-    """Records ``(status(), refreshing)`` at every notification, as the strip renders.
+    """Records `(status(), refreshing)` at every notification, as the strip renders.
 
     The test keeps it: an observable holds its listeners weakly.
     """
 
     def __init__(self, conference: Conference, year: YearData) -> None:
-        """Subscribe to ``conference``; its status is read against ``year``'s dates."""
+        """Subscribe to `conference`; its status is read against `year`'s dates."""
         self.conference = conference
         self.info = year.conference
         self.seen: list[tuple[Status, bool]] = []
@@ -248,7 +248,7 @@ class StatusLog:
         conference.subscribe(self)
 
     def __call__(self, _sender: object, _name: str | None) -> None:
-        """Record the status and the ``refreshing`` flag at a notification."""
+        """Record the status and the `refreshing` flag at a notification."""
         self.seen.append(
             (self.conference.status(self.info), self.conference.refreshing)
         )
@@ -279,7 +279,7 @@ async def test_an_automatic_refresh_over_fresh_data_keeps_the_status_fresh(
 async def test_an_automatic_refresh_over_stale_data_keeps_saying_stale_until_it_ends(
     storage: Storage, year: YearData
 ) -> None:
-    """Over stale data, an automatic refresh says ``stale`` until it ends."""
+    """Over stale data, an automatic refresh says `stale` until it ends."""
     conference = await loaded(storage, year)
     await conference.refresh(storage, year, transport=serving(NETWORK_FEED))
     clock.set_test_now(NOW + timedelta(hours=25))  # not a conference day: over 24 h
@@ -300,7 +300,7 @@ async def test_an_automatic_refresh_over_stale_data_keeps_saying_stale_until_it_
 
 
 async def test_the_start_refresh_is_quiet_too(storage: Storage, year: YearData) -> None:
-    """The refresh at start, over a stale snapshot, says ``stale`` while it runs."""
+    """The refresh at start, over a stale snapshot, says `stale` while it runs."""
     conference = await loaded(storage, year)
     clock.set_test_now(three_days_after_the_snapshot(year))
     feed = HeldFeed()
@@ -319,7 +319,7 @@ async def test_the_start_refresh_is_quiet_too(storage: Storage, year: YearData) 
 async def test_a_refresh_the_user_asked_for_says_refreshing_until_it_ends(
     storage: Storage, year: YearData
 ) -> None:
-    """Over stale data, a refresh the user asked for says ``refreshing``, then ``fresh``."""
+    """Over stale data, a refresh the user asked for says `refreshing`, then `fresh`."""
     conference = await loaded(storage, year)
     clock.set_test_now(three_days_after_the_snapshot(year))
     assert conference.status(year.conference) == "stale"
@@ -365,7 +365,7 @@ async def test_an_automatic_refresh_that_fails_offline_again_changes_no_status(
 async def test_refresh_during_a_quiet_refresh_joins_it_and_says_so_at_once(
     storage: Storage, year: YearData
 ) -> None:
-    """A Refresh tap joins a quiet refresh's request, saying ``refreshing`` at once."""
+    """A Refresh tap joins a quiet refresh's request, saying `refreshing` at once."""
     conference = await loaded(storage, year)
     clock.set_test_now(three_days_after_the_snapshot(year))
     feed = HeldFeed()
@@ -391,7 +391,7 @@ async def test_refresh_during_a_quiet_refresh_joins_it_and_says_so_at_once(
 async def test_after_a_refresh_the_user_asked_for_the_next_automatic_one_is_quiet(
     storage: Storage, year: YearData
 ) -> None:
-    """After a Refresh fails offline, the next automatic one says ``offline`` too."""
+    """After a Refresh fails offline, the next automatic one says `offline` too."""
     conference = await loaded(storage, year)
     offline = failing(httpx.ConnectError("offline"))
     await conference.refresh(storage, year, transport=offline)  # Refresh, offline

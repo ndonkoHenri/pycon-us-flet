@@ -8,10 +8,10 @@ _CHILDREN = ("content", "leading", "title", "subtitle", "trailing")
 
 
 def descendants(control: ft.Control) -> Iterator[ft.Control]:
-    """Yield ``control`` and every control under it, depth first, in reading order.
+    """Yield `control` and every control under it, depth first, in reading order.
 
-    Follows the fields the app's builders fill: ``content``, a ``ListTile``'s parts and
-    ``controls``.
+    Follows the fields the app's builders fill: `content`, a `ListTile`'s parts and
+    `controls`.
     """
     yield control
     for name in _CHILDREN:
@@ -23,14 +23,14 @@ def descendants(control: ft.Control) -> Iterator[ft.Control]:
 
 
 def texts(control: ft.Control) -> list[str]:
-    """Return the values of the ``Text`` controls under ``control``, in reading order."""
+    """Return the values of the `Text` controls under `control`, in reading order."""
     return [
         str(node.value) for node in descendants(control) if isinstance(node, ft.Text)
     ]
 
 
 def only[T: ft.Control](control: ft.Control, kind: type[T]) -> T:
-    """Return the one control of type ``kind`` under ``control``; fail on none or more."""
+    """Return the one control of type `kind` under `control`; fail on none or more."""
     found = [node for node in descendants(control) if isinstance(node, kind)]
     assert len(found) == 1, f"{len(found)} {kind.__name__} controls"
     return found[0]

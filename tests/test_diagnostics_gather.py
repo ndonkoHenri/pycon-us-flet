@@ -1,8 +1,8 @@
-"""Tests for the facts ``gather_facts()`` reads for a bug report (INFO-04, D-72, D-271).
+"""Tests for the facts `gather_facts()` reads for a bug report (INFO-04, D-72, D-271).
 
-``gather_facts()`` runs on a fake page and real stores: the bundled snapshot, a refresh
-through an ``httpx.MockTransport``, and Developer options set in ``Prefs``. Time comes
-from ``clock.set_test_now()``; the text itself is ``tests/test_diagnostics.py``'s.
+`gather_facts()` runs on a fake page and real stores: the bundled snapshot, a refresh
+through an `httpx.MockTransport`, and Developer options set in `Prefs`. Time comes
+from `clock.set_test_now()`; the text itself is `tests/test_diagnostics.py`'s.
 """
 
 import dataclasses
@@ -49,7 +49,7 @@ async def test_gathering_says_whether_the_run_is_packaged(
     year: YearData,
     embedded: bool,
 ) -> None:
-    """A packaged build and the companion app (``is_embedded()``) each say what they are."""
+    """A packaged build and the companion app (`is_embedded()`) each say what they are."""
     monkeypatch.setattr(diagnostics, "is_embedded", lambda: embedded)
     lines = fields(await gathered(year, await bundled(storage, year)))
     expected = "packaged app" if embedded else diagnostics.NOT_EMBEDDED
@@ -74,7 +74,7 @@ async def test_gathering_reads_the_build_and_the_year(
 async def test_gathering_lists_only_the_capabilities_that_are_on(
     monkeypatch: pytest.MonkeyPatch, storage: Storage, year: YearData
 ) -> None:
-    """``gather_facts()`` names the capabilities that are on, in order, and skips the rest."""
+    """`gather_facts()` names the capabilities that are on, in order, and skips the rest."""
     monkeypatch.setattr(
         capabilities,
         "ALL",
@@ -151,7 +151,7 @@ async def test_gathering_reads_the_developer_options(
 ) -> None:
     """With and without a fake clock or a custom feed URL, in every combination.
 
-    The fake clock's start is the stored one and "now" is ``clock.now()``, which a test
+    The fake clock's start is the stored one and "now" is `clock.now()`, which a test
     freezes here; in the app the clock runs forward from the start.
     """
     text = await gathered(year, await bundled(storage, year), prefs=Prefs(dev=dev))
@@ -167,7 +167,7 @@ async def test_the_text_never_holds_the_url_ids_titles_or_an_email(
 
     The feed URL (with a token and a query) is in effect, sessions are saved, and the
     device's maker quotes an email address. A search query is left out by construction:
-    ``gather_facts()`` never reads ``ViewMemory``, and the field-set test pins that.
+    `gather_facts()` never reads `ViewMemory`, and the field-set test pins that.
     """
     conference = await bundled(storage, year)
     data = conference.data

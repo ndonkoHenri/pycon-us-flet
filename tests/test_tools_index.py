@@ -1,4 +1,4 @@
-"""``tools/README.md`` lists every tool, so an agent can find one without reading the guides."""
+"""`tools/README.md` lists every tool, so an agent can find one without reading the guides."""
 
 from pathlib import Path
 
@@ -7,7 +7,7 @@ NOT_TOOLS = {"__init__.py", "README.md", "__pycache__"}
 
 
 def test_every_tool_has_a_line() -> None:
-    """Each script and folder directly in ``tools/`` is named in the index."""
+    """Each script and folder directly in `tools/` is named in the index."""
     index = (TOOLS / "README.md").read_text(encoding="utf-8")
     missing = [
         path.name

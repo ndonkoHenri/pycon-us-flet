@@ -1,7 +1,7 @@
 """Tests for where the mock account's key and secret are kept (D-49, D-63, #684).
 
-``services/credentials.py`` keeps them in the platform keystore when the build has
-``flet-secure-storage``, else in memory for the session; its failures are logged and
+`services/credentials.py` keeps them in the platform keystore when the build has
+`flet-secure-storage`, else in memory for the session; its failures are logged and
 returned (D-120), and its logs never carry a secret (D-72).
 """
 
@@ -27,7 +27,7 @@ def keystore() -> MemoryKeystore:
 
 
 def test_without_the_extension_there_is_no_keystore() -> None:
-    """Outside a packaged build (the companion app, pytest) no ``SecureStorage`` is made."""
+    """Outside a packaged build (the companion app, pytest) no `SecureStorage` is made."""
     assert capabilities.SECURE_STORAGE is False
     assert secure_storage() is None
     assert CredentialStorage().secure is None
@@ -38,7 +38,7 @@ def test_a_packaged_build_keeps_them_after_the_first_unlock_on_this_device_only(
 ) -> None:
     """With the extension, the keychain items are readable after the first unlock.
 
-    ``FIRST_UNLOCK_THIS_DEVICE``: a start in the background can read them, and a
+    `FIRST_UNLOCK_THIS_DEVICE`: a start in the background can read them, and a
     backup restored on another phone carries none.
     """
     monkeypatch.setattr(capabilities, "SECURE_STORAGE", True)
@@ -65,7 +65,7 @@ async def test_in_memory_they_last_for_the_session_only() -> None:
 async def test_the_keystore_holds_both_under_their_own_keys(
     keystore: MemoryKeystore,
 ) -> None:
-    """Write, read and remove go to ``pycon.api_key`` and ``pycon.api_secret``."""
+    """Write, read and remove go to `pycon.api_key` and `pycon.api_secret`."""
     stored = CredentialStorage(secure=keystore)
     assert await stored.write("mock-key-all", "mock-secret-all") is True
     assert keystore.values == {API_KEY: "mock-key-all", API_SECRET: "mock-secret-all"}
@@ -83,7 +83,7 @@ async def test_the_keystore_holds_both_under_their_own_keys(
 async def test_one_stored_without_the_other_reads_as_absent_parts(
     keystore: MemoryKeystore,
 ) -> None:
-    """A lone key reads as the key and no secret, for ``Account.restore`` to clear."""
+    """A lone key reads as the key and no secret, for `Account.restore` to clear."""
     keystore.values[API_KEY] = "mock-key-all"
     assert await CredentialStorage(secure=keystore).read() == ("mock-key-all", None)
 
@@ -119,7 +119,7 @@ async def test_a_removal_tries_both_keys_when_the_first_fails() -> None:
         """Fails to remove the key, and only the key."""
 
         async def remove(self, key: str, **_: object) -> None:
-            """Raise for ``pycon.api_key``, remove anything else."""
+            """Raise for `pycon.api_key`, remove anything else."""
             if key == API_KEY:
                 raise TimeoutError
             self.values.pop(key, None)

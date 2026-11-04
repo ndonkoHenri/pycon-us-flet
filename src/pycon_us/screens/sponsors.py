@@ -1,25 +1,25 @@
-"""Sponsors (``/more/sponsors``): every sponsor of the year, tier by tier (SPON-01).
+"""Sponsors (`/more/sponsors`): every sponsor of the year, tier by tier (SPON-01).
 
 Ionic showed one flat list in one style behind a 10 s blocking loader, with nothing
 when the feed had no sponsors, and a strip that rotated sponsors on every screen; the
 strip is gone (D-37), and this page gives each level its weight instead (ux.md §6.5).
-An intro line, then a level-2 heading per level, in the feed's ``level_order``
-(``ConferenceData.sponsor_levels``), and the level's sponsors in feed order:
+An intro line, then a level-2 heading per level, in the feed's `level_order`
+(`ConferenceData.sponsor_levels`), and the level's sponsors in feed order:
 
 - the first level as full-width cards: a wide white plate with the logo, the name and
   the booth;
 - the next two as logo cards, two to a phone's row, more on a wider screen
-  (``ft.ResponsiveRow``, D-279: a ``GridView`` cannot size itself to its content
-  inside the page's list, U32), and one to a row at large text (``logo_columns()``);
+  (`ft.ResponsiveRow`, D-279: a `GridView` cannot size itself to its content
+  inside the page's list, U32), and one to a row at large text (`logo_columns()`);
 - the rest as rows with a 48 dp plate.
 
 Tiers go by a level's place, never its name, so next year's levels need no code. Each
-plate is ``ui/logos.py``'s ``logo_tile()`` (D-262): the logo, or the initials when
+plate is `ui/logos.py`'s `logo_tile()` (D-262): the logo, or the initials when
 there is none or it cannot load (offline), at a fixed height, so nothing moves when a
 logo arrives or fails. Each sponsor is one node, a button read "Bloomberg, Visionary
-sponsor, booth 613" (D-33), and a tap pushes its detail, ``…/sponsor/<slug>`` (D-17).
+sponsor, booth 613" (D-33), and a tap pushes its detail, `…/sponsor/<slug>` (D-17).
 Each item is a memoised component keyed by its slug (D-153), so a refresh that keeps
-the feed re-renders none. Search lists sponsors as these rows (``SponsorRow``), whose
+the feed re-renders none. Search lists sponsors as these rows (`SponsorRow`), whose
 line says the level too, "Visionary · Booth 613" (#397). Without data the page loads
 and fails as the Schedule does (ux.md §4.1); the status strip says how fresh the list
 is (D-32).
@@ -69,7 +69,7 @@ TILE_PLATE = 48
 """A row's plate, in dp: square (ux.md §6.5)."""
 
 LOGO_COLUMNS: ft.ResponsiveNumber = {"xs": 6, "sm": 4, "md": 3}
-"""A logo card's share of a ``ResponsiveRow``'s 12 columns, by Flet's breakpoints
+"""A logo card's share of a `ResponsiveRow`'s 12 columns, by Flet's breakpoints
 (the page's width): two cards to a phone's row, three from 576 dp, four from 768 dp."""
 
 LOGO_COLUMNS_AT_LARGE_TEXT: ft.ResponsiveNumber = 12
@@ -82,10 +82,10 @@ GAP = 8
 
 
 def tier_of(position: int) -> Tier:
-    """Return how the level at ``position`` (0 is the top) draws its sponsors.
+    """Return how the level at `position` (0 is the top) draws its sponsors.
 
     Args:
-        position: The level's index in ``ConferenceData.sponsor_levels``.
+        position: The level's index in `ConferenceData.sponsor_levels`.
     """
     if position < FEATURE_LEVELS:
         return "feature"
@@ -95,15 +95,15 @@ def tier_of(position: int) -> Tier:
 
 
 def logo_columns(large_text: bool) -> ft.ResponsiveNumber:
-    """Return a logo card's share of its ``ResponsiveRow``'s 12 columns.
+    """Return a logo card's share of its `ResponsiveRow`'s 12 columns.
 
-    Two or more cards to a row (``LOGO_COLUMNS``), or one when the text is large for
-    the width (``Prefs.time_above``, D-216, the signal detail titles and the
+    Two or more cards to a row (`LOGO_COLUMNS`), or one when the text is large for
+    the width (`Prefs.time_above`, D-216, the signal detail titles and the
     Schedule's head use, D-328, D-345), where a name in half a phone's width broke
     inside a word (#649).
 
     Args:
-        large_text: The text is large for the width (``Prefs.time_above``).
+        large_text: The text is large for the width (`Prefs.time_above`).
     """
     return LOGO_COLUMNS_AT_LARGE_TEXT if large_text else LOGO_COLUMNS
 
@@ -190,9 +190,9 @@ def level_section(
 
     Args:
         level: The level and its sponsors, in feed order.
-        tier: How its sponsors are drawn (``tier_of()``).
-        large_text: The text is large for the width (``Prefs.time_above``): logo
-            cards go one to a row (``logo_columns()``).
+        tier: How its sponsors are drawn (`tier_of()`).
+        large_text: The text is large for the width (`Prefs.time_above`): logo
+            cards go one to a row (`logo_columns()`).
     """
     heading = SectionHeader(level.name)
     sponsors = [
@@ -214,7 +214,7 @@ def SponsorItem(sponsor: Sponsor, tier: Tier, *, large_text: bool) -> ft.Control
         sponsor: The sponsor, the same object for one feed version.
         tier: How it is drawn.
         large_text: The text is large for the width: a logo card takes a whole row
-            (``logo_columns()``).
+            (`logo_columns()`).
     """
     # As SessionRow's: ft.component's typing leaves out the key= its wrapper takes.
     return _SponsorItem(sponsor, tier, large_text, key=sponsor.slug)  # pyright: ignore[reportCallIssue]
@@ -223,7 +223,7 @@ def SponsorItem(sponsor: Sponsor, tier: Tier, *, large_text: bool) -> ft.Control
 @ft.memo
 @ft.component
 def _SponsorItem(sponsor: Sponsor, tier: Tier, large_text: bool) -> ft.Control:
-    """The body of ``SponsorItem``; it runs only when one of its arguments changes."""
+    """The body of `SponsorItem`; it runs only when one of its arguments changes."""
     view_path = ft.use_view_path()
     page = ft.context.page
 
@@ -244,15 +244,15 @@ def _SponsorItem(sponsor: Sponsor, tier: Tier, large_text: bool) -> ft.Control:
 def SponsorRow(sponsor: Sponsor, *, screen: str) -> ft.Control:
     """Return a sponsor as a row outside the Sponsors page: plate, name, level and booth.
 
-    The Sponsors page's row (``_row()``), its line saying the level too
-    (``level_line()``), as search lists it (#397): one node, read as
-    ``sponsor_phrase()``, a button, and a tap pushes the sponsor's detail on top of
+    The Sponsors page's row (`_row()`), its line saying the level too
+    (`level_line()`), as search lists it (#397): one node, read as
+    `sponsor_phrase()`, a button, and a tap pushes the sponsor's detail on top of
     the current View (D-17). A memoised component keyed by the slug (D-153), so new
     results re-render only the rows they add.
 
     Args:
         sponsor: The sponsor, the same object for one feed version.
-        screen: The screen's name in the row's identifier, ``<screen>.sponsor.<slug>``.
+        screen: The screen's name in the row's identifier, `<screen>.sponsor.<slug>`.
     """
     # As SponsorItem's: ft.component's typing leaves out the key= its wrapper takes.
     return _SponsorRow(sponsor, screen, key=sponsor.slug)  # pyright: ignore[reportCallIssue]
@@ -261,7 +261,7 @@ def SponsorRow(sponsor: Sponsor, *, screen: str) -> ft.Control:
 @ft.memo
 @ft.component
 def _SponsorRow(sponsor: Sponsor, screen: str) -> ft.Control:
-    """The body of ``SponsorRow``; it runs only when its sponsor changes."""
+    """The body of `SponsorRow`; it runs only when its sponsor changes."""
     view_path = ft.use_view_path()
     page = ft.context.page
 
@@ -289,10 +289,10 @@ def _texts(name: str, line: str | None) -> list[ft.Control]:
 
 
 def _spoken(sponsor: Sponsor, content: ft.Control, screen: str) -> ft.Semantics:
-    """Wrap ``content`` as the sponsor's one node: its phrase, a button, its identifier.
+    """Wrap `content` as the sponsor's one node: its phrase, a button, its identifier.
 
     The phrase replaces the texts, which would be read too, and the plate says nothing
-    (``logo_tile()``).
+    (`logo_tile()`).
     """
     return ft.Semantics(
         label=sponsor_phrase(sponsor),
@@ -309,7 +309,7 @@ def _card(
     """A card: the logo on a plate as wide as the card, then the name and the booth.
 
     A full-width card in the list takes the list's gutters; a logo card takes the
-    width its ``ResponsiveRow`` column gives it.
+    width its `ResponsiveRow` column gives it.
     """
     full = plate == FEATURE_PLATE
     return ft.MergeSemantics(  # the phrase and the tap's action: one node
@@ -348,7 +348,7 @@ def _row(
 ) -> ft.MergeSemantics:
     """A row: a 48 dp plate, the name and its line, and a chevron to the detail.
 
-    Built like ``SpeakerRow`` rather than as a ``ListTile``, so it reads as one phrase
+    Built like `SpeakerRow` rather than as a `ListTile`, so it reads as one phrase
     with its level; nothing but the plate has a fixed size, so it grows with the text.
     """
     return ft.MergeSemantics(

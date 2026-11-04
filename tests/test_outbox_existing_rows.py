@@ -3,8 +3,8 @@
 Keying leads and notes by sponsor as well changes no column, so the file isn't migrated:
 every row written before it is already a valid row of the new key, since a note always
 took its lead's sponsor. These tests write a year's file (D-466) by hand, with the
-migrations as they were, and use it through ``OutboxDb`` and the rules as the app does.
-A device's ``outbox.db`` from those builds is left unread (D-466), and the last test
+migrations as they were, and use it through `OutboxDb` and the rules as the app does.
+A device's `outbox.db` from those builds is left unread (D-466), and the last test
 pins that.
 """
 
@@ -31,7 +31,7 @@ NOTED = json.dumps({"accessCode": "A1", "note": "Hot"})
 
 
 def write_old_rows(path: Path) -> None:
-    """Write a version 2 file at ``path`` holding what an earlier build left.
+    """Write a version 2 file at `path` holding what an earlier build left.
 
     A1: a synced lead for Acme with a note waiting. B2: a pending lead for Acme.
     C3: a failed lead for Acme. D4: a sponsor's own synced lead (no sponsor).
@@ -64,7 +64,7 @@ def device(tmp_path: Path) -> Iterator[OutboxDb]:
 def scan(
     db: OutboxDb, code: str, sponsor: tuple[str | None, str | None] = ("7", "Acme")
 ) -> outbox_enqueue.Enqueued:
-    """Scan ``code`` for ``sponsor`` as the upgraded app does."""
+    """Scan `code` for `sponsor` as the upgraded app does."""
     decide = partial(
         outbox_enqueue.scan_lead,
         owner=OWNER,

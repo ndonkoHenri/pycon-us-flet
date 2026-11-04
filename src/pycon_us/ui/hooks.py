@@ -1,11 +1,11 @@
 """Two small hooks: whether a component is still mounted, and state handlers read at once.
 
-``use_mounted()`` is for a **handler** that goes on after an ``await``: by then the
+`use_mounted()` is for a **handler** that goes on after an `await`: by then the
 screen may have gone, and a SnackBar or a navigation would land on another one. A
 coroutine effect needs no such check: Flet cancels it on unmount (F2), and a state setter
-called after the unmount renders nothing (``tests/test_flet_effects.py``).
+called after the unmount renders nothing (`tests/test_flet_effects.py`).
 
-``use_latest_state()`` is for handlers that build on the state: ``use_state`` only
+`use_latest_state()` is for handlers that build on the state: `use_state` only
 schedules a render, and one may not run between two events (#756).
 """
 
@@ -40,7 +40,7 @@ def use_latest_state[T](initial: T) -> tuple[T, MutableRef[T], Callable[[T], Non
     Call it on every render (D-70). Handlers read the ref; the render reads the state.
 
     Args:
-        initial: The first state. Not a callable: ``use_state`` and ``use_ref`` would
+        initial: The first state. Not a callable: `use_state` and `use_ref` would
             call it.
     """
     value, set_value = ft.use_state(initial)
@@ -49,6 +49,6 @@ def use_latest_state[T](initial: T) -> tuple[T, MutableRef[T], Callable[[T], Non
 
 
 def keep[T](latest: MutableRef[T], set_state: Callable[[T], None], value: T) -> None:
-    """Set the state and ``latest`` together, so the next event sees it at once."""
+    """Set the state and `latest` together, so the next event sees it at once."""
     latest.current = value
     set_state(value)

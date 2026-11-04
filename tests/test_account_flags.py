@@ -1,9 +1,9 @@
 """Tests for the role flags' refresh and the revoked key (AUTH-04, API-03, D-54, D-57, #686).
 
-``Account.refresh_flags`` sends ``check_features`` through the real client to the mock
-(``tools/mock_api/transport.py``) and takes its flags in; the mock's faults stand for
+`Account.refresh_flags` sends `check_features` through the real client to the mock
+(`tools/mock_api/transport.py`) and takes its flags in; the mock's faults stand for
 a lost connection and a revoked key. The triggers (start and resume) are
-``test_app.py``'s and ``test_app_handlers.py``'s.
+`test_app.py`'s and `test_app_handlers.py`'s.
 """
 
 import asyncio
@@ -42,15 +42,15 @@ def state() -> MockState:
 
 
 class Held(Recorder):
-    """A transport to the mock that holds each request until ``release`` is set."""
+    """A transport to the mock that holds each request until `release` is set."""
 
     def __init__(self, inner: httpx.AsyncBaseTransport) -> None:
-        """Hold requests to ``inner``, which answers them once released."""
+        """Hold requests to `inner`, which answers them once released."""
         super().__init__(inner)
         self.release = asyncio.Event()
 
     async def handle_async_request(self, request: httpx.Request) -> httpx.Response:
-        """Record the request, wait for ``release``, then let the mock answer."""
+        """Record the request, wait for `release`, then let the mock answer."""
         self.sent.append(request)
         await self.release.wait()
         return await self.inner.handle_async_request(request)
@@ -58,12 +58,12 @@ class Held(Recorder):
 
 @pytest.fixture
 def held(state: MockState) -> Held:
-    """A held transport to ``state``, released for sign-ins by the test."""
+    """A held transport to `state`, released for sign-ins by the test."""
     return Held(mock_transport(state))
 
 
 def client(transport: httpx.AsyncBaseTransport, store: Account) -> ApiClient:
-    """A client over ``transport`` that signs with ``store``'s credentials, as the app's."""
+    """A client over `transport` that signs with `store`'s credentials, as the app's."""
     return ApiClient(
         BASE_URL, 2026, store.credentials, transport=transport, now=lambda: NOW
     )
@@ -75,7 +75,7 @@ async def signed_in(
     credentials: CredentialStorage,
     role: str = "all",
 ) -> tuple[Account, ApiClient]:
-    """Sign a new store in as the seeded ``role`` and return it with its client.
+    """Sign a new store in as the seeded `role` and return it with its client.
 
     The transport is released for the sign-in and held again after it.
     """
@@ -92,7 +92,7 @@ async def signed_in(
 
 
 def flags_of(store: Account) -> tuple[bool, ...]:
-    """The store's four flags, in ``FLAG_FIELDS``' order."""
+    """The store's four flags, in `FLAG_FIELDS`' order."""
     return tuple(getattr(store, name) for name in FLAG_FIELDS)
 
 
@@ -113,7 +113,7 @@ async def test_a_changed_role_is_taken_in_saved_and_notified(
     storage: Storage,
     credentials: CredentialStorage,
 ) -> None:
-    """A role taken away on the server goes from the store and ``pycon.account``."""
+    """A role taken away on the server goes from the store and `pycon.account`."""
     store, api = await signed_in(held, storage, credentials)
     account(state, "all").features["mask_violation"] = False
     seen = changes(store)
@@ -129,10 +129,10 @@ async def test_a_changed_role_is_taken_in_saved_and_notified(
 async def test_an_absent_flag_reads_false_and_is_speaker_stays(
     state: MockState, held: Held, storage: Storage, credentials: CredentialStorage
 ) -> None:
-    """An absent flag is False; ``is_speaker``, which only sign-in gives, stays.
+    """An absent flag is False; `is_speaker`, which only sign-in gives, stays.
 
-    ``check_features`` leaves out a flag the account lacks, and never sends
-    ``is_speaker`` (STORE-05).
+    `check_features` leaves out a flag the account lacks, and never sends
+    `is_speaker` (STORE-05).
     """
     store, api = await signed_in(held, storage, credentials)
     del account(state, "all").features["door_check_in"]
@@ -146,7 +146,7 @@ async def test_unchanged_flags_write_and_notify_nothing(
     storage: Storage,
     credentials: CredentialStorage,
 ) -> None:
-    """The same flags again leave the store and ``pycon.account`` as they were."""
+    """The same flags again leave the store and `pycon.account` as they were."""
     store, api = await signed_in(held, storage, credentials)
     shared.values.clear()  # a write would show here
     seen = changes(store)
@@ -161,7 +161,7 @@ async def test_no_answer_keeps_the_flags_as_stored(
     storage: Storage,
     credentials: CredentialStorage,
 ) -> None:
-    """A dropped connection (the ``connect`` fault) changes nothing (D-57)."""
+    """A dropped connection (the `connect` fault) changes nothing (D-57)."""
     store, api = await signed_in(held, storage, credentials)
     before = stored_account(shared)
     account(state, "all").features["lead_retrieval"] = False
@@ -275,7 +275,7 @@ async def test_a_closed_session_writes_nothing(
 
 
 def saved_features(shared: MemoryPrefs) -> dict[str, bool]:
-    """The flags ``pycon.account`` holds; the account must be saved."""
+    """The flags `pycon.account` holds; the account must be saved."""
     saved = stored_account(shared)
     assert saved is not None
     return saved["features"]

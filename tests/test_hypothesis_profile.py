@@ -4,7 +4,7 @@ from hypothesis import HealthCheck, settings
 
 
 def test_ci_profile_extends_hypothesis_builtin_with_more_examples() -> None:
-    """The ``ci`` profile runs 200 derandomized examples, no deadline or database."""
+    """The `ci` profile runs 200 derandomized examples, no deadline or database."""
     ci = settings.get_profile("ci")
     assert ci.max_examples == 200
     assert ci.derandomize is True

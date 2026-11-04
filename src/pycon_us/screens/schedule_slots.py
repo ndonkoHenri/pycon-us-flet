@@ -1,15 +1,15 @@
 """The Schedule's day lists as data: their slots, their keys and their put-back.
 
-``screens/schedule.py`` owns the screen; here is what it derives for its day lists
+`screens/schedule.py` owns the screen; here is what it derives for its day lists
 (D-153, D-178, D-331, D-371):
 
-- ``use_day_slots()``, each day's slots under the track filter, their session ids and
+- `use_day_slots()`, each day's slots under the track filter, their session ids and
   their slots by key, memoised per feed version and filter;
-- ``slot_keys()``, each list's item keys in order, as ``PlaceKeeper`` counts a place;
-- ``default_day()``, ``filter_tracks()`` and ``empty_reason()``, the day the Schedule
+- `slot_keys()`, each list's item keys in order, as `PlaceKeeper` counts a place;
+- `default_day()`, `filter_tracks()` and `empty_reason()`, the day the Schedule
   opens on, the tracks the filter offers and why a day shows no slots;
-- ``use_put_back()``, which puts the shown list back on its item after a text-size,
-  width, time-position or filter change (``screens/schedule_place.py``).
+- `use_put_back()`, which puts the shown list back on its item after a text-size,
+  width, time-position or filter change (`screens/schedule_place.py`).
 """
 
 import asyncio
@@ -27,17 +27,17 @@ from pycon_us.screens.schedule_place import PlaceKeeper
 from pycon_us.services.errors import report_errors
 
 type Measured = Callable[[ft.LayoutSizeChangeEvent[ft.LayoutControl]], Awaitable[None]]
-"""A handler of ``layout_probe()``'s reports: the text's width, or the screen's."""
+"""A handler of `layout_probe()`'s reports: the text's width, or the screen's."""
 
 
 @dataclass(frozen=True)
 class DaySlots:
-    """Each day's slots, from ``use_day_slots()``; memoised, so equal across renders.
+    """Each day's slots, from `use_day_slots()`; memoised, so equal across renders.
 
     Attributes:
         slots: Each day's slots under the track filter, in schedule order.
         ids: Each day's session ids, the slots' sessions (D-153).
-        by_key: Each day's slots by slot key, for ``PlaceKeeper.lay_out()``.
+        by_key: Each day's slots by slot key, for `PlaceKeeper.lay_out()`.
     """
 
     slots: dict[date, tuple[Slot, ...]]
@@ -58,8 +58,8 @@ def use_day_slots(
     Args:
         data: The processed feed; None before any.
         all_days: The conference days, sprint days included.
-        excluded: The track keys the filter hides (``Prefs.excluded_tracks``).
-        version: ``Conference.version``, which changes with the feed.
+        excluded: The track keys the filter hides (`Prefs.excluded_tracks`).
+        version: `Conference.version`, which changes with the feed.
     """
     slots = ft.use_memo(
         lambda: (
@@ -98,7 +98,7 @@ def slot_keys(
 ) -> dict[date, tuple[str, ...]]:
     """Return each day list's item keys in order: its slots, today's now line among them.
 
-    With ``head``, at the largest text sizes, each list starts with the head (D-345).
+    With `head`, at the largest text sizes, each list starts with the head (D-345).
     """
     first = (HEAD_KEY,) if head else ()
     keys = {
@@ -160,16 +160,16 @@ def use_put_back(
 
     A hook: call it unconditionally, in the Schedule's render (D-70). Its effects
     follow the time going above the rows (D-216) and the filter (D-371); the handlers
-    it returns follow ``layout_probe()``'s widths (D-331).
+    it returns follow `layout_probe()`'s widths (D-331).
 
     Args:
-        keeper: The Schedule's ``PlaceKeeper``.
+        keeper: The Schedule's `PlaceKeeper`.
         shown: The day shown; None before any data.
-        refs: The day lists' refs (``list_ref()``).
-        ended: Set when the shown list's scroll ends (``Signals.ended``).
+        refs: The day lists' refs (`list_ref()`).
+        ended: Set when the shown list's scroll ends (`Signals.ended`).
         relay: Renders the Schedule again: a list built in full for its put-back is
             built lazy again after it.
-        time_above: Whether a slot's time is above its rows (``Prefs.time_above``).
+        time_above: Whether a slot's time is above its rows (`Prefs.time_above`).
         excluded: The track keys the filter hides.
 
     Returns:

@@ -1,9 +1,9 @@
 """The printable sheet of mock badges: one HTML page of QR codes (D-50, D-391, LEAD-14).
 
-Each seeded attendee gets one card: a QR code of its badge payload ``code:validator``
-(the string Ionic's door, swag and lead pages split on ``:``), its name, and the payload
+Each seeded attendee gets one card: a QR code of its badge payload `code:validator`
+(the string Ionic's door, swag and lead pages split on `:`), its name, and the payload
 in text for manual entry. The page is self-contained (inline SVG, no scripts or
-external files) and prints from a browser on A4 or Letter. ``segno`` is a dev
+external files) and prints from a browser on A4 or Letter. `segno` is a dev
 dependency: nothing here is bundled into the app. Every name and code is fake.
 """
 
@@ -37,18 +37,18 @@ p.code { font: 12pt ui-monospace, monospace; margin: 1mm 0 0; }
 
 
 def payload(attendee: Attendee) -> str:
-    """Return the string a badge's QR code holds, ``<access code>:<validator>``."""
+    """Return the string a badge's QR code holds, `<access code>:<validator>`."""
     return f"{attendee.access_code}:{attendee.validator}"
 
 
 def qr_svg(text: str) -> str:
-    """Return an inline SVG QR code of ``text`` that scales to its box.
+    """Return an inline SVG QR code of `text` that scales to its box.
 
     Args:
         text: What the code holds.
 
     Returns:
-        An ``<svg>`` element with a ``viewBox`` and no size, titled with ``text``; the
+        An `<svg>` element with a `viewBox` and no size, titled with `text`; the
         four-module quiet zone the standard asks for is part of it.
     """
     code = segno.make(text, error="m", micro=False)
@@ -96,7 +96,7 @@ def main(argv: Sequence[str] | None = None) -> None:
     """Write the seeded attendees' badge sheet and say where it is.
 
     Args:
-        argv: The command-line arguments; None reads ``sys.argv``.
+        argv: The command-line arguments; None reads `sys.argv`.
     """
     parser = argparse.ArgumentParser(
         prog="python -m tools.mock_api.badges",

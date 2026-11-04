@@ -1,8 +1,8 @@
 """Lead rows put straight into a real outbox, in any state, for the leads list's tests.
 
-Shared by ``tests/test_lead_views.py`` and ``tests/test_staff_leads.py``: ``add()``
-enqueues a lead as a scan does (``scan_lead``), then saves the state a send would
-have left it in, and ``note()`` enqueues its note (``save_note``).
+Shared by `tests/test_lead_views.py` and `tests/test_staff_leads.py`: `add()`
+enqueues a lead as a scan does (`scan_lead`), then saves the state a send would
+have left it in, and `note()` enqueues its note (`save_note`).
 """
 
 from dataclasses import replace
@@ -26,17 +26,17 @@ def add(
     flagged: bool = False,
     sponsor: tuple[str, str] | None = None,
 ) -> Row:
-    """Store a lead for ``code`` scanned at ``at``, left in ``status``; return it.
+    """Store a lead for `code` scanned at `at`, left in `status`; return it.
 
     Args:
         db: The outbox.
         code: The access code.
         at: When it was scanned (epoch seconds).
         owner: The account that scanned it.
-        status: Pending, synced (with ``name`` as the answer's first name) or failed.
+        status: Pending, synced (with `name` as the answer's first name) or failed.
         name: The first name a synced lead's answer holds.
         flagged: Its send may have been recorded twice (D-410).
-        sponsor: The ``(id, name)`` a staff account scanned it for.
+        sponsor: The `(id, name)` a staff account scanned it for.
     """
     decide = partial(
         outbox_enqueue.scan_lead,
@@ -70,7 +70,7 @@ def note(
     owner: str = OWNER,
     sponsor: tuple[str, str] | None = None,
 ) -> None:
-    """Store ``text`` as the account's note on the lead ``code`` for ``sponsor``."""
+    """Store `text` as the account's note on the lead `code` for `sponsor`."""
     decide = partial(
         outbox_enqueue.save_note,
         owner=owner,

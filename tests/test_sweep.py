@@ -1,4 +1,4 @@
-"""Tests for ``tools/sweep.py``: every mode runs, and the device always goes back (#973)."""
+"""Tests for `tools/sweep.py`: every mode runs, and the device always goes back (#973)."""
 
 import subprocess
 from pathlib import Path
@@ -20,7 +20,7 @@ def calls(monkeypatch: pytest.MonkeyPatch) -> list[list[str]]:
 
 
 def test_every_mode_is_a_valid_prefs_line() -> None:
-    """Each mode's options are ones ``tools.device prefs`` accepts."""
+    """Each mode's options are ones `tools.device prefs` accepts."""
     parser = device._parser()
     for options in sweep.MODES.values():
         parser.parse_args(["prefs", "emulator-5594", *options])
@@ -154,5 +154,5 @@ def test_owners_device_is_refused(calls: list[list[str]]) -> None:
 
 
 def test_sweeps_stay_out_of_the_workspace() -> None:
-    """``maestro test maestro`` runs no sweep, so a full flow rerun isn't changed by them."""
+    """`maestro test maestro` runs no sweep, so a full flow rerun isn't changed by them."""
     assert "sweeps" not in (ROOT / "maestro" / "config.yaml").read_text()

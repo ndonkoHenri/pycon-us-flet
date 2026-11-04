@@ -1,9 +1,9 @@
-"""Tests for the leads list, ``screens/staff_leads.py`` (#743; LEAD-06, LEAD-08, D-428).
+"""Tests for the leads list, `screens/staff_leads.py` (#743; LEAD-06, LEAD-08, D-428).
 
-The page runs in a real Flet session (``tests/harness.py``) over a real outbox, whose
-rows ``tests/lead_rows.py`` puts in each state; no worker runs. It lists the account's
+The page runs in a real Flet session (`tests/harness.py`) over a real outbox, whose
+rows `tests/lead_rows.py` puts in each state; no worker runs. It lists the account's
 leads newest first as one node each, searches them, filters a staff account's by the
-sponsor id, opens a row's note sheet, follows the outbox (``Staff.revision``), and
+sponsor id, opens a row's note sheet, follows the outbox (`Staff.revision`), and
 says when there is nothing to list or the outbox can't be read.
 """
 
@@ -62,8 +62,8 @@ def quick(monkeypatch: pytest.MonkeyPatch) -> None:
 async def show(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> AsyncIterator[Show]:
     """Return a function that renders the page for an account over an outbox.
 
-    ``chosen`` stores the sponsor a staff account scans for, as the picker left it;
-    ``staff`` is the ``Staff`` store, which a test bumps as the worker would.
+    `chosen` stores the sponsor a staff account scans for, as the picker left it;
+    `staff` is the `Staff` store, which a test bumps as the worker would.
     """
 
     async def focus(_: ft.TextField) -> None:
@@ -76,7 +76,7 @@ async def show(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> AsyncIterator
     def sharing(
         year: YearData, directory: Path, memory: ViewMemory | None = None
     ) -> Services:
-        """Return the memory services over the test's one ``stored``."""
+        """Return the memory services over the test's one `stored`."""
         svc = memory_services(year, directory, memory)
         cast(MemoryPrefs, svc.storage.prefs).values = stored
         return svc
@@ -91,7 +91,7 @@ async def show(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> AsyncIterator
             chosen: LeadSponsor | None = None,
             staff: Staff | None = None,
         ) -> Shown:
-            """Render the page signed in as ``account``, its rows in ``outbox``."""
+            """Render the page signed in as `account`, its rows in `outbox`."""
             if chosen is not None:
                 stored[staff_sponsor(2026).key] = json.dumps(to_stored(chosen))
             prefs = Prefs(loaded=True)
@@ -118,7 +118,7 @@ async def show(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> AsyncIterator
 
 
 def sponsor_account() -> Account:
-    """A sponsor's own lead-retrieval account, ``a@example.com``."""
+    """A sponsor's own lead-retrieval account, `a@example.com`."""
     return signed_in(lead_retrieval=True)
 
 
@@ -140,7 +140,7 @@ def rows(shown: Shown) -> list[str]:
 
 
 async def search(shown: Shown, text: str) -> None:
-    """Type ``text`` in the search field, as Flutter reports it."""
+    """Type `text` in the search field, as Flutter reports it."""
     field = cast(ft.TextField, shown.node("lead.leads.search").content)
     shown.session.apply_patch(field._i, {"value": text})
     await shown.event(field, "change", text)
@@ -154,7 +154,7 @@ def sheet(shown: Shown) -> ft.BottomSheet | None:
 
 
 def chip(shown: Shown) -> ft.Container:
-    """The filter chip's tappable ``Container``, around its node's merge."""
+    """The filter chip's tappable `Container`, around its node's merge."""
     return cast(ft.Container, shown.node("lead.leads.only_sponsor").parent)
 
 
@@ -243,7 +243,7 @@ async def test_the_filter_chip_wraps_a_long_sponsor_name(
 ) -> None:
     """The chip is a Container whose label wraps, not Flutter's one-line Chip (D-425).
 
-    ``ft.Chip`` keeps its label on one line, so a long name was cut at 200 % text.
+    `ft.Chip` keeps its label on one line, so a long name was cut at 200 % text.
     """
     add(db, "A1", 100.0, status=Status.SYNCED, name="Ada", sponsor=("1", "Long"))
     long = LeadSponsor(
@@ -371,7 +371,7 @@ async def test_two_sponsors_leads_on_one_attendee_are_two_rows_with_their_own_no
 
 
 async def test_the_list_follows_the_outbox_while_open(show: Show, db: OutboxDb) -> None:
-    """A row synced by the worker turns Confirmed once ``Staff.revision`` moves (D-69)."""
+    """A row synced by the worker turns Confirmed once `Staff.revision` moves (D-69)."""
     queued = add(db, "MOCK0001", 100.0)
     staff = Staff()
     shown = await show(sponsor_account(), db, staff=staff)
@@ -401,7 +401,7 @@ async def test_no_leads_yet_and_an_unreadable_outbox_say_so(
 
 
 async def test_a_thousand_leads_all_list_lazily(show: Show, db: OutboxDb) -> None:
-    """No 50-row cap: 1,000 rows, in a ``ListView`` Flutter builds on demand."""
+    """No 50-row cap: 1,000 rows, in a `ListView` Flutter builds on demand."""
     for n in range(1000):
         add(db, f"C{n:04d}", float(n))
     shown = await show(sponsor_account(), db)

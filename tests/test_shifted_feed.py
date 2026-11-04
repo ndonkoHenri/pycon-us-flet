@@ -1,8 +1,8 @@
-"""Tests for ``tools/shifted_feed.py``, the feed shifted to now for real-time checks (P2-23).
+"""Tests for `tools/shifted_feed.py`, the feed shifted to now for real-time checks (P2-23).
 
 Every test shifts the bundled 2026 snapshot, the feed the tool reads, at a fixed
-``now``, and checks the result with the app's own parser and the invariants of
-``tools/feed_invariants.py``, under two machine zones (D-43).
+`now`, and checks the result with the app's own parser and the invariants of
+`tools/feed_invariants.py`, under two machine zones (D-43).
 """
 
 import argparse
@@ -55,7 +55,7 @@ def snapshot() -> bytes:
 
 
 def times(raw: bytes) -> list[str]:
-    """Every slot's and open space's ``start`` and ``end`` in ``raw``, in feed order."""
+    """Every slot's and open space's `start` and `end` in `raw`, in feed order."""
     document = json.loads(raw)
     return [
         record[key]
@@ -67,13 +67,13 @@ def times(raw: bytes) -> list[str]:
 
 
 def problems(raw: bytes, shifted: YearData) -> dict[str, list[str]]:
-    """The broken invariants of ``raw`` against ``shifted``, by name; empty when all hold."""
+    """The broken invariants of `raw` against `shifted`, by name; empty when all hold."""
     feed = processed_feed(raw, shifted)
     return {i.__name__: found for i in INVARIANTS if (found := i(feed))}
 
 
 def command(printed: str, program: str) -> list[str]:
-    """The arguments of the printed command line that runs ``program``, as a shell splits them."""
+    """The arguments of the printed command line that runs `program`, as a shell splits them."""
     line = next(
         line for line in printed.splitlines() if line.strip().startswith(program + " ")
     )
@@ -81,12 +81,12 @@ def command(printed: str, program: str) -> list[str]:
 
 
 def utc(moment: datetime) -> datetime:
-    """``moment`` in UTC, so instants compare as instants even in a repeated hour."""
+    """`moment` in UTC, so instants compare as instants even in a repeated hour."""
     return moment.astimezone(UTC)
 
 
 def without_times(document: dict[str, Any], conf_key: int) -> dict[str, Any]:
-    """``document`` with slot ``conf_key``'s ``start`` and ``end`` removed, in place."""
+    """`document` with slot `conf_key`'s `start` and `end` removed, in place."""
     slot = next(s for s in document["schedule"] if s["conf_key"] == conf_key)
     del slot["start"], slot["end"]
     return document
@@ -171,7 +171,7 @@ def test_a_time_moved_into_the_skipped_hour_is_refused() -> None:
 
 
 def test_a_negative_lead_puts_the_session_on_now() -> None:
-    """With ``--in -10m`` the session started 10 min before the current minute."""
+    """With `--in -10m` the session started 10 min before the current minute."""
     feed = shift_feed(snapshot(), year(), TALK, now=NOW, lead=-2 * FIVE)
 
     assert feed.start == datetime(2026, 10, 20, 13, 52, tzinfo=ZONE)
@@ -179,7 +179,7 @@ def test_a_negative_lead_puts_the_session_on_now() -> None:
 
 
 def test_the_moved_feed_differs_only_in_the_sessions_times() -> None:
-    """With ``--move 15m`` the second feed moves that slot's start and end, and nothing else."""
+    """With `--move 15m` the second feed moves that slot's start and end, and nothing else."""
     feed = shift_feed(
         snapshot(), year(), TALK, now=NOW, lead=FIVE, move=timedelta(minutes=15)
     )
@@ -240,12 +240,12 @@ def test_the_shifted_years_dates_hold_every_moment_of_the_conference() -> None:
     [("5m", 5), ("2h", 120), ("-30m", -30), ("+15m", 15), ("7", 7)],
 )
 def test_a_duration_is_minutes_or_hours(text: str, minutes: int) -> None:
-    """``5m``, ``2h``, a sign and a bare number of minutes are read as durations."""
+    """`5m`, `2h`, a sign and a bare number of minutes are read as durations."""
     assert duration(text) == timedelta(minutes=minutes)
 
 
 def test_a_duration_in_another_unit_is_refused() -> None:
-    """``30s`` is an argparse error, so the command line says what it expects."""
+    """`30s` is an argparse error, so the command line says what it expects."""
     with pytest.raises(argparse.ArgumentTypeError, match="5m or 2h"):
         duration("30s")
 
@@ -276,7 +276,7 @@ def test_main_writes_both_files_and_prints_the_urls_and_the_server(
 def test_the_printed_commands_quote_a_folder_with_spaces(
     tmp_path: Path, capsys: pytest.CaptureFixture[str]
 ) -> None:
-    """With an ``--out`` that has spaces, the server and copy commands still parse right."""
+    """With an `--out` that has spaces, the server and copy commands still parse right."""
     out = tmp_path / "path with spaces"
 
     assert main([TALK, "--in", "5m", "--move", "15m", "--out", str(out)], now=NOW) == 0
@@ -303,7 +303,7 @@ def test_main_writes_nothing_for_an_unknown_session(
 def test_main_takes_a_negative_duration_as_a_value(
     tmp_path: Path, capsys: pytest.CaptureFixture[str]
 ) -> None:
-    """``--in -10m --move -5m`` are read as values, not options: 13:52, moved to 13:47."""
+    """`--in -10m --move -5m` are read as values, not options: 13:52, moved to 13:47."""
     args = [TALK, "--in", "-10m", "--move", "-5m", "--out", str(tmp_path)]
 
     assert main(args, now=NOW) == 0

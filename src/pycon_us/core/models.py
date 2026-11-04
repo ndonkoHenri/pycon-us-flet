@@ -1,14 +1,14 @@
 """The conference model that feed processing builds and every screen reads (D-41, D-42).
 
-All values are frozen and use identity equality (``eq=False``, D-70 rule 6), so assigning a
+All values are frozen and use identity equality (`eq=False`, D-70 rule 6), so assigning a
 new model to a store always notifies, and comparing two large models never walks them.
 Objects refer to each other by string id only, so there are no cycles: queries look ids up
-in ``ConferenceData`` and return fresh view models instead of mutating these.
+in `ConferenceData` and return fresh view models instead of mutating these.
 
 Feed processing fills the fields in stages. Decoding (P0-10) gives what the feed states;
-Ionic's rules (``core/rules.py``) decide what becomes a session (P0-11) and add cleaned
-names, flags and rooms (P0-12). Last, ``feed.process()`` converts the feed's markup once
-(D-130, D-140): the ``*_md`` fields and ``Session.search_text`` stay at their empty
+Ionic's rules (`core/rules.py`) decide what becomes a session (P0-11) and add cleaned
+names, flags and rooms (P0-12). Last, `feed.process()` converts the feed's markup once
+(D-130, D-140): the `*_md` fields and `Session.search_text` stay at their empty
 defaults until then, beside the raw HTML they come from.
 """
 
@@ -17,7 +17,7 @@ from collections.abc import Mapping
 from dataclasses import dataclass, field
 
 OPEN_SPACE = "open-space"
-"""The ``kind`` of an open space's session (DATA-05)."""
+"""The `kind` of an open space's session (DATA-05)."""
 
 
 @dataclass(frozen=True, eq=False)
@@ -29,7 +29,7 @@ class Speaker:
         name: The display name.
         photo_url: The photo's URL as the feed gives it; empty when there is none.
         bio: The feed's HTML biography; empty when there is none.
-        bio_md: ``bio`` as Markdown (D-130).
+        bio_md: `bio` as Markdown (D-130).
     """
 
     id: str
@@ -45,25 +45,25 @@ class Session:
 
     Attributes:
         id: A stable string id in one of Ionic's four forms (D-42, DATA-26): a slot's
-            ``conf_key``; an open space's ``conf_key + 9000``; ``poster-detail-<conf_key>``;
-            or ``<kind>-<room>-<start>`` for a collapsed row.
-        name: The name as the feed gives it (cleaned by P0-12); ``Posters``, ``Lunch`` and
+            `conf_key`; an open space's `conf_key + 9000`; `poster-detail-<conf_key>`;
+            or `<kind>-<room>-<start>` for a collapsed row.
+        name: The name as the feed gives it (cleaned by P0-12); `Posters`, `Lunch` and
             so on for a collapsed row.
-        kind: The feed's kind, e.g. ``talk``, ``sponsor-workshop`` or ``open-space``.
+        kind: The feed's kind, e.g. `talk`, `sponsor-workshop` or `open-space`.
         track: The track key (DATA-14): the kind with its first letter upper-cased, or
-            ``Sponsor Presentation`` for ``sponsor-workshop`` and ``Open Space`` for open
-            spaces. ``config.ConferenceInfo.track()`` gives its display names.
+            `Sponsor Presentation` for `sponsor-workshop` and `Open Space` for open
+            spaces. `config.ConferenceInfo.track()` gives its display names.
         location: The room text; several rooms are joined by ", ".
         display_location: The one place a row shows (DATA-16): an override such as the
             lightning talks' hall, else the first room; empty for a generic break.
-        rooms: The rooms in ``location``, one name per room slug, in order (ROOM-06).
+        rooms: The rooms in `location`, one name per room slug, in order (ROOM-06).
         description: The feed's description, empty when there is none: HTML, except
             Markdown for an open space (DATA-25).
         start: When it starts: aware, in the conference zone. Its time group's start.
-        display_start: The start to show; earlier than ``start`` for the Job Fair
+        display_start: The start to show; earlier than `start` for the Job Fair
             (DATA-11), else equal.
-        end: When it ends, never before ``start``; equal for a notice.
-        day: The conference-local date of ``start``: the day it is listed under.
+        end: When it ends, never before `start`; equal for a notice.
+        day: The conference-local date of `start`: the day it is listed under.
         speaker_ids: Its speakers in the directory, linked by name (DATA-15).
         speaker_names: Its authors as text, in the feed's order, including names that
             are not in the directory ("Hosted by …").
@@ -73,10 +73,10 @@ class Session:
         image_url: An open space's image, absolute; empty when there is none.
         in_timeline: Whether the schedule's days list it; poster details are reached from
             the Posters row, tracks, rooms, speakers and search instead (DATA-07).
-        description_md: ``description`` as Markdown (D-130); an open space's as the feed
+        description_md: `description` as Markdown (D-130); an open space's as the feed
             gives it, since it is Markdown already (DATA-25).
         search_text: What search matches (D-46): the name, the description's text and
-            ``speaker_names``, folded (``queries.fold``).
+            `speaker_names`, folded (`queries.fold`).
     """
 
     id: str
@@ -107,10 +107,10 @@ class Room:
     """A room and the sessions in it (DATA-16, ROOM-06).
 
     Attributes:
-        slug: Its slug (``slugs.slugify_room``), the key of its route.
+        slug: Its slug (`slugs.slugify_room`), the key of its route.
         name: Its name, as the feed first writes it.
         session_ids: Its sessions, by start, then name; a multi-room session is in each.
-            Empty only for a sprint-only room, seeded from ``map.toml`` (MAP-08).
+            Empty only for a sprint-only room, seeded from `map.toml` (MAP-08).
     """
 
     slug: str
@@ -149,11 +149,11 @@ class Poster:
     """A poster of the poster session (DATA-24).
 
     Attributes:
-        id: The poster's ``conf_key``, as a string.
+        id: The poster's `conf_key`, as a string.
         title: The title.
         description: The feed's HTML description.
         speaker_ids: Its authors.
-        description_md: ``description`` as Markdown (D-130).
+        description_md: `description` as Markdown (D-130).
     """
 
     id: str
@@ -174,9 +174,9 @@ class Sprint:
         description: HTML or plain text, as the feed gives it.
         logo_url: The logo's URL, or None when the feed has none.
         submitter: Who signed the project up.
-        description_md: ``description`` as Markdown (D-130).
-        description_text: ``description``'s visible text, whitespace collapsed
-            (``html_md.to_text``): the Sprints card's preview (EVT-05).
+        description_md: `description` as Markdown (D-130).
+        description_text: `description`'s visible text, whitespace collapsed
+            (`html_md.to_text`): the Sprints card's preview (EVT-05).
         search_text: The folded name, submitter and description text, for the
             Sprints filter (EVT-06, D-46): never markup.
     """
@@ -200,8 +200,8 @@ class Role:
 
     Attributes:
         title: What the role is called: its anchor's text, or the text before its bare
-            URL, else the URL's last segment (``jobs.parse_roles``).
-        url: Its page: an absolute ``http`` or ``https`` URL.
+            URL, else the URL's last segment (`jobs.parse_roles`).
+        url: Its page: an absolute `http` or `https` URL.
     """
 
     title: str
@@ -214,14 +214,14 @@ class JobListing:
 
     Attributes:
         id: The feed's id, as a string.
-        sponsor_name: The sponsor, by the exact name of a ``Sponsor`` (``jobs.listings_of``).
+        sponsor_name: The sponsor, by the exact name of a `Sponsor` (`jobs.listings_of`).
         sponsor_logo_url: The sponsor's logo.
-        sponsor_level: The sponsorship level, e.g. ``Visionary``.
+        sponsor_level: The sponsorship level, e.g. `Visionary`.
         description: The feed's HTML: a list of roles, or a long-form description.
-        description_md: ``description`` as Markdown (D-130); empty for a placeholder such
-            as ``N/A`` (``jobs.is_placeholder``), so a listing without roles shows it
+        description_md: `description` as Markdown (D-130); empty for a placeholder such
+            as `N/A` (`jobs.is_placeholder`), so a listing without roles shows it
             only when it says something.
-        roles: Its roles, in the order the listing gives them (``jobs.parse_roles``);
+        roles: Its roles, in the order the listing gives them (`jobs.parse_roles`);
             none for a long-form listing, whose Markdown shows instead (D-278).
         search_text: What the job listings' search matches (SPON-07, D-46): the
             sponsor's name, the role titles and the description's text, folded; never
@@ -244,14 +244,14 @@ class Sponsor:
 
     Attributes:
         name: The name, as the feed gives it.
-        slug: Ionic's slug of the name (``slugs.sponsor_slug``): sponsors have no id, so
+        slug: Ionic's slug of the name (`slugs.sponsor_slug`): sponsors have no id, so
             their routes and cross-links use it.
-        level: The level it is listed under, e.g. ``Visionary``.
+        level: The level it is listed under, e.g. `Visionary`.
         level_order: Its level's place, from the feed: 0 is the top level.
         logo_url: The logo's URL; empty when there is none.
         description: Plain text, not HTML (SPON-03), its line breaks kept as line feeds.
-        booth: Its Expo Hall booth, e.g. ``613``; None when it has none.
-        job_fair_table: Its Job Fair table, e.g. ``T2``; None when it has none.
+        booth: Its Expo Hall booth, e.g. `613`; None when it has none.
+        job_fair_table: Its Job Fair table, e.g. `T2`; None when it has none.
         mobile_banner: Whether it may appear in Now's sponsor spotlight (SHELL-08).
         external_url: Its website; None when the feed gives none, as the live feed
             never has so far.
@@ -274,8 +274,8 @@ class SponsorLevel:
     """One sponsorship level and its sponsors (DATA-22).
 
     Attributes:
-        name: The level, e.g. ``Visionary``: the feed's key.
-        order: Its place among the levels: its first sponsor's ``level_order``, as Ionic
+        name: The level, e.g. `Visionary`: the feed's key.
+        order: Its place among the levels: its first sponsor's `level_order`, as Ionic
             sorted them.
         sponsors: Its sponsors, in feed order; never empty.
     """
@@ -300,13 +300,13 @@ class ConferenceData:
         sprints: The sprint projects, in feed order.
         job_listings: The job listings, in feed order.
         dropped: The ids of the records that did not become sessions of their own, by the
-            rule that removed them (DATA-04..06): e.g. ``placeholder``, or ``collapsed`` for
+            rule that removed them (DATA-04..06): e.g. `placeholder`, or `collapsed` for
             the slots folded into a collapsed row. An open space's id is its session id.
         skipped: One line per feed record that could not be read, naming it and why.
-        content: The feed's ``conference.content`` HTML blocks by key, e.g. ``about`` or
-            ``venues-hours`` (MAP-09 reads its sections).
-        content_md: ``content`` as Markdown, by the same keys (D-130).
-        sponsor_levels: The sponsorship levels by ``order``, ties in feed order, each
+        content: The feed's `conference.content` HTML blocks by key, e.g. `about` or
+            `venues-hours` (MAP-09 reads its sections).
+        content_md: `content` as Markdown, by the same keys (D-130).
+        sponsor_levels: The sponsorship levels by `order`, ties in feed order, each
             with its sponsors (DATA-22): sorted once here, not by each screen.
     """
 

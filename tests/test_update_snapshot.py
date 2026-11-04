@@ -1,6 +1,6 @@
-"""Tests for ``tools/update_snapshot.py``, the bundled-snapshot refresher (D-38, NEW-03).
+"""Tests for `tools/update_snapshot.py`, the bundled-snapshot refresher (D-38, NEW-03).
 
-The feed comes from an ``httpx.MockTransport`` serving the recorded 2026 feed or a broken
+The feed comes from an `httpx.MockTransport` serving the recorded 2026 feed or a broken
 copy of it, never the network; the year data is a writable copy of the bundled folders.
 """
 
@@ -33,7 +33,7 @@ def data_dir(tmp_path: Path) -> Path:
 
 
 def serving(body: bytes, status: int = 200) -> httpx.MockTransport:
-    """A transport that answers the 2026 feed URL with ``body``, and fails anything else."""
+    """A transport that answers the 2026 feed URL with `body`, and fails anything else."""
 
     def handle(request: httpx.Request) -> httpx.Response:
         assert str(request.url) == FEED_URL
@@ -43,14 +43,14 @@ def serving(body: bytes, status: int = 200) -> httpx.MockTransport:
 
 
 def changed(change: Callable[[dict[str, Any]], object]) -> bytes:
-    """The recorded feed with ``change`` applied to a fresh copy of its JSON."""
+    """The recorded feed with `change` applied to a fresh copy of its JSON."""
     document = json.loads(RECORDED)
     change(document)
     return json.dumps(document).encode()
 
 
 def files(data_dir: Path) -> tuple[bytes, bytes]:
-    """Return the bytes of 2026's ``conference.json`` and ``conference.toml``."""
+    """Return the bytes of 2026's `conference.json` and `conference.toml`."""
     folder = data_dir / "2026"
     return (
         (folder / "conference.json").read_bytes(),
@@ -75,7 +75,7 @@ def test_update_bundles_the_feed_bytes_unchanged_with_the_capture_time(
 def test_update_changes_only_the_capture_line_of_conference_toml(
     data_dir: Path,
 ) -> None:
-    """Of ``conference.toml``, only the ``snapshot_captured_at`` line changes."""
+    """Of `conference.toml`, only the `snapshot_captured_at` line changes."""
     toml = data_dir / "2026" / "conference.toml"
     before = toml.read_text(encoding="utf-8").splitlines()
     update_snapshot(2026, data_dir, transport=serving(RECORDED), now=NOW)
@@ -244,7 +244,7 @@ def test_a_feed_without_a_credited_sponsor_is_refused_and_nothing_changes(
 def test_an_unexpected_conference_toml_layout_is_refused_and_nothing_changes(
     data_dir: Path,
 ) -> None:
-    """A quoted ``snapshot_captured_at`` key is refused, and nothing is written.
+    """A quoted `snapshot_captured_at` key is refused, and nothing is written.
 
     It is valid TOML, but not the bare key the tool rewrites: it must not write a
     duplicate.

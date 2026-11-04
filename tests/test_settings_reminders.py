@@ -1,8 +1,8 @@
 """Tests for Settings' Reminders section: live with E3, D-60's interim without (#429, #449).
 
-``interim_section()`` and ``card_for()`` are plain functions, run without a page. The
-live ``RemindersSection`` runs in a real Flet session (``tests/harness.py``) over the
-fakes of ``tests/fakes.py``, beside ``use_reminder_schedule()`` as ``App`` calls it, so
+`interim_section()` and `card_for()` are plain functions, run without a page. The
+live `RemindersSection` runs in a real Flet session (`tests/harness.py`) over the
+fakes of `tests/fakes.py`, beside `use_reminder_schedule()` as `App` calls it, so
 each change shows how many plans it applied. How the section looks and reads is
 checked on devices (the PR).
 """
@@ -66,7 +66,7 @@ def parts_of(
 
 
 def test_the_interim_is_a_level_2_reminders_heading_over_one_named_row() -> None:
-    """The section is a level-2 "Reminders" heading and one row, ``settings.reminders.interim``."""
+    """The section is a level-2 "Reminders" heading and one row, `settings.reminders.interim`."""
     heading, node, _ = parts_of(interim_section(ft.PagePlatform.IOS, slot=RADIO_WIDTH))
     assert heading.header and heading.heading_level == 2  # a section (D-211)
     assert isinstance(heading.content, ft.Container)
@@ -165,7 +165,7 @@ def test_the_card_follows_the_oss_answers(
 
 @ft.component
 def Planned() -> ft.Control:
-    """The section, with the reminders kept applied as ``App`` keeps them (D-389)."""
+    """The section, with the reminders kept applied as `App` keeps them (D-389)."""
     use_reminder_schedule(
         use_services(), use_conference(), use_favorites(), use_change_log(), use_prefs()
     )
@@ -185,7 +185,7 @@ def os() -> MemoryNotifications:
 async def open_section(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch, os: MemoryNotifications
 ) -> AsyncIterator[Open]:
-    """Provide ``open_section(settings, android=, permissions=)``: the live section."""
+    """Provide `open_section(settings, android=, permissions=)`: the live section."""
     async with AsyncExitStack() as stack:
 
         async def open_(
@@ -230,14 +230,14 @@ async def open_section(
 
 
 def tile_of(shown: harness.Shown, identifier: str) -> ft.ListTile:
-    """The switch row's tile under ``identifier``."""
+    """The switch row's tile under `identifier`."""
     tile = shown.node(identifier).content
     assert isinstance(tile, ft.ListTile)
     return tile
 
 
 def switch_of(shown: harness.Shown, identifier: str) -> ft.Switch:
-    """The switch of the row ``identifier``."""
+    """The switch of the row `identifier`."""
     switch = tile_of(shown, identifier).trailing
     assert isinstance(switch, ft.Switch)
     return switch
@@ -259,7 +259,7 @@ async def pick_lead(shown: harness.Shown, minutes: int) -> None:
 
 
 def button(shown: harness.Shown, card: str) -> ft.OutlinedButton:
-    """The button of the card ``card``, under ``<card>.action``."""
+    """The button of the card `card`, under `<card>.action`."""
     found = shown.node(f"{card}.action").content
     assert isinstance(found, ft.OutlinedButton)
     return found

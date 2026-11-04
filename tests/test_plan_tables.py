@@ -1,7 +1,7 @@
 """Tests for the job fair's tables on the floor viewer (#464; MAP-04, D-254, D-312).
 
-``PlanViewer`` runs in a real Flet session over the 2026 ``map.toml`` and the recorded
-feed, with ``tests/plan_view.py``'s harness. How the selection looks over the print, and
+`PlanViewer` runs in a real Flet session over the 2026 `map.toml` and the recorded
+feed, with `tests/plan_view.py`'s harness. How the selection looks over the print, and
 that each area covers its printed table on screen, are checked on devices (the PR).
 """
 
@@ -23,7 +23,7 @@ from tests.trees import texts
 render = plan_view.render
 
 VIEW = "/map/room/room-104c/plan/job-fair"
-"""The job fair plan's View path in ``tests/plan_view.py``'s harness."""
+"""The job fair plan's View path in `tests/plan_view.py`'s harness."""
 
 FEED = Conference(data=processed(2026), source="bundled", version=1)
 """The store holding the recorded 2026 feed."""
@@ -31,7 +31,7 @@ FEED = Conference(data=processed(2026), source="bundled", version=1)
 
 @pytest.fixture
 def show(render: Render) -> Render:
-    """``tests/plan_view.py``'s ``render``: the floor viewer at a route, in a Flet session."""
+    """`tests/plan_view.py`'s `render`: the floor viewer at a route, in a Flet session."""
     return render
 
 
@@ -56,7 +56,7 @@ def card_texts(plan: Plan) -> list[str]:
 async def test_the_query_selects_its_table_with_the_feed_s_sponsors(
     show: Render,
 ) -> None:
-    """``?table=T7``: T7 is selected, amber, and its card lists Chainguard and Red Hat.
+    """`?table=T7`: T7 is selected, amber, and its card lists Chainguard and Red Hat.
 
     The print shows Temporal at T7; the feed wins (D-254).
     """
@@ -78,7 +78,7 @@ async def test_the_query_selects_its_table_with_the_feed_s_sponsors(
 async def test_an_area_is_placed_from_its_ratios_on_the_fitted_plan(
     show: Render,
 ) -> None:
-    """T1's area is its ``map.toml`` rectangle times the plan's fitted size."""
+    """T1's area is its `map.toml` rectangle times the plan's fitted size."""
     plan = await show(plan_id="job-fair")
     await plan.lay_out()
     width, height = zoom_geometry.fitted(BOX, (1700, 1438))
@@ -131,7 +131,7 @@ async def test_a_table_without_a_sponsor_says_so(show: Render) -> None:
 async def test_a_feed_table_off_the_plan_opens_the_plan_saying_so(
     show: Render,
 ) -> None:
-    """``?table=T21``, which has no rectangle: nothing selected, and the card says why."""
+    """`?table=T21`, which has no rectangle: nothing selected, and the card says why."""
     plan = await show("?table=T21", plan_id="job-fair", conference=FEED)
     await plan.lay_out()
     assert selected(plan) == []
@@ -164,7 +164,7 @@ async def test_a_view_below_the_top_keeps_its_table_and_back_forgets_it(
 async def test_a_new_session_keeps_the_tapped_table_over_the_route_s(
     show: Render,
 ) -> None:
-    """Open ``?table=T7``, tap T2, rebuild the session at that route: T2 stays (D-18)."""
+    """Open `?table=T7`, tap T2, rebuild the session at that route: T2 stays (D-18)."""
     memory = ViewMemory()
     plan = await show("?table=T7", plan_id="job-fair", conference=FEED, memory=memory)
     await plan.lay_out()
@@ -179,7 +179,7 @@ async def test_a_new_session_keeps_the_tapped_table_over_the_route_s(
 
 @pytest.mark.parametrize("query", ["?table=T7", ""])
 async def test_other_plans_have_no_tables(show: Render, query: str) -> None:
-    """The Concourse level ignores ``?table=``: no areas, no card, its double tap."""
+    """The Concourse level ignores `?table=`: no areas, no card, its double tap."""
     plan = await show(query, conference=FEED)
     await plan.lay_out()
     assert areas(plan) == {}
@@ -189,6 +189,6 @@ async def test_other_plans_have_no_tables(show: Render, query: str) -> None:
 
 
 def test_table_href_pushes_the_job_fair_plan_with_the_table() -> None:
-    """The way in from the pane and sponsor detail: ``…/plan/job-fair?table=T8``."""
+    """The way in from the pane and sponsor detail: `…/plan/job-fair?table=T8`."""
     assert plan_tables.table_href("/map", "T8") == "/map/plan/job-fair?table=T8"
     assert plan_tables.show_table_label("T8") == "Show table T8 on the plan"

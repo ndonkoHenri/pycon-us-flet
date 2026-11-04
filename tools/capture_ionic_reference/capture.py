@@ -1,17 +1,17 @@
-"""Capture what Ionic's own ``processData`` makes of the recorded feeds (D-77; #66, SCHED-19).
+"""Capture what Ionic's own `processData` makes of the recorded feeds (D-77; #66, SCHED-19).
 
 Run it by hand, rarely: only when a recorded feed is added or the Ionic reference moves.
-It needs Node and npm; CI and the tests never run it, they only read its output::
+It needs Node and npm; CI and the tests never run it, they only read its output:
 
     uv run python tools/capture_ionic_reference/capture.py --ionic excluded/pycon-us-mobile
 
-It copies Ionic's ``conference-data.ts`` and the files it imports for ``processData``
+It copies Ionic's `conference-data.ts` and the files it imports for `processData`
 unchanged from a clone of PyCon/pycon-us-mobile into the work directory, adds this
-folder's stand-ins for Angular, RxJS, Ionic storage, ``UserData`` and the environment,
-installs the exact ``markdown-to-txt`` and ``marked`` versions of Ionic's
-``package-lock.json`` there, bundles with a pinned esbuild, and runs ``driver.ts`` under
-Node on each ``tests/fixtures/feeds/conference-<year>.json``. The facts it prints go to
-``tests/fixtures/ionic/<year>/*.json``, with their provenance in ``summary.json``.
+folder's stand-ins for Angular, RxJS, Ionic storage, `UserData` and the environment,
+installs the exact `markdown-to-txt` and `marked` versions of Ionic's
+`package-lock.json` there, bundles with a pinned esbuild, and runs `driver.ts` under
+Node on each `tests/fixtures/feeds/conference-<year>.json`. The facts it prints go to
+`tests/fixtures/ionic/<year>/*.json`, with their provenance in `summary.json`.
 Nothing is installed into the repository.
 """
 
@@ -40,7 +40,7 @@ IONIC_FILES = (
     "src/app/location-map/venue-locations.ts",
     "tsconfig.json",
 )
-"""Ionic's files that ``processData`` needs, copied unchanged."""
+"""Ionic's files that `processData` needs, copied unchanged."""
 
 STAND_INS = {
     "driver.ts": "driver.ts",
@@ -58,7 +58,7 @@ STUBBED_PACKAGES = (
     "rxjs",
     "rxjs/operators",
 )
-"""The packages ``stubs.ts`` stands in for; ``processData`` uses none of them."""
+"""The packages `stubs.ts` stands in for; `processData` uses none of them."""
 
 NPM_PACKAGES = (
     "markdown-to-txt",
@@ -67,9 +67,9 @@ NPM_PACKAGES = (
     "lodash.escape",
     "lodash.unescape",
 )
-"""The real code ``processData`` runs besides Ionic's own: its title cleaning.
+"""The real code `processData` runs besides Ionic's own: its title cleaning.
 
-``markdown-to-txt`` 2.0.1 requires ``lodash`` without declaring it; Ionic's build finds
+`markdown-to-txt` 2.0.1 requires `lodash` without declaring it; Ionic's build finds
 the copy its lock file hoists, so we install that one too.
 """
 
@@ -181,7 +181,7 @@ def capture(work: Path, feed: Path, year: int, provenance: dict[str, object]) ->
 
 
 def ionic_commit(ionic: Path) -> str:
-    """The commit the clone has checked out, read from ``.git`` without running git."""
+    """The commit the clone has checked out, read from `.git` without running git."""
     git = ionic / ".git"
     head = (git / "HEAD").read_text(encoding="utf-8").strip()
     if not head.startswith("ref: "):
@@ -203,7 +203,7 @@ def copy(source: Path, target: Path) -> None:
 
 
 def command(args: list[str], cwd: Path, env: dict[str, str] | None = None) -> str:
-    """Run a command in ``cwd`` and return its output; stop with its errors if it fails."""
+    """Run a command in `cwd` and return its output; stop with its errors if it fails."""
     result = subprocess.run(
         args, check=False, cwd=cwd, env=env, capture_output=True, text=True
     )

@@ -1,7 +1,7 @@
-"""Tests for ``lead_note.py``: a lead note through the outbox and what Save says (#742).
+"""Tests for `lead_note.py`: a lead note through the outbox and what Save says (#742).
 
-Each test signs a real ``Account`` in to the in-process mock (``tests/sync_rig.py``),
-runs a real ``SyncWorker`` loop, captures a lead as the Lead scanner does, then stores
+Each test signs a real `Account` in to the in-process mock (`tests/sync_rig.py`),
+runs a real `SyncWorker` loop, captures a lead as the Lead scanner does, then stores
 and confirms a note as the note sheet does (LEAD-10, LEAD-11; D-56, D-407). The mock
 checks every signature and records every note it applied, with its sponsor.
 """
@@ -49,7 +49,7 @@ class Booth:
     """
 
     def __init__(self, rig: Rig) -> None:
-        """Hold the rig and run its worker's loop, as ``supervise()`` does."""
+        """Hold the rig and run its worker's loop, as `supervise()` does."""
         self.rig = rig
         self.worker: SyncWorker = rig.worker()
         self._task = asyncio.create_task(self.worker.run())
@@ -60,7 +60,7 @@ class Booth:
         await asyncio.gather(self._task, return_exceptions=True)
 
     async def scan(self, sponsor: LeadSponsor | None = None) -> ScanOutcome:
-        """Capture Ada's badge for ``sponsor`` (None: the account's own)."""
+        """Capture Ada's badge for `sponsor` (None: the account's own)."""
         result = await capture(
             self.rig.db,
             self.rig.staff,
@@ -75,7 +75,7 @@ class Booth:
     async def note(
         self, note: LeadNote = WARM, sponsor: LeadSponsor | None = None
     ) -> str:
-        """Save ``note`` on Ada's lead as the sheet does; return what it says."""
+        """Save `note` on Ada's lead as the sheet does; return what it says."""
         stored = store(
             self.rig.db,
             ADA.code,
@@ -96,7 +96,7 @@ def rig(db: OutboxDb, storage: Storage, credentials: CredentialStorage) -> Rig:
 
 @pytest.fixture
 async def booth(rig: Rig) -> AsyncIterator[Booth]:
-    """A booth over ``rig`` with its worker running, stopped afterwards."""
+    """A booth over `rig` with its worker running, stopped afterwards."""
     running = Booth(rig)
     yield running
     await running.stop()

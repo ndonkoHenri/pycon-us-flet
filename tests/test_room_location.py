@@ -1,6 +1,6 @@
 """Tests for room detail's unknown room, sprint-only room and location card (ROOM-04).
 
-The page runs in ``tests/room_view.py``'s harness.
+The page runs in `tests/room_view.py`'s harness.
 """
 
 from typing import cast

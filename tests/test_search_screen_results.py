@@ -1,6 +1,6 @@
 """Tests for the search screen's results, their taps, Back and the empty states.
 
-The harness is ``tests/search_view.py``'s.
+The harness is `tests/search_view.py`'s.
 """
 
 from typing import cast
@@ -289,7 +289,7 @@ async def test_each_opening_starts_a_new_search_and_back_leaves_for_the_opener(
 async def test_a_view_rebuilt_below_a_result_gets_the_query_and_scope_back(
     render: Render,
 ) -> None:
-    """A deep entry under ``/search`` mounts Search below the top (D-18, D-164)."""
+    """A deep entry under `/search` mounts Search below the top (D-18, D-164)."""
     conference = Conference(data=DATA, source="bundled", version=1)
     shown = await render(conference)
     shown.memory.search_query, shown.memory.search_scope = "grand", "places"

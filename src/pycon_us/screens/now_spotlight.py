@@ -2,13 +2,13 @@
 
 Ionic rotated a sponsor strip above the tab bar every 30 s with no pause (WCAG 2.2.2).
 Now shows one card instead (D-37): the sponsor's logo on its white tile and "Thanks to
-NVIDIA, a Visionary sponsor", with no timer and no animation. ``core.sponsors`` picks
-the sponsor once for the process (``pick_spotlight()``, D-298); a tap pushes its detail
-over Now, ``/now/sponsor/<slug>``, so Back returns here (D-17). At large text
-(``Prefs.time_above``, D-216) the words go under the tile, the chevron beside it, as a
+NVIDIA, a Visionary sponsor", with no timer and no animation. `core.sponsors` picks
+the sponsor once for the process (`pick_spotlight()`, D-298); a tap pushes its detail
+over Now, `/now/sponsor/<slug>`, so Back returns here (D-17). At large text
+(`Prefs.time_above`, D-216) the words go under the tile, the chevron beside it, as a
 location card's do: beside the tile and the chevron, they broke inside a word at the
 largest sizes, "Maintaini / ng" (#649).
-Apart from ``now.py`` so that the screen stays under about 400 lines (D-66, D-190).
+Apart from `now.py` so that the screen stays under about 400 lines (D-66, D-190).
 """
 
 import flet as ft
@@ -27,7 +27,7 @@ PLATE = 56
 
 
 def Spotlight(sponsor: Sponsor, view_path: str, *, large_text: bool) -> ft.Control:
-    """Return the spotlight card for ``sponsor``, a memoised component.
+    """Return the spotlight card for `sponsor`, a memoised component.
 
     Given the same sponsor, the same object for one feed version, it skips its body
     (D-153, F34), so Now's minute tick never re-renders it.
@@ -35,8 +35,8 @@ def Spotlight(sponsor: Sponsor, view_path: str, *, large_text: bool) -> ft.Contr
     Args:
         sponsor: The sponsor to thank.
         view_path: Now's View path, which the detail is pushed on.
-        large_text: The text is large for the width (``Prefs.time_above``): the
-            words go under the tile (``spotlight_body()``).
+        large_text: The text is large for the width (`Prefs.time_above`): the
+            words go under the tile (`spotlight_body()`).
     """
     # As SessionRow's: ft.component's typing leaves out the key= its wrapper takes.
     return _Spotlight(sponsor, view_path, large_text, key=sponsor.slug)  # pyright: ignore[reportCallIssue]
@@ -45,7 +45,7 @@ def Spotlight(sponsor: Sponsor, view_path: str, *, large_text: bool) -> ft.Contr
 @ft.memo
 @ft.component
 def _Spotlight(sponsor: Sponsor, view_path: str, large_text: bool) -> ft.Control:
-    """The body of ``Spotlight``; it runs only when one of its arguments changes."""
+    """The body of `Spotlight`; it runs only when one of its arguments changes."""
     page = ft.context.page
 
     @report_errors
@@ -79,8 +79,8 @@ def spotlight_body(sponsor: Sponsor, words: str, *, large_text: bool) -> ft.Cont
 
     Args:
         sponsor: The sponsor, whose logo or initials the tile shows.
-        words: What the card says, ``thanks(sponsor)``.
-        large_text: The text is large for the width (``Prefs.time_above``, D-216):
+        words: What the card says, `thanks(sponsor)`.
+        large_text: The text is large for the width (`Prefs.time_above`, D-216):
             the words take the card's whole width, under the tile and the chevron,
             so they wrap between words, never inside one (#649).
     """

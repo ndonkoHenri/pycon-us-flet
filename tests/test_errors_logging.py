@@ -1,7 +1,7 @@
 """Tests for the logging setup (D-72, D-163).
 
-``setup_logging()`` runs on untouched loggers, whatever ran before; the last-resort error
-net (D-71) is ``test_errors.py``'s.
+`setup_logging()` runs on untouched loggers, whatever ran before; the last-resort error
+net (D-71) is `test_errors.py`'s.
 """
 
 import io
@@ -23,7 +23,7 @@ from pycon_us.services.errors import (
 
 
 def ours(root: logging.Logger) -> list[logging.Handler]:
-    """The handlers on ``root`` that ``setup_logging()`` added."""
+    """The handlers on `root` that `setup_logging()` added."""
     return [h for h in root.handlers if h.get_name() == HANDLER_NAME]
 
 
@@ -32,7 +32,7 @@ def clean_logging(monkeypatch: pytest.MonkeyPatch) -> Iterator[logging.Logger]:
     """Start from loggers setup_logging() has not touched, and restore them afterwards.
 
     The loggers are process-wide, so a test that ran setup_logging() earlier, or an
-    import of ``main``, would otherwise decide what these tests see.
+    import of `main`, would otherwise decide what these tests see.
     """
     monkeypatch.delenv("FLET_LOG_LEVEL", raising=False)
     root = logging.getLogger()
@@ -83,7 +83,7 @@ def test_a_second_setup_logging_call_keeps_the_levels_set_since(
 def test_log_lines_carry_the_time_level_logger_and_message(
     clean_logging: logging.Logger,
 ) -> None:
-    """A log line reads ``HH:MM:SS.mmm LEVEL logger: message``."""
+    """A log line reads `HH:MM:SS.mmm LEVEL logger: message`."""
     setup_logging()
     (handler,) = ours(clean_logging)
     record = logging.LogRecord(
@@ -105,7 +105,7 @@ def test_flet_log_level_sets_the_level(
     value: str,
     level: int,
 ) -> None:
-    """The ``FLET_LOG_LEVEL`` variable sets the root's level; an unknown one is INFO."""
+    """The `FLET_LOG_LEVEL` variable sets the root's level; an unknown one is INFO."""
     monkeypatch.setenv("FLET_LOG_LEVEL", value)  # flet run -v / -vv
     setup_logging()
     assert clean_logging.level == level
@@ -145,7 +145,7 @@ async def test_request_urls_with_personal_data_stay_out_of_the_log(
 def test_an_email_address_never_reaches_the_shared_log(
     clean_logging: logging.Logger,
 ) -> None:
-    """The handler writes each email address as ``<email>``, tracebacks included.
+    """The handler writes each email address as `<email>`, tracebacks included.
 
     A line can quote what the app does not control: a platform error that repeats a
     mailto: intent (D-182), or a skipped feed record. console.log, which Share log
@@ -174,5 +174,5 @@ def test_an_email_address_never_reaches_the_shared_log(
     ["@ft.component", "flet@1.1.0", "https://fosstodon.org/@pycon", "user@localhost"],
 )
 def test_text_that_is_not_an_address_is_kept(text: str) -> None:
-    """Text with an ``@`` that is not an email address is kept as it is."""
+    """Text with an `@` that is not an email address is kept as it is."""
     assert errors.EMAIL.sub(errors.REDACTED_EMAIL, text) == text

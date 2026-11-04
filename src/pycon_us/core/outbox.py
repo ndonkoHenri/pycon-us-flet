@@ -2,12 +2,12 @@
 
 The outbox keeps every lead scan, lead note and door check-in until the server has it
 (D-56): "never lose or misattribute a scan". The rules that keep that promise are pure
-and live here and in ``core/outbox_enqueue.py`` (what a scan, a note or an admission
+and live here and in `core/outbox_enqueue.py` (what a scan, a note or an admission
 enqueues), so a hypothesis state machine proves them (D-77) before any sqlite
-(``services/outbox_db.py``) or sending (``services/sync.py``) code exists. Every function
-takes rows and returns new ones; the caller stores them. ``due()`` is the Python twin of
+(`services/outbox_db.py`) or sending (`services/sync.py`) code exists. Every function
+takes rows and returns new ones; the caller stores them. `due()` is the Python twin of
 the due-rows query in docs/architecture.md §12.1, and §12.2 is the transition table.
-``status_text()`` says a row's status, flagged "may be recorded twice" after a send
+`status_text()` says a row's status, flagged "may be recorded twice" after a send
 whose answer was lost or could not be read (D-57, D-410).
 """
 
@@ -17,10 +17,10 @@ from enum import StrEnum
 from typing import Any
 
 RETRY_CAP = 10
-"""Counted failures (``ApiError``s) after which a row is ``failed`` (D-56)."""
+"""Counted failures (`ApiError`s) after which a row is `failed` (D-56)."""
 
 NETWORK_BACKOFF = 60.0
-"""Seconds a row waits after a failed send: the ``SyncWorker``'s tick (LEAD-12)."""
+"""Seconds a row waits after a failed send: the `SyncWorker`'s tick (LEAD-12)."""
 
 
 class Kind(StrEnum):
@@ -50,8 +50,8 @@ class Row:
     Attributes:
         kind: What the row records.
         key: The attendee's access code.
-        payload: The request (``payload_json`` in sqlite); once synced it also holds the
-            server's answer under ``"result"``.
+        payload: The request (`payload_json` in sqlite); once synced it also holds the
+            server's answer under `"result"`.
         owner: The lower-cased account email at enqueue; never changes.
         sponsor_id: The sponsor snapshot at enqueue (STORE-11); never changes.
         sponsor_name: The sponsor's name, snapshot with its id.
@@ -60,14 +60,14 @@ class Row:
         next_at: When the row is next due (epoch seconds).
         created_at: When it was scanned (epoch seconds); the due order's second key.
         last_error: The last counted failure's message, for the queue sheet.
-        idem_key: A door row's idempotency key, ``code|sorted product ids|session``.
+        idem_key: A door row's idempotency key, `code|sorted product ids|session`.
         id: The sqlite row id; None until the row is first stored.
         revision: How many times an enqueue changed the stored row. A send's outcome
             is saved only over the revision it was read at, so a note edited while
             its old text was in flight keeps the new text (D-56).
         maybe_sent: Whether a send got no answer, or none we could read, after the
-            server may have had the request (``NetworkError.maybe_sent``,
-            ``ApiError.unreadable``), so a resend may record it twice (D-57, D-410).
+            server may have had the request (`NetworkError.maybe_sent`,
+            `ApiError.unreadable`), so a resend may record it twice (D-57, D-410).
             Once set, never cleared: a later success keeps it.
     """
 
@@ -96,7 +96,7 @@ STATUS_WORDS = {
 """Each status as the queue sheet and the tools' lists say it (ux.md §7.2)."""
 
 MAYBE_TWICE = "may be recorded twice"
-"""What a flagged row adds to its status (``Row.maybe_sent``, D-410): only "may", since
+"""What a flagged row adds to its status (`Row.maybe_sent`, D-410): only "may", since
 an idempotent server records it once and the app cannot tell which it talks to."""
 
 
@@ -111,7 +111,7 @@ def status_text(row: Row) -> str:
 
 
 def _pending(row: Row) -> None:
-    """Refuse to send a row that isn't pending: only ``due()`` rows are sent."""
+    """Refuse to send a row that isn't pending: only `due()` rows are sent."""
     if row.status is not Status.PENDING:
         raise ValueError(f"outbox row {row.id} is {row.status}, not pending")
 
@@ -134,7 +134,7 @@ def after_success(row: Row, result: object) -> Row:
 def after_network_error(row: Row, now: float, *, maybe_sent: bool = False) -> Row:
     """Return a row whose send got no answer: still pending, its tries unchanged.
 
-    A ``NetworkError`` is the connection's fault, not the row's, so it is never counted;
+    A `NetworkError` is the connection's fault, not the row's, so it is never counted;
     the row waits a tick and the worker ends its pass. One that may have reached the
     server flags the row for good: the resend may be a second record (D-410).
 
@@ -142,10 +142,10 @@ def after_network_error(row: Row, now: float, *, maybe_sent: bool = False) -> Ro
         row: The pending row that was sent.
         now: The current time (epoch seconds).
         maybe_sent: Whether the request may have reached the server
-            (``NetworkError.maybe_sent``); False for a refused key, which answered.
+            (`NetworkError.maybe_sent`); False for a refused key, which answered.
 
     Returns:
-        The row, due again in ``NETWORK_BACKOFF`` seconds.
+        The row, due again in `NETWORK_BACKOFF` seconds.
     """
     _pending(row)
     flagged = row.maybe_sent or maybe_sent
@@ -155,20 +155,20 @@ def after_network_error(row: Row, now: float, *, maybe_sent: bool = False) -> Ro
 def after_error(row: Row, message: str, now: float, *, maybe_sent: bool = False) -> Row:
     """Return a row the server answered unusably: one more counted failure.
 
-    The row waits a tick like after a network error; the ``RETRY_CAP``-th counted
-    failure makes it ``failed``, until "Retry failed". An answer that could not be read
+    The row waits a tick like after a network error; the `RETRY_CAP`-th counted
+    failure makes it `failed`, until "Retry failed". An answer that could not be read
     flags the row for good, as a lost one does, and still counts: resending it for ever
     to a server that always answers so could record it without end (D-410).
 
     Args:
         row: The pending row that was sent.
-        message: The ``ApiError``'s message.
+        message: The `ApiError`'s message.
         now: The current time (epoch seconds).
         maybe_sent: Whether the server may have applied it though it answered
-            (``ApiError.unreadable``); False for a refusal.
+            (`ApiError.unreadable`); False for a refusal.
 
     Returns:
-        The row, pending and due in ``NETWORK_BACKOFF`` seconds, or failed.
+        The row, pending and due in `NETWORK_BACKOFF` seconds, or failed.
     """
     _pending(row)
     tries = row.tries + 1
@@ -187,7 +187,7 @@ def requeue(row: Row, now: float) -> Row:
     """Return a row pending again from scratch: no counted failures, due now.
 
     Behind "Retry failed" and an enqueue that brings a row back
-    (``core/outbox_enqueue.py``). Unlike ``retry_failed()``, it takes any status.
+    (`core/outbox_enqueue.py`). Unlike `retry_failed()`, it takes any status.
 
     Args:
         row: The row.
@@ -220,8 +220,8 @@ def retry_failed(row: Row, now: float) -> Row:
 def due(rows: Iterable[Row], owner: str, now: float) -> list[Row]:
     """Return the owner's rows to send now, in the order to send them.
 
-    Pending rows whose ``next_at`` has come: leads, then door check-ins, then notes,
-    each by ``created_at`` (then id). A note waits until its lead, the same sponsor's,
+    Pending rows whose `next_at` has come: leads, then door check-ins, then notes,
+    each by `created_at` (then id). A note waits until its lead, the same sponsor's,
     is synced (D-459).
 
     Args:
@@ -249,7 +249,7 @@ def due(rows: Iterable[Row], owner: str, now: float) -> list[Row]:
 
 
 def forget_synced(rows: Iterable[Row], owner: str) -> list[Row]:
-    """Return the rows kept when ``owner`` signs out for another account.
+    """Return the rows kept when `owner` signs out for another account.
 
     Their synced rows go (the next account must not see "Already in your leads" for
     someone else's leads), except a synced lead whose note, the same sponsor's, hasn't

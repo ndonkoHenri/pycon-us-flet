@@ -1,6 +1,6 @@
-"""Tests for the job listings' placeholders, search text and filter (``core/jobs.py``).
+"""Tests for the job listings' placeholders, search text and filter (`core/jobs.py`).
 
-SPON-07, SPON-09, D-278. The roles' rules are ``tests/test_jobs.py``'s, and so are the
+SPON-07, SPON-09, D-278. The roles' rules are `tests/test_jobs.py`'s, and so are the
 helpers both modules use (#623).
 """
 
@@ -40,7 +40,7 @@ def test_a_placeholder_says_nothing(text: str, placeholder: bool) -> None:
 
 
 def test_a_placeholder_listing_has_no_roles_nor_description() -> None:
-    """OpenEDG's ``N/A`` gives no role and no Markdown: nothing to show but the sponsor."""
+    """OpenEDG's `N/A` gives no role and no Markdown: nothing to show but the sponsor."""
     openedg = listing("OpenEDG Python Institute")
 
     assert (openedg.roles, openedg.description_md) == ((), "")
@@ -65,7 +65,7 @@ def test_search_text_holds_the_sponsor_the_titles_and_the_text() -> None:
 
 
 def names(listings: tuple[JobListing, ...]) -> list[str]:
-    """The sponsors of ``listings``, in their order."""
+    """The sponsors of `listings`, in their order."""
     return [job.sponsor_name for job in listings]
 
 
@@ -84,7 +84,7 @@ def test_the_filter_needs_every_word_in_any_order() -> None:
 
 @pytest.mark.parametrize("word", ["nofollow", "href", "noopener"])
 def test_the_filter_never_matches_markup(word: str) -> None:
-    """Ionic's filter found Bloomberg from ``nofollow`` in its raw HTML; ours nothing."""
+    """Ionic's filter found Bloomberg from `nofollow` in its raw HTML; ours nothing."""
     assert "nofollow" in listing("Bloomberg").description  # the markup is there
     assert filter_listings(DATA.job_listings, word) == ()
 
@@ -96,7 +96,7 @@ def test_a_filter_with_no_word_keeps_the_listings_themselves(query: str) -> None
 
 
 def test_every_2026_listing_is_found_from_its_sponsor() -> None:
-    """``listings_of`` finds each listing from its sponsor, once; others have none."""
+    """`listings_of` finds each listing from its sponsor, once; others have none."""
     found = [job for s in sponsors_of(DATA) for job in listings_of(DATA, s)]
 
     assert sorted(job.id for job in found) == sorted(j.id for j in DATA.job_listings)

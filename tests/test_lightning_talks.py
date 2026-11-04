@@ -1,6 +1,6 @@
-"""Tests for the Lightning talks page (``screens/lightning_talks.py``; #105, EVT-03).
+"""Tests for the Lightning talks page (`screens/lightning_talks.py`; #105, EVT-03).
 
-The page runs in a real Flet session over the recorded feeds (``tests/sessions.py``).
+The page runs in a real Flet session over the recorded feeds (`tests/sessions.py`).
 How it looks, wraps at 200 % and reads to screen readers is checked on devices (the
 PR).
 """
@@ -150,7 +150,7 @@ def doubt_texts(control: ft.Control) -> list[str]:
 
 
 async def test_think_you_cant_do_one_starts_folded_and_opens(show: Show) -> None:
-    """EVT-03: a collapsed ``FoldTile``, controlled so a render keeps it open."""
+    """EVT-03: a collapsed `FoldTile`, controlled so a render keeps it open."""
     page = await show()
     (fold,) = folds(page.find(ft.Container))
     assert text_of(fold.title) == "Think you can't do one?"
@@ -240,7 +240,7 @@ async def test_a_row_pushes_its_session_and_a_star_saves_it(show: Show) -> None:
 
 
 async def test_a_year_without_the_copy_shows_its_talks_alone(show: Show) -> None:
-    """2025's year data has no ``[lightning_talks]``."""
+    """2025's year data has no `[lightning_talks]`."""
     page = await show(year=2025)
     assert page.find(ft.Card) == []
     assert folds(page.find(ft.Container)) == []

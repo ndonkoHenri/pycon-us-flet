@@ -1,9 +1,9 @@
-"""Tests for what a row says and what Share sends (``core/row_views.py``).
+"""Tests for what a row says and what Share sends (`core/row_views.py`).
 
 The phrases a screen reader hears for a row (D-200) and the text session detail's Share
 sends (NEW-06), both built from a row's view.
 
-The views themselves are tested in ``test_row_views.py``, whose conference zone these
+The views themselves are tested in `test_row_views.py`, whose conference zone these
 tests share.
 """
 

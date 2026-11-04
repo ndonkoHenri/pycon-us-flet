@@ -1,9 +1,9 @@
 """A hypothesis state machine over the outbox's rules (D-56, D-77; testing §4.3).
 
-The machine plays the db and the ``SyncWorker`` with the pure rules of
-``core/outbox_enqueue.py`` (scans, notes and door admissions) and ``core/outbox.py``
-(sends that succeed or fail with a ``NetworkError``, before the request left or after: a
-lost answer, or an ``ApiError``, a refusal or an answer we can't read, one at a time or
+The machine plays the db and the `SyncWorker` with the pure rules of
+`core/outbox_enqueue.py` (scans, notes and door admissions) and `core/outbox.py`
+(sends that succeed or fail with a `NetworkError`, before the request left or after: a
+lost answer, or an `ApiError`, a refusal or an answer we can't read, one at a time or
 in streaks, to reach the cap; "Retry failed"), and with sponsor and account switches and
 time passing. It keeps its own record of what each row should be, independently of the
 rows, and checks the invariants after every step.
@@ -214,7 +214,7 @@ class OutboxMachine(RuleBasedStateMachine):
 
     @rule(count=st.integers(1, outbox.RETRY_CAP))
     def refused_repeatedly(self, count: int) -> None:
-        """Let the server refuse the next due row ``count`` passes running."""
+        """Let the server refuse the next due row `count` passes running."""
         row = self.first_due()
         if row is None or row.id is None:
             return
@@ -295,7 +295,7 @@ class OutboxMachine(RuleBasedStateMachine):
 
     @invariant()
     def tries_count_only_api_errors(self) -> None:
-        """``tries`` is the ``ApiError``s since the last restart; failed exactly at 10."""
+        """`tries` is the `ApiError`s since the last restart; failed exactly at 10."""
         for row_id, row in self.rows.items():
             assert row.tries == self.api_errors[row_id] <= outbox.RETRY_CAP
             assert (row.status is Status.FAILED) == (row.tries == outbox.RETRY_CAP)

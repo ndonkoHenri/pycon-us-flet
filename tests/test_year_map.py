@@ -1,7 +1,7 @@
-"""Tests for ``map.toml``: the floor plans, the room and venue pins, and their loader.
+"""Tests for `map.toml`: the floor plans, the room and venue pins, and their loader.
 
 DATA-32, MAP-07 (#372): the plans are S7's 2048-px WebP (D-312), every feed room has a
-pin or is one of the year's other locations, and ``normalize_room_key()`` keys the pins
+pin or is one of the year's other locations, and `normalize_room_key()` keys the pins
 as Ionic did (D-122).
 """
 
@@ -35,7 +35,7 @@ def data_dir(tmp_path: Path) -> Path:
 
 
 def edit(path: Path, old: str, new: str) -> None:
-    """Replace the first ``old`` in ``path`` with ``new``; ``old`` must be there."""
+    """Replace the first `old` in `path` with `new`; `old` must be there."""
     text = path.read_text(encoding="utf-8")
     assert old in text, f"{old!r} not in {path.name}"
     path.write_text(text.replace(old, new, 1), encoding="utf-8")
@@ -52,7 +52,7 @@ def rooms_without_pins(data: ConferenceData, year: YearData) -> list[str]:
 
 
 def feed_room_strings(year: int) -> set[str]:
-    """Every room name of ``year``'s recorded feed: as written, and as processed."""
+    """Every room name of `year`'s recorded feed: as written, and as processed."""
     names: set[str] = set()
     for item in document(year)["schedule"]:
         names.update(part.strip() for part in item["room"].split(",") if part.strip())
@@ -245,12 +245,12 @@ def test_sprint_rooms_are_the_seaside_rooms_ionic_seeded() -> None:
     ],
 )
 def test_normalize_room_key_is_ionics(name: str, key: str) -> None:
-    """``normalize_room_key`` does what Ionic's ``normalizeRoomKey`` did."""
+    """`normalize_room_key` does what Ionic's `normalizeRoomKey` did."""
     assert normalize_room_key(name) == key
 
 
 def test_the_hall_prefix_finds_the_expo_hall_pin() -> None:
-    """``Lunch (Hall AB)`` is in Expo Hall AB (D-122), whose pin a bare Hall AB is not.
+    """`Lunch (Hall AB)` is in Expo Hall AB (D-122), whose pin a bare Hall AB is not.
 
     The keys differ, so the prefix, applied by feed processing, is what lands the
     lunches on the expo hall's pin; the Arena's hyphen and Ionic's em dash share one.
@@ -268,7 +268,7 @@ def test_the_hall_prefix_finds_the_expo_hall_pin() -> None:
 def test_room_keys_and_slugs_agree_on_every_feed_room(year: int) -> None:
     """Two feed room names share a pin key exactly when they share a slug.
 
-    So the pins (``normalize_room_key``) and the rooms' routes (``slugify_room``) never
+    So the pins (`normalize_room_key`) and the rooms' routes (`slugify_room`) never
     split one room in two or join two rooms in one.
     """
     names = feed_room_strings(year) | {"Pacific Ballroom - Arena", "Hall AB"}

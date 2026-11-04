@@ -1,14 +1,14 @@
 """The session rows of every list: sessions and notices.
 
-``SessionRow`` and ``NoticeRow`` are memoised components keyed by session id (D-153):
-a list owner builds each session's ``SessionView`` once per feed version
-(``use_session_views()``) and hands a row only ``(view, is_favorite, on_toggle,
-tokens)``, so a star tap re-renders that one row. A row reads as one phrase, and its
+`SessionRow` and `NoticeRow` are memoised components keyed by session id (D-153):
+a list owner builds each session's `SessionView` once per feed version
+(`use_session_views()`) and hands a row only `(view, is_favorite, on_toggle,
+tokens)`, so a star tap re-renders that one row. A row reads as one phrase, and its
 star is a separate stop (D-33). A list owner also reads the sessions changed in the last
-24 h (``use_recent_changes()``) and hands each list only its own (``changes_of()``), so a
+24 h (`use_recent_changes()`) and hands each list only its own (`changes_of()`), so a
 recorded batch re-renders only the lists and rows it touches (D-153, D-315). The lines under a row's title are
-``ui.row_lines``'s, the gutter beside the rows is ``ui.time_gutter``, the other rows
-are ``ui.rows``'s (ux.md §3.9, D-184, D-200, D-227).
+`ui.row_lines`'s, the gutter beside the rows is `ui.time_gutter`, the other rows
+are `ui.rows`'s (ux.md §3.9, D-184, D-200, D-227).
 """
 
 from collections.abc import Iterable, Mapping, Sequence
@@ -42,21 +42,21 @@ from pycon_us.ui.semantics import semantics_key
 from pycon_us.ui.status_strip import TICK_SECONDS
 
 type Changes = Mapping[str, frozenset[ChangeKind]]
-"""The sessions changed in the last 24 h, by id: what changed (``ChangeLog.recent()``)."""
+"""The sessions changed in the last 24 h, by id: what changed (`ChangeLog.recent()`)."""
 
 NO_CHANGES: frozenset[ChangeKind] = frozenset()
 """What changed about a session without a recent change: nothing, so no badge."""
 
 NOTICE_GROUP = "logistics"
-"""The track group (``conference.toml``) whose sessions are notices: breaks, meals and
-announcements get a compact ``NoticeRow`` without a star (D-31, SCHED-04)."""
+"""The track group (`conference.toml`) whose sessions are notices: breaks, meals and
+announcements get a compact `NoticeRow` without a star (D-31, SCHED-04)."""
 
 
 def is_notice(session: Session, info: ConferenceInfo) -> bool:
     """Return whether a session shows as a notice rather than a session row (SCHED-04).
 
     Year data decides, not a list of names (ux.md §1, principle 9): every track of the
-    ``logistics`` group, which in 2026 are ``Break`` and ``Informational``.
+    `logistics` group, which in 2026 are `Break` and `Informational`.
 
     Args:
         session: The session.
@@ -81,14 +81,14 @@ def use_session_views(
     feed are left out.
 
     Args:
-        conference: The list owner's ``use_conference()`` store.
+        conference: The list owner's `use_conference()` store.
         session_ids: The sessions, in the order the list shows them.
         use_24h: Whether the device uses the 24-hour clock
-            (``page.media.always_use_24_hour_format``).
+            (`page.media.always_use_24_hour_format`).
         in_room: On a room's page, the room's slug: its rows leave out the room's own
-            name, in what they show and in what they say (``session_view()``).
+            name, in what they show and in what they say (`session_view()`).
         of_speaker: On a speaker's page, the speaker's name: its rows' speakers line
-            names only the co-speakers, shown and said alike (``session_view()``).
+            names only the co-speakers, shown and said alike (`session_view()`).
     """
     zone = use_services().year.conference.zone
     data = conference.data
@@ -110,12 +110,12 @@ def use_recent_changes() -> Changes:
     """Return the sessions to badge as Changed, for the component that owns a list.
 
     A hook: the caller re-renders when a refresh records a batch, and when a mark
-    reaches its 24 h end (``RECENT_FOR``), which the strip's 60 s loop checks while the
-    caller is mounted and the app is in the foreground (``Services.run_every``, D-175),
+    reaches its 24 h end (`RECENT_FOR`), which the strip's 60 s loop checks while the
+    caller is mounted and the app is in the foreground (`Services.run_every`, D-175),
     and at once on a resume. So a badge goes within a minute of its end while its list
-    shows, or when the list next shows. Unlike ``use_minute()``, a tick that ends no
+    shows, or when the list next shows. Unlike `use_minute()`, a tick that ends no
     mark renders nothing: a screen that keeps its minute work in a leaf (a room's "Now
-    in this room") keeps it there. Hand each list ``changes_of()`` of the result.
+    in this room") keeps it there. Hand each list `changes_of()` of the result.
     """
     svc = use_services()
     log = use_change_log()
@@ -149,7 +149,7 @@ def changes_of(
     skips its body when another list's sessions change (D-153).
 
     Args:
-        changes: Every session's recent changes (``use_recent_changes()``).
+        changes: Every session's recent changes (`use_recent_changes()`).
         session_ids: The sessions the list shows.
     """
     return {key: changes[key] for key in session_ids if key in changes}
@@ -186,30 +186,30 @@ def SessionRow(
     star tap re-renders this one row. A tap on the text pushes the session's detail
     on top of the current View (D-17).
 
-    The text is one node for screen readers, read as ``spoken_phrase()``; the star is
-    its own stop, named and stateful (``FavoriteButton``). Nothing has a fixed height,
+    The text is one node for screen readers, read as `spoken_phrase()`; the star is
+    its own stop, named and stateful (`FavoriteButton`). Nothing has a fixed height,
     so the row grows with the text: the title wraps to three lines, the rest in full.
 
     Args:
         view: The session's row view, the same object on every render.
         is_favorite: Whether the session is in My schedule.
-        on_toggle: The list's one star handler (``use_favorite_toggle()``).
+        on_toggle: The list's one star handler (`use_favorite_toggle()`).
         tokens: The scheme's tokens (D-150): a memoised row does not read context.
         screen: The screen's name in semantics identifiers: the row's text is
-            ``<screen>.session.<key>``, its star ``<screen>.favorite.<key>``, the key
-            from ``semantics_key()``.
+            `<screen>.session.<key>`, its star `<screen>.favorite.<key>`, the key
+            from `semantics_key()`.
         overlaps: On My schedule, the names of the saved sessions the row overlaps,
             in agenda order: a last line, after a warning icon, names the first and
             counts the rest, and the phrase names them all, so the clash is never told
             by colour alone (D-33); empty for none.
         elapsed: For a row that is on (Now), how much has passed, in whole percent
-            (``agenda.elapsed_percent()``): a 3 dp bar in ``Tokens.live`` under the
+            (`agenda.elapsed_percent()`): a 3 dp bar in `Tokens.live` under the
             text, and "60 percent elapsed." at the end of the phrase; None for none.
         omit: Badge labels the page already shows, left out of the row and its
-            phrase (``badge_specs()``): a track page's own badge (D-199).
+            phrase (`badge_specs()`): a track page's own badge (D-199).
         show_time: False where the page above says the time of every row, as the
             Posters detail does: the row and its phrase leave it out (D-206).
-        changed: What changed about the session in the last 24 h (``changes_of()``):
+        changed: What changed about the session in the last 24 h (`changes_of()`):
             any time, room or title change adds the Changed badge, which the phrase
             says as what changed, "Time and room changed" (D-315).
     """
@@ -245,7 +245,7 @@ def _SessionRow(
     show_time: bool = True,
     changed: frozenset[ChangeKind] = NO_CHANGES,
 ) -> ft.Control:
-    """The body of ``SessionRow``; it runs only when the props change (F34)."""
+    """The body of `SessionRow`; it runs only when the props change (F34)."""
     view_path = ft.use_view_path()
     info = use_services().year.conference  # a plain value: subscribes to nothing
     session = view.session
@@ -325,22 +325,22 @@ def NoticeRow(
 ) -> ft.Control:
     """Return a break, meal or announcement (SCHED-04): a compact tile without a star.
 
-    Memoised like ``SessionRow`` and keyed by the session id. Its icon is its
+    Memoised like `SessionRow` and keyed by the session id. Its icon is its
     track's, from the year data (a cup for breaks, an info sign for notices). It
     opens the session's detail only when there is something to read there (a
     description); otherwise it is not a button. It is its own node for screen
-    readers, read as ``notice_phrase()``, and a button when it opens: without its own
+    readers, read as `notice_phrase()`, and a button when it opens: without its own
     merge, a notice's text joined the slot's heading in TalkBack's tree (S2). Its
     tile is a tonal fill, outlined in high contrast, where the fill is the surface
     (D-306).
 
     Args:
         view: The notice's row view, the same object on every render.
-        tokens: The scheme's tokens (D-150): ``high_contrast`` outlines the tile.
+        tokens: The scheme's tokens (D-150): `high_contrast` outlines the tile.
         screen: The screen's name in its semantics identifier,
-            ``<screen>.notice.<key>`` (``semantics_key()``).
-        changed: What changed about it in the last 24 h (``changes_of()``): as on a
-            ``SessionRow``, the Changed badge over its title, and the phrase says what
+            `<screen>.notice.<key>` (`semantics_key()`).
+        changed: What changed about it in the last 24 h (`changes_of()`): as on a
+            `SessionRow`, the Changed badge over its title, and the phrase says what
             changed after the track, "Notice, Room changed." (D-315).
     """
     # As in SessionRow: the key= is real, its type is not.
@@ -356,7 +356,7 @@ def _NoticeRow(
     screen: str,
     changed: frozenset[ChangeKind] = NO_CHANGES,
 ) -> ft.Control:
-    """The body of ``NoticeRow``; it runs only when the props change (F34)."""
+    """The body of `NoticeRow`; it runs only when the props change (F34)."""
     view_path = ft.use_view_path()
     info = use_services().year.conference
     session = view.session

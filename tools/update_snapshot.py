@@ -1,17 +1,17 @@
 """Refresh the bundled feed snapshot from the public feed (D-38, NEW-03).
 
-Run it before a build for testers (``docs/development.md`` §8.3)::
+Run it before a build for testers (`docs/development.md` §8.3):
 
     uv run python tools/update_snapshot.py
 
-It fetches the public feed of ``config.YEAR`` from the year's ``feed_url`` and checks it with
-``feed.process``, the app's own parser. A feed that does not parse, that has a record the
+It fetches the public feed of `config.YEAR` from the year's `feed_url` and checks it with
+`feed.process`, the app's own parser. A feed that does not parse, that has a record the
 parser skips, whose days fall outside the conference dates, or that lacks a session the
 year's keynote data names, or has it on a track no keynote has (D-217), or lacks a
 sponsor the year's sponsor credits name (D-337), is refused, and nothing changes: the same bar as the
 tests of the committed snapshot (D-135). Otherwise it writes the
-bytes unchanged to ``data/<year>/conference.json``, records the time in ``conference.toml``'s
-``snapshot_captured_at``, and prints how the counts changed.
+bytes unchanged to `data/<year>/conference.json`, records the time in `conference.toml`'s
+`snapshot_captured_at`, and prints how the counts changed.
 
 Each file is replaced atomically, one after the other. If the second write fails, the error
 is raised and the pair is out of step until the next run; restore it from version control.
@@ -50,7 +50,7 @@ _FEED_URL_LINE = re.compile(r"^feed_url\s*=.*$", re.MULTILINE)
 
 
 class SnapshotError(Exception):
-    """The new feed was refused; the snapshot and ``conference.toml`` are unchanged."""
+    """The new feed was refused; the snapshot and `conference.toml` are unchanged."""
 
 
 def update_snapshot(
@@ -63,9 +63,9 @@ def update_snapshot(
     """Replace a year's bundled snapshot with its current public feed.
 
     Args:
-        year: The conference year; its feed URL comes from its ``conference.toml``.
+        year: The conference year; its feed URL comes from its `conference.toml`.
         data_dir: The folder that holds the year folders.
-        transport: The HTTP transport; tests pass an ``httpx.MockTransport``.
+        transport: The HTTP transport; tests pass an `httpx.MockTransport`.
         now: The capture time to record (aware); defaults to the current time.
 
     Returns:
@@ -74,9 +74,9 @@ def update_snapshot(
     Raises:
         SnapshotError: The feed could not be fetched, does not parse, has records the
             parser skips, has days outside the conference dates, or lacks a keynote's
-            session or has it on another track, or a credited sponsor; or ``conference.toml`` could not be updated. Nothing was written.
+            session or has it on another track, or a credited sponsor; or `conference.toml` could not be updated. Nothing was written.
         YearDataError: The year's data files are invalid.
-        OSError: Writing a file failed; that file is unchanged (``write_atomic``).
+        OSError: Writing a file failed; that file is unchanged (`write_atomic`).
     """
     year_data = load_year(year, data_dir)
     conference = year_data.conference
@@ -160,10 +160,10 @@ def _previous(year_data: YearData) -> Snapshot | None:
 
 
 def _with_captured_at(text: str, captured_at: datetime) -> str:
-    """Return ``conference.toml``'s text with ``snapshot_captured_at`` set.
+    """Return `conference.toml`'s text with `snapshot_captured_at` set.
 
     Only that line changes, so the hand-written comments stay. A year folder without the
-    line (a new year) gets it right after ``feed_url``. Both keys are expected bare and at
+    line (a new year) gets it right after `feed_url`. Both keys are expected bare and at
     the start of a line, as our files write them. The parsed documents before and after
     must differ in that key only, so any other form, or a match inside a multi-line string,
     is refused before anything is written.

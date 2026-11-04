@@ -1,15 +1,15 @@
 """Swag pickup's lookup and hand-out (#768, #769; SHIRT-02..04, API-06, API-07).
 
-``look_up()`` is Swag pickup's ``on_badge``. It asks ``fetch_products`` in swag mode for
+`look_up()` is Swag pickup's `on_badge`. It asks `fetch_products` in swag mode for
 the categories chosen and turns the reply into the result panel's answer: items left
 to hand out, everything already picked up, or nothing bought. Swag pickup is online
 only (D-56), so nothing is queued: no connection is a denial that says so, and a
 reply that can't be used is never shown as "nothing to pick up" (D-120). The result
 stays until the next scan (the scan screen keeps it), unlike Ionic's 1 s card.
 
-With items left, ``look_up()`` hands an ``Offer`` to the screen's hand-out sheet
-(``ui/swag_sheet.py``) and awaits it: the panel then says how the hand-out went, or
-keeps "Ready to hand out" when it was cancelled. ``hand_out()`` sends the ``redeem``
+With items left, `look_up()` hands an `Offer` to the screen's hand-out sheet
+(`ui/swag_sheet.py`) and awaits it: the panel then says how the hand-out went, or
+keeps "Ready to hand out" when it was cancelled. `hand_out()` sends the `redeem`
 once, online; an answer lost or unreadable after the server may have applied it is
 "Not confirmed" with the advice to rescan, never a resend: a second POST could hand out
 twice under non-idempotent semantics (D-57, D-410).
@@ -57,8 +57,8 @@ class Offer:
     """What a lookup offers to hand out: the sheet's content and the redeem's.
 
     Attributes:
-        badge: The badge scanned: its code and validator go in the ``redeem`` body.
-        scanned_at: When it was scanned, epoch seconds: the body's ``scanned_at``.
+        badge: The badge scanned: its code and validator go in the `redeem` body.
+        scanned_at: When it was scanned, epoch seconds: the body's `scanned_at`.
         products: The attendee and what they bought in the categories chosen.
     """
 
@@ -94,15 +94,15 @@ async def look_up(
     offer: OfferHandler | None = None,
     clock: Callable[[], float] = time.time,
 ) -> ScanResult:
-    """Return what the attendee behind ``badge`` can still take in ``categories``.
+    """Return what the attendee behind `badge` can still take in `categories`.
 
     Args:
-        api: ``Services.api``, signed in with the ``door_check_in`` flag; None when
+        api: `Services.api`, signed in with the `door_check_in` flag; None when
             the mock URL has gone, which reads as no connection.
         badge: The badge scanned; its access code is looked up.
         categories: The categories chosen, at least one (the screen pauses without).
         offer: The hand-out sheet, given the items left; None only shows them.
-        clock: The time of the scan, epoch seconds, the redeem's ``scanned_at``.
+        clock: The time of the scan, epoch seconds, the redeem's `scanned_at`.
 
     Returns:
         The result panel's answer: the hand-out's outcome, or, cancelled, accepted
@@ -132,10 +132,10 @@ async def look_up(
 async def hand_out(
     api: ApiClient | None, offer: Offer, quantities: Mapping[int, int]
 ) -> ScanResult:
-    """Redeem ``quantities`` for the attendee of ``offer`` now, once, and say how it went.
+    """Redeem `quantities` for the attendee of `offer` now, once, and say how it went.
 
     Args:
-        api: ``Services.api``; None when the mock URL has gone: no connection.
+        api: `Services.api`; None when the mock URL has gone: no connection.
         offer: The lookup's offer: the badge and the scan's time.
         quantities: How many of each product, by id, at least one product.
 
@@ -166,7 +166,7 @@ async def hand_out(
 def redeemed(
     reply: RedeemReply, offer: Offer, quantities: Mapping[int, int]
 ) -> ScanResult:
-    """Return the answer for a ``redeem`` reply: all, part or nothing handed out.
+    """Return the answer for a `redeem` reply: all, part or nothing handed out.
 
     Args:
         reply: What the server redeemed and its messages.
@@ -195,7 +195,7 @@ def result_of(products: AttendeeProducts, categories: Sequence[Category]) -> Sca
     """Return the answer for a lookup's reply (ux.md §7.3's Swag pickup).
 
     Args:
-        products: The attendee and what they bought in ``categories``.
+        products: The attendee and what they bought in `categories`.
         categories: The categories asked about, named when nothing was bought.
     """
     name = products.name or products.code
@@ -218,7 +218,7 @@ def denied(
         word: The outcome's word.
         title: The name, or the code when there is none.
         detail: The line under it; none when empty.
-        code: The access code, when ``title`` is a name; else ``title`` is the code.
+        code: The access code, when `title` is a name; else `title` is the code.
     """
     lines = (detail,) if detail else ()
     return ScanResult(ScanOutcome.DENIED, word, title, lines, code or title)

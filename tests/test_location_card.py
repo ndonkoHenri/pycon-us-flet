@@ -1,7 +1,7 @@
-"""Tests for ``LocationCard`` (#389; DATA-33, MAP-06; ux.md §3.9).
+"""Tests for `LocationCard` (#389; DATA-33, MAP-06; ux.md §3.9).
 
-The card runs in a real Flet session (``tests/sessions.py``) over the 2026 ``map.toml``.
-Its pulse's waits are held until a test releases them (``tests/timers.py``). How the
+The card runs in a real Flet session (`tests/sessions.py`) over the 2026 `map.toml`.
+Its pulse's waits are held until a test releases them (`tests/timers.py`). How the
 thumbnail, the pin and the words look, at 200 % text too, is checked on devices (the
 PR); here, what the card says, where it leads, where the pin sits and how it pulses.
 """
@@ -33,7 +33,7 @@ IDENTIFIER = "help.location"
 
 
 def place(key: str) -> tuple[Plan, Pin]:
-    """Return a pin of the 2026 ``map.toml`` and the plan it is on."""
+    """Return a pin of the 2026 `map.toml` and the plan it is on."""
     pin = YEAR.map.pin(key)
     assert pin is not None
     plan = YEAR.map.plan(pin.plan)
@@ -43,14 +43,14 @@ def place(key: str) -> tuple[Plan, Pin]:
 
 @dataclass
 class Card(harness.Shown):
-    """The harness's ``Shown`` on one ``LocationCard``."""
+    """The harness's `Shown` on one `LocationCard`."""
 
     sleeps: HeldSleeps = field(default_factory=HeldSleeps)
     renders: list[Callable[[], None]] = field(default_factory=list)
     """The setter that re-renders the screen around the card."""
 
     def pins(self) -> list[ft.Stack]:
-        """The pins on the thumbnail: the ``Stack``s placed on it."""
+        """The pins on the thumbnail: the `Stack`s placed on it."""
         return [s for s in self.find(ft.Stack) if s.left is not None]
 
     def ring_out(self) -> bool:
@@ -60,7 +60,7 @@ class Card(harness.Shown):
         return halo.scale == card.RING_SCALE
 
     async def until_held(self, *, timeout: float = 30.0) -> None:
-        """Settle until the pulse waits on a held sleep, or fail after ``timeout`` s."""
+        """Settle until the pulse waits on a held sleep, or fail after `timeout` s."""
         loop = asyncio.get_running_loop()
         deadline = loop.time() + timeout
         while self.sleeps.held != 1:
@@ -81,7 +81,7 @@ type Render = Callable[..., Awaitable[Card]]
 async def render(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> AsyncIterator[Render]:
-    """Yield a function that shows a ``LocationCard`` on ``VIEW`` and returns its ``Card``.
+    """Yield a function that shows a `LocationCard` on `VIEW` and returns its `Card`.
 
     The pin, the plan-only form, reduced motion, large text and the View's pulsed
     pins can be set; the pulse's
@@ -165,7 +165,7 @@ async def test_the_information_desk_card_is_one_button_that_says_where_it_leads(
 
 
 async def test_a_tap_pushes_the_floor_viewer_at_the_pin(render: Render) -> None:
-    """The card's tap pushes ``plan/<plan>?pin=<key>`` on its own View."""
+    """The card's tap pushes `plan/<plan>?pin=<key>` on its own View."""
     shown = await render("info-desk")
     (tap,) = [c for c in shown.find(ft.Container) if c.on_click]
     await shown.click(tap)
@@ -198,7 +198,7 @@ async def test_the_plan_only_card_opens_the_plan_without_a_pin(render: Render) -
 
 
 async def test_the_pin_pulses_twice_then_stays_still(render: Render) -> None:
-    """Out and back twice, each half ``PULSE_MS``, then no more waits (D-34)."""
+    """Out and back twice, each half `PULSE_MS`, then no more waits (D-34)."""
     shown = await render()
     rings: list[bool] = []
     for _ in range(2 * card.PULSES):
@@ -251,7 +251,7 @@ async def test_the_card_spans_the_width_at_every_text_size(
 ) -> None:
     """The card spans the list at large text too, not its words' width (#795).
 
-    The thumbnail sits in a ``Row`` that fills the width, and keeps its size.
+    The thumbnail sits in a `Row` that fills the width, and keeps its size.
     """
     shown = await render(large_text=large_text)
     body = shown.node(IDENTIFIER).content
@@ -262,7 +262,7 @@ async def test_the_card_spans_the_width_at_every_text_size(
 
 
 async def test_a_pin_already_pulsed_on_the_view_stays_still(render: Render) -> None:
-    """A card whose pin is in ``seen`` (another day's list) never pulses."""
+    """A card whose pin is in `seen` (another day's list) never pulses."""
     shown = await render(seen={"info-desk"})
     await shown.settle()
     assert len(shown.pins()) == 1
@@ -278,11 +278,11 @@ async def test_a_card_that_pulses_marks_its_pin_seen(render: Render) -> None:
 
 @pytest.mark.parametrize("key", ["", "spa"], ids=["no-pin", "unknown"])
 def test_a_spot_without_a_pin_has_no_card(key: str) -> None:
-    """``spot_card()`` gives no card for an empty key or one ``map.toml`` lacks."""
+    """`spot_card()` gives no card for an empty key or one `map.toml` lacks."""
     data = load_year(2026).map
     assert card.spot_card(data, key, identifier="help.info_desk.location") is None
 
 
 def test_a_year_without_the_job_fair_plan_has_no_job_fair_card() -> None:
-    """``job_fair_card()`` is None without a ``job-fair`` plan (2025 has no map.toml)."""
+    """`job_fair_card()` is None without a `job-fair` plan (2025 has no map.toml)."""
     assert card.job_fair_card(load_year(2025).map, identifier=IDENTIFIER) is None

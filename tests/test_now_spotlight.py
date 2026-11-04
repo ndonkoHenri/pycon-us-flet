@@ -1,9 +1,9 @@
 """Tests for Now's sponsor spotlight (#398; SHELL-08, SPON-11; D-37, D-298).
 
-The pick itself is ``core.sponsors`` (``test_sponsors.py``); here, what Now makes of it:
+The pick itself is `core.sponsors` (`test_sponsors.py`); here, what Now makes of it:
 one still card, one button node, the same sponsor for the process, nothing without a
 candidate, and a tap that pushes the sponsor over Now. The screen runs in a real Flet
-session through ``tests/now_view.py``'s harness. How the card looks, wraps at 200 % and
+session through `tests/now_view.py`'s harness. How the card looks, wraps at 200 % and
 reads to TalkBack and VoiceOver is checked on devices (the PR).
 """
 
@@ -28,28 +28,28 @@ from tests.now_view import may, render  # noqa: F401  (the harness's fixture)
 
 @pytest.fixture
 def show(render: Callable[..., Any]) -> Callable[..., Any]:  # noqa: F811
-    """``tests/now_view.py``'s ``render``: Now at a time, in a real Flet session."""
+    """`tests/now_view.py`'s `render`: Now at a time, in a real Flet session."""
     return render
 
 
 SEED = 7
-"""The seed of the tests' ``Random``: any seed works, one keeps the pick known."""
+"""The seed of the tests' `Random`: any seed works, one keeps the pick known."""
 
 
 def seeded() -> ViewMemory:
-    """A fresh process's view memory, its pick drawn from ``Random(SEED)``."""
+    """A fresh process's view memory, its pick drawn from `Random(SEED)`."""
     return ViewMemory(rng=Random(SEED))
 
 
 def expected() -> str:
-    """The slug that ``Random(SEED)`` picks from the 2026 candidates."""
+    """The slug that `Random(SEED)` picks from the 2026 candidates."""
     picked = pick_spotlight(spotlight_candidates(processed(2026)), "", Random(SEED))
     assert picked is not None
     return picked.slug
 
 
 def conference(data: ConferenceData | None, now: datetime) -> Conference:
-    """A ``Conference`` store holding ``data``, fresh at ``now``."""
+    """A `Conference` store holding `data`, fresh at `now`."""
     return Conference(data=data, source="bundled", version=1, fetched_at=now)
 
 

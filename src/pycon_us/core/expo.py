@@ -1,25 +1,25 @@
 """The expo's booths matched to the feed's sponsors, and the job fair's tables (D-254).
 
-``map.toml`` draws the booths (``year_map.Booth``) and the feed says who is at each one
-(``Sponsor.booth``). ``expo_booths()`` joins them by number, compared as text: a booth
+`map.toml` draws the booths (`year_map.Booth`) and the feed says who is at each one
+(`Sponsor.booth`). `expo_booths()` joins them by number, compared as text: a booth
 lists every sponsor with its number, so a shared booth keeps all its exhibitors, where
 Ionic kept one name; and the sponsors whose booth has no rectangle are kept apart, so
 the expo List can still show them and a test can name the gap. The answer is built
 once per feed version (D-153), so the expo's memoised views get the same objects on
 every render.
 
-The expo List (#404) has one row per exhibitor (D-254): ``list_rows()`` makes them,
+The expo List (#404) has one row per exhibitor (D-254): `list_rows()` makes them,
 by booth number in natural order with a shared booth's exhibitors together by name, or
-by name (``by_name()``), and a booth without an exhibitor is a row by its label.
-``filter_rows()`` and ``filter_sponsors()`` keep those whose name or booth number holds
-every word of the List's filter, folded as search folds (D-46). ``booth_entries()``
+by name (`by_name()`), and a booth without an exhibitor is a row by its label.
+`filter_rows()` and `filter_sponsors()` keep those whose name or booth number holds
+every word of the List's filter, folded as search folds (D-46). `booth_entries()`
 gives search's Places the same exhibitors, each at its booth, the ones off the plan
 among them (EXPO-04, #406).
 
-The job fair's tables come from the feed alone (``Sponsor.job_fair_table``):
-``job_fair_tables()`` lists every sponsor with a table, tables in natural order (T2
+The job fair's tables come from the feed alone (`Sponsor.job_fair_table`):
+`job_fair_tables()` lists every sponsor with a table, tables in natural order (T2
 before T10) and a shared table's sponsors by folded name, each with its open roles
-(MAP-04, SPON-10). ``is_job_fair()`` finds the sessions that show the job fair's plan
+(MAP-04, SPON-10). `is_job_fair()` finds the sessions that show the job fair's plan
 card (SESS-10).
 """
 
@@ -42,8 +42,8 @@ class ExpoBooth:
     """One booth on the expo plan and the sponsors the feed puts at it.
 
     Attributes:
-        booth: The booth's rectangle, number and label, from ``map.toml``.
-        sponsors: Every sponsor whose ``booth`` is its number, in folded-name order
+        booth: The booth's rectangle, number and label, from `map.toml`.
+        sponsors: Every sponsor whose `booth` is its number, in folded-name order
             (D-46); empty for a booth without an exhibitor, which its label names.
     """
 
@@ -56,8 +56,8 @@ class Expo:
     """The expo: its booths with their sponsors, and the sponsors off the plan.
 
     Attributes:
-        booths: Every booth of ``map.toml``, by number in natural order.
-        unplaced: The sponsors with a booth number that no booth of ``map.toml`` has,
+        booths: Every booth of `map.toml`, by number in natural order.
+        unplaced: The sponsors with a booth number that no booth of `map.toml` has,
             by booth number in natural order, then by folded name.
     """
 
@@ -81,7 +81,7 @@ class ExpoRow:
 
     @property
     def number(self) -> str:
-        """The booth's number, as ``map.toml`` writes it."""
+        """The booth's number, as `map.toml` writes it."""
         return self.item.booth.number
 
     @property
@@ -100,11 +100,11 @@ class BoothEntry:
     """One exhibitor at its booth, or a booth without one, as search finds it (#406).
 
     Attributes:
-        number: The booth's number, as the feed and ``map.toml`` write it.
+        number: The booth's number, as the feed and `map.toml` write it.
         name: The exhibitor's name, else the booth's label; "" for neither.
         slug: The exhibitor's slug; "" for a booth without one.
         placed: Whether the expo plan draws the booth; False for a sponsor's booth
-            that ``map.toml`` does not have, which opens the List's line instead.
+            that `map.toml` does not have, which opens the List's line instead.
     """
 
     number: str
@@ -126,7 +126,7 @@ class JobFairTable:
         table: The table, as the feed writes it ("T2").
         sponsor: The sponsor the feed puts at it; a shared table has an entry per
             sponsor.
-        roles: The open roles of its job listings (``JobListing.roles``); 0 without a
+        roles: The open roles of its job listings (`JobListing.roles`); 0 without a
             listing, and for a long-form listing, which lists none (D-278).
     """
 
@@ -143,7 +143,7 @@ def expo_booths(data: ConferenceData, booths: Sequence[Booth]) -> Expo:
 
     Args:
         data: The processed feed.
-        booths: The year's booths (``MapData.booths``).
+        booths: The year's booths (`MapData.booths`).
 
     Returns:
         The expo, the same object for the same feed and booths (D-153).
@@ -158,7 +158,7 @@ def expo_booths(data: ConferenceData, booths: Sequence[Booth]) -> Expo:
 def list_rows(booths: Sequence[ExpoBooth]) -> tuple[ExpoRow, ...]:
     """Return the List's rows in booth order: one per exhibitor, or one for the booth.
 
-    A shared booth's rows follow its exhibitors' folded-name order (``expo_booths()``),
+    A shared booth's rows follow its exhibitors' folded-name order (`expo_booths()`),
     so they stay together under its number (D-254).
 
     Args:
@@ -172,12 +172,12 @@ def list_rows(booths: Sequence[ExpoBooth]) -> tuple[ExpoRow, ...]:
 def booth_entries(expo: Expo) -> tuple[BoothEntry, ...]:
     """Return every exhibitor at its booth, the booths off the plan among them (#406).
 
-    One entry per List row (``list_rows()``, D-254), and one per sponsor of
-    ``Expo.unplaced``, all by booth number in natural order, a shared booth's
+    One entry per List row (`list_rows()`, D-254), and one per sponsor of
+    `Expo.unplaced`, all by booth number in natural order, a shared booth's
     exhibitors in folded-name order.
 
     Args:
-        expo: The year's expo (``expo_booths()``).
+        expo: The year's expo (`expo_booths()`).
     """
     placed = [
         BoothEntry(
@@ -196,10 +196,10 @@ def booth_entries(expo: Expo) -> tuple[BoothEntry, ...]:
 
 
 def by_name(rows: Sequence[ExpoRow]) -> tuple[ExpoRow, ...]:
-    """Return ``rows`` by folded name (D-46), then booth number; nameless rows last.
+    """Return `rows` by folded name (D-46), then booth number; nameless rows last.
 
     Args:
-        rows: The List's rows (``list_rows()``).
+        rows: The List's rows (`list_rows()`).
     """
     return tuple(
         sorted(
@@ -210,9 +210,9 @@ def by_name(rows: Sequence[ExpoRow]) -> tuple[ExpoRow, ...]:
 
 
 def filter_rows(rows: tuple[ExpoRow, ...], query: str) -> tuple[ExpoRow, ...]:
-    """Return the rows whose number or name holds every word of ``query`` (D-46).
+    """Return the rows whose number or name holds every word of `query` (D-46).
 
-    A query with no word to match returns ``rows`` itself, as ``filter_projects()``
+    A query with no word to match returns `rows` itself, as `filter_projects()`
     does: "socal" finds 726's SoCal Python, "613" booth 613.
 
     Args:
@@ -226,7 +226,7 @@ def filter_sponsors(sponsors: tuple[Sponsor, ...], query: str) -> tuple[Sponsor,
     """Return the unplaced sponsors whose booth number or name holds every word.
 
     Args:
-        sponsors: ``Expo.unplaced``.
+        sponsors: `Expo.unplaced`.
         query: What the user typed in the List's filter.
     """
     return matching(sponsors, query, lambda s: fold(f"{s.booth} {s.name}"))
@@ -271,7 +271,7 @@ def job_fair_tables(data: ConferenceData) -> tuple[JobFairTable, ...]:
 
 
 def is_job_fair(session: Session) -> bool:
-    """Return whether ``session`` is a Job Fair row, which shows the job fair's card.
+    """Return whether `session` is a Job Fair row, which shows the job fair's card.
 
     The feed has two (SESS-10), the event in the expo hall and the plenary that marks
     its time ("Job Fair & Community Showcase & Poster Sessions", "Job Fair & Community
@@ -285,7 +285,7 @@ def is_job_fair(session: Session) -> bool:
 
 
 def _build(data: ConferenceData, booths: tuple[Booth, ...]) -> Expo:
-    """Match ``booths`` to the feed's sponsors: ``expo_booths()``'s work."""
+    """Match `booths` to the feed's sponsors: `expo_booths()`'s work."""
     if not booths:
         return Expo()
     by_number: dict[str, list[Sponsor]] = {}
@@ -312,17 +312,17 @@ def _row(item: ExpoBooth, sponsor: Sponsor | None) -> ExpoRow:
 
 
 def _by_name(sponsors: list[Sponsor]) -> tuple[Sponsor, ...]:
-    """Return ``sponsors`` in folded-name order (D-46)."""
+    """Return `sponsors` in folded-name order (D-46)."""
     return tuple(sorted(sponsors, key=lambda sponsor: fold(sponsor.name)))
 
 
 _MEMO: WeakKeyDictionary[ConferenceData, dict[tuple[Booth, ...], Expo]] = (
     WeakKeyDictionary()
 )
-"""``expo_booths()``'s answers, per feed. A processed feed is one object per feed version,
+"""`expo_booths()`'s answers, per feed. A processed feed is one object per feed version,
 so it is the version in the key; weak, so a replaced feed's answers go with it."""
 
 _TABLES: WeakKeyDictionary[ConferenceData, tuple[JobFairTable, ...]] = (
     WeakKeyDictionary()
 )
-"""``job_fair_tables()``'s answers, per feed, kept as ``_MEMO`` keeps the booths'."""
+"""`job_fair_tables()`'s answers, per feed, kept as `_MEMO` keeps the booths'."""

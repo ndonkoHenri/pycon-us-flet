@@ -1,4 +1,4 @@
-"""Tests for ``core/list_place.py``: the item at a list's top, as a key (D-331, #337)."""
+"""Tests for `core/list_place.py`: the item at a list's top, as a key (D-331, #337)."""
 
 from pycon_us.core.list_place import Place, place_at, rescaled
 

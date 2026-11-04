@@ -4,18 +4,18 @@ A conference moment is a fixed reminder that is not about a saved session (D-58,
 NOTIF-05). Two kinds, with two id ranges (D-59, D-274):
 
 - **Hand-authored** (8000–8049): the lightning-talk and open-space sign-ups, which no
-  feed knows about. ``content.toml``'s ``[[event_reminders]]`` build into
-  ``EventReminder`` through ``year_schema.build()``, as ``config.Content.event_reminders``,
+  feed knows about. `content.toml`'s `[[event_reminders]]` build into
+  `EventReminder` through `year_schema.build()`, as `config.Content.event_reminders`,
   each with the public page it was said from and when that was checked.
-  ``check_moments()`` checks them when the year loads.
+  `check_moments()` checks them when the year loads.
 - **Derived** (8050–8099): one per keynote and panel, 15 minutes before its start in the
-  feed, from ``keynote_moments()``. Ionic hard-coded their times and copy, which drifted
+  feed, from `keynote_moments()`. Ionic hard-coded their times and copy, which drifted
   when the schedule moved; here a moved keynote moves its moment, and a keynote time
   never sits in the year data.
 
 8999 is the Developer test reminder's (DEV-06), outside both ranges. A module of its own,
-as ``year_keynotes`` is, so ``config.py`` grows by little (D-66). It imports no Flet: the
-plan that turns these into reminders is ``services.reminder_plan.plan()`` (P2-67).
+as `year_keynotes` is, so `config.py` grows by little (D-66). It imports no Flet: the
+plan that turns these into reminders is `services.reminder_plan.plan()` (P2-67).
 """
 
 from collections.abc import Iterable
@@ -41,7 +41,7 @@ DERIVED_IDS = range(8050, 8100)
 
 KEYNOTE_TRACK = "Keynote"
 """The keynotes' track, whose sessions all have a moment: the Keynotes page's
-(``screens.keynotes.TRACK``, ``year_tracks.HUB_PAGES["keynotes"]``; a test keeps them
+(`screens.keynotes.TRACK`, `year_tracks.HUB_PAGES["keynotes"]`; a test keeps them
 the same), named here because this module imports no screen."""
 
 KEYNOTE_LEAD = timedelta(minutes=15)
@@ -55,15 +55,15 @@ class EventReminder:
     Attributes:
         id: Its notification id: 8000–8049 written by hand, 8050–8099 derived (D-274).
         category: What it is about, which the reminder settings turn on or off
-            (NOTIF-05): ``"lightning"``, ``"open_space"`` or ``"keynote"``.
+            (NOTIF-05): `"lightning"`, `"open_space"` or `"keynote"`.
         at: When it fires; aware.
         title: The notification's title.
         body: The notification's text.
-        route: What a tap opens, a route path: ``/more/lightning-talks``, or the
+        route: What a tap opens, a route path: `/more/lightning-talks`, or the
             session of a keynote (D-274).
         source: The public page a hand-authored moment was said from; empty for a
             derived one, whose source is the feed.
-        checked: When ``source`` was last checked; None for a derived moment.
+        checked: When `source` was last checked; None for a derived moment.
         session_id: The session a keynote moment is about, so the plan gives a saved
             keynote one reminder, not two; empty for a hand-authored moment.
     """
@@ -85,10 +85,10 @@ def check_moments(
     """Check the hand-authored moments' rules (D-274).
 
     Args:
-        moments: The ``[[event_reminders]]`` entries.
+        moments: The `[[event_reminders]]` entries.
         year: The conference year: every moment fires in it, in the conference's zone.
         zone: The conference's time zone.
-        file: The data file they come from, for the messages (``2026/content.toml``).
+        file: The data file they come from, for the messages (`2026/content.toml`).
 
     Raises:
         YearDataError: A rule is broken; the message names the file and the entry.
@@ -131,15 +131,15 @@ def keynote_moments(
 ) -> tuple[EventReminder, ...]:
     """Return a moment for each keynote and panel, 15 minutes before its start (D-274).
 
-    The sessions are the Keynotes page's (``timeline.keynote_sessions()``): every
+    The sessions are the Keynotes page's (`timeline.keynote_sessions()`): every
     session of the keynotes' track and every session the year's keynote data names, in
     the order they happen. The feed gives the time, the name and the room, so a keynote
     the feed moves takes its moment along. A tap opens the session on the Schedule.
 
     Args:
         data: The processed feed.
-        keynotes: The year's keynote entries (``Content.keynotes``); an entry's
-            ``kind`` names a panel.
+        keynotes: The year's keynote entries (`Content.keynotes`); an entry's
+            `kind` names a panel.
         zone: The conference's time zone, for the time in the title.
         use_24h: Whether the title's time is in 24-hour form.
 

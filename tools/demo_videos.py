@@ -1,25 +1,25 @@
 """Record the demo videos on a fresh iOS simulator, or lay a clip's frames out to read.
 
-Usage, from the repo's root (uv fetches the video readers, which nothing else needs)::
+Usage, from the repo's root (uv fetches the video readers, which nothing else needs):
 
     uv run --with av --with numpy --with pillow python -m tools.demo_videos record
         [--out DIR] [--clips NAME ...] [--build] [--model "iPhone 17"]
     uv run --with av --with numpy --with pillow python -m tools.demo_videos sheets CLIP DIR
         [--fps 2]
 
-``record`` makes a simulator of its own and restarts this checkout's mock, clean, then films ``maestro/demo/`` and writes
-each clip, trimmed, to ``--out``, then deletes the simulator and stops the mock. ``--build``
+`record` makes a simulator of its own and restarts this checkout's mock, clean, then films `maestro/demo/` and writes
+each clip, trimmed, to `--out`, then deletes the simulator and stops the mock. `--build`
 builds the app first; without it the present build must hold this tree's Python.
 
 The app's fake clock starts at the launch and keeps running, so a clip that outlasts a minute
 shows "Now · 9:42" in the app. The status bar follows it: while a clip is filmed, the tool sets
-the status bar's time to the fake clock's minute each time that minute changes (``fake_minute()``),
+the status bar's time to the fake clock's minute each time that minute changes (`fake_minute()`),
 so the two agree in every frame. The app never freezes its clock for this (#1016).
 
 The Developer options never appear because nothing ever opens or unlocks them: each scene
 writes the fake clock and the mock's URL straight into the app's stored preferences, with no
-``unlocked`` key, so neither More nor About this app has a Developer row (``prefs.developer``).
-``sheets`` is how a person checks that, frame by frame, before a clip is shared.
+`unlocked` key, so neither More nor About this app has a Developer row (`prefs.developer`).
+`sheets` is how a person checks that, frame by frame, before a clip is shared.
 """
 
 import argparse
@@ -48,15 +48,15 @@ FAKE_NOW = "2026-05-15T09:41:00-07:00"
 """Friday, four minutes before the keynote: the moment a clip's first frame shows."""
 
 STATUS_BAR = "--batteryState charged --batteryLevel 100 --cellularBars 4 --wifiBars 3"
-"""What the status bar shows besides its time, which ``fake_minute()`` supplies."""
+"""What the status bar shows besides its time, which `fake_minute()` supplies."""
 
 CLOCK_LEAD = 10.0
 """Seconds from the app starting its fake clock to a clip's first frame: the ready flow, the
-settle and the take's opening. The stored clock starts this long before ``FAKE_NOW``, so the
+settle and the take's opening. The stored clock starts this long before `FAKE_NOW`, so the
 clip begins on it (measured on an iPhone 17 simulator, #1016)."""
 
 BOOT_LAG = 3.0
-"""Seconds from ``simctl launch`` returning to the app starting its fake clock: Python boots
+"""Seconds from `simctl launch` returning to the app starting its fake clock: Python boots
 and the stored settings are read first (measured on an iPhone 17 simulator, #1016)."""
 
 FIRST_LAUNCH_SECONDS = 25.0
@@ -85,7 +85,7 @@ class Clip:
     """One finished video.
 
     Attributes:
-        name: The file's name without ``.mp4``; it says what the clip shows.
+        name: The file's name without `.mp4`; it says what the clip shows.
         flows: The flows filmed, in order, in one recording.
         large_text_between: Raise the text size between the flows, on camera.
         setup: A flow run before the recording starts.
@@ -118,7 +118,7 @@ CLIPS = (
 
 
 def fake_start(lead: float = 0.0) -> datetime:
-    """Return the instant the stored fake clock starts at, ``lead`` s before ``FAKE_NOW``.
+    """Return the instant the stored fake clock starts at, `lead` s before `FAKE_NOW`.
 
     Args:
         lead: Seconds the app's clock runs before the clip's first frame.
@@ -127,22 +127,22 @@ def fake_start(lead: float = 0.0) -> datetime:
 
 
 def fake_minute(elapsed: float, lead: float = 0.0) -> str:
-    """Return the fake clock's time as a status bar shows it, ``elapsed`` s after its start.
+    """Return the fake clock's time as a status bar shows it, `elapsed` s after its start.
 
     Args:
         elapsed: Seconds since the app started its fake clock; below 0 reads as 0.
-        lead: The lead the clock was stored with (``fake_start()``).
+        lead: The lead the clock was stored with (`fake_start()`).
     """
     moment = fake_start(lead) + timedelta(seconds=max(elapsed, 0.0))
     return f"{moment.hour}:{moment.minute:02d}"
 
 
 def seconds_to_next_minute(elapsed: float, lead: float = 0.0) -> float:
-    """Return how long, from ``elapsed``, until the fake clock's minute changes.
+    """Return how long, from `elapsed`, until the fake clock's minute changes.
 
     Args:
         elapsed: Seconds since the app started its fake clock; below 0 reads as 0.
-        lead: The lead the clock was stored with (``fake_start()``).
+        lead: The lead the clock was stored with (`fake_start()`).
     """
     seconds = fake_start(lead).second + max(elapsed, 0.0)
     return 60.0 - seconds % 60.0
@@ -152,7 +152,7 @@ def scene_prefs(mock_url: str | None, lead: float = 0.0) -> dict[str, Any]:
     """Return a scene's stored preferences, keyed as SharedPreferences writes them.
 
     Welcome is already seen, the reminders primer already answered, and the Developer
-    options hold only what the scene needs. ``unlocked`` is left out on purpose.
+    options hold only what the scene needs. `unlocked` is left out on purpose.
 
     Args:
         mock_url: The mock API's URL, or None when the clip's scene has no private API.
@@ -169,7 +169,7 @@ def scene_prefs(mock_url: str | None, lead: float = 0.0) -> dict[str, Any]:
 
 
 def merged_prefs(stored: dict[str, Any], scene: dict[str, Any]) -> dict[str, Any]:
-    """Return ``stored`` with every app key replaced by the scene's; others are the OS's."""
+    """Return `stored` with every app key replaced by the scene's; others are the OS's."""
     kept = {k: v for k, v in stored.items() if not k.startswith("flutter.pycon.")}
     return kept | scene
 
@@ -182,9 +182,9 @@ def still_cuts(changes: list[float], duration: float) -> list[tuple[float, float
         duration: The recording's length in seconds.
 
     Returns:
-        ``(start, end)`` pairs: at most ``HEAD_STILL`` before the first change and
-        ``TAIL_STILL`` after the last, and each still stretch over ``LONGEST_STILL`` cut
-        down to ``SHORTENED_STILL``.
+        `(start, end)` pairs: at most `HEAD_STILL` before the first change and
+        `TAIL_STILL` after the last, and each still stretch over `LONGEST_STILL` cut
+        down to `SHORTENED_STILL`.
     """
     if not changes:
         return [(0.0, min(duration, HEAD_STILL))]
@@ -207,7 +207,7 @@ def _run(*command: str, **options: Any) -> str:
 
 
 def _simctl(*args: str) -> str:
-    """Run ``xcrun simctl`` with ``args``."""
+    """Run `xcrun simctl` with `args`."""
     return _run("xcrun", "simctl", *args)
 
 
@@ -225,7 +225,7 @@ class Stage:
         self.clock_started = time.monotonic()
 
     def set_time(self, text: str) -> None:
-        """Show ``text`` as the status bar's time, with the rest as ``STATUS_BAR`` says."""
+        """Show `text` as the status bar's time, with the rest as `STATUS_BAR` says."""
         _simctl(
             "status_bar", self.udid, "override", "--time", text, *STATUS_BAR.split()
         )
@@ -233,7 +233,7 @@ class Stage:
     def follow_clock(self, stop: threading.Event) -> None:
         """Set the status bar's time to the fake clock's minute, and again at each change.
 
-        Runs until ``stop`` is set; a failed ``simctl`` call is told and the next minute
+        Runs until `stop` is set; a failed `simctl` call is told and the next minute
         tries again, since a clip is worth finishing with a stale minute.
         """
         shown = None
@@ -253,7 +253,7 @@ class Stage:
             stop.wait(wait)
 
     def flow(self, name: str) -> None:
-        """Run a flow of ``maestro/demo``; a failure stops the run."""
+        """Run a flow of `maestro/demo`; a failure stops the run."""
         env = os.environ | {"MAESTRO_CLI_NO_ANALYTICS": "1"}
         command = ["maestro", "--device", self.udid, "test", str(FLOWS / name)]
         done = subprocess.run(
@@ -273,7 +273,7 @@ class Stage:
         """Start the app again with only its fake clock stored anew, never recording.
 
         After a clip's setup, which can take minutes: the clock has run on since the
-        launch, and the clip must begin on ``FAKE_NOW``. What the setup stored, such as
+        launch, and the clip must begin on `FAKE_NOW`. What the setup stored, such as
         the staff sign-in, stays.
         """
         scene = scene_prefs(self.mock_url if clip.mock else None, CLOCK_LEAD)
@@ -282,10 +282,10 @@ class Stage:
         self._start("subflows/staff_ready.yaml")
 
     def _store(self, scene: dict[str, Any], *, replace_all: bool = True) -> None:
-        """Stop the app and write ``scene`` into its stored preferences.
+        """Stop the app and write `scene` into its stored preferences.
 
         Args:
-            scene: The keys to store, as ``scene_prefs()`` has them.
+            scene: The keys to store, as `scene_prefs()` has them.
             replace_all: Replace every app key, as a fresh scene does; else only these.
         """
         subprocess.run(
@@ -310,14 +310,14 @@ class Stage:
         )
 
     def _start(self, ready: str = "subflows/ready.yaml") -> None:
-        """Launch the app and wait for its first screen, as the flow ``ready`` says."""
+        """Launch the app and wait for its first screen, as the flow `ready` says."""
         _simctl("launch", self.udid, BUNDLE)
         # The app's fake clock starts when its Python has booted, a moment after this.
         self.clock_started = time.monotonic() + BOOT_LAG
         self.flow(ready)
 
     def take(self, clip: Clip, raw: Path) -> None:
-        """Film the clip into ``raw``, with the app already on its first screen."""
+        """Film the clip into `raw`, with the app already on its first screen."""
         self.set_time(fake_minute(time.monotonic() - self.clock_started, CLOCK_LEAD))
         recorder = subprocess.Popen(
             [
@@ -385,7 +385,7 @@ def _changes(raw: Path) -> tuple[list[float], float]:
 
 
 def render(raw: Path, out: Path) -> float:
-    """Write the kept stretches of ``raw`` to ``out`` at a constant frame rate.
+    """Write the kept stretches of `raw` to `out` at a constant frame rate.
 
     Args:
         raw: The recording, whose frames come only when the screen changes.
@@ -434,7 +434,7 @@ def _output_times(kept: list[tuple[float, float]]) -> list[float]:
 
 
 def _emit(output: Any, encoder: Any, frame: Any, index: int) -> int:
-    """Encode ``frame`` as the clip's frame ``index``; return the next index."""
+    """Encode `frame` as the clip's frame `index`; return the next index."""
     picture = frame.reformat(format="yuv420p")
     picture.pts = index
     picture.time_base = Fraction(1, OUTPUT_FPS)
@@ -443,7 +443,7 @@ def _emit(output: Any, encoder: Any, frame: Any, index: int) -> int:
 
 
 def sheets(clip: Path, folder: Path, fps: float) -> None:
-    """Save contact sheets of ``clip`` and print the frames a person must look at.
+    """Save contact sheets of `clip` and print the frames a person must look at.
 
     Prints the dark frames, and each flash: a picture that differs from half a second
     before it while the pictures on both sides of it agree, which a sheet can miss.
@@ -487,7 +487,7 @@ def sheets(clip: Path, folder: Path, fps: float) -> None:
 
 
 def _flashes(grays: list[tuple[float, Any]], window: int = 15) -> list[float]:
-    """Return when a picture stands apart from those ``window`` frames either side."""
+    """Return when a picture stands apart from those `window` frames either side."""
     import numpy as np
 
     found: list[float] = []

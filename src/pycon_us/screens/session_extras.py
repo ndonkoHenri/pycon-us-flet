@@ -1,20 +1,20 @@
 """Session detail's extras (ux.md §5.5): Share, the overflow, posters, an open space's.
 
 - **Share** (NEW-06) sends the session's title, when and where in conference time with
-  its zone, and its public page when it has one (``row_views.share_text()``), through
-  the platform's share sheet (``ui.share``).
+  its zone, and its public page when it has one (`row_views.share_text()`), through
+  the platform's share sheet (`ui.share`).
 - **The overflow** ("More options"): "Open on us.pycon.org", the session's public page,
-  and Add to calendar (SESS-04), which hands the session's ``.ics`` to the calendar
-  (``services.calendar``, D-272).
+  and Add to calendar (SESS-04), which hands the session's `.ics` to the calendar
+  (`services.calendar`, D-272).
 - **Posters** (SESS-09): the Posters row of the Schedule stands for the poster session,
-  so its detail lists the posters (``timeline.posters()``) as the session rows every
+  so its detail lists the posters (`timeline.posters()`) as the session rows every
   list uses, with their stars; each pushes its poster's detail on top of this one, so
   Back returns here (D-17).
 - **An open space** (SESS-11) shows its image, which the feed links on the conference's
   asset host, and its entry on the site's open-spaces page, a link that leaves the app
-  (the link rule, ``ui.links``).
+  (the link rule, `ui.links`).
 
-A module of its own, so ``screens/session.py`` stays under about 400 lines (D-66).
+A module of its own, so `screens/session.py` stays under about 400 lines (D-66).
 """
 
 from urllib.parse import urlsplit
@@ -122,14 +122,14 @@ def SessionMenu(
     words (ux.md §4.7). Add to calendar is disabled while the calendar's sheet or
     the save dialog is up, so a second tap does not serve or save the file twice;
     in place, so the item keeps its node (D-182). Each label wraps at 200 % text
-    (``menu_item()``, F47, D-233). The caller shows the menu only with an item in it.
+    (`menu_item()`, F47, D-233). The caller shows the menu only with an item in it.
 
     Args:
         session: The session the page shows.
-        site: Whether to offer the session's public page (``Session.url``).
+        site: Whether to offer the session's public page (`Session.url`).
         calendar: Whether to offer Add to calendar: a session the schedule still has
             and that can be saved (D-186, D-31).
-        source: Session detail's ``__name__``, for View source, always last (D-461).
+        source: Session detail's `__name__`, for View source, always last (D-461).
     """
     svc = use_services()
     prefs = use_prefs()  # the export's alarm follows the reminders' lead (D-401)
@@ -186,16 +186,16 @@ def Posters(
 ) -> ft.Control:
     """The posters of a Posters row's detail (SESS-09), under "Posters (25)".
 
-    Each is a ``SessionRow`` with its star, as on the Posters track page, without what
+    Each is a `SessionRow` with its star, as on the Posters track page, without what
     the page above already says: the "Poster" badge, the time and the place, which
     every poster shares with the row (DATA-07). The rows are memoised and their views
     built once per feed version, so a star tap re-renders one row (D-153).
 
     Args:
         row: The Posters row the page shows.
-        posters: Its posters (``timeline.posters()``), never empty.
-        saved: The saved session ids (``Favorites.ids``).
-        on_toggle: The page's one star handler (``use_favorite_toggle()``).
+        posters: Its posters (`timeline.posters()`), never empty.
+        saved: The saved session ids (`Favorites.ids`).
+        on_toggle: The page's one star handler (`use_favorite_toggle()`).
         tokens: The scheme's tokens, for the rows (D-150).
     """
     page = ft.context.page
@@ -236,8 +236,8 @@ def open_space_extras(
 
     Args:
         session: The open space.
-        fade_ms: How long the image fades in once loaded (``prefs.motion_ms()``).
-        high_contrast: HC is on screen (``Tokens.high_contrast``): the image's frame
+        fade_ms: How long the image fades in once loaded (`prefs.motion_ms()`).
+        high_contrast: HC is on screen (`Tokens.high_contrast`): the image's frame
             is outlined.
     """
     extras: list[ft.Control] = []
@@ -262,12 +262,12 @@ def _image(session: Session, *, fade_ms: int, high_contrast: bool) -> ft.Control
     image of other proportions (a portrait flyer, a screenshot) the frame shows the
     same image again, cropped to fill it and blurred under a scrim, so it is the
     picture's own colours rather than bars of grey (D-206). The frame's fill shows
-    while the image loads, and the image fades in over it. No ``placeholder_src``:
+    while the image loads, and the image fades in over it. No `placeholder_src`:
     Flet sizes the placeholder with the image's own width and height (F44), which an
     image of unknown size does not have, so it could not fill the frame. When the
-    image does not load, the frame says so (``error_content``). Its name for screen
+    image does not load, the frame says so (`error_content`). Its name for screen
     readers is the session's: the feed has no description of the picture. In high
-    contrast, where the fill is the surface, a 1 dp ``outline`` border draws the frame
+    contrast, where the fill is the surface, a 1 dp `outline` border draws the frame
     (D-306).
     """
     fade = ft.Animation(fade_ms, ft.AnimationCurve.EASE_OUT)

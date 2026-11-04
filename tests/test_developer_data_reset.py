@@ -1,6 +1,6 @@
 """Tests for the Developer screen's Data section: share the log, welcome, reset (#107).
 
-The fixtures and lookups are ``tests/data_section.py``'s. The share sheet and a reset on
+The fixtures and lookups are `tests/data_section.py`'s. The share sheet and a reset on
 a device are checked on devices (the PR).
 """
 
@@ -308,8 +308,8 @@ async def test_reset_app_deletes_the_change_log_when_no_feed_url_was_set(
 ) -> None:
     """Reset app deletes the change log when no feed URL was set (D-255).
 
-    ``Conference.reset()`` deletes the log only through a feed URL change, so here only
-    ``reset_app()``'s own deletion can remove it.
+    `Conference.reset()` deletes the log only through a feed URL change, so here only
+    `reset_app()`'s own deletion can remove it.
     """
     await changes_file.write_batches(svc.storage, [Batch(clock.now(), ())])
     assert (

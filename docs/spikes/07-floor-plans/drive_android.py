@@ -1,27 +1,27 @@
 """Drive the S7 reproducer on an Android emulator with adb (#361).
 
-Run from this folder with the release APK installed::
+Run from this folder with the release APK installed:
 
     S7_SERIAL=emulator-5590 uv run python drive_android.py <step> [<arg> ...]
 
-Steps (each prints ``S7-DRIVE`` lines):
+Steps (each prints `S7-DRIVE` lines):
 
-- ``launch``: force-stop, start the app (``am start -W``), wait 8 s.
-- ``tap <text>``: tap the node whose text or description starts with ``<text>``.
-- ``mem <label>``: ``dumpsys meminfo`` of the app: the App Summary, Unknown's PSS
+- `launch`: force-stop, start the app (`am start -W`), wait 8 s.
+- `tap <text>`: tap the node whose text or description starts with `<text>`.
+- `mem <label>`: `dumpsys meminfo` of the app: the App Summary, Unknown's PSS
   and TOTAL PSS/RSS.
-- ``booths``: every ``booth.*`` node's bounds, in tree order (TalkBack's order).
-- ``tapall [limit]``: tap the centre of every booth node on screen and report
+- `booths`: every `booth.*` node's bounds, in tree order (TalkBack's order).
+- `tapall [limit]`: tap the centre of every booth node on screen and report
   which booth the app logged for each (tap accuracy).
-- ``tapsame <file>``: tap the centres saved by ``booths > file`` again (for the
+- `tapsame <file>`: tap the centres saved by `booths > file` again (for the
   gesture mode, which has no booth nodes).
-- ``swipe <x1> <y1> <x2> <y2> [ms]``: one drag.
-- ``pans <n>``: n drags across the plan, left, right, up and down, between
+- `swipe <x1> <y1> <x2> <y2> [ms]`: one drag.
+- `pans <n>`: n drags across the plan, left, right, up and down, between
   points inside the plan's on-screen bounds; says how many transforms the app
   logged (0 means the plan did not move, so frame numbers would mean nothing).
-- ``frames <seconds>``: SurfaceFlinger's present times of the app's layer while
-  ``pans`` runs, as intervals (a relative signal on a loaded host).
-- ``log [since]``: the app's ``S7`` lines.
+- `frames <seconds>`: SurfaceFlinger's present times of the app's layer while
+  `pans` runs, as intervals (a relative signal on a loaded host).
+- `log [since]`: the app's `S7` lines.
 """
 
 import itertools

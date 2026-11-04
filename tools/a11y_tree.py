@@ -1,21 +1,21 @@
 """Print Android's accessibility tree, headings included, for the screen on an emulator (#257).
 
-``uiautomator dump`` has no heading attribute, so it cannot show what TalkBack's Headings
+`uiautomator dump` has no heading attribute, so it cannot show what TalkBack's Headings
 navigation moves by (D-211). This tool builds a small instrumentation APK
-(``tools/a11y_tree_apk``) with the Android SDK, installs it on the emulator you name, and
-runs it: it walks the active window through ``UiAutomation`` and returns
-``uiautomator dump``'s attributes plus ``heading``, ``accessibility-focused``,
-``state-description`` and ``hint``. TalkBack can stay on while it runs.
+(`tools/a11y_tree_apk`) with the Android SDK, installs it on the emulator you name, and
+runs it: it walks the active window through `UiAutomation` and returns
+`uiautomator dump`'s attributes plus `heading`, `accessibility-focused`,
+`state-description` and `hint`. TalkBack can stay on while it runs.
 
-From the repo root, with the app open on your own emulator (never another agent's)::
+From the repo root, with the app open on your own emulator (never another agent's):
 
     uv run python -m tools.a11y_tree --serial emulator-5578              # the whole tree
     uv run python -m tools.a11y_tree --serial emulator-5578 --headings   # headings only
     uv run python -m tools.a11y_tree --serial emulator-5578 --route /more --xml > more.xml
 
-``--route`` opens that route first through the app's deep link (D-269). The APK is signed
-with a throwaway key generated in ``build/a11y_tree`` (git-ignored, D-86). Like
-``uiautomator dump``, connecting makes Flutter report a screen reader (F72).
+`--route` opens that route first through the app's deep link (D-269). The APK is signed
+with a throwaway key generated in `build/a11y_tree` (git-ignored, D-86). Like
+`uiautomator dump`, connecting makes Flutter report a screen reader (F72).
 """
 
 import argparse
@@ -77,11 +77,11 @@ FLAGS = (
     "focused",
     "accessibility-focused",
 )
-"""The ``true`` attributes a line lists, in this order; ``disabled`` and ``offscreen`` follow."""
+"""The `true` attributes a line lists, in this order; `disabled` and `offscreen` follow."""
 
 
 def parse(xml: str) -> list[A11yNode]:
-    """Read a dump (the tool's, or ``uiautomator dump``'s) into its nodes, in document order."""
+    """Read a dump (the tool's, or `uiautomator dump`'s) into its nodes, in document order."""
     nodes: list[A11yNode] = []
 
     def walk(element: ET.Element, depth: int) -> None:
@@ -114,12 +114,12 @@ def parse(xml: str) -> list[A11yNode]:
 
 
 def _quote(value: str) -> str:
-    """``value`` in double quotes, each newline written as a backslash and ``n``, so a node stays on one line."""
+    """`value` in double quotes, each newline written as a backslash and `n`, so a node stays on one line."""
     return '"' + value.replace("\n", "\\n") + '"'
 
 
 def describe(node: A11yNode, bounds: bool = False) -> str:
-    """One line for ``node``: class, ``HEADING``, ``#identifier``, label, then its states."""
+    """One line for `node`: class, `HEADING`, `#identifier`, label, then its states."""
     parts = [node.cls.rsplit(".", 1)[-1] or "?"]
     if node.heading:
         parts.append("HEADING")
@@ -141,14 +141,14 @@ def describe(node: A11yNode, bounds: bool = False) -> str:
 
 
 def render(nodes: list[A11yNode], headings: bool = False, bounds: bool = False) -> str:
-    """The tree, indented two spaces a level; ``headings`` lists the heading nodes alone, flat."""
+    """The tree, indented two spaces a level; `headings` lists the heading nodes alone, flat."""
     if headings:
         return "\n".join(describe(n, bounds) for n in nodes if n.heading)
     return "\n".join("  " * n.depth + describe(n, bounds) for n in nodes)
 
 
 def result_xml(output: str) -> str:
-    """The XML from ``am instrument -w -r``'s output; raises ``DumpError`` when it has none."""
+    """The XML from `am instrument -w -r`'s output; raises `DumpError` when it has none."""
     error = ""
     for line in output.splitlines():
         if line.startswith(RESULT + "xml="):
@@ -159,7 +159,7 @@ def result_xml(output: str) -> str:
 
 
 def deep_link(route: str) -> str:
-    """The app's link to ``route`` (``/more``), from ``[tool.flet.deep_linking]`` (D-269)."""
+    """The app's link to `route` (`/more`), from `[tool.flet.deep_linking]` (D-269)."""
     with (ROOT / "pyproject.toml").open("rb") as file:
         linking = tomllib.load(file)["tool"]["flet"]["deep_linking"]
     return f"{linking['scheme']}://{linking['host']}/{route.lstrip('/')}"
@@ -169,7 +169,7 @@ def deep_link(route: str) -> str:
 
 
 def _sdk() -> Path:
-    """The Android SDK: ``ANDROID_HOME``, ``ANDROID_SDK_ROOT``, else Android Studio's default."""
+    """The Android SDK: `ANDROID_HOME`, `ANDROID_SDK_ROOT`, else Android Studio's default."""
     for name in ("ANDROID_HOME", "ANDROID_SDK_ROOT"):
         if os.environ.get(name):
             return Path(os.environ[name])
@@ -177,7 +177,7 @@ def _sdk() -> Path:
 
 
 def _newest(folder: Path) -> Path:
-    """The subfolder of ``folder`` with the highest version (``36.0.0``, ``android-36``)."""
+    """The subfolder of `folder` with the highest version (`36.0.0`, `android-36`)."""
     versions = [p for p in folder.iterdir() if p.name.rsplit("-", 1)[-1][:1].isdigit()]
     if not versions:
         raise FileNotFoundError(f"nothing installed in {folder}")
@@ -200,7 +200,7 @@ def _run(*args: str | Path) -> str:
 
 
 def build() -> Path:
-    """Build and sign the APK in ``build/a11y_tree``, unless it is newer than its sources."""
+    """Build and sign the APK in `build/a11y_tree`, unless it is newer than its sources."""
     apk = BUILD / "a11y-tree.apk"
     sources = [SOURCE / "A11yTree.java", SOURCE / "AndroidManifest.xml"]
     if apk.exists() and apk.stat().st_mtime > max(s.stat().st_mtime for s in sources):
@@ -265,7 +265,7 @@ def build() -> Path:
 
 
 def dump(serial: str, route: str | None = None, wait: float = 2.0) -> str:
-    """Install the APK on ``serial``, open ``route`` if given, and return the screen's XML."""
+    """Install the APK on `serial`, open `route` if given, and return the screen's XML."""
     adb = ("adb", "-s", serial)
     _run(*adb, "install", "-r", build())
     if route:

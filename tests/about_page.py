@@ -1,12 +1,12 @@
 """About this app's fakes, fixtures and lookups, for its three test modules (#312).
 
-``test_about_app.py`` (the build and the 7-tap unlock), ``test_about_app_links.py`` (the
-links and the Conference data section) and ``test_about_app_help.py`` (Help us fix it)
-run ``AboutApp``, ``ConferenceData`` and ``HelpUsFixIt`` outside a renderer: their hooks
-and ``AppScaffold`` are replaced, an external link row's body runs inline, and a fake
-page is bound as Flet binds a session's page. ``test_help_report.py`` reuses the help
+`test_about_app.py` (the build and the 7-tap unlock), `test_about_app_links.py` (the
+links and the Conference data section) and `test_about_app_help.py` (Help us fix it)
+run `AboutApp`, `ConferenceData` and `HelpUsFixIt` outside a renderer: their hooks
+and `AppScaffold` are replaced, an external link row's body runs inline, and a fake
+page is bound as Flet binds a session's page. `test_help_report.py` reuses the help
 section's stand-ins. A module takes the fixtures by assigning them to its own names, as
-``docs/testing-and-quality.md`` §3.1 says.
+`docs/testing-and-quality.md` §3.1 says.
 """
 
 import inspect
@@ -44,10 +44,10 @@ from tests.fakes import (
 )
 
 CONFERENCE_DATA = ft.Container()
-"""What ``ConferenceData`` renders as in the page's tests: its own tests are below."""
+"""What `ConferenceData` renders as in the page's tests: its own tests are below."""
 
 HELP_US_FIX_IT = ft.Container()
-"""What ``HelpUsFixIt`` renders as in the page's tests: its own tests are below."""
+"""What `HelpUsFixIt` renders as in the page's tests: its own tests are below."""
 
 
 @pytest.fixture(autouse=True)
@@ -70,7 +70,7 @@ def offline(monkeypatch: pytest.MonkeyPatch) -> None:
 
 @pytest.fixture
 def page() -> Iterator[FakePage]:
-    """Yield a ``FakePage`` bound as the page Flet's handlers see."""
+    """Yield a `FakePage` bound as the page Flet's handlers see."""
     fake = FakePage()
     with bound(fake):
         yield fake
@@ -78,7 +78,7 @@ def page() -> Iterator[FakePage]:
 
 @pytest.fixture
 def svc(tmp_path: Path) -> Services:
-    """The 2026 ``Services`` over in-memory prefs and device services."""
+    """The 2026 `Services` over in-memory prefs and device services."""
     storage = Storage(prefs=MemoryPrefs(), directory=tmp_path, year=2026)
     return Services(
         year=load_year(2026),
@@ -95,7 +95,7 @@ def svc(tmp_path: Path) -> Services:
 
 @pytest.fixture
 def prefs(monkeypatch: pytest.MonkeyPatch) -> Prefs:
-    """Fresh ``Prefs`` as in a packaged build: Developer locked, error details off."""
+    """Fresh `Prefs` as in a packaged build: Developer locked, error details off."""
     monkeypatch.setattr(prefs_module, "DEVELOPER_ALWAYS", False)  # a packaged build
     monkeypatch.setattr(errors, "_details", False)
     return Prefs()
@@ -105,11 +105,11 @@ def prefs(monkeypatch: pytest.MonkeyPatch) -> Prefs:
 def render(
     monkeypatch: pytest.MonkeyPatch, svc: Services, prefs: Prefs, page: FakePage
 ) -> Callable[[], dict[str, Any]]:
-    """Render ``AboutApp`` and return what it passed to ``AppScaffold``.
+    """Render `AboutApp` and return what it passed to `AppScaffold`.
 
     The tap count is one ref, and the unsaved flag one state, that live as long as the
-    page, as Flet's do. The build is what is known without asking (``known_build()``):
-    ``use_build()``'s own tests are ``test_build.py``'s.
+    page, as Flet's do. The build is what is known without asking (`known_build()`):
+    `use_build()`'s own tests are `test_build.py`'s.
     """
     ref = MutableRef(0)
     unsaved: list[bool] = [False]  # the one use_state: whether the unlock was saved
@@ -141,7 +141,7 @@ def body_of(scaffold: dict[str, Any]) -> list[ft.Control]:
 
 
 def tiles(scaffold: dict[str, Any]) -> dict[str, ft.ListTile]:
-    """The build's rows by title, the version row's ``ListTile`` included."""
+    """The build's rows by title, the version row's `ListTile` included."""
     found = {}
     for row in body_of(scaffold):
         if isinstance(row, ft.Semantics) and row.live_region:
@@ -157,7 +157,7 @@ def tiles(scaffold: dict[str, Any]) -> dict[str, ft.ListTile]:
 
 
 def headings(controls: list[ft.Control]) -> list[tuple[str, int | None]]:
-    """The section headings among ``controls``: each one's text and level, in order."""
+    """The section headings among `controls`: each one's text and level, in order."""
     found = []
     for control in controls:
         if isinstance(control, ft.Semantics) and control.header:
@@ -178,7 +178,7 @@ def link_rows(scaffold: dict[str, Any]) -> dict[str, ft.Semantics]:
 
 
 async def tap_version(render: Callable[[], dict[str, Any]], times: int) -> None:
-    """Tap the Version row ``times`` times, rendering the page before each."""
+    """Tap the Version row `times` times, rendering the page before each."""
     for _ in range(times):
         await cast(Any, tiles(render())["Version"].on_click)()
 
@@ -192,7 +192,7 @@ async def conference(svc: Services) -> Conference:
 
 
 class States:
-    """``ft.use_state`` answered by call order, as Flet's renderer does, across renders."""
+    """`ft.use_state` answered by call order, as Flet's renderer does, across renders."""
 
     def __init__(self) -> None:
         """Start with no state values."""
@@ -214,7 +214,7 @@ def answer_report_hooks(
     conference: Conference,
     prefs: Prefs,
 ) -> None:
-    """Answer ``use_problem_report()``'s hooks, as in a packaged build with no saves.
+    """Answer `use_problem_report()`'s hooks, as in a packaged build with no saves.
 
     Shared with Help & safety's tests, whose Report a problem row uses the same hook.
     """
@@ -226,7 +226,7 @@ def answer_report_hooks(
 
 
 def identified(controls: list[ft.Control]) -> dict[str, ft.Semantics]:
-    """The identified nodes among ``controls``, merged rows' included, by identifier."""
+    """The identified nodes among `controls`, merged rows' included, by identifier."""
     found = {}
     for control in controls:
         node = control.content if isinstance(control, ft.MergeSemantics) else control
@@ -236,5 +236,5 @@ def identified(controls: list[ft.Control]) -> dict[str, ft.Semantics]:
 
 
 def text_of(value: Any) -> str:
-    """The words of a tile's title or subtitle, a ``Text`` or a string."""
+    """The words of a tile's title or subtitle, a `Text` or a string."""
     return str(value.value if isinstance(value, ft.Text) else value)

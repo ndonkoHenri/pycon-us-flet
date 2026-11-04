@@ -1,13 +1,13 @@
 """A rotation across 600 dp keeps every screen re-rendering (#606).
 
-A phone turned to landscape crosses M3's medium width class (D-09): the ``Layout``
+A phone turned to landscape crosses M3's medium width class (D-09): the `Layout`
 store notifies, and every screen that reads it re-renders, the Views below the top
 one too. A render that raises stops Flet's updates scheduler for the rest of the
-session, without a log line (U111, #597): on #606's parent commit, ``use_margin()``
-called ``ft.use_view_path()`` only in a wide window, so the crossing shifted the
+session, without a log line (U111, #597): on #606's parent commit, `use_margin()`
+called `ft.use_view_path()` only in a wide window, so the crossing shifted the
 caller's hooks, the Map under the floor viewer raised, and no screen rendered again.
 
-Each test opens the app (``tests/links.py``'s ``open_at``: the real Router and screens
+Each test opens the app (`tests/links.py`'s `open_at`: the real Router and screens
 over the 2026 feed) and turns the window as an iPhone 17 does, 402 dp wide in portrait
 and 874 dp in landscape. What the rail and the margins look like after a turn is
 checked on the simulator (the PR).
@@ -82,7 +82,7 @@ def stopped(shown: Shown) -> str | None:
 
 
 async def turn(shown: Shown, width: float) -> None:
-    """Turn the window to ``width`` dp, as ``follow_width()`` hears a rotation."""
+    """Turn the window to `width` dp, as `follow_width()` hears a rotation."""
     shown.layout.set_width(width)
     await shown.settle()
 
@@ -99,7 +99,7 @@ async def test_a_rotation_and_back_stops_no_render(
 
 
 class Viewer:
-    """The floor viewer in the app's Views, with ``FakeViewer`` behind its methods."""
+    """The floor viewer in the app's Views, with `FakeViewer` behind its methods."""
 
     def __init__(self, shown: Shown, fake: FakeViewer) -> None:
         """Hold the open app and the fake its viewer calls, which reports each zoom."""
@@ -109,7 +109,7 @@ class Viewer:
 
     @property
     def layer(self) -> ft.InteractiveViewer:
-        """The plan's one ``InteractiveViewer``."""
+        """The plan's one `InteractiveViewer`."""
         (found,) = self.shown.find(ft.InteractiveViewer)
         return found
 
@@ -135,7 +135,7 @@ class Viewer:
         await self.shown.event(sized, "size_change", {"w": box[0], "h": box[1]})
 
     async def transformed(self) -> None:
-        """Report the fake's transform, as ``on_transform_changed`` does."""
+        """Report the fake's transform, as `on_transform_changed` does."""
         f = self.fake
         data = {"s": f.scale, "tx": f.x, "ty": f.y, "tz": 0.0, "m": []}
         await self.shown.event(self.layer, "transform_changed", data)
@@ -147,7 +147,7 @@ class Viewer:
 
 
 def top(box: tuple[float, float]) -> float:
-    """The Concourse plan's maximum zoom in a box (``ui.zoom``, D-312)."""
+    """The Concourse plan's maximum zoom in a box (`ui.zoom`, D-312)."""
     natural = (2048.0, 1583.0)
     return zoom_geometry.max_scale(natural[0], zoom_geometry.fitted(box, natural)[0])
 

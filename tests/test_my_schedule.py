@@ -1,9 +1,9 @@
 """Tests for My schedule's agenda and overlaps (#94; NEW-01, SCHED-07; ux.md §5.6).
 
-The screen runs in ``tests/my_schedule_view.py``'s harness. What has ended, removal and
-Undo are ``test_my_schedule_ended.py``'s, the states and the dropped sessions' notice
-``test_my_schedule_states.py``'s. The fold itself is a pure function, tested in
-``test_agenda_fold.py``.
+The screen runs in `tests/my_schedule_view.py`'s harness. What has ended, removal and
+Undo are `test_my_schedule_ended.py`'s, the states and the dropped sessions' notice
+`test_my_schedule_states.py`'s. The fold itself is a pure function, tested in
+`test_agenda_fold.py`.
 """
 
 from typing import cast

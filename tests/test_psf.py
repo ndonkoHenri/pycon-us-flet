@@ -1,6 +1,6 @@
-"""Tests for About the PSF (``screens/psf.py``; #415, INFO-06, D-283).
+"""Tests for About the PSF (`screens/psf.py`; #415, INFO-06, D-283).
 
-The page runs in a real Flet session (``tests/sessions.py``) over the bundled year data,
+The page runs in a real Flet session (`tests/sessions.py`) over the bundled year data,
 with and without a feed. How it looks, wraps at 200 % and reads to screen readers is
 checked on devices (the PR).
 """
@@ -35,7 +35,7 @@ async def show(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> AsyncIterator
     async with AsyncExitStack() as stack:
 
         async def render(*, year: int = 2026, feed: int | None = None) -> Shown:
-            """Render the page with ``year``'s data and ``feed``'s feed (None: none yet)."""
+            """Render the page with `year`'s data and `feed`'s feed (None: none yet)."""
             conference = (
                 Conference()
                 if feed is None
@@ -57,12 +57,12 @@ async def show(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> AsyncIterator
 
 
 def identifier(link: PsfLink) -> str:
-    """A link's row identifier: ``psf.link.<its label as a key>``."""
+    """A link's row identifier: `psf.link.<its label as a key>`."""
     return f"psf.link.{semantics_key(link.label)}"
 
 
 def tile_of(node: ft.Semantics) -> ft.ListTile:
-    """The ``ListTile`` an external row's link node holds."""
+    """The `ListTile` an external row's link node holds."""
     assert isinstance(node.content, ft.ListTile)
     return node.content
 
@@ -175,7 +175,7 @@ async def test_a_link_that_cannot_open_says_so(show: Show) -> None:
 
 
 async def test_a_year_without_psf_data_shows_the_feed_s_block(show: Show) -> None:
-    """2025 has no ``[psf]``: the page shows the feed's ``about-psf`` block instead."""
+    """2025 has no `[psf]`: the page shows the feed's `about-psf` block instead."""
     page = await show(year=2025, feed=2025)
     (text,) = page.find(ft.Markdown)
     assert "Python Software Foundation" in text.value
@@ -187,7 +187,7 @@ async def test_a_year_without_psf_data_shows_the_feed_s_block(show: Show) -> Non
 async def test_without_psf_data_or_a_feed_the_page_says_it_will_come(
     show: Show,
 ) -> None:
-    """No ``[psf]`` and no feed yet: the empty state says the page fills in later."""
+    """No `[psf]` and no feed yet: the empty state says the page fills in later."""
     page = await show(year=2025)
     texts = page.texts()
     assert screen.NO_PSF in texts and screen.NO_PSF_BODY in texts

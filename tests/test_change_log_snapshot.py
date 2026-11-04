@@ -1,10 +1,10 @@
-"""Tests for the ``ChangeLog`` store over the bundled snapshot, and ``recent()`` (D-47).
+"""Tests for the `ChangeLog` store over the bundled snapshot, and `recent()` (D-47).
 
 Before the first fetch, only saved sessions are diffed against the snapshot, without
-additions (D-255); then what ``recent()`` and ``recent_of()`` say for the last 24 hours.
-Each case runs a real ``Conference`` refresh with the fixtures and helpers of
-``tests/change_log_feeds.py``; what a refresh over the cache records, and feed URLs, are
-in ``test_change_log.py``.
+additions (D-255); then what `recent()` and `recent_of()` say for the last 24 hours.
+Each case runs a real `Conference` refresh with the fixtures and helpers of
+`tests/change_log_feeds.py`; what a refresh over the cache records, and feed URLs, are
+in `test_change_log.py`.
 """
 
 import json
@@ -216,7 +216,7 @@ async def test_recent_joins_the_kinds_of_every_batch_of_the_last_24_hours(
 
 
 def room_batch(detected: datetime, old: str, new: str, key: str = "142") -> Batch:
-    """A batch moving session ``key`` from room ``old`` to room ``new``."""
+    """A batch moving session `key` from room `old` to room `new`."""
     start = datetime(2026, 5, 16, 17, 30, tzinfo=UTC)
     end = start + timedelta(minutes=30)
     before, after = (Listing("Talk", start, end, room) for room in (old, new))

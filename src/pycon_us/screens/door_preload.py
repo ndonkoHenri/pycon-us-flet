@@ -1,10 +1,10 @@
 """Door check's attendee-list preload: the hook that loads it and the line that says how.
 
-Once a session is chosen, ``use_preload()`` loads who bought it
-(``door_inventory.load_inventory()``) in a coroutine effect that Flet cancels on
+Once a session is chosen, `use_preload()` loads who bought it
+(`door_inventory.load_inventory()`) in a coroutine effect that Flet cancels on
 unmount and when the session changes (D-70), so no call completes into a screen that
 has gone. Scanning waits for it ("Loading attendee list… 2 of 5", DOOR-03). Then
-``status_line()``, under the session chip, says "Ready, works offline · 128 attendees",
+`status_line()`, under the session chip, says "Ready, works offline · 128 attendees",
 or "Badges will be checked online" with Retry when any session's call failed; scanning
 starts either way (unknown badges go online, #766).
 
@@ -61,7 +61,7 @@ class Preload:
 
 @dataclass(frozen=True)
 class Preloading:
-    """``use_preload()``'s answer: the load and how to try it again.
+    """`use_preload()`'s answer: the load and how to try it again.
 
     Attributes:
         preload: Where the load is.
@@ -79,7 +79,7 @@ def use_preload(owner: str, choice: DoorChoice | None) -> Preloading:
     nothing and drops the list it held.
 
     Args:
-        owner: The signed-in account (``Account.owner``).
+        owner: The signed-in account (`Account.owner`).
         choice: The session, or sessions, chosen, or None.
     """
     page = ft.context.page
@@ -160,7 +160,7 @@ def status_line(
     """Return the line under the session chip: the list's state, and Retry on a failure.
 
     A small ring while loading; the words wrap (200 % text); Retry is a named 48 dp
-    button (``door.preload.retry``).
+    button (`door.preload.retry`).
 
     Args:
         preload: Where the load is.

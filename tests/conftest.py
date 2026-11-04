@@ -30,7 +30,7 @@ settings.load_profile("dev")
 
 
 def pytest_configure(config: pytest.Config) -> None:
-    """Register the ``loopback`` marker, ``no_network``'s one opt-out."""
+    """Register the `loopback` marker, `no_network`'s one opt-out."""
     config.addinivalue_line(
         "markers",
         "loopback: let httpx reach 127.0.0.1 only, for a server the test runs itself",
@@ -38,7 +38,7 @@ def pytest_configure(config: pytest.Config) -> None:
 
 
 def pytest_addoption(parser: pytest.Parser) -> None:
-    """Add ``--snapshot-update``, which rewrites snapshots instead of comparing."""
+    """Add `--snapshot-update`, which rewrites snapshots instead of comparing."""
     parser.addoption(
         "--snapshot-update",
         action="store_true",
@@ -50,8 +50,8 @@ def pytest_addoption(parser: pytest.Parser) -> None:
 def quick_focus_back(monkeypatch: pytest.MonkeyPatch) -> None:
     """Let a tapped link or Share stop waiting for a departure at once (D-372).
 
-    No test leaves the app unless it says so (``Presence.leave()``), so a handler that
-    opened a link from a button would otherwise wait ``LEAVE_WITHIN`` (3 s) for nothing.
+    No test leaves the app unless it says so (`Presence.leave()`), so a handler that
+    opened a link from a button would otherwise wait `LEAVE_WITHIN` (3 s) for nothing.
     """
     monkeypatch.setattr(focus_back, "LEAVE_WITHIN", 0.01)
 
@@ -63,11 +63,11 @@ def no_network(
     """Refuse every real HTTP connection, and fail the test that tried one (#539).
 
     Tests never touch the network: a request reaches a server only through a test's
-    ``httpx.MockTransport``. httpx's own transports, which a client without one uses
-    (the app's feed refresh), raise ``ConnectError`` instead of connecting, so the code
+    `httpx.MockTransport`. httpx's own transports, which a client without one uses
+    (the app's feed refresh), raise `ConnectError` instead of connecting, so the code
     under test takes its offline path, and the test then fails at teardown naming the
-    URLs, even when the code swallowed the error. A test marked ``loopback`` may still
-    reach ``127.0.0.1``, where it runs a server of its own (the mock's, #666), and
+    URLs, even when the code swallowed the error. A test marked `loopback` may still
+    reach `127.0.0.1`, where it runs a server of its own (the mock's, #666), and
     nothing else. Yields the refused URLs.
     """
     refused: list[str] = []
@@ -76,7 +76,7 @@ def no_network(
     connect_async = httpx.AsyncHTTPTransport.handle_async_request
 
     def allowed(sent: httpx.Request) -> bool:
-        """Whether this request may connect: only a ``loopback`` test's, to 127.0.0.1."""
+        """Whether this request may connect: only a `loopback` test's, to 127.0.0.1."""
         if loopback and sent.url.host == "127.0.0.1":
             return True
         refused.append(str(sent.url))
@@ -124,7 +124,7 @@ def machine_tz(request: pytest.FixtureRequest) -> Iterator[str]:
 def snapshot(request: pytest.FixtureRequest) -> Callable[[str, object], None]:
     """Return check(name, data): compare data with a committed JSON snapshot (D-77).
 
-    With ``--snapshot-update`` it writes ``tests/fixtures/snapshots/<name>.json`` instead;
+    With `--snapshot-update` it writes `tests/fixtures/snapshots/<name>.json` instead;
     review the diff before committing it.
     """
     update = request.config.getoption("--snapshot-update")

@@ -1,12 +1,12 @@
 """HTTP: the public feed fetch and the signed client of the private API (D-05, D-53).
 
-``fetch_feed`` is P0's one request, an unsigned GET of the year's public feed.
-``ApiClient`` is the only way the app talks to the private API, which it only ever
-reaches on the local mock (D-06): ``ApiClient.request`` refuses the PSF's hosts before
+`fetch_feed` is P0's one request, an unsigned GET of the year's public feed.
+`ApiClient` is the only way the app talks to the private API, which it only ever
+reaches on the local mock (D-06): `ApiClient.request` refuses the PSF's hosts before
 sending (D-51), signs the exact bytes it sends (D-52) and corrects its clock once from
-the server's ``Date`` (D-53). Both raise the same two errors, so callers only ever
-branch on "no answer" (``NetworkError``) or "a bad answer" (``ApiError``). The endpoints
-and their timeouts are ``services/endpoints.py``'s, after Ionic's ``pycon-api.ts``.
+the server's `Date` (D-53). Both raise the same two errors, so callers only ever
+branch on "no answer" (`NetworkError`) or "a bad answer" (`ApiError`). The endpoints
+and their timeouts are `services/endpoints.py`'s, after Ionic's `pycon-api.ts`.
 """
 
 import json
@@ -24,7 +24,7 @@ FEED_TIMEOUT = 10.0
 """Seconds to wait for the feed (connect, each read, the pool), as Ionic did (API-12)."""
 
 SKEW_LIMIT = 300.0
-"""Seconds between a refused request's timestamp and the server's ``Date`` past which
+"""Seconds between a refused request's timestamp and the server's `Date` past which
 the refusal is blamed on the clock and retried once, corrected (half of the 600 s window
 the 2019 server allowed)."""
 
@@ -40,18 +40,18 @@ NOT_SENT = (
     httpx.UnsupportedProtocol,
 )
 """The transport errors raised before a request can have left: no connection was made
-(DNS failures are ``ConnectError``s). Any other may come after the server got it."""
+(DNS failures are `ConnectError`s). Any other may come after the server got it."""
 
 
 class NetworkError(Exception):
     """No answer: no connection, a DNS failure, a dropped connection or a timeout.
 
     Attributes:
-        timed_out: Whether the wait ran out (``httpx.TimeoutException``), which
+        timed_out: Whether the wait ran out (`httpx.TimeoutException`), which
             sign-in says apart from being offline (D-54).
         maybe_sent: Whether the request may have reached the server, which may then
             have applied it though no answer came back (a read error or timeout, a
-            dropped connection); False only when it surely never left (``NOT_SENT``).
+            dropped connection); False only when it surely never left (`NOT_SENT`).
             The outbox flags such a row "may be recorded twice" (D-57, D-410).
     """
 
@@ -71,7 +71,7 @@ class NetworkError(Exception):
 
     @classmethod
     def of(cls, error: httpx.TransportError) -> NetworkError:
-        """Return the error for ``httpx``'s: a timeout or not, maybe sent or not."""
+        """Return the error for `httpx`'s: a timeout or not, maybe sent or not."""
         return cls(
             f"{type(error).__name__}: {error}",
             timed_out=isinstance(error, httpx.TimeoutException),
@@ -85,9 +85,9 @@ class ApiError(Exception):
     Attributes:
         status: The HTTP status of a refusal (an error status, or an error envelope
             under a success), or None when the reply could not be read (`unreadable`).
-        message: What went wrong: the server's own ``error`` or ``message`` when it sent
-            one. The app doesn't control that text, and ``str()`` includes it, so a
-            private-API call logs ``status`` instead (D-72).
+        message: What went wrong: the server's own `error` or `message` when it sent
+            one. The app doesn't control that text, and `str()` includes it, so a
+            private-API call logs `status` instead (D-72).
     """
 
     def __init__(self, status: int | None, message: str) -> None:
@@ -111,7 +111,7 @@ class ApiError(Exception):
 
         The mock answers 401 for an unknown key and 403 for a bad signature, a stale
         timestamp or a wrong role; Ionic never told them apart, so callers treat both
-        alike (``tools/mock_api/README.md``, Unknown).
+        alike (`tools/mock_api/README.md`, Unknown).
         """
         return self.status in (401, 403)
 
@@ -121,7 +121,7 @@ class ApiError(Exception):
 
         Not JSON, no envelope, an undecodable body or a shape the caller can't parse,
         unlike a refusal, which says the server didn't apply it. So a write must treat
-        this as ``NetworkError.maybe_sent``: "not confirmed", never "not recorded" (D-410).
+        this as `NetworkError.maybe_sent`: "not confirmed", never "not recorded" (D-410).
         """
         return self.status is None
 
@@ -132,15 +132,15 @@ async def fetch_feed(
     """Download the public conference feed.
 
     Args:
-        url: The year's ``feed_url`` (``conference.toml``).
-        transport: The HTTP transport; tests pass an ``httpx.MockTransport``, the app
+        url: The year's `feed_url` (`conference.toml`).
+        transport: The HTTP transport; tests pass an `httpx.MockTransport`, the app
             leaves it None.
 
     Returns:
         The response body exactly as served; the caller parses it.
 
     Raises:
-        NetworkError: No answer arrived (``httpx.TransportError``, timeouts included).
+        NetworkError: No answer arrived (`httpx.TransportError`, timeouts included).
         ApiError: The server answered with an error status, or the answer could not be
             read.
     """
@@ -167,7 +167,7 @@ def refuse_private_psf(url: httpx.URL) -> None:
         url: The full URL a request is about to be sent to.
 
     Raises:
-        PermissionError: The URL is an ``/api/v1`` path on ``pycon.org`` or one of its
+        PermissionError: The URL is an `/api/v1` path on `pycon.org` or one of its
             subdomains, whatever the letter case or a trailing dot. It is a refused
             misconfiguration, not an answer, so it is neither of the two API errors.
     """
@@ -178,7 +178,7 @@ def refuse_private_psf(url: httpx.URL) -> None:
 
 
 def server_time(date: str | None) -> float | None:
-    """Read a reply's ``Date`` header as seconds since the epoch.
+    """Read a reply's `Date` header as seconds since the epoch.
 
     Args:
         date: The header's value, or None when there is none.
@@ -197,7 +197,7 @@ def server_time(date: str | None) -> float | None:
 
 
 def error_message(body: object) -> str | None:
-    """The server's own words for an error: ``error`` (signed calls), else ``message``.
+    """The server's own words for an error: `error` (signed calls), else `message`.
 
     Args:
         body: A decoded reply.
@@ -213,7 +213,7 @@ def error_message(body: object) -> str | None:
 
 
 NOT_JSON = object()
-"""Stands for a reply that does not decode, unlike a JSON ``null``."""
+"""Stands for a reply that does not decode, unlike a JSON `null`."""
 
 MAX_NESTING = 32
 """How many levels of values a reply may nest; the private API's use a handful. A deeper
@@ -223,7 +223,7 @@ This is far below what even a small stack overflows at."""
 
 
 def _decoded(content: bytes) -> object:
-    """Return a reply's JSON, or ``NOT_JSON``: not UTF-8, not JSON, or nested too deep."""
+    """Return a reply's JSON, or `NOT_JSON`: not UTF-8, not JSON, or nested too deep."""
     try:
         body = json.loads(content)
     except ValueError, RecursionError:
@@ -240,20 +240,20 @@ def _decoded(content: bytes) -> object:
 
 
 def unwrap(response: httpx.Response, enveloped: bool) -> object:
-    """Turn a reply into what the caller reads, or an ``ApiError``.
+    """Turn a reply into what the caller reads, or an `ApiError`.
 
     Args:
         response: The reply, read in full.
-        enveloped: Whether a success is ``{"code", "data"}`` and the ``data`` is wanted.
+        enveloped: Whether a success is `{"code", "data"}` and the `data` is wanted.
 
     Returns:
-        The decoded body (JSON ``null`` included), or its ``data`` when ``enveloped``.
+        The decoded body (JSON `null` included), or its `data` when `enveloped`.
 
     Raises:
-        ApiError: A refusal: an error status (with the body's ``error`` or ``message``
-            when it has one) or a ``{"code", "error"}`` envelope whatever the status.
-            Or ``unreadable``: a success whose body is not JSON, nests deeper than
-            ``MAX_NESTING`` or has no envelope, which the server may have applied (#874).
+        ApiError: A refusal: an error status (with the body's `error` or `message`
+            when it has one) or a `{"code", "error"}` envelope whatever the status.
+            Or `unreadable`: a success whose body is not JSON, nests deeper than
+            `MAX_NESTING` or has no envelope, which the server may have applied (#874).
     """
     body = _decoded(response.content)
     status = response.status_code
@@ -293,7 +293,7 @@ class ApiClient:
             base_url: The server's scheme, host, port and any path prefix.
             year: The conference year, the first segment of every path.
             credentials: Returns the key and secret to sign with, read on each request.
-            transport: The HTTP transport; tests pass ``mock_transport``, the app
+            transport: The HTTP transport; tests pass `mock_transport`, the app
                 leaves it None.
             now: The device clock in seconds since the epoch; tests fix it.
         """
@@ -302,7 +302,7 @@ class ApiClient:
         self._credentials = credentials
         self._now = now
         self.skew = 0.0
-        """The server's clock minus the device's, from the last ``Date`` read."""
+        """The server's clock minus the device's, from the last `Date` read."""
 
     async def aclose(self) -> None:
         """Close the client's connections."""
@@ -317,29 +317,29 @@ class ApiClient:
     ) -> object:
         """Send one call and return its reply.
 
-        The body is serialised once and the signature covers ``request.url.raw_path``,
+        The body is serialised once and the signature covers `request.url.raw_path`,
         exactly the target sent. A signed call refused with 403 while its timestamp was
-        more than ``SKEW_LIMIT`` from the server's ``Date`` is sent once more with the
+        more than `SKEW_LIMIT` from the server's `Date` is sent once more with the
         corrected clock, which later calls keep using. The credentials are read once,
         so both attempts carry the same key even if the account changes in between
         (D-56: a row only ever goes with its own owner's key).
 
         Args:
             endpoint: The call.
-            *args: The path's ``{}`` segments in order, percent-encoded here (API-11).
-            query: The query from ``services/endpoints.py``'s builders, built the Ionic way; never
-                ``httpx``'s ``params=``, which would encode it its own way.
+            *args: The path's `{}` segments in order, percent-encoded here (API-11).
+            query: The query from `services/endpoints.py`'s builders, built the Ionic way; never
+                `httpx`'s `params=`, which would encode it its own way.
             payload: The JSON body, or None for none.
 
         Returns:
-            The decoded reply, or its ``data`` for an enveloped endpoint.
+            The decoded reply, or its `data` for an enveloped endpoint.
 
         Raises:
-            NetworkError: No answer arrived (``httpx.TransportError``, timeouts
+            NetworkError: No answer arrived (`httpx.TransportError`, timeouts
                 included).
             ApiError: The server refused the call, or its reply could not be read.
             PermissionError: The URL is the PSF's private API (`refuse_private_psf`).
-            TypeError: ``args`` doesn't fill the path's segments.
+            TypeError: `args` doesn't fill the path's segments.
         """
         if endpoint.path.count("{}") != len(args):
             raise TypeError(f"{endpoint.name} takes {endpoint.path.count('{}')} args")
@@ -369,8 +369,8 @@ class ApiClient:
             credentials: The key and secret to sign with, read once per call.
 
         Returns:
-            The reply, and whether the timestamp sent was more than ``SKEW_LIMIT`` from
-            the reply's ``Date``.
+            The reply, and whether the timestamp sent was more than `SKEW_LIMIT` from
+            the reply's `Date`.
         """
         request = self._http.build_request(
             endpoint.method, target, content=body or None, timeout=endpoint.timeout
@@ -395,9 +395,9 @@ class ApiClient:
         body: bytes,
         credentials: tuple[str | None, str | None],
     ) -> None:
-        """Add the ``X-API-*`` headers, signed over the target exactly as it is sent.
+        """Add the `X-API-*` headers, signed over the target exactly as it is sent.
 
-        Signed out (no key), the request goes without ``X-API-Key`` and the server
+        Signed out (no key), the request goes without `X-API-Key` and the server
         answers 401.
         """
         key, secret = credentials

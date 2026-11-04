@@ -1,4 +1,4 @@
-"""The docs that quote ``pyproject.toml``'s ``dev`` group list the packages it lists."""
+"""The docs that quote `pyproject.toml`'s `dev` group list the packages it lists."""
 
 import re
 import tomllib
@@ -10,7 +10,7 @@ ROOT = Path(__file__).resolve().parents[1]
 
 
 def _dev_group(path: str) -> list[str]:
-    """Return the ``dev`` list of the ``[dependency-groups]`` table quoted in ``path``."""
+    """Return the `dev` list of the `[dependency-groups]` table quoted in `path`."""
     text = (ROOT / path).read_text(encoding="utf-8")
     table = re.search(
         r"^\[dependency-groups\]\ndev = \[.*?^\]$", text, re.MULTILINE | re.DOTALL
@@ -21,5 +21,5 @@ def _dev_group(path: str) -> list[str]:
 
 @pytest.mark.parametrize("doc", ["docs/development.md", "docs/testing-and-quality.md"])
 def test_quoted_dev_group_matches_the_project_file(doc: str) -> None:
-    """A quoted ``dev`` list names the same packages as ``pyproject.toml``, in the same order."""
+    """A quoted `dev` list names the same packages as `pyproject.toml`, in the same order."""
     assert _dev_group(doc) == _dev_group("pyproject.toml")

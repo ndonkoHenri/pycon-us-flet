@@ -586,7 +586,7 @@ Goldens churn while the UI evolves, so a handful arrive only in P4 (D-78):
 
   ```python
   async def capture(t: RemoteTester, name: str) -> bytes:
-      """Return the screen as PNG bytes for ``assert_screenshot``."""
+      """Return the screen as PNG bytes for `assert_screenshot`."""
       if PLATFORM == "android":
           # take_screenshot's second call in a launch fails here (U280, #884).
           return await run(adb(), "-s", DEVICE, "exec-out", "screencap", "-p")

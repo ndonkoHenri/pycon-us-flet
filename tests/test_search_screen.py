@@ -1,9 +1,9 @@
 """Tests for the global search screen's scope, field and typing (#97; NEW-02, D-19).
 
-The screen is ``screens/search.py`` (D-193). The matching is ``core/search.py``'s,
-tested in ``tests/test_search.py``; here the screen around it, in
-``tests/search_view.py``'s harness. The results are ``test_search_screen_results.py``'s,
-the first rows and Show all ``test_search_screen_show_all.py``'s.
+The screen is `screens/search.py` (D-193). The matching is `core/search.py`'s,
+tested in `tests/test_search.py`; here the screen around it, in
+`tests/search_view.py`'s harness. The results are `test_search_screen_results.py`'s,
+the first rows and Show all `test_search_screen_show_all.py`'s.
 
 How the screen looks, wraps at 200 % text and reads to TalkBack and VoiceOver is checked
 on devices (the PR).
@@ -82,7 +82,7 @@ async def test_the_field_takes_the_focus_and_never_fixes_words(opened: Shown) ->
 
 
 async def test_the_field_is_named_by_its_hint_then_by_its_label(opened: Shown) -> None:
-    """The empty field is named by its hint, then by ``LABEL`` once typed in."""
+    """The empty field is named by its hint, then by `LABEL` once typed in."""
     assert opened.field.hint_text == screen.HINTS["sessions"]
     assert opened.node("search.field").label is None  # the hint names it
     await opened.type("typing")
@@ -274,8 +274,8 @@ async def test_a_drag_of_the_row_stops_a_waiting_jump(
 ) -> None:
     """A drag stops the opening jump's retries, which would snap the row back (#794).
 
-    On All the anchor is already in place, so the real ``jump_to_key()`` gets no
-    scroll end and would ask again after ``LANDING_S``.
+    On All the anchor is already in place, so the real `jump_to_key()` gets no
+    scroll end and would ask again after `LANDING_S`.
     """
     shown = await render(Conference(data=DATA, source="bundled", version=1))
     asks: list[object] = []
@@ -321,7 +321,7 @@ async def test_each_chip_has_an_anchor_before_it_and_reads_in_order(
 
 
 async def test_an_unknown_scope_opens_on_all(render: Render) -> None:
-    """``/search?scope=booths`` opens with All selected."""
+    """`/search?scope=booths` opens with All selected."""
     conference = Conference(data=DATA, source="bundled", version=1)
     shown = await render(conference)
     await shown.go("/search?scope=booths")  # a typo, or a scope of a later version

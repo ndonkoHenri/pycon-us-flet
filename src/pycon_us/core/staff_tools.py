@@ -1,9 +1,9 @@
 """Which staff tools an account may open: Ionic's gating, pure (D-16, D-54; SHELL-06, SHELL-11).
 
 Every staff entry point (More's "Staff tools" section, the Now card) and every tool
-screen's re-check (``ui/scan_screen.py``'s ``use_tool_allowed()``) asks ``staff_entries()``
-or ``may_open()``, so the gating is one table, docs/architecture.md §12.4, pinned by an
-exhaustive truth-table test. The flags are the ``Account`` store's attribute names; an
+screen's re-check (`ui/scan_screen.py`'s `use_tool_allowed()`) asks `staff_entries()`
+or `may_open()`, so the gating is one table, docs/architecture.md §12.4, pinned by an
+exhaustive truth-table test. The flags are the `Account` store's attribute names; an
 absent flag is False (SHELL-11: the server may leave one out).
 """
 
@@ -13,7 +13,7 @@ from enum import StrEnum
 
 
 class ToolKey(StrEnum):
-    """A staff tool's key: its route's last segment, ``/more/staff/<key>``."""
+    """A staff tool's key: its route's last segment, `/more/staff/<key>`."""
 
     LEAD = "lead"
     DOOR = "door"
@@ -28,9 +28,9 @@ class StaffTool:
     Attributes:
         key: The tool's key.
         title: Its name, as ux.md §2.2 gives it.
-        icon: The name of its Material icon in ``ft.Icons`` (``core/`` imports no Flet),
-            resolved by the screen with ``getattr(ft.Icons, tool.icon)``.
-        route: Its route, ``/more/staff/<key>``.
+        icon: The name of its Material icon in `ft.Icons` (`core/` imports no Flet),
+            resolved by the screen with `getattr(ft.Icons, tool.icon)`.
+        route: Its route, `/more/staff/<key>`.
         purpose: What it is for, More's row's second line (ux.md §2.2).
     """
 
@@ -42,9 +42,9 @@ class StaffTool:
 
     @property
     def now_route(self) -> str:
-        """Its route under Now, ``/now/staff/<key>``: the Scan badges card's (D-421).
+        """Its route under Now, `/now/staff/<key>`: the Scan badges card's (D-421).
 
-        Under Now, so Back from the tool returns to Now, as ``/my-schedule/settings``
+        Under Now, so Back from the tool returns to Now, as `/my-schedule/settings`
         returns to My schedule (D-207's pattern, D-401).
         """
         return f"/now/staff/{self.key}"
@@ -80,9 +80,9 @@ BUILT_TOOLS = (ToolKey.LEAD, ToolKey.DOOR, ToolKey.SWAG, ToolKey.COC)
 """The tools whose screen is in the route table: only they get an entry (D-169).
 
 Each tool's PR adds its key once the tool works (#40 door with #766, #41 swag with
-#769, #42 CoC with #760), so no row is dead; ``staff_entries()`` stays the whole
+#769, #42 CoC with #760), so no row is dead; `staff_entries()` stays the whole
 gating table.
-CoC records nothing offline, so it is in no ``QUEUED_TOOLS``.
+CoC records nothing offline, so it is in no `QUEUED_TOOLS`.
 """
 
 QUEUED_TOOLS = (ToolKey.LEAD, ToolKey.DOOR)
@@ -103,12 +103,12 @@ def may_open(tool: ToolKey, flags: Mapping[str, object]) -> bool:
 
     Args:
         tool: The tool's key.
-        flags: The account's role flags, ``lead_retrieval``, ``door_check`` and
-            ``mask_violation``; absent ones are False.
+        flags: The account's role flags, `lead_retrieval`, `door_check` and
+            `mask_violation`; absent ones are False.
 
     Returns:
-        Lead scanner: ``lead_retrieval or door_check``; Door check and Swag pickup:
-        ``door_check``; CoC incident: ``mask_violation``.
+        Lead scanner: `lead_retrieval or door_check`; Door check and Swag pickup:
+        `door_check`; CoC incident: `mask_violation`.
     """
     door = _on(flags, "door_check")
     match tool:
@@ -124,10 +124,10 @@ def staff_entries(flags: Mapping[str, object]) -> tuple[StaffTool, ...]:
     """Return the staff tools an account may open, in O-7's order.
 
     Args:
-        flags: The account's role flags, as ``may_open()`` takes them.
+        flags: The account's role flags, as `may_open()` takes them.
 
     Returns:
-        The tools ``may_open()`` allows; empty when the account has no staff role, and
+        The tools `may_open()` allows; empty when the account has no staff role, and
         then neither the Staff section nor the Now card shows.
     """
     return tuple(tool for tool in TOOLS if may_open(tool.key, flags))
@@ -137,23 +137,23 @@ def scans_for_sponsor(flags: Mapping[str, object]) -> bool:
     """Say whether the Lead scanner asks which sponsor to scan for (#39's picker).
 
     Args:
-        flags: The account's role flags, as ``may_open()`` takes them.
+        flags: The account's role flags, as `may_open()` takes them.
 
     Returns:
-        ``door_check and not lead_retrieval``: staff who capture leads on a sponsor's
+        `door_check and not lead_retrieval`: staff who capture leads on a sponsor's
         behalf; a sponsor's own account scans for itself.
     """
     return _on(flags, "door_check") and not _on(flags, "lead_retrieval")
 
 
 def built_entries(flags: Mapping[str, object]) -> tuple[StaffTool, ...]:
-    """Return the entries More and Now show: ``staff_entries()`` with a screen built.
+    """Return the entries More and Now show: `staff_entries()` with a screen built.
 
     Args:
-        flags: The account's role flags, as ``may_open()`` takes them.
+        flags: The account's role flags, as `may_open()` takes them.
 
     Returns:
-        The allowed tools in ``BUILT_TOOLS``, in O-7's order; empty when none, and
+        The allowed tools in `BUILT_TOOLS`, in O-7's order; empty when none, and
         then neither the Staff tools section nor the Scan badges card shows.
     """
     return tuple(tool for tool in staff_entries(flags) if tool.key in BUILT_TOOLS)
@@ -163,9 +163,9 @@ def card_tool(entries: Sequence[StaffTool], last: str) -> StaffTool | None:
     """Return the tool Now's Scan badges card opens (D-421).
 
     Args:
-        entries: The account's entries, ``built_entries()``.
+        entries: The account's entries, `built_entries()`.
         last: The key of the last tool opened in this process
-            (``ViewMemory.staff_tool``), or empty.
+            (`ViewMemory.staff_tool`), or empty.
 
     Returns:
         The last tool opened while the account may still open it, else the first
@@ -181,8 +181,8 @@ def queue_words(pending: int, failed: int) -> str:
     """Return an entry's outbox counts in words, or empty when nothing waits.
 
     Args:
-        pending: The account's rows waiting to be sent (``Staff.pending``).
-        failed: Its rows given up on until "Retry failed" (``Staff.failed``).
+        pending: The account's rows waiting to be sent (`Staff.pending`).
+        failed: Its rows given up on until "Retry failed" (`Staff.failed`).
 
     Returns:
         E.g. "3 pending", "1 failed" or "3 pending · 1 failed".
@@ -197,12 +197,12 @@ def starts_on_lead(flags: Mapping[str, object], start_screen: str) -> bool:
     """Say whether the app opens on the Lead scanner for an account (D-16, #689).
 
     Args:
-        flags: The account's role flags, as ``may_open()`` takes them.
-        start_screen: The Start screen setting (``Prefs.start_screen``): ``auto``,
-            ``now`` or ``lead``.
+        flags: The account's role flags, as `may_open()` takes them.
+        start_screen: The Start screen setting (`Prefs.start_screen`): `auto`,
+            `now` or `lead`.
 
     Returns:
-        ``lead_retrieval`` unless the setting is ``now``: a sponsor lands on the
+        `lead_retrieval` unless the setting is `now`: a sponsor lands on the
         scanner by default (#310), door-check-only staff and everyone else on Now.
     """
     return _on(flags, "lead_retrieval") and start_screen != "now"

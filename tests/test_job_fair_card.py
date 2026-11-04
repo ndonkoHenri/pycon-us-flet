@@ -1,8 +1,8 @@
 """Tests for the job fair card on Job Fair sessions and Job listings (#408, D-254).
 
-One card in three places: the Map's Job fair pane (``tests/test_map_job_fair.py``), the
+One card in three places: the Map's Job fair pane (`tests/test_map_job_fair.py`), the
 two Job Fair rows' detail (SESS-10) and the top of Job listings (SPON-10). Each pushes
-the floor viewer at ``plan/job-fair`` on its own View, so Back returns to the page.
+the floor viewer at `plan/job-fair` on its own View, so Back returns to the page.
 """
 
 from collections.abc import AsyncIterator, Awaitable, Callable
@@ -46,7 +46,7 @@ type ShowJobs = Callable[[ConferenceData | None], Awaitable[Shown]]
 async def render(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> AsyncIterator[Render]:
-    """Provide an async function that renders a session's detail at ``VIEW`` by id."""
+    """Provide an async function that renders a session's detail at `VIEW` by id."""
     async with rendering(tmp_path, monkeypatch) as show:
         yield show
 
@@ -86,7 +86,7 @@ async def test_a_job_fair_row_shows_the_card_under_its_room_s(
 async def test_the_session_s_card_pushes_the_plan_on_the_session(
     render: Render,
 ) -> None:
-    """A tap pushes ``…/plan/job-fair``, without a pin; Back returns to the session."""
+    """A tap pushes `…/plan/job-fair`, without a pin; Back returns to the session."""
     detail = await render(EVENT)
     await detail.click(tap_of(detail, "session.job_fair.location"))
     assert detail.pushed == [f"{VIEW}/plan/job-fair"]
@@ -120,7 +120,7 @@ async def test_an_unknown_id_shows_not_found_without_a_card(render: Render) -> N
 
 
 def ancestors(control: ft.BaseControl) -> list[ft.BaseControl]:
-    """The controls ``control`` is in, from its parent up to the page."""
+    """The controls `control` is in, from its parent up to the page."""
     found: list[ft.BaseControl] = []
     parent = control.parent
     while parent is not None:
@@ -176,7 +176,7 @@ async def test_job_listings_open_with_the_card_above_the_listings(
 async def test_the_jobs_card_pushes_the_plan_on_job_listings(
     show_jobs: ShowJobs,
 ) -> None:
-    """``/more/jobs/plan/job-fair``: Back returns to the listings."""
+    """`/more/jobs/plan/job-fair`: Back returns to the listings."""
     shown = await show_jobs(None)
     await shown.click(tap_of(shown, "jobs.job_fair.location"))
     assert shown.went == [f"{JOBS_VIEW}/plan/job-fair"]

@@ -1,8 +1,8 @@
 """Tests for the fake clock's pickers on the Developer screen (#88; D-187).
 
-``clock_picker()`` runs on a fake page bound as Flet binds a session's page, and each
+`clock_picker()` runs on a fake page bound as Flet binds a session's page, and each
 pick is reported as Flutter reports it. How the screen fills its field from them is
-``test_developer.py``'s; how they look on a device is checked on devices (the PR).
+`test_developer.py`'s; how they look on a device is checked on devices (the PR).
 """
 
 from collections.abc import Callable, Iterator
@@ -43,7 +43,7 @@ def open_pickers(page: FakePage, text: str, picked: list[datetime]) -> ft.DatePi
 
 
 def choose(picker: ft.DatePicker | ft.TimePicker, value: object) -> None:
-    """Pick ``value`` as Flutter reports it: the picker's value first, then ``on_change``."""
+    """Pick `value` as Flutter reports it: the picker's value first, then `on_change`."""
     picker.value = cast(Any, value)
     cast(Callable[[object], None], picker.on_change)(SimpleNamespace(control=picker))
 
@@ -76,7 +76,7 @@ def test_the_pickers_open_on_the_field_s_moment_in_conference_time(
 def test_the_picked_day_and_time_are_handed_on_in_conference_time(
     page: FakePage, machine_tz: str
 ) -> None:
-    """In any machine zone, a picked day and time reach ``on_pick`` in Pacific Time.
+    """In any machine zone, a picked day and time reach `on_pick` in Pacific Time.
 
     The time picker's help text names Pacific Time too.
     """
