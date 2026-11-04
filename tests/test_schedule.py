@@ -140,6 +140,26 @@ async def test_a_device_in_another_zone_gets_the_pacific_time_note(
         assert texts(note) == ["Times are Pacific Time (PDT)"]
 
 
+async def test_read_in_winter_the_zone_note_still_names_the_sessions_zone(
+    shown: Callable[[], Awaitable[Shown]],
+    machine_tz: str,
+    now: list[datetime | None],
+) -> None:
+    """D-500: in November, May's sessions are still in PDT, whatever Pacific is today."""
+    now[0] = datetime(2026, 11, 4, 9, 0, tzinfo=PACIFIC)
+    schedule = await shown()
+    notes = find(
+        schedule.session,
+        ft.Semantics,
+        lambda c: c.identifier == "schedule.zone_note",
+    )
+    if machine_tz == "America/Los_Angeles":
+        assert notes == []  # the device's clock matches the conference's today
+    else:
+        (note,) = notes
+        assert texts(note) == ["Times are Pacific Time (PDT)"]
+
+
 async def test_the_zone_note_keeps_its_place_under_the_strip_in_every_zone(
     shown: Callable[[], Awaitable[Shown]], machine_tz: str
 ) -> None:

@@ -795,7 +795,7 @@ def start_fake_clock(at: datetime | None) -> None:
 | `time_label(moment, zone, use_24h=...)` | `9:25 AM`, or `09:25` when `page.media.always_use_24_hour_format` is set (F23) |
 | `time_range_label(start, end, zone, use_24h=...)` | `9:25–10:10 AM`, `11:30 AM–12:15 PM`, one time when start equals end |
 | `day_label(day)`, `day_heading(day)` | `Fri, May 15`, `Friday, May 15` |
-| `zone_note(now, zone, zone_name, device_offset)` | `Times are Pacific Time (PDT)` when the device's offset at `now` differs, else None; the UI passes `now.astimezone().utcoffset()` |
+| `zone_note(now, zone, zone_name, device_offset, *, times_on=None)` | `Times are Pacific Time (PDT)` when the device's offset at `now` differs, else None; the UI passes `now.astimezone().utcoffset()`, and `times_on` when the times it stands above aren't at `now`, whose abbreviation it then says (D-500) |
 | `time_status(start, end, now, zone)` | a `TimeStatus(label, spoken, happening)`: `Starts in 25 min` / `Starts in 25 minutes` on the session's own day, `Happening now` for `start <= now < end`, `Ended` from the end; None on an earlier day, and for a notice from its time on (D-186) |
 
 Weekday and month names come from fixed tuples, never locale `strftime`, and naive datetimes raise `ValueError`. Tests run under `TZ=America/Los_Angeles` and `Pacific/Kiritimati` (the `machine_tz` fixture), and cover both DST changes and midnight.

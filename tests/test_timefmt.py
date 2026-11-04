@@ -194,6 +194,32 @@ def test_zone_note_names_standard_time_in_winter() -> None:
     assert note == "Times are Pacific Time (PST)"
 
 
+@pytest.mark.parametrize(
+    "today",
+    [
+        datetime(2026, 5, 15, 17, 0, tzinfo=UTC),
+        datetime(2026, 11, 4, 17, 0, tzinfo=UTC),
+    ],
+    ids=["read in May", "read in November"],
+)
+def test_zone_note_names_the_zone_of_the_times_it_stands_above(today: datetime) -> None:
+    """Above May's times the note says PDT in any season, though Pacific is PST in winter."""
+    note = timefmt.zone_note(
+        today, PACIFIC, "Pacific Time", timedelta(hours=5), times_on=date(2026, 5, 15)
+    )
+    assert note == "Times are Pacific Time (PDT)"
+
+
+def test_zone_note_for_other_dates_still_shows_by_the_device_s_clock_now() -> None:
+    """Whether the note shows is `now`'s question: `times_on` changes only the words."""
+    winter = datetime(2026, 11, 4, 17, 0, tzinfo=UTC)
+    pacific_now = winter.astimezone(PACIFIC).utcoffset()
+    note = timefmt.zone_note(
+        winter, PACIFIC, "Pacific Time", pacific_now, times_on=date(2026, 5, 15)
+    )
+    assert note is None
+
+
 def test_zone_note_follows_the_machine_zone(machine_tz: str) -> None:
     """With the machine's own offset, the note shows unless it is on Pacific Time."""
     now = datetime(2026, 5, 15, 17, 0, tzinfo=UTC)

@@ -316,7 +316,13 @@ def Schedule() -> ft.View:
         track_filter.summary,
         # The device's offset now: the packaged app's Python reads the device's
         # zone (F60), and the minute tick follows a DST change.
-        zone_note(now, info.zone, info.time_zone_name, now.astimezone().utcoffset()),
+        zone_note(
+            now,
+            info.zone,
+            info.time_zone_name,
+            now.astimezone().utcoffset(),
+            times_on=shown,
+        ),
         strip,
     )
     pages: list[ft.Control] = []

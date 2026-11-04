@@ -108,7 +108,9 @@ def DataSection(slot: int) -> ft.Control:
             slot=slot,
         ),
     ]
-    note = zone_note(now, info.zone, info.time_zone_name, offset)
+    note = zone_note(
+        now, info.zone, info.time_zone_name, offset, times_on=info.first_day
+    )
     if note is not None:
         rows.append(zone_row(note, offset, slot=slot))
     return ft.Column(rows, spacing=0)
