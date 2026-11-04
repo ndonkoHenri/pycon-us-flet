@@ -724,7 +724,7 @@ Every screen once, on 2026-11-04. **A machine "heard" this, not a person.** Talk
 |---|---|---|---|---|
 | Welcome | ok, "Get started" last | not photographed | not photographed | not photographed |
 | Now | ok; status spoken first (#1102) | ok | ok | ok |
-| Schedule | ok; a clipped row's star (#1101) | Now button, below | ok | ok |
+| Schedule | ok; a clipped row's star is one swipe back (#1101) | Now button, below | ok | ok |
 | My schedule, saved; empty heard only | ok | ok | ok | ok |
 | Map: Rooms, Floor plans, Expo, Job fair | ok; a screen reader gets Expo's List | ok | ok | ok |
 | More | ok | ok | ok | ok |
@@ -770,12 +770,14 @@ Every screen once, on 2026-11-04. **A machine "heard" this, not a person.** Talk
 | Date picker | Flutter's words: "Friday, May 15, 2026", "Fake clock date" |
 | CoC review dialog | "Grace Sample", "Badge: Grace S.", "1 incident on record", "What happened?", Cancel, Record incident |
 
-**Bugs.** Fixed: #1058 (D-485), #1074, #1083, #1085, #1087, #1089, #1091, #1093, #1095, #1099 (D-496), #1100 (D-497), #1103. Open: #1101 (a clipped row's star), #1102 (the status strip spoken as each screen opens, `design`).
+**Bugs.** Fixed: #1058 (D-485), #1074, #1083, #1085, #1087, #1089, #1091, #1093, #1095, #1099 (D-496), #1100 (D-497), #1103. Not a bug of ours: #1101 (below). Open: #1102 (the status strip spoken as each screen opens, `design`).
 
 **Judged again.**
 - **"My schedule"'s wrap and its star (D-167) stands.** Tried on the iOS simulator: `label_text_style` at 11 sp with no letter spacing still wraps at Flutter's 1.3x clamp on an iPhone 17, and shrinks all five labels at 100 %. Only a label control or a one-word label can fix it; the second is the owner's choice in D-167.
 - **The Now button (D-204) stands.** It covers a row's text at every size while it shows, as any M3 floating button does, and a scroll moves the row out from under it. `FAB_CLEARANCE` lets the list's end clear it, seen at 200 % with bold.
 - **The door picker's keyboard wasn't reproduced.** Six rounds from a scan screen with its keyboard up to the picker through `door.session_chip`, at iOS's largest text, and the tour's move from the Lead scanner to the picker: the keyboard went down each time.
+
+**A clipped row's star (#1101), Flutter's behaviour, and left as it is.** When TalkBack's focus takes a row whose top is above the list's edge, the star beside its first lines is hidden, and Android's bridge leaves hidden nodes out (`AccessibilityBridge.java`, `IS_HIDDEN`, Flutter 3.47.9), so the next swipe goes to the next row. Nothing is lost: from there, one swipe back lands on the star and scrolls the whole row in, and the row's own stop then comes before it again (heard on the Schedule's Wed 13, "Practical Software Testing with Python"). Every list in the app works this way. The app could only do worse: Flet does wire `Semantics.on_did_gain_accessibility_focus`, but Python isn't told whether a row is clipped, and `scroll_to()`'s `Scrollable.ensureVisible` puts a row at the list's top, so the list would jump on every swipe, against TalkBack's own scrolling.
 
 **Residual upstream gaps,** each with its interim in place: #605 (a toggle's state read before it changes), #230 (links aren't called links), #187 (`Semantics` hints), #317 (a tooltip as a node of its own), #753 (`announce_message` on iOS under VoiceOver), #163 (identifiers and labels on the bar's destinations), #1098 (`TextField`'s reveal icon). A popup menu's first stop, "Dismiss menu", is Flutter's, and Flet gives Python no handle on it (U89).
 
