@@ -458,7 +458,9 @@ async def test_the_map_tab_s_other_panes_keep_a_tinting_bar(render: Render) -> N
     assert shown.still_bars[-1] is False
 
 
-async def test_the_expo_tab_corrects_the_flag_when_it_comes_back(render: Render) -> None:
+async def test_the_expo_tab_corrects_the_flag_when_it_comes_back(
+    render: Render,
+) -> None:
     """Rooms, then a List picked elsewhere, then Expo: the bar follows the view shown.
 
     The parent's flag outlives the pane (it is the last view the pane told), so the
