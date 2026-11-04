@@ -87,7 +87,7 @@ ci, area:build · after P0-01 · DEV-08
 One Linux job on every PR and push to `main`: `uv sync --locked`, `ruff check`, `ruff format --check`, `pyright`, `pytest`.
 
 - Any failing check fails the job.
-- It takes under 2 minutes on a typical PR.
+- It takes under 5 minutes on a typical PR (D-483).
 
 #### P0-03 · Add issue and PR templates and the Project board
 
