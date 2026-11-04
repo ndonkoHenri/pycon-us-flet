@@ -169,6 +169,9 @@ def result_panel(
                 vertical_alignment=ft.CrossAxisAlignment.START,
             )
         ),
+        # An alignment makes the card take the width it's given: a column of the icon and
+        # the words would shrink it to them, narrower than the field (#1103).
+        alignment=ft.Alignment.TOP_LEFT if large_text else None,
         bgcolor=fill,
         padding=16,
         border_radius=12,

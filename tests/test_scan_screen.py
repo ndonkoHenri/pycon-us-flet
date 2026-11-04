@@ -568,6 +568,7 @@ async def test_at_large_text_the_panel_puts_its_icon_above_its_words(
     assert isinstance(icon, ft.Icon) and isinstance(words, ft.Column)
     assert not words.expand
     assert icon.apply_text_scaling is False  # it would fill the screen at 3x
+    assert card.alignment is not None  # or the card shrinks to its words (#1103)
 
 
 async def test_at_normal_text_the_panel_keeps_its_icon_beside_its_words(
