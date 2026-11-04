@@ -54,6 +54,7 @@ def FoldTile(
     bgcolor: ft.ColorValue | None = None,
     controls_padding: ft.PaddingValue | None = None,
     lines: bool = False,
+    live: bool = True,
 ) -> ft.Container:
     """Return a controlled fold: `expanded` comes from the screen's state.
 
@@ -80,6 +81,8 @@ def FoldTile(
         controls_padding: The padding around what it holds.
         lines: Draw lines above and below it while open, in `outline`: the edge of
             a `bgcolor` that high contrast's one surface hides (D-306).
+        live: The header is a live region. False while a sheet opens: TalkBack speaks a
+            live region as it appears, over the sheet's title (#1074).
     """
 
     @report_errors
@@ -105,7 +108,7 @@ def FoldTile(
     return ft.Container(
         ft.Column(
             [
-                named(identifier, ft.Semantics(live_region=True, content=header)),
+                named(identifier, ft.Semantics(live_region=live, content=header)),
                 ft.Container(
                     # Hidden, out of the screen reader's tree too, while folded.
                     ft.Column(

@@ -385,3 +385,21 @@ def test_a_screen_reader_meets_the_title_first() -> None:
         screen_reader=True,
     )
     assert not read.show_drag_handle and not read.dismissible
+
+
+def test_the_live_regions_wait_until_the_sheet_has_settled(db: OutboxDb) -> None:
+    """Opening, neither the summary nor the fold is live; afterwards both are (#1074).
+
+    TalkBack speaks a live region as it appears, and "Sync queue" went unheard.
+    """
+    queue = Queue(confirmed=(seed(db, "A1", status=Status.SYNCED),))
+
+    def live_nodes(live: bool) -> int:
+        """Count the live regions on the sheet built with `live`."""
+        built = sheet(queue, live=live)
+        return sum(
+            1 for c in walk(built) if isinstance(c, ft.Semantics) and c.live_region
+        )
+
+    assert live_nodes(False) == 0
+    assert live_nodes(True) == 2
