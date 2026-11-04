@@ -35,18 +35,28 @@ SHEET_COLOR = ft.Colors.SURFACE_CONTAINER_LOW
 
 
 def interest_button(
-    interest: Interest | None, on_change: ft.ControlEventHandler[ft.SegmentedButton]
+    interest: Interest | None,
+    on_change: ft.ControlEventHandler[ft.SegmentedButton],
+    *,
+    large_text: bool = False,
 ) -> ft.Control:
     """Return Hot · Warm · Cold; none selected allowed, so a second tap clears it.
 
     Each segment is read as its label, a button and its state; its identifier
     (`lead.note.interest.<value>`) is merged into the segment's node, as the Expo's.
+
+    Args:
+        interest: The choice, if any.
+        on_change: Called with the new choice.
+        large_text: The text is large for the width (`Prefs.time_above`): the words take
+            the icons' and the check mark's width, since a third of a phone's sheet
+            otherwise breaks "Warm" in two (D-26). The fill still says which is chosen.
     """
     return ft.SegmentedButton(
         segments=[
             ft.Segment(
                 value=value.value,
-                icon=icon,
+                icon=None if large_text else icon,
                 label=ft.Semantics(
                     identifier=f"lead.note.interest.{value.value}",
                     content=ft.Text(label),
@@ -56,6 +66,7 @@ def interest_button(
         ],
         selected=[] if interest is None else [interest.value],
         allow_empty_selection=True,
+        show_selected_icon=not large_text,
         on_change=on_change,
     )
 

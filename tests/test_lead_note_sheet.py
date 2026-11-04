@@ -23,6 +23,7 @@ from pycon_us.screens.staff_lead import NOTE_OPEN
 from pycon_us.services.outbox_db import OutboxDb
 from pycon_us.services.pref_keys import staff_sponsor
 from pycon_us.ui import scan_screen
+from pycon_us.ui.lead_note_fields import interest_button
 from tests import lead_screen
 from tests.filter_sheet import descendants
 from tests.harness import Shown
@@ -323,6 +324,21 @@ async def test_a_note_the_outbox_can_t_store_keeps_the_sheet_and_says_so(
 async def burst(shown: Shown, control: ft.BaseControl, name: str, data: Any) -> None:
     """Dispatch an event and let no render run after it: the next one comes at once."""
     await shown.session.dispatch_event(control._i, name, data)
+
+
+@pytest.mark.parametrize("large_text", [False, True])
+def test_at_large_text_the_interest_button_gives_its_icons_width_to_the_words(
+    large_text: bool,
+) -> None:
+    """#1118: at large text no icon or check mark squeezes "Warm"; below it they stay."""
+    button = cast(
+        ft.SegmentedButton,
+        interest_button(Interest.WARM, lambda _: None, large_text=large_text),
+    )
+    icons = [segment.icon for segment in button.segments]
+    assert all(icon is None for icon in icons) is large_text
+    assert all(icon is not None for icon in icons) is not large_text
+    assert button.show_selected_icon is not large_text
 
 
 async def test_an_interest_chosen_just_before_save_is_saved(
