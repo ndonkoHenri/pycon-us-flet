@@ -77,6 +77,7 @@ dev = [                      # host only; flet-* come from .flet-src via [tool.u
     "pytest",
     "hypothesis",
     "ruff",
+    "pre-commit",                     # the hooks of .pre-commit-config.yaml (D-480); tools/check.sh runs them
     "pyright",
     "segno",                 # the mock-badge sheet's QR codes (D-391); never bundled
     "icalendar",             # reads core/ics.py's files back (D-268); never bundled
