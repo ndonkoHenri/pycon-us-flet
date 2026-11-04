@@ -19,7 +19,7 @@ sheet. Where Maestro fits next to the `flet test` flows in `tests/ui/` is in
 | `regression/` | Trials repeated N times to compare two builds, tagged `regression` |
 | `subflows/` | Steps the flows share through `runFlow`; never run on their own, but for `open_link.yaml`, which `tests/ui/developer.py` runs on iOS (D-478) |
 | `scripts/` | JavaScript that a flow runs (`runScript`) |
-| `demo/` | What `tools/demo_videos.py` films: outside `config.yaml`, never a test ([below](#demo-videos)) |
+| `demo/` | What `tools/demo_videos.py` films, and `readme_shots.yaml`, which `tools/readme_shots.py` photographs for the README: outside `config.yaml`, never a test ([below](#demo-videos)) |
 
 | Flow | Tags | What it checks |
 |---|---|---|

@@ -20,19 +20,36 @@ this is not a 1:1 port: where its UX, accessibility or offline behaviour can imp
 - **Accounts and staff tools:** sign-in, favourites sync, lead retrieval, door check, swag pickup and Code of Conduct
   capture run against [our local mock server](tools/mock_api/README.md), not PyCon's servers.
 
+## Screenshots
+
+Taken at a fixed moment of the 2026 conference (Friday, 11:04), so the schedule is live.
+
+**Android** (release build on a Pixel 6a emulator)
+
+| | Now | Schedule | A session | Floor plan | My schedule | More |
+|---|---|---|---|---|---|---|
+| Light | <img src="docs/images/android-light-1-now.webp" width="125" alt="Android, light. Now: the conference day, the next saved session and what is on."> | <img src="docs/images/android-light-2-schedule.webp" width="125" alt="Android, light. Schedule: Friday's sessions, with saved ones starred."> | <img src="docs/images/android-light-3-session.webp" width="125" alt="Android, light. A session: time, room, speaker and abstract."> | <img src="docs/images/android-light-4-floor-plan.webp" width="125" alt="Android, light. The session's room marked on the floor plan."> | <img src="docs/images/android-light-5-my-schedule.webp" width="125" alt="Android, light. My schedule: saved sessions, with the ones that overlap flagged."> | <img src="docs/images/android-light-6-more.webp" width="125" alt="Android, light. More: speakers, tracks, sponsors, venue and settings."> |
+| Dark | <img src="docs/images/android-dark-1-now.webp" width="125" alt="Android, dark. Now: the conference day, the next saved session and what is on."> | <img src="docs/images/android-dark-2-schedule.webp" width="125" alt="Android, dark. Schedule: Friday's sessions, with saved ones starred."> | <img src="docs/images/android-dark-3-session.webp" width="125" alt="Android, dark. A session: time, room, speaker and abstract."> | <img src="docs/images/android-dark-4-floor-plan.webp" width="125" alt="Android, dark. The session's room marked on the floor plan."> | <img src="docs/images/android-dark-5-my-schedule.webp" width="125" alt="Android, dark. My schedule: saved sessions, with the ones that overlap flagged."> | <img src="docs/images/android-dark-6-more.webp" width="125" alt="Android, dark. More: speakers, tracks, sponsors, venue and settings."> |
+
+**iOS** (iPhone 17 simulator)
+
+| | Now | Schedule | A session | Floor plan | My schedule | More |
+|---|---|---|---|---|---|---|
+| Light | <img src="docs/images/ios-light-1-now.webp" width="125" alt="iOS, light. Now: the conference day, the next saved session and what is on."> | <img src="docs/images/ios-light-2-schedule.webp" width="125" alt="iOS, light. Schedule: Friday's sessions, with saved ones starred."> | <img src="docs/images/ios-light-3-session.webp" width="125" alt="iOS, light. A session: time, room, speaker and abstract."> | <img src="docs/images/ios-light-4-floor-plan.webp" width="125" alt="iOS, light. The session's room marked on the floor plan."> | <img src="docs/images/ios-light-5-my-schedule.webp" width="125" alt="iOS, light. My schedule: saved sessions, with the ones that overlap flagged."> | <img src="docs/images/ios-light-6-more.webp" width="125" alt="iOS, light. More: speakers, tracks, sponsors, venue and settings."> |
+| Dark | <img src="docs/images/ios-dark-1-now.webp" width="125" alt="iOS, dark. Now: the conference day, the next saved session and what is on."> | <img src="docs/images/ios-dark-2-schedule.webp" width="125" alt="iOS, dark. Schedule: Friday's sessions, with saved ones starred."> | <img src="docs/images/ios-dark-3-session.webp" width="125" alt="iOS, dark. A session: time, room, speaker and abstract."> | <img src="docs/images/ios-dark-4-floor-plan.webp" width="125" alt="iOS, dark. The session's room marked on the floor plan."> | <img src="docs/images/ios-dark-5-my-schedule.webp" width="125" alt="iOS, dark. My schedule: saved sessions, with the ones that overlap flagged."> | <img src="docs/images/ios-dark-6-more.webp" width="125" alt="iOS, dark. More: speakers, tracks, sponsors, venue and settings."> |
+
 ## Status
 
 The app is under active development and has no public builds. To try it, build it from source. It carries the 2026
 conference data until the 2027 feed is published.
 
-- **P0 Foundations and P1 Attendee core** are done.
-- **P2 Conference companion** is built, with pull to refresh on the Schedule, Sprints and Job listings; what remains is
-  mainly its exit checks on devices.
-- **P3 Accounts & staff tools** is built against the mock, at version 0.4.0. What remains is the scanner's camera
-  preview, which waits on a barcode-scanner extension for Flet. Until then, badge codes are typed in.
-- **P4 Showcase** is what comes next: the performance pass, the accessibility audit, a View source action on each
-  screen, the 2027 data and the licence and trademark review. The repository is private for now, and making it public
-  is part of this phase.
+- **The attendee features are built:** schedule, My schedule, search, maps, venue pages, reminders and offline use.
+  What remains is mostly checking them on real devices.
+- **Accounts and staff tools are built against the mock server.** The scanner's camera preview waits on a
+  barcode-scanner extension for Flet; until then, badge codes are typed in.
+- **The last phase, P4 Showcase, is what comes next:** the performance pass, the accessibility audit, a View source
+  action on each screen, the 2027 data and the licence and trademark review. The repository is private for now, and
+  making it public is part of this phase.
 
 The objective is to present the app at PyCon US 2027. GitHub issues hold the live task list;
 [`docs/roadmap.md`](docs/roadmap.md) describes the phases.
@@ -54,9 +71,20 @@ app. That gives one codebase for both platforms, in a language many developers a
 The app is also a test of Flet. When it needs something Flet lacks, we ship a documented interim and record the gap in
 [`docs/flet-gaps-and-extensions.md`](docs/flet-gaps-and-extensions.md). The project's owner maintains Flet.
 
-## Screenshots
+## How it's built
 
-None yet: they wait for a stable UI.
+- **Python 3.14 and Flet 1.1.0.dev4.** Every Flet package comes from PyPI at that one exact version, a prerelease until
+  Flet 1.1.0 is out; `pyproject.toml` pins it. `flet build` packs the Python runtime into the Android and iOS apps.
+- **Declarative UI.** Each screen is an `@ft.component` module in `src/pycon_us/screens/`, shared widgets live in
+  `ui/`, state is held in `@ft.observable` stores, and `ft.Router` handles navigation.
+- **A pure core.** `core/` holds the feed, models, queries and time handling, and never imports Flet, so it is tested
+  without a UI. `services/` holds what touches the outside: storage, the feed fetch, notifications.
+- **Data.** The app ships a snapshot of the public `conference.json` feed, plus our own TOML files for the venue pages
+  and floor-plan pins (`src/pycon_us/data/<year>/`). It refreshes from the public feed and works offline.
+- **Tests.** Thousands of pytest tests need no device; the device journeys run with [Maestro](https://maestro.dev) on an
+  emulator and a simulator.
+
+[`docs/architecture.md`](docs/architecture.md) goes through each part.
 
 ## Accessibility
 
@@ -79,10 +107,20 @@ come from Flet are listed in [`docs/flet-gaps-and-extensions.md`](docs/flet-gaps
 
 ## Running it
 
-[`docs/development.md`, section 5.1](docs/development.md#51-from-a-clean-mac) goes from a clean checkout to the
-app on an emulator or simulator. You need git and [uv](https://docs.astral.sh/uv/); Android also needs an emulator or a
-phone, and iOS needs a Mac with Xcode. The tests need no device. While the repository is private, cloning it needs
-access to it.
+You need git and [uv](https://docs.astral.sh/uv/). Android also needs an emulator or a phone, and iOS needs a Mac with
+Xcode. While the repository is private, cloning it needs access to it.
+
+```bash
+gh repo clone ndonkoHenri/pycon-us-flet && cd pycon-us-flet   # or git clone, with a login that has access
+uv sync --locked                       # Python 3.14 and every package, Flet included
+uv run pytest                          # the tests need no device
+uv run flet devices                    # list your emulators, simulators and phones
+uv run flet debug android -d <device>  # or: LANG=en_US.UTF-8 uv run flet debug ios -d <simulator>
+```
+
+The first `flet debug` installs Flutter and the Android SDK for you, and the first build takes several minutes.
+[`docs/development.md`, section 5.1](docs/development.md#51-from-a-clean-mac) covers creating an emulator, the iOS
+setup and how long each step takes.
 
 ## Contributing and docs
 
