@@ -26,8 +26,8 @@ The app is under active development and has no public builds. To try it, build i
 conference data until the 2027 feed is published.
 
 - **P0 Foundations and P1 Attendee core** are done.
-- **P2 Conference companion** is built; what remains is mainly its exit checks on devices, and pull to refresh, which
-  waits on a fix in Flet.
+- **P2 Conference companion** is built, with pull to refresh on the Schedule, Sprints and Job listings; what remains is
+  mainly its exit checks on devices.
 - **P3 Accounts & staff tools** is built against the mock, at version 0.4.0. What remains is the scanner's camera
   preview, which waits on a barcode-scanner extension for Flet. Until then, badge codes are typed in.
 - **P4 Showcase** is what comes next: the performance pass, the accessibility audit, a View source action on each
@@ -89,6 +89,8 @@ access to it.
 - [`CONTRIBUTING.md`](CONTRIBUTING.md): how to set up, find an issue and send a PR.
 - [`AGENTS.md`](AGENTS.md): how we work, for humans and AI agents: issues, branches, reviews and the definition of done.
 - [`PLAN.md`](PLAN.md): the vision, scope, phases and risks.
+- [`CODE_OF_CONDUCT.md`](CODE_OF_CONDUCT.md) and [`SECURITY.md`](SECURITY.md): how we treat each other, and how to
+  report a vulnerability privately.
 
 | Doc | What it holds |
 |---|---|
