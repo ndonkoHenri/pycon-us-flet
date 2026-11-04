@@ -146,7 +146,7 @@ setup and how long each step takes.
 | [`docs/roadmap.md`](docs/roadmap.md) | The phases broken into epics and issues |
 | [`docs/demo-script.md`](docs/demo-script.md) | The stage demo, a draft: its beats, timings and fallbacks, with no Wi-Fi |
 | [`docs/feature-matrix.md`](docs/feature-matrix.md) | Every feature of the official app, plus ours: what we do with it, and in which phase |
-| [`docs/decisions.md`](docs/decisions.md) | The binding decisions, numbered D-1 and up, and verified Flet facts. It is large, so search it by id |
+| [`docs/decisions.md`](docs/decisions.md) | The binding decisions, each with a number, and verified Flet facts. It is large, so search it by number |
 | [`docs/spikes/`](docs/spikes/) | The verdicts of our technical spikes |
 | [`docs/research/`](docs/research/) | The frozen analysis of the official app and of Flet's capabilities |
 
