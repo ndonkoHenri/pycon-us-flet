@@ -1,6 +1,7 @@
 # Dependabot watches what GitHub's own scanners can read: the Actions our workflows use, pinned by commit with the release
 # in a comment, and `uv.lock`, which holds the host's tools and tests. It leaves the Flet family out: those move together,
-# in a bump of their own (docs/development.md §2.2). A phone's bundle isn't read from the lock (§7.6).
+# in a bump of their own (docs/development.md §2.2). So does `uv_build`, whose line moves with setup-uv's `version` in the
+# workflows. A phone's bundle isn't read from the lock (§7.6), so what a phone ships gets a PR of its own.
 version: 2
 updates:
   - package-ecosystem: "github-actions"
@@ -20,6 +21,9 @@ updates:
       prefix: "Bump"
     ignore:
       - dependency-name: "flet*"
+      - dependency-name: "uv-build"
     groups:
+      bundled:              # the first group that matches takes a package
+        patterns: ["httpx", "tzdata"]
       python:
         patterns: ["*"]
