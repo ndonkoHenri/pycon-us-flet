@@ -74,6 +74,16 @@ def test_the_camera_note_says_how_to_go_on_and_blames_no_build() -> None:
     assert "build" not in CAMERA_UNAVAILABLE
 
 
+async def test_the_result_card_replaces_the_old_one_without_a_crossfade(
+    show: Show,
+) -> None:
+    """The old card is gone at once and the new one fades in alone (#1014)."""
+    shown = await show()
+    (switcher,) = shown.find(ft.AnimatedSwitcher)
+    assert switcher.reverse_duration == 0
+    assert switcher.duration  # the new card still comes in over SWITCH_MS
+
+
 async def test_with_a_scanner_the_interim_text_is_gone(
     show: Show, monkeypatch: pytest.MonkeyPatch
 ) -> None:
