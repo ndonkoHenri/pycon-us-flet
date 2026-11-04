@@ -4,6 +4,7 @@ The last test runs the check on the repo's own Python files, so the local checks
 span that slips back in; the others pin what is flagged and what is deliberately left alone.
 """
 
+import tokenize
 from pathlib import Path
 
 import pytest
@@ -11,6 +12,12 @@ import pytest
 from tools.check_backticks import find_spans, main, tracked_python_files
 
 TICKS = "`" * 2
+
+
+def _read(path: Path) -> str:
+    """Return a Python file's text, decoded as its encoding line says."""
+    with tokenize.open(path) as file:
+        return file.read()
 
 
 def test_a_span_in_a_docstring_is_flagged_with_its_line() -> None:
@@ -81,6 +88,41 @@ def test_the_repo_has_no_double_backtick_span() -> None:
     found = [
         f"{name}:{line}"
         for name in tracked_python_files()
-        for line, _ in find_spans((root / name).read_text(encoding="utf-8"))
+        for line, _ in find_spans(_read(root / name))
     ]
     assert found == []
+
+
+def test_a_data_string_beside_a_docstring_is_left_alone() -> None:
+    """A string assigned on the docstring's own line, or a byte string, is data and is not read."""
+    source = f'"""Doc."""; value = "{TICKS}data{TICKS}"; raw = b"{TICKS}b{TICKS}"\n'
+    assert find_spans(source) == []
+
+
+def test_two_allowed_spans_do_not_make_a_false_one() -> None:
+    """Delimiters are paired as Markdown pairs them, so the text between two allowed spans is not a span."""
+    assert find_spans(f'"""See {TICKS}a`b{TICKS} and {TICKS}c`d{TICKS}."""\n') == []
+
+
+def test_a_span_built_by_implicit_concatenation_is_flagged() -> None:
+    """Adjacent literals in one docstring read as one string, so a span split across them is found."""
+    assert find_spans(f'"Uses {TICKS}" "x{TICKS}."\n') == [(1, f"{TICKS}x{TICKS}")]
+
+
+def test_a_file_in_another_encoding_is_read(tmp_path: Path) -> None:
+    """A Latin-1 file with an encoding line is decoded, not rejected as UTF-8."""
+    path = tmp_path / "latin.py"
+    path.write_bytes(
+        f'# -*- coding: latin-1 -*-\n"""Caf\xe9 {TICKS}x{TICKS}."""\n'.encode("latin-1")
+    )
+    assert main([str(path)]) == 1
+
+
+def test_a_file_that_is_not_python_fails_cleanly(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """A syntax error is reported as a problem on its line, not as a traceback."""
+    path = tmp_path / "broken.py"
+    path.write_text("def (:\n", encoding="utf-8")
+    assert main([str(path)]) == 1
+    assert "cannot read it as Python" in capsys.readouterr().out
