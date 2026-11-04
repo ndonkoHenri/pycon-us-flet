@@ -357,6 +357,8 @@ async def screenshot(name: str) -> None:
     path = SCREENSHOTS / f"{name}.png"
     if PLATFORM == "android":
         path.write_bytes(await run(adb(), "-s", DEVICE, "exec-out", "screencap", "-p"))
+    elif PLATFORM == "linux":  # S9 only: the whole virtual screen
+        await run("import", "-window", "root", str(path))
     else:
         await run("xcrun", "simctl", "io", DEVICE, "screenshot", str(path))
 
