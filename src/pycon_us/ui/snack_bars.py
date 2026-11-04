@@ -7,6 +7,9 @@ timer reads `SnackBar.persist` and is not armed again), and the OS reports its f
 as a snapshot with no change event (F13, U17). So a screen reader turned off with the
 app in front left such a SnackBar up for good (#343): `keep_while_screen_reader()`
 reads the flags again while one shows, and closes it once no screen reader is on.
+It keeps it where it was made: `ScaffoldMessenger` would carry it over every later
+screen, and TalkBack would speak it again on each one (#1099), so
+`close_kept_snack_bars()` closes it when the route changes (D-496).
 """
 
 import asyncio
@@ -92,6 +95,24 @@ async def _watch(shown: ref[ft.SnackBar], svc: Services, prefs: Prefs) -> None:
             bar.update()
             return
         del bar  # held weakly across the sleep
+
+
+def close_kept_snack_bars(page: ft.Page) -> None:
+    """Close each SnackBar kept for a screen reader as the route changes (D-496).
+
+    Only a kept one (`persist`, set only while a screen reader is on): anyone else's
+    goes in its 4 s, and a message that says what just happened may outlive a link
+    (D-291). Its action stays reachable for as long as the user stays on the screen.
+    Flet keeps a page's SnackBars in `page._dialogs` (`base_page.py`), and has no public
+    list (U89).
+
+    Args:
+        page: The session's page.
+    """
+    for dialog in page._dialogs.controls:
+        if isinstance(dialog, ft.SnackBar) and dialog.open and dialog.persist:
+            dialog.open = False
+            dialog.update()
 
 
 def _showing(shown: ref[ft.SnackBar]) -> ft.SnackBar | None:

@@ -12,11 +12,12 @@ open dialog and sheet, waits for Flutter to say each one has gone (or `CLOSE_WAI
 and only then hands the change on.
 
 SnackBars and Banners stay (`KEPT`): they are messages, not routes (Flutter's
-`ScaffoldMessenger` shows them over every page), and an Undo must outlive the link
-(ux.md §4.4). What Python cannot close stays as Flutter leaves it, until U89: a popup
-menu, which Flet gives Python no handle on, and a date or time picker
-(`UNCLOSABLE`), which Flet only opens; Back closes either (D-208), and a picker goes
-with its View.
+`ScaffoldMessenger` shows them over every page). The one exception is a SnackBar kept
+for a screen reader, which goes as the route changes, without waiting, since TalkBack
+would speak it again on every later screen (`close_kept_snack_bars()`, D-496). What
+Python cannot close stays as Flutter leaves it, until U89: a popup menu, which Flet
+gives Python no handle on, and a date or time picker (`UNCLOSABLE`), which Flet only
+opens; Back closes either (D-208), and a picker goes with its View.
 
 The rule holds for every route change, not only for links: the Router replaces
 `page.on_route_change` without chaining it (`router.py:660-667`), and Flet does
@@ -33,6 +34,7 @@ from typing import Any
 import flet as ft
 
 from pycon_us.services.errors import report_errors
+from pycon_us.ui.snack_bars import close_kept_snack_bars
 
 logger = logging.getLogger(__name__)
 
@@ -118,6 +120,7 @@ def close_then(page: ft.Page, handler: Callable[..., Any]) -> Callable[..., Any]
 
     @report_errors
     def on_route_change(e: ft.RouteChangeEvent) -> None:
+        close_kept_snack_bars(page)
         if not turn.locked() and not open_modals(page):
             handler(e)
             return

@@ -761,7 +761,7 @@ Every screen once, on 2026-11-04. **A machine "heard" this, not a person.** Talk
 |---|---|
 | Filter, lead note, hand-out, queue and CoC search sheets | #1058, #1074 |
 | Reminders primer | #963, not heard again here |
-| Star on and off, Undo | "Added to My schedule", "Removed from My schedule"; #1099 |
+| Star on and off, Undo | "Added to My schedule", "Removed from My schedule"; #1099, since fixed (D-496) |
 | Day change, overflow menu | "selected", then "Popup menu", "Dismiss menu", the item: Flutter's first stop, below |
 | Scan outcome | "Lead captured", "Ada", "MOCK0001", "Scan 1" |
 | Sync queue's pass | "Syncing · 1 pending…", then "All synced…" |
@@ -770,7 +770,7 @@ Every screen once, on 2026-11-04. **A machine "heard" this, not a person.** Talk
 | Date picker | Flutter's words: "Friday, May 15, 2026", "Fake clock date" |
 | CoC review dialog | "Grace Sample", "Badge: Grace S.", "1 incident on record", "What happened?", Cancel, Record incident |
 
-**Bugs.** Fixed: #1058 (D-485), #1074, #1083, #1085, #1087, #1089, #1091, #1093, #1095, #1103. Open: #1099 (a kept SnackBar is read on every screen), #1100 (long words in narrow tiles at iOS's largest text), #1101 (a clipped row's star), #1102 (the status strip spoken as each screen opens, `design`).
+**Bugs.** Fixed: #1058 (D-485), #1074, #1083, #1085, #1087, #1089, #1091, #1093, #1095, #1099 (D-496), #1103. Open: #1100 (long words in narrow tiles at iOS's largest text), #1101 (a clipped row's star), #1102 (the status strip spoken as each screen opens, `design`).
 
 **Judged again.**
 - **"My schedule"'s wrap and its star (D-167) stands.** Tried on the iOS simulator: `label_text_style` at 11 sp with no letter spacing still wraps at Flutter's 1.3x clamp on an iPhone 17, and shrinks all five labels at 100 %. Only a label control or a one-word label can fix it; the second is the owner's choice in D-167.
