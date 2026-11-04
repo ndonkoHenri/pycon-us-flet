@@ -111,12 +111,18 @@ You need git and [uv](https://docs.astral.sh/uv/). Android also needs an emulato
 Xcode. While the repository is private, cloning it needs access to it.
 
 ```bash
-gh repo clone ndonkoHenri/pycon-us-flet && cd pycon-us-flet   # or git clone, with a login that has access
-uv sync --locked                       # Python 3.14 and every package, Flet included
-uv run pytest                          # the tests need no device
-uv run flet devices                    # list your emulators, simulators and phones
-uv run flet debug android -d <device>  # or: LANG=en_US.UTF-8 uv run flet debug ios -d <simulator>
+gh repo clone ndonkoHenri/pycon-us-flet && cd pycon-us-flet
+uv sync --locked
+uv run pytest
+uv run flet devices
+uv run flet debug android -d <device>
 ```
+
+- `uv sync` installs Python 3.14 and every package, Flet included; `gh` is one way to clone, any git login with access
+  works too.
+- `pytest` needs no device.
+- `flet devices` lists your emulators, simulators and phones. For iOS, run
+  `LANG=en_US.UTF-8 uv run flet debug ios -d <simulator>` instead of the last line.
 
 The first `flet debug` installs Flutter and the Android SDK for you, and the first build takes several minutes.
 [`docs/development.md`, section 5.1](docs/development.md#51-from-a-clean-mac) covers creating an emulator, the iOS
@@ -125,7 +131,7 @@ setup and how long each step takes.
 ## Contributing and docs
 
 - [`CONTRIBUTING.md`](CONTRIBUTING.md): how to set up, find an issue and send a PR.
-- [`AGENTS.md`](AGENTS.md): how we work, for humans and AI agents: issues, branches, reviews and the definition of done.
+- [`AGENTS.md`](AGENTS.md): how we work, for people and automated coding assistants: issues, branches, reviews and the definition of done.
 - [`PLAN.md`](PLAN.md): the vision, scope, phases and risks.
 - [`CODE_OF_CONDUCT.md`](CODE_OF_CONDUCT.md) and [`SECURITY.md`](SECURITY.md): how we treat each other, and how to
   report a vulnerability privately.
@@ -140,7 +146,7 @@ setup and how long each step takes.
 | [`docs/roadmap.md`](docs/roadmap.md) | The phases broken into epics and issues |
 | [`docs/demo-script.md`](docs/demo-script.md) | The stage demo, a draft: its beats, timings and fallbacks, with no Wi-Fi |
 | [`docs/feature-matrix.md`](docs/feature-matrix.md) | Every feature of the official app, plus ours: what we do with it, and in which phase |
-| [`docs/decisions.md`](docs/decisions.md) | The binding decisions (D-numbers) and verified Flet facts. It is large, so search it by id |
+| [`docs/decisions.md`](docs/decisions.md) | The binding decisions, numbered D-1 and up, and verified Flet facts. It is large, so search it by id |
 | [`docs/spikes/`](docs/spikes/) | The verdicts of our technical spikes |
 | [`docs/research/`](docs/research/) | The frozen analysis of the official app and of Flet's capabilities |
 
