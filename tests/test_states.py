@@ -68,7 +68,10 @@ def test_an_empty_state_s_icon_is_large_and_decorative() -> None:
 
 
 def test_the_title_is_a_heading_and_the_text_a_live_region() -> None:
-    """Title and body are one live region; the title is a level-2 heading node."""
+    """Title and body are live regions, title first; the title is a level-2 heading.
+
+    One region around both read the body before the heading inside it (#1083).
+    """
     state = EmptyState(
         "Can't load the schedule",
         icon=ft.Icons.CLOUD_OFF_OUTLINED,
@@ -80,12 +83,15 @@ def test_the_title_is_a_heading_and_the_text_a_live_region() -> None:
         for node in descendants(state)
         if isinstance(node, ft.Semantics) and node.live_region
     ]
-    assert len(region) == 1  # announced when it replaces a list (D-33)
-    assert region[0].identifier == "schedule.no_data"
-    assert texts(region[0]) == [
-        "Can't load the schedule",
-        "Connect to the internet and try again.",
+    # Announced when it replaces a list (D-33), each line a live node of its own; the
+    # region around them has no text of its own to read before them.
+    holder, *lines = region
+    assert holder.identifier == "schedule.no_data" and not holder.label
+    assert [texts(node) for node in lines] == [
+        ["Can't load the schedule"],
+        ["Connect to the internet and try again."],
     ]
+    assert all(node.container for node in lines)
     headings = [
         node
         for node in descendants(state)

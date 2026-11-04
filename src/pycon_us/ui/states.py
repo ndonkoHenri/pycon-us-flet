@@ -53,8 +53,9 @@ def EmptyState(
 
     Centred, padded and without a fixed height, so it reflows at 200 % text inside the
     screen's `ListView`. For screen readers the title is a level-2 heading node of
-    its own, under the page's title (D-211), and, with the body, inside a live region,
-    so the state is announced when it replaces a list (D-33); the icon is decorative;
+    its own, under the page's title (D-211), and it and the body are live regions in a
+    region, so the state is announced when it replaces a list (D-33); the icon is
+    decorative;
     the button is a stop of its own.
 
     Every empty state names a way out (ux.md §4.6): `action` is a button that takes
@@ -84,13 +85,15 @@ def EmptyState(
     """
     if (action is None) != (on_action is None):
         raise ValueError("an empty state's action needs both a label and a handler")
+    # Each line is a node of its own and live itself. As the region's own label, the
+    # body's text was read before the heading inside it (#1083), and the region only
+    # speaks a label of its own (F61); with no container, the heading flag merged in.
     texts: list[ft.Control] = [
-        # A container of its own: without it, the heading flag and the body's text
-        # merge into the live region, and the whole state reads as one heading.
         ft.Semantics(
             header=True,
             heading_level=2,
             container=True,
+            live_region=True,
             content=ft.Text(
                 title,
                 theme_style=ft.TextThemeStyle.TITLE_MEDIUM,
@@ -100,11 +103,15 @@ def EmptyState(
     ]
     if body is not None:
         texts.append(
-            ft.Text(
-                body,
-                theme_style=ft.TextThemeStyle.BODY_MEDIUM,
-                color=ft.Colors.ON_SURFACE_VARIANT,
-                text_align=ft.TextAlign.CENTER,
+            ft.Semantics(
+                container=True,
+                live_region=True,
+                content=ft.Text(
+                    body,
+                    theme_style=ft.TextThemeStyle.BODY_MEDIUM,
+                    color=ft.Colors.ON_SURFACE_VARIANT,
+                    text_align=ft.TextAlign.CENTER,
+                ),
             )
         )
     controls: list[ft.Control] = [
