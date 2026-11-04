@@ -15,7 +15,7 @@ import pytest
 from pycon_us import theme
 from pycon_us.theme_hc import HC_DARK, HC_LIGHT
 from tests.flet_dart import flet_dart_file
-from tests.test_theme import (
+from tests.theme_helpers import (
     FLET_THEME_DART,
     NEUTRAL_RAMP,
     contrast_ratio,

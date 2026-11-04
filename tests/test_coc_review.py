@@ -39,7 +39,7 @@ from tests.harness import Shown
 from tests.scan_rig import panel
 from tests.test_high_contrast import AAA_TEXT
 from tests.test_staff_coc import ATTENDEES, Show, Switch, coc
-from tests.test_theme import AA_TEXT, NEUTRAL_RAMP, contrast_ratio
+from tests.theme_helpers import AA_TEXT, NEUTRAL_RAMP, contrast_ratio
 from tools.mock_api.state import MockState
 from tools.mock_api.transport import mock_transport
 

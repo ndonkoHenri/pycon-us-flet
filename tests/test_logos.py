@@ -8,7 +8,7 @@ How it looks is checked on devices (the PR), and the Sprints cards that use it i
 import flet as ft
 
 from pycon_us.ui.logos import CORNER, EDGE, INK, INSET, logo_tile
-from tests.test_theme import contrast_ratio
+from tests.theme_helpers import contrast_ratio
 from tests.trees import descendants, only
 
 LOGO = "https://example.com/arcade.png"
