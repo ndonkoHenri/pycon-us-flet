@@ -23,10 +23,15 @@
 # is still (scripts/record_fling.js): "moved" when it is near a control in the same way,
 # so the fling ended no more than three rows from where a full fling ends (not merely in
 # its slot: 3:00 PM is about 20 rows deep with Open space shown); "none" when the rest's
-# row is on top; "short" when it ended anywhere else; "invalid" when the trial did not
-# start on the now slot. The flow prints each control and trial
-# (maestro/README.md says where) and fails unless every trial moved and every tap
-# reached the button.
+# row is on top; "dragged" when it ended where a slow drag does, having lost its velocity;
+# "short" when it ended anywhere else; "invalid" when the trial did not start on the now
+# slot. The flow prints each control and trial (maestro/README.md says where) and fails
+# on any short, none, invalid or missed tap, and when more than half the flings dragged.
+#
+# On the Android emulator about 1 fling in 8 loses its velocity with no sheet before it at
+# all (#1012: 4 of 24 at this pace, and 4 of 40 trials, 2 of 20 on each Flet pin; iOS 0 of
+# 10). So a dragged fling says nothing about the sheet, and this flow can't see a sheet
+# that kills less than about half of them: it guards against the fling dying outright.
 appId: io.github.ndonkohenri.confcompanion
 name: A fling right after the filter sheet closes runs in full
 tags:
@@ -42,10 +47,24 @@ onFlowComplete:
     condition: ${output.startSlot == '2:00'}
     label: The Schedule opens with the now slot, 2:00 PM, at the top
 
-# The controls: the trials' fling from the rest, with no sheet just before it, three
-# times. The rows they stop on are the rows a full fling ends on.
+# A drag with no fling: the same swipe, slow. A fling that loses its velocity lands here.
+- runFlow: ../subflows/to_now.yaml
+- runFlow: ../subflows/toggle_open_space.yaml
+- swipe:
+    start: "50%, 75%"
+    end: "50%, 25%"
+    duration: 3000
+- waitForAnimationToEnd
+- runFlow: ../subflows/top_rows.yaml
+- evalScript: ${output.dragRows = output.topRows}
+- runFlow: ../subflows/toggle_open_space.yaml
+
+# The controls: the trials' fling from the rest, with no sheet just before it, until
+# three have kept their velocity. The rows they stop on are the rows a full fling ends on.
 - repeat:
-    times: 3
+    while:
+      true: ${(output.controls || []).length < 3}
+    times: 8
     commands:
       - runFlow: ../subflows/to_now.yaml
       - runFlow: ../subflows/toggle_open_space.yaml
@@ -148,4 +167,7 @@ onFlowComplete:
     label: Every tap reached "Show N sessions"
 - assertTrue:
     condition: ${output.trial > 0 && output.lost == 0}
-    label: Every fling after the sheet ran in full
+    label: Every fling after the sheet that kept its velocity ran in full
+- assertTrue:
+    condition: ${output.dragged * 2 <= output.trial}
+    label: No more than half the flings lost their velocity

@@ -61,7 +61,7 @@ sheet. Where Maestro fits next to the `flet test` flows in `tests/ui/` is in
 | `journeys/door_check.yaml` | staff, door | Against the local mock as `staff@example.com`: the picker opens by itself, Tutorials › All about decorators, "Ready, works offline", 2 attendees; a typed code and a HID-style one, "Checked in" with the dietary chip and "Admits 2", "2 checked in"; the first again past the cooldown, "Already checked in", the count unchanged; off the list, "Not registered for this session"; "Not a badge code" with the text read, and Edit code (D-473); "All synced" (DOOR-04, #825). Needs the mock running |
 | `journeys/swag_pickup.yaml` | staff, swag | Against the local mock as `staff@example.com`: paused until a category is chosen; a typed code opens the hand-out sheet, Cancel, "Ready to hand out"; a HID-style code, on a mock that hasn't seen the flow, "Hand out 3 items", "Handed out 3 items"; that badge again, "Already picked up"; nothing bought, "Nothing to pick up"; "Not a badge code" with the text read, and Edit code (D-473) (SHIRT-02, #825). Needs the mock running, just started to check the hand-out |
 | `journeys/pull_to_refresh.yaml` | feed_pair | Pull to refresh (D-449, #806), the feed held open by the feed-pair server: on Wednesday's list, swipes between days start no refresh; a pull shows the spinner and "Updating the schedule…", which end when the feed answers; a day change and "Show all" during the refresh (a render) and a changed feed after it leave no spinner; Sprints and Job listings the same; on Sprints, a feed that stays silent ends on the strip's "Offline" line and its working Refresh. Back during a refresh on Job listings leaves no error. Needs `tools.feed_pair` running ([below](#feed-pairs)) |
-| `regression/fling_after_sheet.yaml` | regression | Open space shown through the sheet, then a fling 0.8 to 1.0 s after "Show N sessions" (Maestro's pace, not #346's row D window), `TRIALS` times (at most about 35). Three control flings with no sheet first; each trial is "moved" (it ended within three rows of where a control ended, read from the first four rows of each; not merely in their slot), "short", "none" or "invalid" |
+| `regression/fling_after_sheet.yaml` | regression | Open space shown through the sheet, then a fling 0.8 to 1.0 s after "Show N sessions" (Maestro's pace, not #346's row D window), `TRIALS` times (at most about 35). Three control flings with no sheet first; each trial is "moved" (it ended within three rows of where a control ended, read from the first four rows of each; not merely in their slot), "dragged" (lost its velocity, as the emulator's flings also do with no sheet, #1012), "short", "none" or "invalid" |
 
 Every flow but `theme_relaunch` and `reminder_settings` (which need no clock or feed, and start with `subflows/launch_fresh.yaml`), `reminder_primer` (which launches with notifications `unset`, then runs `subflows/get_started.yaml` and the same scene) and the `staff` flows ([below](#staff-flows-and-the-mock)) starts from `subflows/start_offline.yaml`: a fresh launch (`clearState`),
 airplane mode on Android, Get started on the first-run Welcome (D-287), then Developer
@@ -214,19 +214,26 @@ Every other flow has no per-level step. On API 24 these passed, in #816 or #953:
 
 **Comparing two builds** (the fling after the sheet, at Maestro's pace): install `main`'s
 APK, run the regression flow, install the PR's APK, run it again with the same `TRIALS`,
-and compare the two summaries (`flings after the sheet, N moved, N short, N none, N
-invalid, of N`). First the flow runs three control flings with no sheet just before them
+and compare the two summaries (`flings after the sheet, N moved, N dragged, N short, N
+none, N invalid, of N`). First the flow makes the same swipe slowly, a drag with no
+velocity, and keeps where it ends. Then it runs control flings with no sheet just before
+them until three have kept their velocity (one that ends where the drag did is dropped),
 and keeps the first four rows each one stopped on; it fails at once unless they are near
 each other (of any two, one's top row is among the other's rows: no more than three rows
 apart). A trial "moved" only when it is near a control in the same way, from its own
 first four rows: a full fling varies by a row or two, and the 3:00 PM slot, where it
 ends, is about 20 rows deep with Open space shown, so a fling cut short by many rows can
-still end in that slot. The flow
-fails unless every trial moved and every tap reached the button. It starts the fake
+still end in that slot. A trial "dragged" when it ended where the slow swipe did: it lost
+its velocity. On the Android emulator that also happens with no sheet (#1012: 4 of 24 at
+this pace on one build, and 4 of 40 trials, 2 of 20 on each Flet pin; iOS 0 of 10), so it
+says nothing about the sheet, and the two summaries can differ by chance. The flow fails
+on any short, none or invalid trial, on a missed tap, and when more than half dragged, so
+it guards against a fling that dies outright, not one that dies now and then. It starts the fake
 clock at 14:01, so the now slot stays 2:00 PM for about 35 trials. On Android the
 launcher logs every touch, so the time from the tap on "Show N sessions" to the fling is
 `adb -s emulator-5570 logcat -d | grep TaplEvents`: the `ACTION_UP` at (540, 2232), then
-the `ACTION_DOWN` at (540, 1800), by `eventTime` (ms). Compare builds only on a quiet
+the `ACTION_DOWN` at (540, 1800), by `eventTime` (ms); on 2026-11-04 it logged none on a
+freshly booted `pycon_pixel6a_api36`. Compare builds only on a quiet
 host, one right after the other: a busy host stretches the sheet's exit past the fling,
 and `main` loses flings too.
 

@@ -7,7 +7,9 @@
 // Reads, from `output`:
 // - restRow: the top row at the rest, read before this control's fling;
 // - topRows: the first four rows on screen once the fling had ended
-//   (subflows/top_rows.yaml), in order, topRows[0] being the top row.
+//   (subflows/top_rows.yaml), in order, topRows[0] being the top row;
+// - dragRows: the rows a slow swipe, with no velocity, ends on. A control that ends near
+//   them lost its velocity (#1012), and measures nothing: it isn't kept.
 // Keeps, in `output`:
 // - controls: every control so far, as {rest, top, rows};
 // - controlsOk: every control started from the first control's rest and left it, and
@@ -40,11 +42,22 @@ function recordControl(o) {
   return { controls: controls, controlsOk: ok, control: control };
 }
 
-var recorded = recordControl(output);
+var dragged = near(
+  (output.topRows || []).filter(function (row) {
+    return !!row;
+  }),
+  output.dragRows || []
+);
+if (dragged) {
+  console.log("control dropped: it lost its velocity, ending on \"" + output.topRows[0] + "\"");
+}
+var recorded = dragged
+  ? { controls: output.controls || [], controlsOk: output.controlsOk, control: null }
+  : recordControl(output);
 output.controls = recorded.controls;
 output.controlsOk = recorded.controlsOk;
 
-console.log(
+if (!dragged) console.log(
   "control " + recorded.controls.length + ": from \"" + recorded.control.rest +
   "\" to \"" + (recorded.control.top || "-") + "\"" +
   (recorded.controlsOk ? "" : " (the controls disagree, or one did not move)")
