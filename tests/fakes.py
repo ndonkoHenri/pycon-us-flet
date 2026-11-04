@@ -350,6 +350,8 @@ class MemoryNotifications:
         self.gate: asyncio.Event | None = None  # schedule() waits on it when given
         self.grant = True  # what the user answers the OS's prompt
         self.grant_exact = True  # what the user sets on Alarms & reminders
+        # request_exact_alarm_permission() stays on the page until a test sets it
+        self.settings_gate: asyncio.Event | None = None
         self.requests: list[dict[str, bool]] = []  # request_permissions()' arguments
         # are_notifications_enabled() waits on it when given, as E3 waits for its start
         self.initialized: asyncio.Event | None = None
@@ -384,8 +386,14 @@ class MemoryNotifications:
         return self.grant
 
     async def request_exact_alarm_permission(self) -> bool:
-        """Record the visit to Alarms & reminders; `exact` becomes `grant_exact`."""
+        """Record the visit to Alarms & reminders; `exact` becomes `grant_exact`.
+
+        The visit lasts until `settings_gate` is set, when a test gives one, as it
+        lasts until the user comes back from the page.
+        """
         self._call("request_exact_alarm_permission")
+        if self.settings_gate is not None:
+            await self.settings_gate.wait()
         self.exact = self.grant_exact
         return self.exact
 
@@ -436,10 +444,18 @@ class MemoryPermissions:
         self.status = status
         self.reads = 0
         self.settings_opened = 0
+        # open_app_settings() stays on the page until a test sets it
+        self.settings_gate: asyncio.Event | None = None
 
     async def open_app_settings(self) -> bool:
-        """Count a visit to the app's settings page in `settings_opened`."""
+        """Count a visit to the app's settings page in `settings_opened`.
+
+        The visit lasts until `settings_gate` is set, when a test gives one, as it
+        lasts until the user comes back from the page.
+        """
         self.settings_opened += 1
+        if self.settings_gate is not None:
+            await self.settings_gate.wait()
         return True
 
     async def get_status(self, permission: Permission) -> PermissionStatus | None:

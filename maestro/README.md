@@ -19,7 +19,7 @@ sheet. Where Maestro fits next to the `flet test` flows in `tests/ui/` is in
 | `regression/` | Trials repeated N times to compare two builds, tagged `regression` |
 | `subflows/` | Steps the flows share through `runFlow`; never run on their own, but for `open_link.yaml`, which `tests/ui/developer.py` runs on iOS (D-478) |
 | `scripts/` | JavaScript that a flow runs (`runScript`) |
-| `demo/` | What `tools/demo_videos.py` films: outside `config.yaml`, never a test ([below](#demo-videos)) |
+| `demo/` | What `tools/demo_videos.py` films, and `readme_shots.yaml`, which `tools/readme_shots.py` photographs for the README: outside `config.yaml`, never a test ([below](#demo-videos)) |
 
 | Flow | Tags | What it checks |
 |---|---|---|
@@ -423,6 +423,16 @@ fails under `tools/check.sh`. A new `text:` in those flows needs its words there
   the Schedule's Now button on the now slot, and by D-184 keeps SnackBars until they are
   used, as it does for TalkBack. Check those behaviours on iOS only (`jump_to_now` checks
   the button there; no flow checks a SnackBar's timeout yet).
+- **So on Android a SnackBar with an action stays over the rows for the rest of the run**
+  (#1025): a bar that a person would see for 4 s is still there many steps later, and a
+  `tapOn` of a row under it lands on the bar, with no error. The row stays in the
+  hierarchy, clickable, and only a screenshot shows why nothing opened. At 200 % text the
+  "Schedule updated" bar is 117 dp tall, so it covered More's Expo hall and Job listings.
+  Rows clear of it still answer. After a step that changes the feed or a favourite, swipe
+  the bar down (`swipe`, `start: "50%, 80%"`, `end: "50%, 97%"`), or do that step last.
+  The bar goes when Maestro's run ends, as the app then reads no screen reader (D-356), so
+  an `adb` tap afterwards works and hides it. TalkBack itself is not stuck: its double tap
+  activates the row under the bar.
 - About 0.85 s passes between two Maestro commands on the emulator (0.8 s on the
   simulator), so a step can never follow the last one faster. #346 saw its failures with
   0.33 to 0.6 s between the tap and the fling, which Maestro cannot reach.

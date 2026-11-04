@@ -50,6 +50,25 @@ grep -n '^#' docs/ux.md
 
 A row's first words say when a later decision amends it; a struck-through part no longer applies.
 
+Rows are grouped by topic, and each topic is a section of `docs/decisions.md` you can open and scan:
+
+| Your work is about | Section |
+|---|---|
+| Scope, the owner's direction | [A. Purpose and scope](docs/decisions.md#a-purpose-and-scope) |
+| Platforms, Material 3 on both, no adaptive widgets | [B. Platforms and UI](docs/decisions.md#b-platforms-and-ui) |
+| Tabs, routes, Back, links | [C. Information architecture and navigation](docs/decisions.md#c-information-architecture-and-navigation) |
+| Colours, type, components, accessibility, how lists are built | [D. Design system](docs/decisions.md#d-design-system) |
+| The feed, storage, offline, the change log | [E. Data and offline](docs/decisions.md#e-data-and-offline) |
+| The mock server, signing, the staff tools | [F. Mock backend and private API](docs/decisions.md#f-mock-backend-and-private-api) |
+| Reminders, native pieces, capabilities | [G. Notifications, native gaps and capabilities](docs/decisions.md#g-notifications-native-gaps-and-capabilities) |
+| How components, hooks and stores are written; module layout | [H. Code style and project layout](docs/decisions.md#h-code-style-and-project-layout) |
+| Tests and device flows | [I. Testing](docs/decisions.md#i-testing) |
+| Builds, CI, signing, distribution | [J. Build, CI and distribution](docs/decisions.md#j-build-ci-and-distribution) |
+| Issues, PRs, reviews, merging | [K. Process and GitHub workflow](docs/decisions.md#k-process-and-github-workflow) |
+| Something Flet lacks | [L. Upstream Flet work](docs/decisions.md#l-upstream-flet-work) |
+| Names: files, identifiers, semantics ids | [M. Naming](docs/decisions.md#m-naming-binding) |
+| A verified Flet fact (`F2`) | [N. Verified Flet SDK facts](docs/decisions.md#n-verified-flet-sdk-facts) |
+
 | When you work on | Look in |
 |---|---|
 | Screens and interaction | [`docs/ux.md`](docs/ux.md), and its [accessibility checklist](docs/ux.md#9-accessibility-checklist-every-ui-pr-d-33-d-93) |

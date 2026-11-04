@@ -247,7 +247,8 @@ onFlowComplete:
 - assertVisible:
     id: more.title
 
-# Back on Wednesday's list, last, as it changes the feed for the rest of the session.
+# Back on Wednesday's list, last: a changed feed's Review bar stays up under Maestro on
+# Android, and at 200 % text it covers the rows above the tab bar (maestro/README.md, #1025).
 - tapOn:
     id: app.nav.schedule
 - extendedWaitUntil:

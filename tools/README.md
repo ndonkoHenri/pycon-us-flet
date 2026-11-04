@@ -22,6 +22,7 @@ What's here, and when you'd reach for it. Run from the repo's root; each script'
 | `mock_api/own.py` | Keep a mock on your checkout's own port |
 | `mock_api/` | The mock API itself ([`README.md`](mock_api/README.md)) |
 | `demo_videos.py` | Film the demo clips (`maestro/demo/`) on a new simulator (`record`), and lay a clip's frames out to read (`sheets`) |
+| `readme_shots.py` | Photograph the README's screenshots (`docs/images/`) on your own emulator and simulator, light and dark |
 | `clip_processing.py` | The video half of `demo_videos.py`: trim a recording to the stretches that change, and the contact sheets and flash checks of a clip |
 | `sweep.py` | Photograph the staff tools per text size and appearance, for a person to read |
 | `offline_scans.py` | Run the offline scans journey, with a mock whose listener can stop and keep its captures |
