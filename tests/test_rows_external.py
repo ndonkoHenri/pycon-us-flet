@@ -63,6 +63,14 @@ def test_a_stacked_row_keeps_its_words_and_its_icon_under_the_title(
     assert cast(ft.Icon, icon).semantics_label == "Opens in browser"
 
 
+def test_stacked_leaves_a_row_with_a_subtitle_or_no_link_icon_as_it_is(
+    page: FakePage,
+) -> None:
+    """A phone row keeps its number: `stacked` only moves a link's icon (D-497)."""
+    row = LinkTile("Call", "tel:+15551234", subtitle="+1 555 1234", stacked=True)
+    assert tile_of(row).subtitle == "+1 555 1234"
+
+
 async def test_a_web_row_opens_in_the_in_app_browser(
     page: FakePage, svc: Services
 ) -> None:

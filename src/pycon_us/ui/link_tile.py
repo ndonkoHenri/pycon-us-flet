@@ -74,7 +74,8 @@ def LinkTile(
         stacked: A link whose words matter more than its icons, at large text
             (`Prefs.time_above`): no leading icon, and the `OPEN_IN_NEW` icon under the
             title rather than beside it, so a long word stays whole (D-497). The node
-            reads as before, title then "Opens in browser". Needs no `subtitle`.
+            reads as before, title then "Opens in browser". Ignored on a row with a
+            `subtitle`, or with no such icon (a page, a phone, an email).
 
     Raises:
         ValueError: `target` is not a link the app opens (`link_kind()`).
@@ -131,10 +132,9 @@ def _ExternalLinkTile(
     trailing = None
     if opens_in is not None:
         trailing = ft.Icon(ft.Icons.OPEN_IN_NEW, semantics_label=opens_in)
-    if stacked:
+    if stacked and trailing is not None and subtitle is None:
         # At the words' start: a ListTile's subtitle would centre a bare icon.
-        under = ft.Row([trailing]) if trailing is not None else None
-        icon, subtitle, trailing = None, under, None
+        icon, subtitle, trailing = None, ft.Row([trailing]), None
     row = ft.MergeSemantics(
         content=ft.Semantics(
             identifier=identifier,
