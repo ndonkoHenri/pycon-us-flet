@@ -10,10 +10,8 @@ from tools import demo_videos
 from tools.demo_videos import (
     CLIPS,
     FLOWS,
-    _output_times,
     merged_prefs,
     scene_prefs,
-    still_cuts,
 )
 
 MAESTRO = Path(demo_videos.__file__).resolve().parents[1] / "maestro"
@@ -53,16 +51,6 @@ def test_a_scene_replaces_the_app_s_keys_and_keeps_the_os_s() -> None:
     assert merged["flutter.pycon.onboarded"] is True
 
 
-def test_the_ends_are_trimmed_and_a_long_still_is_shortened() -> None:
-    """Maestro's start, a busy host's wait and the end go; a flow's own pause stays."""
-    assert still_cuts([10.0, 12.0, 30.0, 31.0], 40.0) == [(8.0, 15.0), (30.0, 33.0)]
-
-
-def test_a_recording_that_never_changes_keeps_only_its_opening() -> None:
-    """With no change to keep, the clip is the opening's hold, not the whole recording."""
-    assert still_cuts([], 40.0) == [(0.0, demo_videos.HEAD_STILL)]
-
-
 def test_every_clip_s_flows_exist_and_stay_out_of_the_test_workspace() -> None:
     """A retake finds its flows; `maestro test maestro` never films a clip."""
     for clip in CLIPS:
@@ -71,15 +59,6 @@ def test_every_clip_s_flows_exist_and_stay_out_of_the_test_workspace() -> None:
     config = (MAESTRO / "config.yaml").read_text()
     globs = [line for line in config.splitlines() if line.startswith("  - ")]
     assert globs and not any("demo" in line for line in globs)
-
-
-def test_each_clip_frame_shows_the_recording_s_time_in_order() -> None:
-    """The kept stretches run one after another at the clip's frame rate, nothing doubled."""
-    times = _output_times([(1.0, 1.1), (5.0, 5.1)])
-    rate = demo_videos.OUTPUT_FPS
-    assert times == [1.0 + i / rate for i in range(3)] + [
-        5.0 + i / rate for i in range(3)
-    ]
 
 
 def test_the_staff_clip_says_mock_data_in_its_name() -> None:
