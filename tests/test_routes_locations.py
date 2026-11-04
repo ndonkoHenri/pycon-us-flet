@@ -155,7 +155,7 @@ def test_query_of_reads_the_view_options(location: str, options: dict) -> None:
 )
 def test_only_the_last_view_a_location_builds_is_the_top_one(location: str) -> None:
     """Of the Views a location stacks, only the last is the top one."""
-    path = location.split("?")[0].rstrip("/") or "/"
+    path = location.split("?", maxsplit=1)[0].rstrip("/") or "/"
     paths = [view_path for _, view_path, _ in view_levels(path)]
     assert [is_top_view(location, view_path) for view_path in paths] == [
         *[False] * (len(paths) - 1),

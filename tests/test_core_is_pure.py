@@ -19,7 +19,7 @@ CORE = Path(__file__).resolve().parents[1] / "src" / "pycon_us" / "core"
 
 def is_flet(module: str) -> bool:
     """Return whether `module` is Flet itself or a Flet extension package."""
-    top = module.split(".")[0]
+    top = module.split(".", maxsplit=1)[0]
     return top == "flet" or top.startswith("flet_")
 
 

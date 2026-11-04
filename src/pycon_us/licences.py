@@ -271,8 +271,8 @@ def paragraphs(text: str) -> list[Paragraph]:
             found.append(Paragraph("\n".join(line.rstrip() for line in lines), True))
             continue
         joined: list[str] = []
-        for line in lines:
-            line = " ".join(line.split())
+        for raw in lines:
+            line = " ".join(raw.split())
             if joined and not _OWN_LINE.match(line):
                 joined[-1] = f"{joined[-1]} {line}"
             else:

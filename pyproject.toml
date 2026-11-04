@@ -134,6 +134,8 @@ extend-select = [
     "ARG",    # unused arguments
     "PT",     # pytest style: raises() blocks of one statement, match=, parametrize names
     "ASYNC",  # async functions: blocking calls and busy waits
+    "PLC",    # pylint conventions: imports at the top, no needless indexing
+    "PLW",    # pylint warnings: a loop variable reassigned, a lambda around a call, `global`
     "RUF",    # ruff's own: unused noqa, a task nobody holds, regex patterns that are not raw
     "PIE",    # misc. clutter: unneeded pass, range start, dict spread
     "RET",    # return statements: no else after return, no unneeded variable
@@ -148,6 +150,9 @@ extend-select = [
 ]
 
 ignore = [
+    "PLC0415", # imports inside functions are deliberate: native extensions exist only in the packaged app, tools load heavy readers on use
+    "PLW0108", # `lambda: f()` is late-binding on purpose where tests patch `f` (and a store's callbacks read the current one)
+    "PLW0603", # four process-wide switches (clock, build, error details) are module state by design, with test hooks
     "PT018",  # one `assert a and b` per check reads better than two asserts here: 575 tests would churn for no bug found
     "ASYNC109", # an async helper that takes a `timeout` budget as its API; asyncio.timeout() inside would hide it from callers
     "N802",   # the Flet idiom: an `@ft.component` function is named like the control it returns, in CamelCase
@@ -161,7 +166,7 @@ ignore = [
 max-line-length = 120             # code is formatted at ruff's 88; docstrings and comments run to 120
 
 [tool.ruff.lint.per-file-ignores]
-"docs/spikes/**" = ["E402", "E501", "PTH", "PERF", "T20", "A", "N", "ARG", "ASYNC"]   # frozen spike scripts
+"docs/spikes/**" = ["E402", "E501", "PTH", "PERF", "T20", "A", "N", "ARG", "ASYNC", "PLC", "PLW"]   # frozen spike scripts
 "tools/**" = ["T20", "ARG"]                      # command-line scripts print by design; ARG: handler signatures
 "tools/mock_api/server.py" = ["N815"]            # BaseHTTPRequestHandler wants do_GET, do_POST ...
 "tools/mock_api/state.py" = ["N818"]             # `Refused` is the mock's vocabulary: 59 uses, docstrings read "Refused: 404 ..."

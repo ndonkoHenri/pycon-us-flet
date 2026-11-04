@@ -33,7 +33,7 @@ def walk_down(location: str, search_base: str = "/now") -> list[str]:
     One step up per press (`parent_of()`) to a root, then Now, then out.
     """
     steps = []
-    while location.split("?")[0] not in TAB_ROOTS:
+    while location.split("?", maxsplit=1)[0] not in TAB_ROOTS:
         location = parent_of(location, search_base)
         steps.append(location)
     if location != "/now":
