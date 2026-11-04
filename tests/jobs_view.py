@@ -9,12 +9,14 @@ held by `tests/timers.py`.
 
 from collections.abc import AsyncIterator
 from contextlib import AsyncExitStack
+from datetime import datetime
 from pathlib import Path
 from typing import Any, cast
 
 import flet as ft
 import pytest
 
+from pycon_us import clock
 from pycon_us.config import load_year
 from pycon_us.core.models import JobListing
 from pycon_us.prefs import Prefs
@@ -29,6 +31,14 @@ YEAR = load_year(2026)
 
 
 DATA = processed(2026)
+
+
+DURING = datetime(2026, 5, 15, 12, 0, tzinfo=YEAR.conference.zone)
+"""A moment on the conference's third day: the page's default, whatever today is (#869)."""
+
+
+AFTER = datetime(2026, 5, 20, 8, 0, tzinfo=YEAR.conference.zone)
+"""The morning after the last sprint day: the conference is over."""
 
 
 VIEW = "/more/jobs"
@@ -107,13 +117,20 @@ async def show(
 ) -> AsyncIterator[Any]:
     """Return a function that shows the page, with a `conference` (2026 by default).
 
-    `prefs` sets the settings, large text say; by default the defaults.
+    `prefs` sets the settings, large text say; by default the defaults. `now` is the
+    clock's moment, `DURING` the conference by default so no test depends on today's
+    date; the clock goes back to real time when the stack closes.
     """
     async with AsyncExitStack() as stack:
+        stack.callback(clock.set_test_now, None)
 
         async def render(
-            conference: Conference | None = None, *, prefs: Prefs | None = None
+            conference: Conference | None = None,
+            *,
+            prefs: Prefs | None = None,
+            now: datetime = DURING,
         ) -> Shown:
+            clock.set_test_now(now)
             return await stack.enter_async_context(
                 harness.showing(
                     screen.Jobs,

@@ -13,6 +13,7 @@ from typing import cast
 import flet as ft
 import pytest
 
+from pycon_us import clock
 from pycon_us.config import load_year
 from pycon_us.core.expo import is_job_fair
 from pycon_us.core.models import ConferenceData
@@ -23,6 +24,7 @@ from pycon_us.ui import location_card
 from tests import harness
 from tests.feeds import processed
 from tests.harness import Shown
+from tests.jobs_view import DURING
 from tests.session_detail import TALK, VIEW, Render, rendering
 from tests.test_session_location import ROOM_104C, drop
 from tests.timers import HeldSleeps
@@ -139,6 +141,8 @@ async def show_jobs(
     """Provide an async function that shows Job listings with the given feed."""
     monkeypatch.setattr(jobs, "asyncio", HeldSleeps())  # the filter's debounce
     monkeypatch.setattr(location_card, "asyncio", HeldSleeps())
+    # During the conference, whatever today is: the closed line is not these tests'.
+    clock.set_test_now(DURING)
     async with harness.showing(
         jobs.Jobs,
         jobs,
@@ -155,7 +159,10 @@ async def show_jobs(
                 await shown.settle()
             return shown
 
-        yield with_data
+        try:
+            yield with_data
+        finally:
+            clock.set_test_now(None)
 
 
 async def test_job_listings_open_with_the_card_above_the_listings(
