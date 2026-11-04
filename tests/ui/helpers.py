@@ -12,7 +12,7 @@ import contextlib
 import os
 import shutil
 import time
-from collections.abc import Awaitable, Callable, Sequence
+from collections.abc import AsyncIterator, Awaitable, Callable, Sequence
 from pathlib import Path
 
 import flet as ft
@@ -345,7 +345,7 @@ async def press_system_back(t: RemoteTester) -> None:
 async def screenshot(name: str) -> None:
     """Save the screen as `build/ui/<platform>/<name>.png`, a record of the step.
 
-    Not a golden: nothing compares it (goldens arrive in P4, testing-and-quality.md §6).
+    Not a golden: nothing compares it (the goldens are `capture()`'s, testing-and-quality.md §6).
     The device's own tools take it: `RemoteTester.take_screenshot` works once per run
     on Android, where its second call fails ("Surface already converted to an image").
     """
@@ -355,6 +355,73 @@ async def screenshot(name: str) -> None:
         path.write_bytes(await run(adb(), "-s", DEVICE, "exec-out", "screencap", "-p"))
     else:
         await run("xcrun", "simctl", "io", DEVICE, "screenshot", str(path))
+
+
+async def capture(t: RemoteTester, name: str) -> bytes:
+    """Return the screen as PNG bytes for `assert_screenshot`, as often as a launch needs.
+
+    `RemoteTester.take_screenshot` works once per launch on Android, where its second
+    call fails ("Surface already converted to an image", U280, #884, F300), so the
+    device's own bytes are taken there. Its capture pumps no frame, so the caller lets
+    the screen settle first (`test_goldens.py`'s `settle()`), and it holds the whole screen, status and
+    navigation bars included. On iOS `take_screenshot` has no such limit and draws only
+    the Flutter view. When U280 is fixed, the Android branch can go.
+
+    Args:
+        t: The tester.
+        name: The image's name, for `take_screenshot` on iOS.
+
+    Returns:
+        The PNG file's bytes.
+    """
+    if PLATFORM == "android":
+        return await run(adb(), "-s", DEVICE, "exec-out", "screencap", "-p")
+    return await t.take_screenshot(name)
+
+
+DEMO = "com.android.systemui.demo"
+"""The broadcast action SystemUI's demo mode listens for."""
+
+DEMO_COMMANDS: tuple[tuple[str, ...], ...] = (
+    ("clock", "-e", "hhmm", "1000"),
+    ("network", "-e", "wifi", "show", "-e", "level", "4", "-e", "fully", "true"),
+    ("network", "-e", "mobile", "hide"),
+    ("battery", "-e", "level", "100", "-e", "plugged", "false"),
+    ("notifications", "-e", "visible", "false"),
+)
+"""SystemUI demo mode's commands after `enter`: a fixed clock, full Wi-Fi bars, no
+mobile icon (it differed by about 230 pixels between runs), a full battery and no
+notification icons, so a capture's status bar is the same on every run
+(testing-and-quality.md §6)."""
+
+
+@contextlib.asynccontextmanager
+async def demo_mode() -> AsyncIterator[None]:
+    """Freeze Android's status bar for the goldens, and give it back on exit.
+
+    `adb exec-out screencap` holds the whole screen, so the bar's real clock would
+    differ on every run. SystemUI's demo mode fixes its clock, signal, battery and
+    icons. It does nothing on iOS, where `take_screenshot` draws the Flutter view
+    only. The exit runs even when the flow fails, so the emulator isn't left in it.
+    """
+    if PLATFORM != "android":
+        yield
+        return
+
+    async def shell(*command: str) -> None:
+        await run(adb(), "-s", DEVICE, "shell", *command)
+
+    async def broadcast(*command: str) -> None:
+        await shell("am", "broadcast", "-a", DEMO, "-e", "command", *command)
+
+    await shell("settings", "put", "global", "sysui_demo_allowed", "1")
+    await broadcast("enter")
+    try:
+        for command in DEMO_COMMANDS:
+            await broadcast(*command)
+        yield
+    finally:
+        await broadcast("exit")
 
 
 async def screenshot_on_failure() -> None:
