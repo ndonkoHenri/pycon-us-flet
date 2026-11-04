@@ -259,7 +259,7 @@ def find_sheet(
 
 
 def find_button(reason: str | None, on_click: Callable[[], object]) -> ft.Control:
-    """Return "Find by name", under the badge field; disabled while ``reason`` holds.
+    """Return "Find by name", in the buttons under the badge field; disabled while ``reason`` holds.
 
     A disabled button's tooltip is not read, so its name says why (#759's words:
     "Loading attendee list…", "CoC capture needs a connection").
@@ -284,6 +284,5 @@ def find_button(reason: str | None, on_click: Callable[[], object]) -> ft.Contro
         )
     return ft.Container(
         named("coc.find", button),
-        alignment=ft.Alignment.CENTER_LEFT,
-        key="coc.find",  # kept apart from a result's buttons in ScanScreen's list
+        key="coc.find",  # kept apart from a result's buttons in ScanScreen's row
     )

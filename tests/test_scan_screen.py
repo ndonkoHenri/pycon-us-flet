@@ -44,6 +44,7 @@ from pycon_us.ui.scan_result import (
 )
 from pycon_us.ui.scan_screen import EDIT_CODE, SCAN_AGAIN, ResultPanel, ScanScreen
 from pycon_us.ui.scrolling import FULL_LIST_EXTENT
+from pycon_us.ui.tool_controls import tool_button
 from tests import harness, scan_rig
 from tests.scan_rig import ACCEPTED, Rig, Show, enter, entry, panel, scan
 from tests.test_high_contrast import AAA_TEXT
@@ -82,6 +83,28 @@ async def test_the_result_card_replaces_the_old_one_without_a_crossfade(
     (switcher,) = shown.find(ft.AnimatedSwitcher)
     assert switcher.reverse_duration == 0
     assert switcher.duration  # the new card still comes in over SWITCH_MS
+
+
+async def test_a_tool_s_buttons_share_one_wrapping_row_under_the_field(
+    show: Show, rig: Rig
+) -> None:
+    """Two buttons take one line, not two: a column ran past the keyboard (#1015)."""
+    one = tool_button("t.one", "Find by name", ft.Icons.PERSON_SEARCH, lambda _: None)
+    two = tool_button("t.two", "Show email", ft.Icons.VISIBILITY, lambda _: None)
+
+    @ft.component
+    def Scan() -> ft.Control:
+        return ScanScreen(
+            title="CoC incident",
+            source=__name__,
+            on_badge=rig.on_badge,
+            actions=[one, two],
+        )
+
+    shown = await show(Scan)
+    (row,) = [r for r in shown.find(ft.Row) if r.key == "scan.buttons"]
+    assert row.wrap and len(row.controls) == 2
+    assert shown.nodes("t.one") and shown.nodes("t.two")
 
 
 async def test_with_a_scanner_the_interim_text_is_gone(

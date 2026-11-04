@@ -81,7 +81,9 @@ def context_chip(
 def tool_button(
     identifier: str, label: str, icon: ft.IconData, on_click: ft.ControlEventHandler
 ) -> ft.Control:
-    """Return one of a tool's tonal buttons under the field, start-aligned.
+    """Return one of a tool's tonal buttons under the field, as wide as its words.
+
+    ``ScanScreen`` lays the tool's buttons in one wrapping row, so two share a line.
 
     Args:
         identifier: For UI flows, e.g. ``lead.add_note``.
@@ -100,7 +102,6 @@ def tool_button(
                 elevation=0,  # M3's tonal button lies flat (D-344)
             ),
         ),
-        alignment=ft.Alignment.CENTER_LEFT,
         # Keyed: "Leads (42)" is built here and kept by ScanScreen's own re-renders,
         # so a result's "Add note" landing in its place would otherwise take its id,
         # two buttons with one (U163, #622); differing keys make it a new control.

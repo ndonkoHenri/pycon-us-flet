@@ -317,7 +317,15 @@ def ScanScreen(
     )
     field.key = "scan.field"
     result_note_line = [padded(note)] if note is not None else []
-    buttons = [padded(action) for action in [*for_result, *(actions or ())]]
+    # One wrapping row, not a line for each: after a result with the keyboard up, a column
+    # of buttons ran past the keyboard's edge and "Find by name" was cut in half (#1015).
+    # They share a line while their words fit, and wrap at large text.
+    tools = [*for_result, *(actions or ())]
+    buttons = (
+        [padded(ft.Row(tools, wrap=True, spacing=8, run_spacing=8, key="scan.buttons"))]
+        if tools
+        else []
+    )
     if prefs.time_above:
         # The field and the result first (D-475): the keyboard scrolls a focused field
         # into view, and below the chip, the context and the camera note it sat four
