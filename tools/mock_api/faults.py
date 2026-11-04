@@ -1,16 +1,16 @@
 """The faults the mock injects on demand, so conference Wi-Fi can be replayed (D-57).
 
 A fault is switched on for the next request only (one-shot) or for every request until
-it is cleared. ``transport.py`` and ``server.py`` take the transport faults around
-``handle``, and ``handle`` takes ``revoked`` itself; the clock skew is
-``MockState.skew``. Each fault and what it simulates is in ``README.md`` ("Faults").
+it is cleared. `transport.py` and `server.py` take the transport faults around
+`handle`, and `handle` takes `revoked` itself; the clock skew is
+`MockState.skew`. Each fault and what it simulates is in `README.md` ("Faults").
 """
 
 from dataclasses import dataclass, field
 from typing import Literal
 
 type Fault = Literal["connect", "timeout", "lost_response", "revoked"]
-"""A fault's name, as tests and ``--fault`` spell it."""
+"""A fault's name, as tests and `--fault` spell it."""
 
 FAULTS: tuple[Fault, ...] = ("connect", "timeout", "lost_response", "revoked")
 
@@ -31,7 +31,7 @@ class Faults:
 
         Args:
             fault: The fault.
-            until_cleared: Keep it for every request until ``clear``; by default only
+            until_cleared: Keep it for every request until `clear`; by default only
                 the next request it applies to takes it.
 
         Raises:

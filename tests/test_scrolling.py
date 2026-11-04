@@ -1,8 +1,8 @@
-"""Tests for ``jump_to_key()``: one keyed scroll, confirmed by the list's scroll end (D-155).
+"""Tests for `jump_to_key()`: one keyed scroll, confirmed by the list's scroll end (D-155).
 
-A stand-in list answers ``scroll_to`` as the device would in each case: a scroll that
+A stand-in list answers `scroll_to` as the device would in each case: a scroll that
 ends (the item was built), nothing (not built yet, or already in place), Flutter's
-``TimeoutException`` for a list that never registered its methods, or Flet's error for a
+`TimeoutException` for a list that never registered its methods, or Flet's error for a
 list that has left the page. Whether the jump lands on a device is #86's device check.
 """
 
@@ -22,14 +22,14 @@ KEY = "slot-2026-05-15T14:00:00-07:00"
 
 
 LEFT = RuntimeError("ListView(79) Control must be added to the page first")
-"""What Flet raises for a call on a list no longer under the page (``BaseControl.page``)."""
+"""What Flet raises for a call on a list no longer under the page (`BaseControl.page`)."""
 
 
 @dataclass
 class List:
-    """A list whose ``scroll_to`` ends a scroll from the ``ends``-th call on.
+    """A list whose `scroll_to` ends a scroll from the `ends`-th call on.
 
-    It raises ``error`` from the ``fails``-th call on instead.
+    It raises `error` from the `fails`-th call on instead.
     """
 
     ended: asyncio.Event
@@ -39,13 +39,13 @@ class List:
     calls: list[dict[str, Any]] = field(default_factory=list)
 
     async def scroll_to(self, **kwargs: Any) -> None:
-        """Record the call, then raise ``error`` or end a scroll as set."""
+        """Record the call, then raise `error` or end a scroll as set."""
         self.calls.append(kwargs)
         if self.error is not None and len(self.calls) >= self.fails:
             raise self.error
         if self.ends is not None and len(self.calls) >= self.ends:
             # Set before the jump starts its wait, so a scroll that ends never races
-            # ``LANDING_S`` on a loaded host (#270): it lands whatever the wait's length.
+            # `LANDING_S` on a loaded host (#270): it lands whatever the wait's length.
             self.ended.set()
 
 
@@ -56,7 +56,7 @@ def quick(monkeypatch: pytest.MonkeyPatch) -> None:
 
 
 def ref_to(target: object) -> ft.Ref[ft.ListView]:
-    """A ref whose ``current`` is the stand-in (``ft.Ref`` holds a weak reference)."""
+    """A ref whose `current` is the stand-in (`ft.Ref` holds a weak reference)."""
     return cast(ft.Ref[ft.ListView], SimpleNamespace(current=target))
 
 

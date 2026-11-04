@@ -1,7 +1,7 @@
-"""``SyncWorker.drain()`` against the in-process mock and its faults (#692; D-56, D-57).
+"""`SyncWorker.drain()` against the in-process mock and its faults (#692; D-56, D-57).
 
-Each test queues rows through ``core/outbox_enqueue.py``'s rules into a real ``OutboxDb``,
-signs a real ``Account`` in to the mock and drains; the mock checks every signature and
+Each test queues rows through `core/outbox_enqueue.py`'s rules into a real `OutboxDb`,
+signs a real `Account` in to the mock and drains; the mock checks every signature and
 counts every lead, note and redemption it applied, so "exactly once" is the mock's own
 count.
 """
@@ -39,7 +39,7 @@ def rig(db: OutboxDb, storage: Storage, credentials: CredentialStorage) -> Rig:
 
 
 def key(rig: Rig, role: str) -> str:
-    """The seeded API key of ``role``, which every send of its rows must carry."""
+    """The seeded API key of `role`, which every send of its rows must carry."""
     return account(rig.state, role).key
 
 
@@ -66,7 +66,7 @@ async def test_a_lead_its_note_and_a_check_in_sync_in_order_in_one_pass(
 async def test_the_answer_is_kept_and_a_sponsors_own_lead_names_no_sponsor(
     rig: Rig,
 ) -> None:
-    """A sponsor's own scan sends no ``sponsor_id``; the reply lands in the payload."""
+    """A sponsor's own scan sends no `sponsor_id`; the reply lands in the payload."""
     await rig.sign_in("sponsor")
     rig.lead()
     await rig.worker().drain()
@@ -124,7 +124,7 @@ async def test_a_note_waits_for_its_own_sponsor_s_lead_not_another_s(rig: Rig) -
 async def test_no_connection_ends_the_pass_uncounted_and_retries_after_60_s(
     rig: Rig,
 ) -> None:
-    """``connect``: tries unchanged, the next row unsent, both sent a tick later.
+    """`connect`: tries unchanged, the next row unsent, both sent a tick later.
 
     The pass that found no answer leaves the chip offline; one that reaches clears it.
     """
@@ -150,7 +150,7 @@ async def test_no_connection_ends_the_pass_uncounted_and_retries_after_60_s(
 
 
 async def test_ten_refusals_make_a_row_failed(rig: Rig) -> None:
-    """Every ``ApiError`` counts; the tenth makes the row ``failed`` (D-56)."""
+    """Every `ApiError` counts; the tenth makes the row `failed` (D-56)."""
     await rig.sign_in("sponsor")
     rig.lead(validator="wrong")
     worker = rig.worker()
@@ -208,7 +208,7 @@ async def test_every_record_is_applied_once_despite_lost_replies_and_skew(
     seen: set[str] = set()
 
     def lose_first_reply(request: httpx.Request) -> None:
-        """Arm ``lost_response`` for the first send to each endpoint."""
+        """Arm `lost_response` for the first send to each endpoint."""
         if request.url.path not in seen:
             seen.add(request.url.path)
             rig.state.faults.inject("lost_response")
@@ -269,7 +269,7 @@ async def test_a_pause_mid_pass_stops_it_before_the_next_row(rig: Rig) -> None:
     foreground.set()
 
     async def pause() -> None:
-        """Send the app to the background, as ``on_pause()`` does."""
+        """Send the app to the background, as `on_pause()` does."""
         foreground.clear()
 
     rig.wire.then = pause  # right after the lead's reply
@@ -303,7 +303,7 @@ async def test_a_skew_retry_keeps_its_key_through_an_account_switch(rig: Rig) ->
 
 
 async def test_a_refused_key_stops_the_pass_uncounted_and_says_so(rig: Rig) -> None:
-    """``revoked``: the row waits with its tries, and the account's flags are asked."""
+    """`revoked`: the row waits with its tries, and the account's flags are asked."""
     await rig.sign_in("sponsor")
     rig.lead()
     rig.lead(code="MOCK0002", validator="v4l1d02")
@@ -316,7 +316,7 @@ async def test_a_refused_key_stops_the_pass_uncounted_and_says_so(rig: Rig) -> N
 
 
 async def test_an_expired_account_sends_nothing(rig: Rig) -> None:
-    """While ``expired`` no private call is made (D-403)."""
+    """While `expired` no private call is made (D-403)."""
     await rig.sign_in("sponsor")
     rig.lead()
     rig.account.expired = True

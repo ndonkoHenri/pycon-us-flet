@@ -1,7 +1,7 @@
-"""Tests for View source: the overflow item behind ``SOURCE_URL`` (NEW-09, #834, D-461).
+"""Tests for View source: the overflow item behind `SOURCE_URL` (NEW-09, #834, D-461).
 
-The app's real Router renders every route and drill page (``tests/links.py``'s
-``open_at``), so a screen's bar is the one ``AppScaffold`` builds: while ``SOURCE_URL``
+The app's real Router renders every route and drill page (`tests/links.py`'s
+`open_at`), so a screen's bar is the one `AppScaffold` builds: while `SOURCE_URL`
 is None it holds what it held before, and once it is set exactly one overflow, whose
 last item opens that screen's own module.
 """
@@ -39,7 +39,7 @@ from tests.sessions import menu_text
 
 open_at = links.open_at
 
-# ``AppScaffold``'s fixtures, under this module's names, where pytest looks them up.
+# `AppScaffold`'s fixtures, under this module's names, where pytest looks them up.
 year, svc, page, conference, hooks = (
     chrome.year,
     chrome.svc,
@@ -49,7 +49,7 @@ year, svc, page, conference, hooks = (
 )
 
 URL = "https://example.org/conf"
-"""What the tests set ``SOURCE_URL`` to."""
+"""What the tests set `SOURCE_URL` to."""
 
 ITEM = "app.view_source"
 """The item's identifier."""
@@ -75,13 +75,13 @@ DRILL_PAGES = {
     "/map/plan/expo": plan.__name__,
     CHANGES_PAGE: schedule_changes.__name__,
 }
-"""One page per drill kind: ``Drill()`` dispatches, so the table doesn't name them."""
+"""One page per drill kind: `Drill()` dispatches, so the table doesn't name them."""
 
 
 def route_pages(routes: list[Any], prefix: str = "") -> Iterator[tuple[str, str]]:
-    """Yield every page of ``routes`` with its screen's module, its params filled in.
+    """Yield every page of `routes` with its screen's module, its params filled in.
 
-    The index route (``Start``), Welcome and the unknown route have no View source:
+    The index route (`Start`), Welcome and the unknown route have no View source:
     the first two have no app bar, the last no screen of ours to show.
     """
     for route in routes:
@@ -117,8 +117,8 @@ OWN_MENUS = {
 def bar_menus(view: ft.View) -> dict[str, ft.PopupMenuButton]:
     """The View's app bar's overflow buttons, by identifier.
 
-    An action may be a component (``SessionMenu``), so the walk goes through what it
-    rendered, ``_b``, as well as through ``named()``'s wrappers.
+    An action may be a component (`SessionMenu`), so the walk goes through what it
+    rendered, `_b`, as well as through `named()`'s wrappers.
     """
     found: dict[str, ft.PopupMenuButton] = {}
     for action in cast(ft.AppBar, view.appbar).actions or []:
@@ -134,17 +134,17 @@ def bar_menus(view: ft.View) -> dict[str, ft.PopupMenuButton]:
 
 
 def identifier_of(item: ft.PopupMenuItem) -> str | None:
-    """The identifier on ``menu_item()``'s item."""
+    """The identifier on `menu_item()`'s item."""
     return cast(ft.Semantics, item.content).identifier
 
 
 def source_url_set(monkeypatch: pytest.MonkeyPatch) -> None:
-    """Set ``SOURCE_URL`` where View source reads it, as the PR going public will."""
+    """Set `SOURCE_URL` where View source reads it, as the PR going public will."""
     monkeypatch.setattr(menus, "SOURCE_URL", URL)
 
 
 def link_to(module: str) -> tuple[str, ft.LaunchMode]:
-    """The launch that opens ``module``: at this version's tag, in the in-app browser."""
+    """The launch that opens `module`: at this version's tag, in the in-app browser."""
     path = module.replace(".", "/")
     url = f"{URL}/blob/v{pycon_us.__version__}/src/{path}.py"
     return (url, ft.LaunchMode.IN_APP_BROWSER_VIEW)
@@ -153,7 +153,7 @@ def link_to(module: str) -> tuple[str, ft.LaunchMode]:
 async def assert_one_overflow_ending_in_view_source(
     shown: Shown, identifier: str, module: str
 ) -> None:
-    """The top View's bar has one overflow, ``identifier``, whose last item opens ``module``."""
+    """The top View's bar has one overflow, `identifier`, whose last item opens `module`."""
     menu = bar_menus(shown.views()[-1])
     assert list(menu) == [identifier]
     item = list(menu[identifier].items or [])[-1]
@@ -166,7 +166,7 @@ async def assert_one_overflow_ending_in_view_source(
 
 
 def test_the_link_is_the_module_at_this_build_s_tag() -> None:
-    """The link names the version's tag, not ``main``, and the module's file (D-461)."""
+    """The link names the version's tag, not `main`, and the module's file (D-461)."""
     assert source_link(URL, "pycon_us.screens.now") == (
         f"{URL}/blob/v{pycon_us.__version__}/src/pycon_us/screens/now.py"
     )
@@ -177,7 +177,7 @@ def test_the_link_is_the_module_at_this_build_s_tag() -> None:
 
 @pytest.mark.parametrize("module", sorted(set(EVERY_PAGE.values())))
 def test_the_link_of_every_screen_names_a_file_of_the_repository(module: str) -> None:
-    """A screen's module is a file under ``src/``, where the link looks for it."""
+    """A screen's module is a file under `src/`, where the link looks for it."""
     src = Path(pycon_us.__file__).parents[1]
     assert (src / f"{module.replace('.', '/')}.py").is_file()
 
@@ -185,7 +185,7 @@ def test_the_link_of_every_screen_names_a_file_of_the_repository(module: str) ->
 def test_nothing_exists_while_the_repository_is_private(
     svc: Services, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """With ``SOURCE_URL`` None there is no item and no menu, whatever the module."""
+    """With `SOURCE_URL` None there is no item and no menu, whatever the module."""
     monkeypatch.setattr(menus, "SOURCE_URL", None)
     assert view_source_items(svc, "pycon_us.screens.now") == []
     assert source_menu(svc, "pycon_us.screens.now") == []
@@ -219,7 +219,7 @@ async def test_the_item_is_a_named_link_that_opens_the_in_app_browser(
 def test_the_scaffold_leaves_the_bar_alone_while_private(
     hooks: Hooks, page: FakePage, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """With ``SOURCE_URL`` None a bar holds its own actions: no icon, no empty menu."""
+    """With `SOURCE_URL` None a bar holds its own actions: no icon, no empty menu."""
     monkeypatch.setattr(menus, "SOURCE_URL", None)
     action = ft.IconButton(ft.Icons.SEARCH)
     bare = view_at(hooks, page, "/more/wifi", source="pycon_us.screens.wifi")
@@ -249,7 +249,7 @@ def test_the_scaffold_ends_the_bar_in_view_source_once_public(
 def test_a_screen_with_its_own_menu_gets_no_second_one(
     hooks: Hooks, page: FakePage, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """``source=None``: the screen's own menu lists the item, so the bar adds none."""
+    """`source=None`: the screen's own menu lists the item, so the bar adds none."""
     source_url_set(monkeypatch)
     assert app_bar(view_at(hooks, page, "/more/wifi", source=None)).actions == []
 
@@ -270,7 +270,7 @@ def test_every_route_and_drill_kind_is_covered() -> None:
 async def test_no_screen_changes_while_the_repository_is_private(
     open_at: Open, monkeypatch: pytest.MonkeyPatch, location: str
 ) -> None:
-    """With ``SOURCE_URL`` None, a bar has only its own overflow, without the item."""
+    """With `SOURCE_URL` None, a bar has only its own overflow, without the item."""
     monkeypatch.setattr(menus, "SOURCE_URL", None)
     shown = await open_at(location)
     own = OWN_MENUS.get(location)
@@ -359,7 +359,7 @@ async def test_an_unknown_plan_gets_the_scaffold_s(
 ) -> None:
     """A plan that isn't there has no viewer's menu: only the scaffold's overflow.
 
-    The one state of the ``ALWAYS_OWN_MENU`` screens that must keep ``__name__``, which
+    The one state of the `ALWAYS_OWN_MENU` screens that must keep `__name__`, which
     the source scan below allows to be None for the whole module.
     """
     source_url_set(monkeypatch)
@@ -387,7 +387,7 @@ def test_a_sprints_year_without_links_has_a_menu_only_once_public(
 
 
 SCAFFOLDS = {"AppScaffold", "ScanScreen", "picker_page", "Reading", "NotAvailable"}
-"""What takes a screen's ``source``: the scaffold and the staff tools' shared pages."""
+"""What takes a screen's `source`: the scaffold and the staff tools' shared pages."""
 
 ALWAYS_OWN_MENU = {"plan", "schedule", "sprints"}
 """The screens whose main state has its menu whatever happens, and may pass None."""
@@ -397,7 +397,7 @@ SCREENS = Path(pycon_us.__file__).parent / "screens"
 
 
 def source_arguments(path: Path) -> Iterator[str]:
-    """Yield the ``source`` each scaffold call in the module at ``path`` is given."""
+    """Yield the `source` each scaffold call in the module at `path` is given."""
     for node in ast.walk(ast.parse(path.read_text())):
         if (
             isinstance(node, ast.Call)
@@ -410,7 +410,7 @@ def source_arguments(path: Path) -> Iterator[str]:
 
 @pytest.mark.parametrize("path", sorted(SCREENS.glob("*.py")), ids=lambda p: p.stem)
 def test_every_state_of_a_screen_names_its_own_module(path: Path) -> None:
-    """A not-found or signed-out state passes ``__name__`` too: only a menu passes None.
+    """A not-found or signed-out state passes `__name__` too: only a menu passes None.
 
     The real Router reaches one state per screen; this reaches the others, such as a
     staff tool's scan screen, which needs a signed-in account.
@@ -424,5 +424,5 @@ def test_every_state_of_a_screen_names_its_own_module(path: Path) -> None:
 
 @pytest.mark.parametrize("name", ["scan_screen.py", "staff_picker.py"])
 def test_the_staff_pages_pass_on_their_tool_s_module(name: str) -> None:
-    """A shared page opens the tool's module, not ``ui/scan_screen.py``, its own."""
+    """A shared page opens the tool's module, not `ui/scan_screen.py`, its own."""
     assert set(source_arguments(UI / name)) == {"source"}

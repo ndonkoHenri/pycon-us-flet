@@ -1,20 +1,20 @@
-"""The sponsor picker (``…/staff/lead/sponsor``): whom door staff scan leads for (LEAD-05).
+"""The sponsor picker (`…/staff/lead/sponsor`): whom door staff scan leads for (LEAD-05).
 
 Ionic asked with a radio alert that had no Cancel and could not be dismissed, was
 unusable with a long list, and found the chosen sponsor by its quote-stripped name.
-Here a pushed page, for staff who scan for a sponsor (``scans_for_sponsor()``; anyone
+Here a pushed page, for staff who scan for a sponsor (`scans_for_sponsor()`; anyone
 else, and a deep link, sees "Not available for this account"): a search field
-(``lead.sponsor.search``) that matches the name or booth, then one row per sponsor
-(``lead.sponsor.<id>``): its logo (``logo_tile()``, the initials without one), its name
+(`lead.sponsor.search`) that matches the name or booth, then one row per sponsor
+(`lead.sponsor.<id>`): its logo (`logo_tile()`, the initials without one), its name
 and "Booth 101", the current one ticked. One node each, read "Example Corp, Booth 101,
-selected". A tap saves the choice (``staff_sponsor()``) and goes back; a save that fails
+selected". A tap saves the choice (`staff_sponsor()`) and goes back; a save that fails
 stays here and says so, since the scanner would not see it (D-120, D-425). Cancel (a close
 icon in the app bar) and Back leave the choice as it was.
 
-The list is asked for each time the page opens and never kept (``fetch_sponsors()``):
+The list is asked for each time the page opens and never kept (`fetch_sponsors()`):
 a spinner meanwhile, "Couldn't load sponsors" with Retry offline or on an error (D-120),
 "No sponsors available" for an empty one. A saved sponsor needs no list to scan. The
-page's parts are ``ui/staff_picker.py``'s, which Door check's session picker shares.
+page's parts are `ui/staff_picker.py`'s, which Door check's session picker shares.
 """
 
 from collections.abc import Awaitable, Callable
@@ -45,7 +45,7 @@ from pycon_us.ui.states import EmptyState
 from pycon_us.ui.widths import LIST, use_margin
 
 SEGMENT = "sponsor"
-"""The picker's segment under the Lead scanner's route, ``…/staff/lead/sponsor``."""
+"""The picker's segment under the Lead scanner's route, `…/staff/lead/sponsor`."""
 
 TITLE = "Choose sponsor"
 """The app bar's title, and the scan screen's button that opens the page."""
@@ -168,7 +168,7 @@ def SponsorRow(
     Args:
         sponsor: The sponsor.
         selected: It is the saved choice.
-        on_pick: Saves it and goes back; stable across renders (``use_callback``).
+        on_pick: Saves it and goes back; stable across renders (`use_callback`).
     """
     # As SessionRow's: ft.component's typing leaves out the key= its wrapper takes.
     return _SponsorRow(sponsor, selected, on_pick, key=sponsor.id)  # pyright: ignore[reportCallIssue]
@@ -181,7 +181,7 @@ def _SponsorRow(
     selected: bool,
     on_pick: Callable[[LeadSponsor], Awaitable[None]],
 ) -> ft.Control:
-    """The body of ``SponsorRow``: plate, name and booth, a tick when selected."""
+    """The body of `SponsorRow`: plate, name and booth, a tick when selected."""
 
     @report_errors
     async def pick() -> None:

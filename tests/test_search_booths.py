@@ -2,7 +2,7 @@
 
 A booth is found by its number or its exhibitor's name, each exhibitor at its booth,
 the sponsors' booths the plan does not draw among them; a sponsor is never found by
-its booth (#397). The screen's rows and taps are in ``test_search_screen_results.py``.
+its booth (#397). The screen's rows and taps are in `test_search_screen_results.py`.
 """
 
 from functools import cache
@@ -24,7 +24,7 @@ def index() -> SearchIndex:
 
 
 def numbers(query: str, scope: str = "places") -> list[str]:
-    """The keys of the booth entries ``query`` finds, in result order."""
+    """The keys of the booth entries `query` finds, in result order."""
     return [entry.key for entry in search(index(), query, scope).booths]
 
 
@@ -79,5 +79,5 @@ def test_booth_entries_are_the_list_s_rows_and_the_unplaced_by_number() -> None:
 
 
 def test_a_year_without_booths_indexes_none() -> None:
-    """Without ``map.toml`` booths there is no expo, so search finds no booth."""
+    """Without `map.toml` booths there is no expo, so search finds no booth."""
     assert search_index(processed(2026)).booths == ()

@@ -1,8 +1,8 @@
-"""Tests for the shared scan screen, ``ui/scan_screen.py`` (LEAD-01, LEAD-09; D-65, #723).
+"""Tests for the shared scan screen, `ui/scan_screen.py` (LEAD-01, LEAD-09; D-65, #723).
 
-The screen runs in a real Flet session around a recording handler (``tests/scan_rig.py``).
+The screen runs in a real Flet session around a recording handler (`tests/scan_rig.py`).
 Its haptics, announcements, wake lock, sync chip and pauses are
-``tests/test_scan_feedback.py``'s. How it looks, a HID scanner's typing and the screen
+`tests/test_scan_feedback.py`'s. How it looks, a HID scanner's typing and the screen
 readers are checked on devices (the PR).
 """
 
@@ -132,7 +132,7 @@ async def test_a_badge_shows_its_result_and_leaves_the_field_empty_and_focused(
 async def test_the_field_asks_for_the_key_that_keeps_android_s_focus(
     show: Show,
 ) -> None:
-    """``UNSPECIFIED`` keeps Android's keyboard up across submits (F274, #830)."""
+    """`UNSPECIFIED` keeps Android's keyboard up across submits (F274, #830)."""
     shown = await show()
     assert entry(shown).text_input_action == ft.TextInputAction.UNSPECIFIED
 
@@ -393,7 +393,7 @@ async def test_back_from_a_pushed_page_puts_the_focus_back_in_the_field(
 ) -> None:
     """Back from the leads list or a picker leaves the field focused (#775, D-438).
 
-    The field never loses ``can_request_focus``: Flutter applies it a frame after the
+    The field never loses `can_request_focus`: Flutter applies it a frame after the
     patch, so a focus asked for as it turns back on would be dropped (F288).
     """
     renders: list[Callable[[int], None]] = []
@@ -477,7 +477,7 @@ async def test_the_field_is_built_however_far_down_the_large_text_pushes_it(
 
 
 def under(control: object) -> list[object]:
-    """``control`` and every control under it, in reading order."""
+    """`control` and every control under it, in reading order."""
     found = [control]
     for child in (getattr(control, "content", None), *getattr(control, "controls", ())):
         if child is not None:
@@ -643,7 +643,7 @@ def test_each_outcome_s_label_reads_on_its_fill(
 
 
 def test_high_contrast_picks_its_own_fills() -> None:
-    """The panel in high contrast takes ``HC_FILLS``, and LIGHT_TOKENS is not HC."""
+    """The panel in high contrast takes `HC_FILLS`, and LIGHT_TOKENS is not HC."""
     assert not LIGHT_TOKENS.high_contrast
     assert (
         fill_of(ScanOutcome.ACCEPTED, high_contrast=True, dimmed=False)

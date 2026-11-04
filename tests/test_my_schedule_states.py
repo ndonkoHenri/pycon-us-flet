@@ -1,6 +1,6 @@
 """Tests for the My schedule tab's states and its notice of dropped sessions (D-329).
 
-The screen runs in ``tests/my_schedule_view.py``'s harness.
+The screen runs in `tests/my_schedule_view.py`'s harness.
 """
 
 from collections.abc import Callable
@@ -76,7 +76,7 @@ def unread(setup: Setup) -> None:
 
 @pytest.mark.usefixtures("unread")
 async def test_a_failed_read_is_not_an_empty_list(shown: Shown) -> None:
-    """D-172: after the gate, ``loaded`` False means the saved list could not be read."""
+    """D-172: after the gate, `loaded` False means the saved list could not be read."""
     shown.node("my_schedule.unavailable")
     assert "Couldn't open My schedule" in shown.texts()
     assert "Nothing saved yet" not in shown.texts()
@@ -117,7 +117,7 @@ GONE, LOST = "gone-session", "lost-session"
 
 
 def removal(session_id: str) -> Batch:
-    """A batch, an hour before Thursday's clock, that removed ``session_id``."""
+    """A batch, an hour before Thursday's clock, that removed `session_id`."""
     start = datetime(2026, 5, 15, 11, 0, tzinfo=ZONE)
     last = Listing("A dropped talk", start, start + timedelta(minutes=30), "Room 104A")
     change = Change(session_id, ChangeKind.REMOVED, last, None)
@@ -170,7 +170,7 @@ async def test_forget_unsaves_only_the_dropped_ids_with_undo(shown: Shown) -> No
 
 
 def _words(node: ft.Control) -> list[str]:
-    """Return the texts under ``node`` (the live region or its merge), in order."""
+    """Return the texts under `node` (the live region or its merge), in order."""
     return [str(c.value) for c in _walk(node) if isinstance(c, ft.Text)]
 
 
@@ -180,8 +180,8 @@ async def test_the_notice_says_its_title_then_its_body_as_one_heading(
 ) -> None:
     """D-329: one node whose label is the title, then the body, as the screen shows.
 
-    A merge of the texts read the body first on Android: Flet's ``Semantics``
-    always states ``enabled``, so a heading ``Semantics`` inside the live region
+    A merge of the texts read the body first on Android: Flet's `Semantics`
+    always states `enabled`, so a heading `Semantics` inside the live region
     conflicted with it and became a child node, whose label a merge puts after the
     live region's own. So the label is explicit and the texts are excluded.
     """
@@ -239,8 +239,8 @@ async def test_the_quiet_node_is_hidden_and_shows_with_its_words(
 ) -> None:
     """D-329, F95: hidden with no dropped session, shown with one, hidden after Forget.
 
-    Empty is not quiet on Android: Flet's ``Semantics`` always states ``enabled``,
-    a focusable flag, so only ``hidden`` keeps TalkBack from stopping on the blank
+    Empty is not quiet on Android: Flet's `Semantics` always states `enabled`,
+    a focusable flag, so only `hidden` keeps TalkBack from stopping on the blank
     node. The node keeps its id throughout, so its reveal is a label change (F61).
     """
     quiet = cast(ft.Semantics, shown.node("my_schedule.dropped_notice"))

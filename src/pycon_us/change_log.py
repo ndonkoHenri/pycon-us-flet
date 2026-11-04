@@ -1,13 +1,13 @@
-"""The ``ChangeLog`` store, with its context and hook: what refreshes changed (D-47, D-255).
+"""The `ChangeLog` store, with its context and hook: what refreshes changed (D-47, D-255).
 
 NEW-04. A refresh that publishes a new feed hands the feed it replaces and the new one to
-``ChangeLog.record()`` (``Conference._refresh``), which diffs them under D-255's rules and
-records what changed as one batch (``core/change_batches.py``), kept in
-``changes-<year>.json`` (``services/changes_file.py``). A store of its own, not a field of
-``Conference``, so ``state.py`` stays the feed's (D-160, D-231). Screens read ``batches``,
-``recent()`` and the batch to announce; the reminders' re-plan (#27) subscribes too.
-Schedule changes marks batches seen (``mark_seen()``, ux.md §6.4), which Now's card and
-Settings › Data count (``unseen_saved()``).
+`ChangeLog.record()` (`Conference._refresh`), which diffs them under D-255's rules and
+records what changed as one batch (`core/change_batches.py`), kept in
+`changes-<year>.json` (`services/changes_file.py`). A store of its own, not a field of
+`Conference`, so `state.py` stays the feed's (D-160, D-231). Screens read `batches`,
+`recent()` and the batch to announce; the reminders' re-plan (#27) subscribes too.
+Schedule changes marks batches seen (`mark_seen()`, ux.md §6.4), which Now's card and
+Settings › Data count (`unseen_saved()`).
 """
 
 import asyncio
@@ -41,7 +41,7 @@ BADGED = frozenset((ChangeKind.TIME, ChangeKind.ROOM, ChangeKind.TITLE))
 
 @dataclass(frozen=True)
 class Published:
-    """A feed as ``Conference`` published it, one side of the hand-off.
+    """A feed as `Conference` published it, one side of the hand-off.
 
     Attributes:
         data: The processed feed; None before the first publish.
@@ -61,12 +61,12 @@ class Published:
 class ChangeLog:
     """The change batches of the active year, newest first, and the one to announce.
 
-    Only ``batches`` is public, so a recorded batch notifies once: the batch to announce
-    is set before it. Built by ``App`` with the session's ``Favorites``, which the diff
+    Only `batches` is public, so a recorded batch notifies once: the batch to announce
+    is set before it. Built by `App` with the session's `Favorites`, which the diff
     over the bundled snapshot keeps to (D-255).
 
     Attributes:
-        batches: The batches of the last 14 days, newest first (``trim()``).
+        batches: The batches of the last 14 days, newest first (`trim()`).
     """
 
     batches: tuple[Batch, ...] = ()
@@ -80,7 +80,7 @@ class ChangeLog:
     # the storage's thread lock gives turns, not order (D-244).
     _writing: asyncio.Lock = field(default_factory=asyncio.Lock, repr=False)
     # Counts the deletions and resets: a write asked for before the latest one is
-    # dropped when its turn comes, whatever the order of the turns (``_write()``).
+    # dropped when its turn comes, whatever the order of the turns (`_write()`).
     _generation: int = field(default=0, repr=False)
 
     async def load(self, storage: Storage, zone: tzinfo) -> None:
@@ -117,9 +117,9 @@ class ChangeLog:
     def reset(self) -> None:
         """Return to a fresh install's log, without writing: Reset app (D-198, D-255).
 
-        Reset app deletes the file and clears the marker with every ``pycon.`` key; a
+        Reset app deletes the file and clears the marker with every `pycon.` key; a
         write asked for before the reset and not yet started is dropped, as for
-        ``delete()``.
+        `delete()`.
         """
         self._fetched = False
         self._forget()
@@ -127,12 +127,12 @@ class ChangeLog:
     def recent(self, now: datetime) -> dict[str, frozenset[ChangeKind]]:
         """Return the sessions to badge as Changed: id → what changed in the last 24 h.
 
-        A change counts for 24 h after its batch's detection (``RECENT_FOR``), seen or
+        A change counts for 24 h after its batch's detection (`RECENT_FOR`), seen or
         not; additions and removals never count (D-255). A session changed by two
         batches of the last 24 h has the kinds of both: "Time and room changed".
 
         Args:
-            now: The current instant (aware), ``clock.now()``.
+            now: The current instant (aware), `clock.now()`.
         """
         badged: dict[str, set[ChangeKind]] = {}
         for batch in self.batches:
@@ -152,10 +152,10 @@ class ChangeLog:
 
         Args:
             session_id: The session's id (D-42).
-            now: The current instant (aware), ``clock.now()``.
+            now: The current instant (aware), `clock.now()`.
 
         Returns:
-            The merged changes in ``ChangeKind``'s order; empty for an unchanged session.
+            The merged changes in `ChangeKind`'s order; empty for an unchanged session.
         """
         spans: dict[ChangeKind, Change] = {}
         oldest_first = sorted(self.batches, key=lambda batch: batch.detected_at)
@@ -183,27 +183,27 @@ class ChangeLog:
         """Return how many saved sessions the unseen batches of the last 24 h changed.
 
         Each session once, additions left out: the count Now's card and Settings ›
-        Data show (``core.change_views.unseen_saved()``, ux.md §5.1).
+        Data show (`core.change_views.unseen_saved()`, ux.md §5.1).
 
         Args:
             saved: The ids of the saved sessions.
-            now: The current instant (aware), ``clock.now()``.
+            now: The current instant (aware), `clock.now()`.
         """
         return unseen_saved(self.batches, saved, now)
 
     def mark_seen(
         self, storage: Storage, batches: Collection[Batch] | None = None
     ) -> asyncio.Task[bool] | None:
-        """Mark ``batches`` seen, or every batch when None, and save the log (ux.md §6.4).
+        """Mark `batches` seen, or every batch when None, and save the log (ux.md §6.4).
 
         Synchronous, so a screen's sync cleanup can call it (D-70): the marks apply at
         once and notify, and the file write is a task the store keeps until it lands.
-        The write saves the batches as they are when its turn comes (``_save()``), so a
+        The write saves the batches as they are when its turn comes (`_save()`), so a
         batch recorded meanwhile is kept.
 
         Args:
             storage: Where the log is kept.
-            batches: The batches to mark, as the caller read them from ``batches``;
+            batches: The batches to mark, as the caller read them from `batches`;
                 one already marked, or no longer in the log, is skipped.
 
         Returns:
@@ -229,7 +229,7 @@ class ChangeLog:
         batches as they are once the one before it landed, so a seen mark's write can
         never land over a newer batch's. The task is kept until it lands, so a
         cancelled caller (a refresh, a cleanup) leaves it to finish. A deletion or a
-        reset before its turn drops it (``delete()``); its result is then False.
+        reset before its turn drops it (`delete()`); its result is then False.
         """
         save = asyncio.create_task(self._write(storage, self._generation))
         self._saves.add(save)
@@ -241,7 +241,7 @@ class ChangeLog:
 
         Args:
             storage: Where the log is kept.
-            generation: ``_generation`` when the write was asked for: once a deletion
+            generation: `_generation` when the write was asked for: once a deletion
                 or a reset has changed it, the write is dropped and returns False.
         """
         async with self._writing:
@@ -266,20 +266,20 @@ class ChangeLog:
         after: Published,
         current: Callable[[], bool],
     ) -> Batch | None:
-        """Record what changed from ``before`` to ``after``, a network feed just published.
+        """Record what changed from `before` to `after`, a network feed just published.
 
-        The first network publish of the year saves ``pycon.<year>.fetched``. The diff
+        The first network publish of the year saves `pycon.<year>.fetched`. The diff
         runs under D-255's rules: only against a feed of the same feed URL; over the
         bundled snapshot only before the marker was set and only when sessions are
         saved, keeping their changes and no addition. No change records nothing. Just
-        before it writes, ``current()`` says whether the refresh still counts (its URL
+        before it writes, `current()` says whether the refresh still counts (its URL
         in effect, its session open); when not, nothing is recorded.
 
         Args:
             storage: Where the log and the marker are kept.
             before: The feed that was shown.
             after: The feed just published, from the network.
-            current: ``Conference._refresh``'s check, True while the refresh may write.
+            current: `Conference._refresh`'s check, True while the refresh may write.
 
         Returns:
             The batch recorded, or None.
@@ -310,7 +310,7 @@ class ChangeLog:
     def _changes(
         self, before: Published, after: Published, was_fetched: bool
     ) -> list[Change]:
-        """Return the changes D-255 records from ``before`` to ``after``; logs why none."""
+        """Return the changes D-255 records from `before` to `after`; logs why none."""
         if before.data is None or after.data is None:
             return []
         if before.url != after.url:
@@ -349,14 +349,14 @@ def _came_back(change: Change) -> bool:
 
 
 ChangeLogCtx: ft.ContextProvider[ChangeLog | None] = ft.create_context(None)
-"""Provides the session's ``ChangeLog``; ``App`` writes the provider out (D-69)."""
+"""Provides the session's `ChangeLog`; `App` writes the provider out (D-69)."""
 
 
 def use_change_log() -> ChangeLog:
-    """Return the ``ChangeLog`` store and re-render the caller when it records a batch (F3).
+    """Return the `ChangeLog` store and re-render the caller when it records a batch (F3).
 
     Raises:
-        RuntimeError: No ``ChangeLogCtx`` provider is above the calling component.
+        RuntimeError: No `ChangeLogCtx` provider is above the calling component.
     """
     store = ft.use_context(ChangeLogCtx)
     if store is None:

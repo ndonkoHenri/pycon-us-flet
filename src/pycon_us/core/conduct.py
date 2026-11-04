@@ -1,10 +1,10 @@
 """The Code of Conduct tool's data: the directory, the name search, the count words.
 
-``coc_attendees`` (API-08) answers the attendee directory the name search runs over
-(MASK-01); ``coc_capture`` answers the attendee an incident was recorded for. Ionic
+`coc_attendees` (API-08) answers the attendee directory the name search runs over
+(MASK-01); `coc_capture` answers the attendee an incident was recorded for. Ionic
 matched raw lower-case substrings and coloured its list and its result card by two
 different thresholds; here every word of a query must appear, folded as the app's
-search folds (D-46), and one ``count_level`` serves the list and the result alike
+search folds (D-46), and one `count_level` serves the list and the result alike
 (MASK-02). Nothing here is stored or logged: the directory lives in memory only
 (D-56), and names, codes and emails never reach a log (D-72).
 """
@@ -35,11 +35,11 @@ class Attendee:
 
     Attributes:
         code: The badge's access code, what a record is sent with.
-        full_name: The full name, or ``""``.
-        nickname: The nickname, or ``""``.
-        badge_name: The name printed on the badge, or ``""``.
+        full_name: The full name, or `""`.
+        nickname: The nickname, or `""`.
+        badge_name: The name printed on the badge, or `""`.
         incidents: The incidents on record.
-        folded: The three names folded and joined by spaces, what ``search``
+        folded: The three names folded and joined by spaces, what `search`
             matches; computed once, so a keystroke over thousands stays fast.
     """
 
@@ -51,7 +51,7 @@ class Attendee:
     folded: str = field(init=False, repr=False, compare=False)
 
     def __post_init__(self) -> None:
-        """Fold the names once for ``search``."""
+        """Fold the names once for `search`."""
         names = f"{self.full_name} {self.nickname} {self.badge_name}"
         object.__setattr__(self, "folded", fold(names))
 
@@ -62,7 +62,7 @@ class Matches:
 
     Attributes:
         rows: The attendees found, in the directory's order, at most the limit.
-        more: Whether more matched than ``rows`` holds ("Refine your search").
+        more: Whether more matched than `rows` holds ("Refine your search").
     """
 
     rows: tuple[Attendee, ...]
@@ -71,11 +71,11 @@ class Matches:
 
 @dataclass(frozen=True)
 class Recorded:
-    """The attendee an incident was just recorded for, from ``coc_capture``'s reply.
+    """The attendee an incident was just recorded for, from `coc_capture`'s reply.
 
     Attributes:
-        name: The full name, else the nickname, else the badge name, else ``""``.
-        badge_name: The name printed on the badge, or ``""``.
+        name: The full name, else the nickname, else the badge name, else `""`.
+        badge_name: The name printed on the badge, or `""`.
         email: The email, or None without one; the result card hides it until
             revealed (MASK-05).
         incidents: The incidents now on record, or None when the reply has no count:
@@ -89,20 +89,20 @@ class Recorded:
 
 
 def parse_directory(data: object) -> tuple[Attendee, ...]:
-    """Read ``coc_attendees``' ``data`` into the directory, sorted as Ionic sorted it.
+    """Read `coc_attendees`' `data` into the directory, sorted as Ionic sorted it.
 
     An entry without an access code is left out, a repeated code is kept once (the
-    first read), and a missing or non-integer ``violations`` reads as 0: one bad row
+    first read), and a missing or non-integer `violations` reads as 0: one bad row
     never hides the others.
 
     Args:
-        data: The reply's ``data`` (the client unwraps the envelope).
+        data: The reply's `data` (the client unwraps the envelope).
 
     Returns:
         The attendees, sorted by their folded display name, then by code.
 
     Raises:
-        TypeError: ``data`` is not a list.
+        TypeError: `data` is not a list.
     """
     if not isinstance(data, list):
         raise TypeError("coc_attendees: no attendee list")
@@ -131,7 +131,7 @@ def _attendee(entry: object) -> Attendee | None:
 
 
 def _text(value: object) -> str:
-    """Return a string stripped, anything else as ``""``."""
+    """Return a string stripped, anything else as `""`."""
     return value.strip() if isinstance(value, str) else ""
 
 
@@ -154,7 +154,7 @@ def display_name(attendee: Attendee) -> str:
 
 
 def search(attendees: tuple[Attendee, ...], query: str, limit: int = LIMIT) -> Matches:
-    """Find the attendees whose names hold every word of ``query`` (MASK-02, D-46).
+    """Find the attendees whose names hold every word of `query` (MASK-02, D-46).
 
     Each folded word must appear, anywhere and as a substring, in the full name,
     nickname or badge name, so "ada ex" finds Ada Example and "jose" finds José.
@@ -165,7 +165,7 @@ def search(attendees: tuple[Attendee, ...], query: str, limit: int = LIMIT) -> M
         limit: The most rows to return.
 
     Returns:
-        The first ``limit`` attendees found, in the directory's order, and whether
+        The first `limit` attendees found, in the directory's order, and whether
         more matched; nothing for a query without a word.
     """
     words = fold(query).split()
@@ -205,7 +205,7 @@ def count_level(incidents: int) -> Level:
         incidents: The incidents on record.
 
     Returns:
-        ``NONE`` for 0, ``NOTICE`` for 1 or 2, ``HIGH`` for 3 or more.
+        `NONE` for 0, `NOTICE` for 1 or 2, `HIGH` for 3 or more.
     """
     if incidents <= 0:
         return Level.NONE
@@ -213,17 +213,17 @@ def count_level(incidents: int) -> Level:
 
 
 def parse_capture(data: object) -> Recorded:
-    """Read ``coc_capture``'s ``data`` into the attendee the incident went to.
+    """Read `coc_capture`'s `data` into the attendee the incident went to.
 
     Args:
-        data: The reply's ``data``: ``{nickname, full_name, badge_name, email,
-            violations}``.
+        data: The reply's `data`: `{nickname, full_name, badge_name, email,
+            violations}`.
 
     Returns:
         The attendee's names, email and new count.
 
     Raises:
-        TypeError: ``data`` is not an object.
+        TypeError: `data` is not an object.
     """
     if not isinstance(data, dict):
         raise TypeError("coc_capture: no attendee in the reply")

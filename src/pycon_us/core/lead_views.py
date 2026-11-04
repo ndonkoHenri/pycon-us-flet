@@ -1,12 +1,12 @@
 """A lead as the leads list shows it, and the list's search and sponsor filter (#743).
 
-LEAD-06, LEAD-08, DATA-31. Pure: ``lead_view()`` turns an outbox ``lead`` row into
-the lines of its row on ``screens/staff_leads.py``'s page: the attendee's first name
+LEAD-06, LEAD-08, DATA-31. Pure: `lead_view()` turns an outbox `lead` row into
+the lines of its row on `screens/staff_leads.py`'s page: the attendee's first name
 from the stored answer, else the access code (a pending lead has no answer, so it
-shows only its code, PII-light); its status in ``status_text()``'s words (D-410); how
+shows only its code, PII-light); its status in `status_text()`'s words (D-410); how
 long ago it was scanned; the sponsor it was scanned for (a staff account's snapshot,
 STORE-11), so two sponsors' leads on one attendee are two rows (D-459); and whether it
-has a note. ``filter_leads()`` searches the name and the
+has a note. `filter_leads()` searches the name and the
 code and keeps one sponsor's leads by **id**, never by name: Ionic compared names,
 which two sponsors whose names differ only by quotes share.
 """
@@ -65,7 +65,7 @@ def for_line(sponsor_name: str) -> str:
 
 
 def first_name(row: Row) -> str | None:
-    """Return the first name the capture's answer stored (``{first_name}``), if any."""
+    """Return the first name the capture's answer stored (`{first_name}`), if any."""
     result = row.payload.get("result")
     name = result.get("first_name") if isinstance(result, Mapping) else None
     if not isinstance(name, str) or not name.strip():
@@ -77,7 +77,7 @@ def lead_view(row: Row, has_note: bool, now: float) -> LeadView:
     """Return a lead row's lines.
 
     Args:
-        row: A ``lead`` row of the outbox.
+        row: A `lead` row of the outbox.
         has_note: Whether the account has a note row for the lead.
         now: The current time (epoch seconds), for "5 minutes ago".
     """
@@ -116,7 +116,7 @@ def filter_leads(
 ) -> tuple[LeadView, ...]:
     """Return the leads that match the search and, when given, the sponsor.
 
-    Each word of ``query``, folded as search folds (D-46), must be in the name or the
+    Each word of `query`, folded as search folds (D-46), must be in the name or the
     code, anywhere; a pending lead is found by its code only, as that is all it shows.
 
     Args:

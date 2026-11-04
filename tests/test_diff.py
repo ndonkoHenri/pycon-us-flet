@@ -1,6 +1,6 @@
 """The change log's diff over feed pairs (D-47, D-255; NEW-04).
 
-Each pair is the recorded feed and a copy with named edits (``tests/feeds.py``), both
+Each pair is the recorded feed and a copy with named edits (`tests/feeds.py`), both
 processed by the current code, as the app diffs a refresh. The recorded side of a pair is
 processed once per year; only the edited side is processed per test.
 """
@@ -40,18 +40,18 @@ TITLE = "Python for Humans - Designing Python Code Like a User Interface"
 
 @cache
 def recorded_model(year: int) -> ConferenceData:
-    """The recorded feed of ``year``, processed once for the whole module."""
+    """The recorded feed of `year`, processed once for the whole module."""
     return processed(year)
 
 
 def changes(year: int, *edits: Edit) -> list[Change]:
-    """The diff from the recorded feed of ``year`` to a copy with ``edits`` applied."""
+    """The diff from the recorded feed of `year` to a copy with `edits` applied."""
     _, new = pair(year, *edits)
     return diff(recorded_model(year), process(new, settings(year)))
 
 
 def pacific(day: int, hour: int, minute: int = 0) -> datetime:
-    """May ``day``, 2026, at ``hour``:``minute``, Pacific time."""
+    """May `day`, 2026, at `hour`:`minute`, Pacific time."""
     return datetime(2026, 5, day, hour, minute, tzinfo=PACIFIC)
 
 
@@ -65,7 +65,7 @@ RECORDED = Listing(
 
 
 def talk(**values: object) -> Listing:
-    """The talk's recorded listing with ``values`` (its fields' new values) changed."""
+    """The talk's recorded listing with `values` (its fields' new values) changed."""
     return replace(RECORDED, **values)
 
 
@@ -275,7 +275,7 @@ def plans(draw: st.DrawFn) -> tuple[Step, ...]:
     """A few edits of 2026's recorded sessions, and a few additions.
 
     Any session may be drawn, collapsed rows included. An addition is a copy of a drawn
-    session under a new id (``added-<n>``). Plans are drawn, not models,
+    session under a new id (`added-<n>`). Plans are drawn, not models,
     so a failing example prints a few steps rather than a whole feed.
     """
     ids = sorted(recorded_model(2026).sessions)
@@ -289,7 +289,7 @@ def plans(draw: st.DrawFn) -> tuple[Step, ...]:
 
 
 def applied(plan: tuple[Step, ...]) -> ConferenceData:
-    """2026's recorded model with ``plan``'s steps applied to a copy of its sessions."""
+    """2026's recorded model with `plan`'s steps applied to a copy of its sessions."""
     data = recorded_model(2026)
     sessions = dict(data.sessions)
     for key, edit, value in plan:
@@ -303,7 +303,7 @@ def applied(plan: tuple[Step, ...]) -> ConferenceData:
 
 
 def _edited(session: Session, edit: str, value: str | int) -> Session:
-    """``session`` retimed or stretched by ``value`` minutes, or moved or renamed."""
+    """`session` retimed or stretched by `value` minutes, or moved or renamed."""
     if edit == "move":
         return replace(session, location=str(value))
     if edit == "rename":
@@ -320,7 +320,7 @@ def _edited(session: Session, edit: str, value: str | int) -> Session:
 
 
 def swapped(change: Change) -> Change:
-    """``change`` as the diff in the other direction states it."""
+    """`change` as the diff in the other direction states it."""
     kind = {ChangeKind.ADDED: ChangeKind.REMOVED, ChangeKind.REMOVED: ChangeKind.ADDED}
     return Change(change.id, kind.get(change.kind, change.kind), change.new, change.old)
 
@@ -329,7 +329,7 @@ def swapped(change: Change) -> Change:
 def test_swapping_sides_swaps_additions_removals_and_values(
     first: tuple[Step, ...], second: tuple[Step, ...]
 ) -> None:
-    """``diff(b, a)`` holds exactly ``diff(a, b)``'s changes with the sides swapped."""
+    """`diff(b, a)` holds exactly `diff(a, b)`'s changes with the sides swapped."""
     old, new = applied(first), applied(second)
     forward, backward = diff(old, new), diff(new, old)
     assert len(set(forward)) == len(forward)

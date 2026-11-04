@@ -28,7 +28,7 @@ from pycon_us.ui.sync_chip import IDENTIFIER, SyncChip, chip_icon, chip_words
 def test_the_chip_says_each_state_in_words(state: dict[str, Any], words: str) -> None:
     """Counts, a pass under way and an offline last pass are words, not colour alone.
 
-    A retry under way says "Syncing" though the last pass left ``offline`` set.
+    A retry under way says "Syncing" though the last pass left `offline` set.
     """
     assert chip_words(Staff(**state)) == words
 
@@ -58,7 +58,7 @@ def test_the_icon_follows_the_state() -> None:
 
 
 def test_a_chip_that_opens_the_sheet_is_one_node_with_its_identifier() -> None:
-    """With an action, the chip is merged with ``staff.sync_chip`` and taps through."""
+    """With an action, the chip is merged with `staff.sync_chip` and taps through."""
     taps: list[int] = []
     control = SyncChip(
         Staff(pending=2), tokens=LIGHT_TOKENS, on_click=lambda: taps.append(1)

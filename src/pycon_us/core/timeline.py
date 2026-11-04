@@ -24,14 +24,14 @@ from pycon_us.core.timefmt import instant
 class Slot:
     """Sessions that start at the same instant: one list item with a time gutter (D-31).
 
-    The Schedule's slots (``timeline``), Now's next slot and My schedule's slots
-    (``agenda``) are all ``Slot``s. A value: two slots with the same start and the same
+    The Schedule's slots (`timeline`), Now's next slot and My schedule's slots
+    (`agenda`) are all `Slot`s. A value: two slots with the same start and the same
     session objects are equal. Its sessions are the model's own, which compare by
     identity, so comparing two slots never compares a session's fields.
 
     Attributes:
-        start: The slot's start (``TimeGroup.start``): aware, in the conference zone.
-        sessions: Its rows in schedule order (``schedule_order``); never empty.
+        start: The slot's start (`TimeGroup.start`): aware, in the conference zone.
+        sessions: Its rows in schedule order (`schedule_order`); never empty.
     """
 
     start: datetime
@@ -39,7 +39,7 @@ class Slot:
 
     @property
     def key(self) -> str:
-        """``slot-<start in ISO 8601>``: the item's ``ScrollKey`` and list key (D-155).
+        """`slot-<start in ISO 8601>`: the item's `ScrollKey` and list key (D-155).
 
         Derived from the start, so the Schedule's slot and My schedule's slot at one
         start share it, and Jump to now finds either by it.
@@ -53,7 +53,7 @@ class DaySessions:
 
     Attributes:
         day: The date.
-        sessions: The day's sessions in schedule order (``schedule_order``); never empty.
+        sessions: The day's sessions in schedule order (`schedule_order`); never empty.
     """
 
     day: date
@@ -63,17 +63,17 @@ class DaySessions:
 def schedule_order(session: Session) -> tuple[object, ...]:
     """Return the key that orders sessions as the Schedule shows them (DATA-30, D-31).
 
-    By the start a row shows, as an instant (``timefmt.instant``: on the night summer
+    By the start a row shows, as an instant (`timefmt.instant`: on the night summer
     time ends, the repeated hour comes after the first, #535), then by the place it
-    shows, in natural order (``slugs.room_sort_key``: ``Room 102A`` before ``Room
-    1000``, as the printed grid reads), then by name and id, so ties always come out
+    shows, in natural order (`slugs.room_sort_key`: `Room 102A` before `Room
+    1000`, as the printed grid reads), then by name and id, so ties always come out
     the same. A row without a place (a notice, a generic break) comes first in its slot.
 
     Args:
         session: A session of the model.
 
     Returns:
-        A key for ``sorted``.
+        A key for `sorted`.
     """
     return (
         instant(session.display_start),
@@ -89,13 +89,13 @@ def timeline(
     """Return a day's slots for the Schedule, without the excluded tracks (DATA-18, D-20).
 
     The Schedule's filter applies here and nowhere else: this is the only query that
-    takes ``excluded``, and only the Schedule calls it. My schedule, Now and Search never
+    takes `excluded`, and only the Schedule calls it. My schedule, Now and Search never
     filter (SCHED-07, D-20).
 
     A session passes unless its track key is excluded (SCHED-10); a slot the filter
     empties is left out. A day without sessions (the sprint days) and a filter that hides
-    every track both give ``()``; a screen tells the two empty states apart by asking for
-    the unfiltered day: ``timeline(data, day, ())`` is ``()`` only when the day has no
+    every track both give `()`; a screen tells the two empty states apart by asking for
+    the unfiltered day: `timeline(data, day, ())` is `()` only when the day has no
     sessions at all (ux.md §4.6). "Jump to now" picks its target from the filtered
     slots, because a slot the filter leaves out has no item to scroll to (D-155).
 
@@ -106,15 +106,15 @@ def timeline(
 
     Args:
         data: The processed feed.
-        day: A conference-local date, e.g. one of ``days()``.
-        excluded: The track keys to hide (``Prefs.excluded_tracks``); order and
+        day: A conference-local date, e.g. one of `days()`.
+        excluded: The track keys to hide (`Prefs.excluded_tracks`); order and
             repeats do not matter.
 
     Returns:
-        The day's slots by start, each with its rows in ``schedule_order``.
+        The day's slots by start, each with its rows in `schedule_order`.
 
     Raises:
-        TypeError: ``excluded`` is one string, not a collection of track keys.
+        TypeError: `excluded` is one string, not a collection of track keys.
     """
     if isinstance(excluded, str):
         raise TypeError("excluded must be a collection of track keys, not one string")
@@ -125,8 +125,8 @@ def timeline(
 
 
 NOW_KEY = "now"
-"""The now line's ``ScrollKey`` in today's Schedule list (D-204); no slot key clashes
-with it, since every slot key starts with ``slot-``."""
+"""The now line's `ScrollKey` in today's Schedule list (D-204); no slot key clashes
+with it, since every slot key starts with `slot-`."""
 
 
 @dataclass(frozen=True)
@@ -138,10 +138,10 @@ class NowPlace:
 
     Attributes:
         line: How many slots have started: the now line sits just before
-            ``slots[line]``, so 0 puts it above the first slot and ``len(slots)``
+            `slots[line]`, so 0 puts it above the first slot and `len(slots)`
             after the last.
         on: The key of the slot that is on, else None: the last slot that has
-            started, while one of its sessions has not ended (``start <= now < end``,
+            started, while one of its sessions has not ended (`start <= now < end`,
             Now's half-open rule, D-179). A notice has no duration, so a slot of
             notices alone is over as soon as it starts.
     """
@@ -168,9 +168,9 @@ def now_place(slots: Sequence[Slot], now: datetime) -> NowPlace:
     wants what is starting next.
 
     Args:
-        slots: The slots the list shows (``timeline(data, day, excluded)``), so the
+        slots: The slots the list shows (`timeline(data, day, excluded)`), so the
             target always has an item to scroll to (D-178); may be empty.
-        now: The current instant (``clock.now()``), aware.
+        now: The current instant (`clock.now()`), aware.
 
     Returns:
         The now line's index and the slot that is on.
@@ -185,7 +185,7 @@ def now_place(slots: Sequence[Slot], now: datetime) -> NowPlace:
 def track_sessions(data: ConferenceData, track: str) -> tuple[DaySessions, ...]:
     """Return a track page's sessions, by day (DATA-20, SCHED-22).
 
-    Every session whose track key is ``track``, in ``schedule_order`` within each day,
+    Every session whose track key is `track`, in `schedule_order` within each day,
     whatever the Schedule's filter (a track page shows its own track, open spaces
     included). The Posters track lists its posters (DATA-07) instead of the Posters row
     that stands for them on the Schedule; until the feed publishes posters, the row
@@ -194,10 +194,10 @@ def track_sessions(data: ConferenceData, track: str) -> tuple[DaySessions, ...]:
 
     Args:
         data: The processed feed.
-        track: A track key (``Session.track``), e.g. ``Talk`` or ``Open Space``.
+        track: A track key (`Session.track`), e.g. `Talk` or `Open Space`.
 
     Returns:
-        The days that have sessions of the track, oldest first; ``()`` for a track
+        The days that have sessions of the track, oldest first; `()` for a track
         without sessions.
     """
 
@@ -227,7 +227,7 @@ def keynote_sessions(
 
     Args:
         data: The processed feed.
-        track: The keynotes' track key (``Keynote``).
+        track: The keynotes' track key (`Keynote`).
         ids: The session ids of the year's keynote data; one the feed lacks is left out.
     """
     wanted = frozenset(ids)
@@ -246,7 +246,7 @@ def posters(data: ConferenceData, session: Session) -> tuple[Session, ...]:
 
     The poster details (DATA-07) take the time and place of the Posters row they belong
     to, so they are the sessions outside the timeline at its start and location, in
-    ``schedule_order`` as the Posters track page lists them (D-199). Memoised per feed
+    `schedule_order` as the Posters track page lists them (D-199). Memoised per feed
     and row, so the detail's memoised rows get the same objects on every render (D-153).
 
     Args:
@@ -254,7 +254,7 @@ def posters(data: ConferenceData, session: Session) -> tuple[Session, ...]:
         session: Any session; only a Posters row has posters.
 
     Returns:
-        Its posters; ``()`` for any other session, and for a Posters row of a feed that
+        Its posters; `()` for any other session, and for a Posters row of a feed that
         publishes no posters.
     """
     if not _is_posters_row(session):
@@ -275,22 +275,22 @@ def posters(data: ConferenceData, session: Session) -> tuple[Session, ...]:
 
 
 def _is_posters_row(session: Session) -> bool:
-    """Whether ``session`` is the Posters row, which the poster slots collapse into."""
+    """Whether `session` is the Posters row, which the poster slots collapse into."""
     return session.kind == "poster" and session.in_timeline
 
 
 def day_slots(data: ConferenceData, day: date) -> tuple[Slot, ...]:
-    """Return every slot of ``day``, unfiltered: what Now reads (D-179).
+    """Return every slot of `day`, unfiltered: what Now reads (D-179).
 
-    The Schedule asks ``timeline`` instead, the one query that takes its filter (D-20).
-    Memoised per feed and day; ``timeline`` filters these same objects.
+    The Schedule asks `timeline` instead, the one query that takes its filter (D-20).
+    Memoised per feed and day; `timeline` filters these same objects.
 
     Args:
         data: The processed feed.
         day: A conference-local date.
 
     Returns:
-        The day's slots by start, each with its rows in ``schedule_order``; ``()`` for
+        The day's slots by start, each with its rows in `schedule_order`; `()` for
         a day without sessions.
     """
 
@@ -315,10 +315,10 @@ def day_slots(data: ConferenceData, day: date) -> tuple[Slot, ...]:
 
 
 def _without(slots: tuple[Slot, ...], hidden: frozenset[str]) -> tuple[Slot, ...]:
-    """Return ``slots`` without the sessions of the ``hidden`` tracks.
+    """Return `slots` without the sessions of the `hidden` tracks.
 
     Slots that lose nothing are kept as they are, so a memoised slot item sees the same
-    object and skips its body; when no slot loses anything, ``slots`` itself is returned.
+    object and skips its body; when no slot loses anything, `slots` itself is returned.
     """
     kept: list[Slot] = []
     changed = False
@@ -337,14 +337,14 @@ _MEMO: WeakKeyDictionary[ConferenceData, dict[tuple[object, ...], object]] = (
     WeakKeyDictionary()
 )
 """The schedule queries' results, per feed. A processed feed is one object per feed
-version (``Conference.version`` counts them), so it is the version in the key; weak, so a
+version (`Conference.version` counts them), so it is the version in the key; weak, so a
 replaced feed's results go with it. Only the event loop's thread calls the queries."""
 
 
 def _memoised[T](
     data: ConferenceData, key: tuple[object, ...], build: Callable[[], T]
 ) -> T:
-    """Return the value stored for ``data`` and ``key``, building and storing it once."""
+    """Return the value stored for `data` and `key`, building and storing it once."""
     results = _MEMO.setdefault(data, {})
     if key not in results:
         results[key] = build()

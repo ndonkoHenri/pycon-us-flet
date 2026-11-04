@@ -1,22 +1,22 @@
 """What the Schedule shows for each day: its list, its slots, and "Now".
 
-``screens/schedule.py`` owns the screen: the stores, the positions and the jumps. Here
-is what it places (D-31, D-153..D-156); the day tabs are ``ui/day_tabs.py``'s (D-192):
+`screens/schedule.py` owns the screen: the stores, the positions and the jumps. Here
+is what it places (D-31, D-153..D-156); the day tabs are `ui/day_tabs.py`'s (D-192):
 
-- ``DayList``, a ``TabBarView`` page, memoised and given only its day's slots and
+- `DayList`, a `TabBarView` page, memoised and given only its day's slots and
   favourites, so a star tap re-renders one day list, one slot and one row (D-153);
-- ``SlotItem``, memoised and keyed by its slot key, with the ``ScrollKey`` a jump scrolls
-  to (D-155): the ``TimeGutter`` beside the slot's ``SessionRow``s and ``NoticeRow``s,
+- `SlotItem`, memoised and keyed by its slot key, with the `ScrollKey` a jump scrolls
+  to (D-155): the `TimeGutter` beside the slot's `SessionRow`s and `NoticeRow`s,
   or its time above them at the largest text sizes (D-216);
-- today's ``NowLine`` among the slots (``screens/schedule_now.py``, D-204);
+- today's `NowLine` among the slots (`screens/schedule_now.py`, D-204);
 - at the largest text sizes, the Schedule's head above the slots, so it scrolls away
-  (``screens/schedule_head.py``, D-345);
+  (`screens/schedule_head.py`, D-345);
 - the empty days: a sprint day, which has no sessions, and a day the filter empties;
-- ``now_button()``, the "Now" button over today's list (SCHED-15).
+- `now_button()`, the "Now" button over today's list (SCHED-15).
 
-A day list is a lazy ``ListView``; today's builds every slot (``FULL_LIST_EXTENT``), so
+A day list is a lazy `ListView`; today's builds every slot (`FULL_LIST_EXTENT`), so
 Jump to now reaches any of them (D-154). Each list reports where a scroll ended, which
-the Schedule keeps in ``ViewMemory`` and a jump waits for.
+the Schedule keeps in `ViewMemory` and a jump waits for.
 """
 
 from collections.abc import Awaitable, Callable, Mapping
@@ -98,23 +98,23 @@ def DayList(
     A memoised component keyed by the day (D-153, F34): with stable props it re-renders
     only when its slots, its own favourites or changes, the clock format, the slots'
     layout or the tokens change. It also follows the screen's side margin
-    (``use_margin()``, D-305), which changes only with the window.
+    (`use_margin()`, D-305), which changes only with the window.
 
     Args:
         day: The conference-local date.
-        slots: Its slots as the filter leaves them (``timeline()``), the same objects
+        slots: Its slots as the filter leaves them (`timeline()`), the same objects
             while the feed and the filter stay the same (D-178).
         views: Every session's row view by id, built once per feed version.
         favorites: The saved ids among this day's sessions only.
-        changes: The recent changes of this day's sessions only (``changes_of()``).
-        on_toggle: The screen's one star handler (``use_favorite_toggle()``).
+        changes: The recent changes of this day's sessions only (`changes_of()`).
+        on_toggle: The screen's one star handler (`use_favorite_toggle()`).
         tokens: The scheme's tokens (D-150).
         use_24h: Whether the device uses the 24-hour clock.
-        time_above: Put each slot's time above its rows (``Prefs.time_above``,
+        time_above: Put each slot's time above its rows (`Prefs.time_above`,
             D-216).
         full: Build every slot (today's list, D-154), so a jump reaches any of them.
         clearance: Leave room at the end for the "Now" button.
-        empty: Why ``slots`` is empty, when it is.
+        empty: Why `slots` is empty, when it is.
         now: Today's now line; None on the other days.
         head: The Schedule's head, at the top of the list at the largest text sizes
             (D-345); None while it stays fixed above the day pages.
@@ -215,9 +215,9 @@ def SlotItem(
     """Return one time slot (D-31): its time in the gutter beside its rows, or above.
 
     A memoised component keyed by the slot key (D-153, F34), which runs only when its
-    props change; an anchor above its time and rows carries ``ScrollKey(slot.key)``, the
+    props change; an anchor above its time and rows carries `ScrollKey(slot.key)`, the
     target of a jump (D-155, D-242), and its divider sits above that anchor. Rows are in
-    schedule order (by room, D-31); breaks and notices are ``NoticeRow``s, without a
+    schedule order (by room, D-31); breaks and notices are `NoticeRow`s, without a
     star.
 
     Args:
@@ -227,7 +227,7 @@ def SlotItem(
         changes: The recent changes of this slot's sessions only.
         on_toggle: The screen's one star handler.
         tokens: The scheme's tokens.
-        label: The slot's time, e.g. "9:25 AM" (``timefmt.time_label()``).
+        label: The slot's time, e.g. "9:25 AM" (`timefmt.time_label()`).
         time_above: Put the time above the rows rather than in the gutter (D-216).
         divider: Draw a 1 dp divider above the slot (every slot but the first).
         day: The slot's day, which it reports its height with.
@@ -284,11 +284,11 @@ def now_button(
 
     What it does is said after its label, from inside the button, which Flutter's
     button merges into its own node ("Now", then "Jump to the current time"). Flet's
-    ``tooltip`` sits around the button, a node of its own beside it, and a View takes
-    only a ``FloatingActionButton``, so no merge can go around it: the tooltip shown on
+    `tooltip` sits around the button, a node of its own beside it, and a View takes
+    only a `FloatingActionButton`, so no merge can go around it: the tooltip shown on
     a long press stays out of the semantics (F55, D-234). Said by the label's
-    ``semantics_label``, as a link's "Opens in browser" is (ux.md §4.7): a
-    ``Semantics``' ``tooltip`` would show a second tooltip too, and its ``hint_text``
+    `semantics_label`, as a link's "Opens in browser" is (ux.md §4.7): a
+    `Semantics`' `tooltip` would show a second tooltip too, and its `hint_text`
     never reaches Flutter at the pin (#187).
 
     Args:

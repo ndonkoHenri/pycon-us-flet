@@ -1,8 +1,8 @@
-"""Tests for Swag pickup's lookup, ``swag.py`` (SHIRT-02, API-06; ux.md §7.3).
+"""Tests for Swag pickup's lookup, `swag.py` (SHIRT-02, API-06; ux.md §7.3).
 
 Each row of the issue's table against the mock's real transport, signed in as the
 seeded staff account (Ada: 2 T-shirts and a bag; Grace: 1 T-shirt; Margaret: nothing),
-or a fixed ``httpx.MockTransport`` reply: items left, all picked up, nothing bought, an
+or a fixed `httpx.MockTransport` reply: items left, all picked up, nothing bought, an
 unknown badge, no connection and another failure. Nothing is ever queued (D-56).
 """
 
@@ -33,7 +33,7 @@ BOTH = (SHIRT, BAG)
 
 
 def badge(n: int) -> Badge:
-    """Return the seeded attendee ``MOCK000n``'s badge, as ``parse_badge`` reads it."""
+    """Return the seeded attendee `MOCK000n`'s badge, as `parse_badge` reads it."""
     return Badge(f"MOCK000{n}", f"v4l1d0{n}", f"v4l1d0{n}")
 
 
@@ -124,7 +124,7 @@ def offline(request: httpx.Request) -> httpx.Response:
 
 @pytest.mark.parametrize("api", ["offline", "none"])
 async def test_no_connection_says_scan_again_when_online(api: str) -> None:
-    """A ``NetworkError``, or no client at all, is "No connection", nothing queued."""
+    """A `NetworkError`, or no client at all, is "No connection", nothing queued."""
     client = client_for(httpx.MockTransport(offline)) if api == "offline" else None
     result = await look_up(client, badge(1), categories=BOTH)
     assert result == ScanResult(

@@ -2,8 +2,8 @@
 
 The questions screens ask of the processed feed are queries: pure functions that never
 change the model (SCHED-17) and return new values computed from it. The schedule queries
-are in ``timeline.py`` (D-178), Now's and My schedule's in ``agenda.py`` (D-179) and
-search in ``search.py`` (D-180); this module holds what the rest of the app shares with
+are in `timeline.py` (D-178), Now's and My schedule's in `agenda.py` (D-179) and
+search in `search.py` (D-180); this module holds what the rest of the app shares with
 them: the Schedule's days, the one fold, the filter built on it and the order it gives
 speakers.
 """
@@ -26,8 +26,8 @@ def days(data: ConferenceData, first_day: date, last_day: date) -> tuple[date, .
 
     Args:
         data: The processed feed.
-        first_day: The conference's first day, from ``conference.toml``.
-        last_day: The conference's last day, from ``conference.toml``.
+        first_day: The conference's first day, from `conference.toml`.
+        last_day: The conference's last day, from `conference.toml`.
 
     Returns:
         The dates, one per day, oldest first.
@@ -85,9 +85,9 @@ _DROPPED = frozenset({"Mn", "Me", "Cf"})
 def fold(text: str) -> str:
     """Return text as search compares it: case, accents and typography folded (D-46, D-180).
 
-    So ``Cristián`` and ``CRISTIAN`` both fold to ``cristian``, ``Straße`` to
-    ``strasse``, ``ﬁle`` to ``file``, ``Łukasz`` to ``lukasz``, and ``don’t``, ``don't``
-    and ``dont`` all to ``dont``. Feed processing folds ``Session.search_text`` once, ``search`` folds the
+    So `Cristián` and `CRISTIAN` both fold to `cristian`, `Straße` to
+    `strasse`, `ﬁle` to `file`, `Łukasz` to `lukasz`, and `don’t`, `don't`
+    and `dont` all to `dont`. Feed processing folds `Session.search_text` once, `search` folds the
     names it indexes and every query the same way, so both sides always agree.
 
     Args:
@@ -96,7 +96,7 @@ def fold(text: str) -> str:
     Returns:
         The text decomposed (NFKD), case folded and decomposed again, with apostrophes
         removed, typographic double quotes and dashes as ASCII, the letters in
-        ``_FOLD_TABLE`` replaced, and marks and format characters removed.
+        `_FOLD_TABLE` replaced, and marks and format characters removed.
     """
     # NFKD around casefold is the Unicode Standard's compatibility caseless match (§3.13):
     # case folding can leave text that is not decomposed, and folding twice must not
@@ -116,22 +116,22 @@ def _without_marks(run: re.Match[str]) -> str:
 def matching[T](
     items: tuple[T, ...], query: str, text_of: Callable[[T], str]
 ) -> tuple[T, ...]:
-    """Return the items whose text holds every word of ``query``, each as a substring.
+    """Return the items whose text holds every word of `query`, each as a substring.
 
     The query folds as search's does (D-46), and the words may come in any order.
 
-    Screens rely on the identity: a query with no word to match returns ``items``
-    itself, not a copy, so ``found is not items`` says that a filter applies. That covers
-    a blank query and one that folds to nothing (a lone ``’``).
+    Screens rely on the identity: a query with no word to match returns `items`
+    itself, not a copy, so `found is not items` says that a filter applies. That covers
+    a blank query and one that folds to nothing (a lone `’`).
 
     Args:
         items: What the filter narrows, in the order shown.
         query: What the user typed in the filter.
         text_of: An item's text, folded by the caller: a text folded once per feed
-            version (``search_text``) is not folded again here.
+            version (`search_text`) is not folded again here.
 
     Returns:
-        The items found, in their order; ``items`` itself without a word.
+        The items found, in their order; `items` itself without a word.
     """
     words = fold(query).split()
     if not words:
@@ -149,6 +149,6 @@ def speaker_order(speaker: Speaker) -> tuple[str, str]:
         speaker: A speaker of the directory.
 
     Returns:
-        A key for ``sorted``.
+        A key for `sorted`.
     """
     return fold(speaker.name), speaker.id

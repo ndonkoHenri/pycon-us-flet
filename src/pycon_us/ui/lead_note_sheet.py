@@ -1,25 +1,25 @@
 """The lead note sheet: interest, follow-ups and free text for one lead (#742; LEAD-10).
 
 ux.md §7.3. Ionic's modal labelled its choices with emoji, which screen readers read
-oddly; here a modal ``BottomSheet`` with a drag handle, everything scrolling together
+oddly; here a modal `BottomSheet` with a drag handle, everything scrolling together
 so Save stays in reach at 200 % text:
 
 - a level-1 heading "Note for Ada" (the lead's name, or its code), the code under it
   when the name is the heading, and "For Example Corp" on a staff account's lead, since
   each sponsor's lead on an attendee has its own note (D-459);
-- **Interest**, a ``SegmentedButton`` Hot · Warm · Cold with icons, empty allowed (a
+- **Interest**, a `SegmentedButton` Hot · Warm · Cold with icons, empty allowed (a
   tap on the chosen one clears it), each segment read with its state;
-- **Follow-up**, a filter ``Chip`` per label of ``FOLLOW_UPS``, each one stop that says
+- **Follow-up**, a filter `Chip` per label of `FOLLOW_UPS`, each one stop that says
   whether it is selected;
-- **Notes**, a multi-line ``TextField`` of at most 4000 characters with its counter;
-- Cancel and **Save** (``lead.note.save``), and a line when the outbox can't store it.
+- **Notes**, a multi-line `TextField` of at most 4000 characters with its counter;
+- Cancel and **Save** (`lead.note.save`), and a line when the outbox can't store it.
 
-The Interest button and the Follow-up chips are built in ``ui/lead_note_fields.py``.
+The Interest button and the Follow-up chips are built in `ui/lead_note_fields.py`.
 
-``use_note_sheet()`` is the Lead scanner's hook: it keeps the lead being noted and the
-draft, prefills it from the lead's saved note (``lead_note.saved_note()``), shows the
-sheet through ``ft.use_dialog`` and saves through ``lead_note.store()`` and
-``confirm()``. Save closes the sheet and says "Note saved", "Note saved. Will sync."
+`use_note_sheet()` is the Lead scanner's hook: it keeps the lead being noted and the
+draft, prefills it from the lead's saved note (`lead_note.saved_note()`), shows the
+sheet through `ft.use_dialog` and saves through `lead_note.store()` and
+`confirm()`. Save closes the sheet and says "Note saved", "Note saved. Will sync."
 or "Nothing to save" in a SnackBar, unless the screen has gone meanwhile. When the
 saved note can't be read, the sheet stays closed and a SnackBar says so: a blank
 prefill would save over it.
@@ -65,7 +65,7 @@ class Editing:
         name: The attendee's first name when the result had one, else None.
         draft: The interest and follow-ups as chosen so far, and the text the field
             started with: the field itself holds what is typed since (D-243).
-        problem: Why the last Save stored nothing (``lead_note.NOT_SAVED``), or None.
+        problem: Why the last Save stored nothing (`lead_note.NOT_SAVED`), or None.
         sponsor: The sponsor the lead was scanned for; None for a sponsor's own lead.
     """
 
@@ -107,14 +107,14 @@ def note_sheet(
     high_contrast: bool = False,
     reduce_motion: bool = False,
 ) -> ft.BottomSheet:
-    """Return the note sheet for ``editing`` (ux.md §7.3).
+    """Return the note sheet for `editing` (ux.md §7.3).
 
     Args:
         editing: The lead and its draft.
         field: Set to the Notes field, which Save reads (D-243).
         text: The Notes field's text: the prefill, or what Flutter last reported.
         actions: The handlers.
-        high_contrast: HC is on screen: a 1 dp ``outline`` edge draws the sheet.
+        high_contrast: HC is on screen: a 1 dp `outline` edge draws the sheet.
         reduce_motion: The sheet appears without its slide (D-34, D-173).
     """
     draft = editing.draft
@@ -209,7 +209,7 @@ def note_sheet(
 
 @dataclass(frozen=True)
 class NoteSheet:
-    """What the Lead scanner gets from ``use_note_sheet()``.
+    """What the Lead scanner gets from `use_note_sheet()`.
 
     Attributes:
         open: Opens the sheet for a lead.
@@ -224,11 +224,11 @@ def use_note_sheet(*, owner: str) -> NoteSheet:
     """Keep the note sheet's lead and draft, show it while open; return what opens it.
 
     Call it on every render (D-70). The Notes field is built from what Flutter last
-    reported (D-243), through a ``Ref`` made for each opening, so the prefill is sent
+    reported (D-243), through a `Ref` made for each opening, so the prefill is sent
     once and typing is never sent back over.
 
     Args:
-        owner: The signed-in account (``Account.owner``).
+        owner: The signed-in account (`Account.owner`).
     """
     page = ft.context.page
     view_path = ft.use_view_path()
@@ -308,7 +308,7 @@ def use_note_sheet(*, owner: str) -> NoteSheet:
 
 
 def toggled(last: Editing | None, label: str, selected: bool) -> Editing | None:
-    """Return ``last`` with a follow-up chosen or not; None stays None."""
+    """Return `last` with a follow-up chosen or not; None stays None."""
     if last is None:
         return None
     kept = tuple(f for f in last.draft.follow_ups if f != label)
@@ -316,7 +316,7 @@ def toggled(last: Editing | None, label: str, selected: bool) -> Editing | None:
 
 
 def redraft(last: Editing | None, **change: object) -> Editing | None:
-    """Return ``last`` with its draft changed, and no problem shown; None stays None."""
+    """Return `last` with its draft changed, and no problem shown; None stays None."""
     if last is None:
         return None
     return replace(last, draft=replace(last.draft, **change), problem=None)

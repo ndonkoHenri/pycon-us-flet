@@ -1,8 +1,8 @@
 """Developer › Data's Staff queue row: when it shows, what it says, what it opens (#694).
 
-``StaffQueue`` runs outside a renderer: its hooks are replaced, and the sheet's own hook
-(``use_queue_sheet()``, whose sheet ``test_queue_sheet.py`` checks) by an opener that
-counts its calls. The rows are seeded into a real ``outbox-<year>.db``.
+`StaffQueue` runs outside a renderer: its hooks are replaced, and the sheet's own hook
+(`use_queue_sheet()`, whose sheet `test_queue_sheet.py` checks) by an opener that
+counts its calls. The rows are seeded into a real `outbox-<year>.db`.
 """
 
 import inspect
@@ -44,7 +44,7 @@ def db(tmp_path: Path) -> Iterator[OutboxDb]:
 
 
 def seed(db: OutboxDb, code: str, owner: str) -> None:
-    """Store a pending lead row of ``owner``'s for ``code``."""
+    """Store a pending lead row of `owner`'s for `code`."""
     decide = partial(
         outbox_enqueue.scan_lead,
         owner=owner,
@@ -88,7 +88,7 @@ def test_the_line_about_other_accounts(count: int | None, line: str | None) -> N
 def render(
     monkeypatch: pytest.MonkeyPatch, db: OutboxDb
 ) -> Callable[..., tuple[ft.Control, list[int]]]:
-    """Render ``StaffQueue`` for an account and a mock URL; return it and the opens."""
+    """Render `StaffQueue` for an account and a mock URL; return it and the opens."""
 
     def render(
         *, signed_in: bool = True, mock: bool = True, staff: Staff | None = None
@@ -119,7 +119,7 @@ def render(
 
 
 def texts(control: Any) -> list[str]:
-    """Every text's words and every semantics label below ``control``, in order."""
+    """Every text's words and every semantics label below `control`, in order."""
     found = []
     if isinstance(control, ft.Text):
         found.append(str(control.value))

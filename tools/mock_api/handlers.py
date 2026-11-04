@@ -1,12 +1,12 @@
 """The mock API's pure request handler: routing, envelopes, signing, accounts (D-50).
 
-``handle`` takes a request as plain values and returns a reply as plain values: it does
-no I/O and reads the time only from ``MockState.now`` (plus its ``skew``), so the tests
-drive it directly or through ``transport.py``, and the LAN server wraps the same
+`handle` takes a request as plain values and returns a reply as plain values: it does
+no I/O and reads the time only from `MockState.now` (plus its `skew`), so the tests
+drive it directly or through `transport.py`, and the LAN server wraps the same
 function. This module holds the routing, the envelopes, the signature check, the
-``revoked`` fault and the account endpoints; the staff endpoints live in
-``check_in.py``, ``conduct.py`` and ``leads.py``, and the state in ``state.py``
-(contract in ``README.md``).
+`revoked` fault and the account endpoints; the staff endpoints live in
+`check_in.py`, `conduct.py` and `leads.py`, and the state in `state.py`
+(contract in `README.md`).
 """
 
 import hmac
@@ -22,7 +22,7 @@ WINDOW = 600
 """Seconds a signed request's timestamp may be from the mock's clock (2019's value)."""
 
 FLAGS = ("lead_retrieval", "door_check_in", "mask_violation")
-"""The flags ``check_features`` returns; ``is_speaker`` only comes with ``authenticate``."""
+"""The flags `check_features` returns; `is_speaker` only comes with `authenticate`."""
 
 type Reply = tuple[int, dict[str, str], bytes]
 """A reply: the status, the headers and the body bytes."""
@@ -48,8 +48,8 @@ def handle(
         body: The body bytes exactly as sent.
 
     Returns:
-        The status, the headers (``Content-Type`` and a ``Date`` from the mock's clock,
-        ``state.now`` plus ``state.skew``, which the client learns skew from, D-53) and
+        The status, the headers (`Content-Type` and a `Date` from the mock's clock,
+        `state.now` plus `state.skew`, which the client learns skew from, D-53) and
         the JSON body.
     """
     now = state.now() + state.skew
@@ -78,7 +78,7 @@ def route(
 
     Args:
         state: The mock's state.
-        now: The time of this request, ``state.now()`` plus ``state.skew``.
+        now: The time of this request, `state.now()` plus `state.skew`.
         method: The HTTP method as sent.
         raw_path: The request target exactly as sent.
         headers: The request headers.
@@ -105,14 +105,14 @@ def route(
 
 
 def find(method: str, endpoint: str | None) -> tuple[Handler, str] | None:
-    """Match a request to a signed route, ``{}`` standing for one non-empty segment.
+    """Match a request to a signed route, `{}` standing for one non-empty segment.
 
     Args:
         method: The HTTP method as sent.
-        endpoint: The path under ``/<year>/api/v1/``, or None outside it.
+        endpoint: The path under `/<year>/api/v1/`, or None outside it.
 
     Returns:
-        The endpoint and the segment ``{}`` matched (``""`` if none), or None.
+        The endpoint and the segment `{}` matched (`""` if none), or None.
     """
     if endpoint is None:
         return None
@@ -158,9 +158,9 @@ def verify(
         The account the key belongs to.
 
     Raises:
-        Refused: 401 for a missing or unknown key, or while the ``revoked`` fault is
+        Refused: 401 for a missing or unknown key, or while the `revoked` fault is
             on (D-57); 403 for a missing or malformed
-            timestamp, one more than ``WINDOW`` seconds from ``now``, or a wrong
+            timestamp, one more than `WINDOW` seconds from `now`, or a wrong
             signature.
     """
     lower = {name.lower(): value for name, value in headers.items()}
@@ -189,17 +189,17 @@ def verify(
 
 
 def authenticate(state: MockState, body: bytes) -> tuple[int, object]:
-    """Sign in with an email and a password (unsigned; ``login.ts`` 58-67).
+    """Sign in with an email and a password (unsigned; `login.ts` 58-67).
 
     Args:
         state: The mock's state.
-        body: ``{"email", "password"}``.
+        body: `{"email", "password"}`.
 
     Returns:
         200 with the account's nickname, email, key, secret and flags, bare.
 
     Raises:
-        Refused: 401 ``{"message"}`` for a wrong email or password, the field Ionic
+        Refused: 401 `{"message"}` for a wrong email or password, the field Ionic
             shows as "Invalid Auth: <message>"; 400 for a body that is not an object.
     """
     payload = json_object(body)
@@ -220,45 +220,45 @@ def authenticate(state: MockState, body: bytes) -> tuple[int, object]:
 
 
 def check_features(call: Call) -> tuple[int, object]:
-    """Return the account's role flags, absent ones left out (``user-data.ts`` 61-66).
+    """Return the account's role flags, absent ones left out (`user-data.ts` 61-66).
 
     Args:
         call: The signed request.
 
     Returns:
-        200 ``{"features": {...}}``, bare.
+        200 `{"features": {...}}`, bare.
     """
     flags = {name: on for name, on in call.account.features.items() if name in FLAGS}
     return 200, {"features": flags}
 
 
 def read_mobile_state(call: Call) -> tuple[int, object]:
-    """Return the account's favourites (``user-data.ts`` 76-85).
+    """Return the account's favourites (`user-data.ts` 76-85).
 
     Args:
         call: The signed request.
 
     Returns:
-        200 ``{"favorites": [...]}``, bare, ids as strings.
+        200 `{"favorites": [...]}`, bare, ids as strings.
     """
     return 200, {"favorites": call.account.favorites}
 
 
 def write_mobile_state(call: Call) -> tuple[int, object]:
-    """Replace the account's favourites with the list sent (``pycon-api.ts`` 80-101).
+    """Replace the account's favourites with the list sent (`pycon-api.ts` 80-101).
 
     Ids are kept as strings (D-42); integer ids are accepted and stored as their
     decimal strings. Anything else is refused, floats included, so no id depends on
-    how a float prints (``1.0`` in Python, ``1`` in JavaScript).
+    how a float prints (`1.0` in Python, `1` in JavaScript).
 
     Args:
-        call: The signed request, its body ``{"favorites": [...]}``.
+        call: The signed request, its body `{"favorites": [...]}`.
 
     Returns:
         200 with the list now stored, bare (Ionic ignores it).
 
     Raises:
-        Refused: 400 unless ``favorites`` is a list of strings and integers, each
+        Refused: 400 unless `favorites` is a list of strings and integers, each
             encodable as UTF-8: a JSON escape can carry a lone surrogate, which no
             reply could then serialise.
     """
@@ -291,6 +291,6 @@ SIGNED: dict[tuple[str, str], Handler] = {
     ("GET", "lead_retrieval/capture/"): leads.lead_capture,
     ("POST", "lead_retrieval/{}/note/"): leads.lead_note,
 }
-"""The signed endpoints by method and path under ``/<year>/api/v1/``; ``{}`` matches
-one non-empty segment (Ionic's never-called ``attendees_by_product/<id>/`` is not served,
+"""The signed endpoints by method and path under `/<year>/api/v1/`; `{}` matches
+one non-empty segment (Ionic's never-called `attendees_by_product/<id>/` is not served,
 API-05)."""

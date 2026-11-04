@@ -1,11 +1,11 @@
-"""Tests for the CoC incident tool's screen, ``screens/staff_coc.py`` (#759; MASK-01).
+"""Tests for the CoC incident tool's screen, `screens/staff_coc.py` (#759; MASK-01).
 
-The route runs in a real Flet session (``tests/harness.py``) over the mock's own
+The route runs in a real Flet session (`tests/harness.py`) over the mock's own
 transport, signed with a seeded account's key, so the directory is what the mock's
-``handle()`` answers. The tool re-checks its rule on every render (architecture
+`handle()` answers. The tool re-checks its rule on every render (architecture
 §12.4); its status line goes loading, "4 attendees" with Reload, "Couldn't load the
 attendee list" with Retry, or "Not available" on a 403; offline pauses scanning; a
-scan opens the review dialog (its tests: ``tests/test_coc_review.py``); and the directory lives in the
+scan opens the review dialog (its tests: `tests/test_coc_review.py`); and the directory lives in the
 screen alone: nothing is stored, and a remount fetches it again (D-56, D-432).
 """
 
@@ -59,7 +59,7 @@ class Switch(httpx.AsyncBaseTransport):
     """The mock's transport, which records each path, can wait and can go offline."""
 
     def __init__(self, inner: httpx.AsyncBaseTransport) -> None:
-        """Answer through ``inner``, online, at once."""
+        """Answer through `inner`, online, at once."""
         self.inner = inner
         self.offline = False
         self.gate: asyncio.Event | None = None
@@ -67,9 +67,9 @@ class Switch(httpx.AsyncBaseTransport):
         self.cancelled = 0
 
     async def handle_async_request(self, request: httpx.Request) -> httpx.Response:
-        """Record the path; wait for ``gate``; then fail offline, else let ``inner`` answer.
+        """Record the path; wait for `gate`; then fail offline, else let `inner` answer.
 
-        A request cancelled while it waits is counted in ``cancelled``.
+        A request cancelled while it waits is counted in `cancelled`.
         """
         self.paths.append(request.url.path)
         if self.gate is not None:
@@ -89,7 +89,7 @@ def coc(
     door_check: bool = False,
     lead_retrieval: bool = False,
 ) -> Account:
-    """A signed-in ``Account`` with only the given role flags; CoC staff by default."""
+    """A signed-in `Account` with only the given role flags; CoC staff by default."""
     return Account(
         signed_in=True,
         email="coc@example.com",
@@ -127,11 +127,11 @@ async def show(
     switch: Switch,
     stored: dict[str, Any],
 ) -> AsyncIterator[Show]:
-    """Return a function that renders the tool for an account over ``switch``.
+    """Return a function that renders the tool for an account over `switch`.
 
-    It signs with the seeded ``coc`` account's key (``role`` picks another); its
-    sessions keep their preferences in ``stored``, so a second render is a relaunch;
-    ``mock_url`` False leaves the mock URL unset.
+    It signs with the seeded `coc` account's key (`role` picks another); its
+    sessions keep their preferences in `stored`, so a second render is a relaunch;
+    `mock_url` False leaves the mock URL unset.
     """
 
     async def focus(_: ft.TextField) -> None:
@@ -143,7 +143,7 @@ async def show(
     def sharing(
         year: YearData, directory: Path, memory: ViewMemory | None = None
     ) -> Services:
-        """Return the memory services over the test's one ``stored``."""
+        """Return the memory services over the test's one `stored`."""
         svc = memory_services(year, directory, memory)
         cast(MemoryPrefs, svc.storage.prefs).values = stored
         return svc
@@ -158,9 +158,9 @@ async def show(
             mock_url: bool = True,
             settle: bool = True,
         ) -> Shown:
-            """Render the route signed in as ``account``, ``coc()`` by default.
+            """Render the route signed in as `account`, `coc()` by default.
 
-            ``settle`` False returns before the fetch has ended (a gated transport).
+            `settle` False returns before the fetch has ended (a gated transport).
             """
             who = seeded(state_at(), role)
             private_api = PrivateApi(switch, credentials=Login(who.key, who.secret))
@@ -205,7 +205,7 @@ def helper(shown: Shown) -> str | None:
 
 
 def button(shown: Shown, identifier: str) -> ft.IconButton | ft.TextButton:
-    """The status line's button that ``identifier`` names."""
+    """The status line's button that `identifier` names."""
     found = shown.node(identifier).content
     assert isinstance(found, ft.IconButton | ft.TextButton)
     return found
@@ -224,7 +224,7 @@ def button(shown: Shown, identifier: str) -> ft.IconButton | ft.TextButton:
 async def test_only_a_coc_account_with_a_mock_url_reaches_it(
     show: Show, switch: Switch, account: Account, mock_url: bool
 ) -> None:
-    """Without ``mask_violation``, signed out or with no mock URL: "Not available"."""
+    """Without `mask_violation`, signed out or with no mock URL: "Not available"."""
     shown = await show(account, mock_url=mock_url)
     assert NOT_AVAILABLE in shown.texts()
     assert not shown.nodes("scan.entry")
@@ -256,7 +256,7 @@ async def test_it_loads_then_counts_the_mock_s_attendees(
 async def test_a_large_directory_is_counted_with_a_separator(
     show: Show, switch: Switch
 ) -> None:
-    """The mock's ``--attendees 3000``: "3,004 attendees"."""
+    """The mock's `--attendees 3000`: "3,004 attendees"."""
     switch.inner = seeded_mock(attendees=3000)
     shown = await show()
     assert status(shown) == "3,004 attendees"
@@ -329,7 +329,7 @@ async def test_the_directory_is_dropped_on_leaving_and_never_stored(
 ) -> None:
     """Leaving the tool cancels its fetch and drops the directory; re-entry refetches.
 
-    In one session: losing ``mask_violation`` mid-fetch unmounts the tool and cancels
+    In one session: losing `mask_violation` mid-fetch unmounts the tool and cancels
     the request, so no late answer lands; regaining it fetches the changed mock anew;
     a sign-out drops it again; nothing ever reaches storage (D-432, D-56).
     """

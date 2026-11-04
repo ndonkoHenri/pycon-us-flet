@@ -1,9 +1,9 @@
 """The Developer screen's fake-clock pickers: a date picker, then a time picker (D-187).
 
-``clock_picker()`` returns the button at the end of the fake-clock field. It opens a
-Material ``DatePicker``; the day picked opens a ``TimePicker``; the time picked hands
+`clock_picker()` returns the button at the end of the fake-clock field. It opens a
+Material `DatePicker`; the day picked opens a `TimePicker`; the time picked hands
 the moment, in conference time, to the screen, which fills the field. Apart from
-``developer.py`` so that the screen stays under about 400 lines (D-66).
+`developer.py` so that the screen stays under about 400 lines (D-66).
 """
 
 from collections.abc import Callable
@@ -81,10 +81,10 @@ def clock_picker(
 
 
 def picked_date(value: datetime | date) -> date:
-    """Return the day a ``DatePicker`` reports: it sends the device's local midnight in UTC.
+    """Return the day a `DatePicker` reports: it sends the device's local midnight in UTC.
 
     Args:
-        value: ``DatePicker.value`` after a pick.
+        value: `DatePicker.value` after a pick.
     """
     if isinstance(value, datetime):
         return (

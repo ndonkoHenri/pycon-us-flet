@@ -1,10 +1,10 @@
 """Now's sections under the header and the strip, by season (ux.md §5.1, D-190).
 
-``sections()`` picks them: the key dates and "Build your schedule" before the
-conference; on its days Your next session (``now_card``), the Schedule changes card,
-Happening now and Up next, each folded at peak times (``now_fold``, D-327), and the
+`sections()` picks them: the key dates and "Build your schedule" before the
+conference; on its days Your next session (`now_card`), the Schedule changes card,
+Happening now and Up next, each folded at peak times (`now_fold`, D-327), and the
 Schedule link; the Sprints row on the last evening and the sprint days; "Look back at
-the schedule" afterwards. Apart from ``now.py``, which wires the screen's hooks, so that
+the schedule" afterwards. Apart from `now.py`, which wires the screen's hooks, so that
 the screen stays under about 400 lines (D-66).
 """
 
@@ -34,8 +34,8 @@ from pycon_us.ui.scaffold import SectionHeader
 from pycon_us.ui.semantics import named
 
 type Fold = Callable[..., list[ft.Control]]
-"""``now_fold.folded()`` with the saved ids and the opened sections given: a section's
-rows, folded at peak times, from its name, its sessions, ``whole=`` and ``row=``."""
+"""`now_fold.folded()` with the saved ids and the opened sections given: a section's
+rows, folded at peak times, from its name, its sessions, `whole=` and `row=`."""
 
 SCREEN = "now"
 """The screen's name in its semantics identifiers (decisions §M)."""
@@ -61,7 +61,7 @@ def sections(
 ) -> list[ft.Control]:
     """Return what Now shows under the header and the strip, in the given season.
 
-    ``changed`` is the Schedule changes card, if any, shown under Your next session.
+    `changed` is the Schedule changes card, if any, shown under Your next session.
     """
     day = today(now, info.zone)
     sections: list[ft.Control] = []
@@ -111,7 +111,7 @@ def sections(
 def _without(
     sessions: tuple[Session, ...], mine: Session | None
 ) -> tuple[Session, ...]:
-    """``sessions`` but your next session, which the card shows."""
+    """`sessions` but your next session, which the card shows."""
     return tuple(s for s in sessions if mine is None or s.id != mine.id)
 
 
@@ -125,8 +125,8 @@ def _happening(
 ) -> list[ft.Control]:
     """Happening now: the sessions on but yours, saved ones first, each with its bar.
 
-    Folded at peak times after the saved ones and three others (``fold``, D-327),
-    and kept open by ``whole``, every session on, the card's too.
+    Folded at peak times after the saved ones and three others (`fold`, D-327),
+    and kept open by `whole`, every session on, the card's too.
     """
     dot = ft.Container(width=8, height=8, border_radius=4, bgcolor=live)
     header = SectionHeader("Happening now", level=2, leading=dot)
@@ -156,8 +156,8 @@ def _up_next(
 ) -> list[ft.Control]:
     """Up next: the next slot's start, its countdown on its own day, then its rows.
 
-    ``sessions`` are the slot's rows but your next session, which the card shows,
-    saved ones first and folded at peak times as Happening now's (``fold``, D-327).
+    `sessions` are the slot's rows but your next session, which the card shows,
+    saved ones first and folded at peak times as Happening now's (`fold`, D-327).
     """
     heading = f"Up next · {up_next_when(slot, now, info, use_24h=use_24h)}"
     controls: list[ft.Control] = [
@@ -182,7 +182,7 @@ def _up_next(
 
 
 def _button(label: str, location: str, name: str, *, text: bool = False) -> ft.Control:
-    """A button that opens another tab: a tonal one, or a text one (``text``)."""
+    """A button that opens another tab: a tonal one, or a text one (`text`)."""
     page = ft.context.page
 
     @report_errors

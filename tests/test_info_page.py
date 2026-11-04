@@ -1,8 +1,8 @@
-"""Tests for the info pages' shared body (D-263, INFO-05): ``ui.info_page``.
+"""Tests for the info pages' shared body (D-263, INFO-05): `ui.info_page`.
 
-``InfoBody`` lists a page's blocks from its year data, or hands the page to
-``FeedBlock``, which shows the feed's own block or the page's empty state, with no
-loader. ``FeedBlock`` runs outside a renderer: its hooks are answered by the test.
+`InfoBody` lists a page's blocks from its year data, or hands the page to
+`FeedBlock`, which shows the feed's own block or the page's empty state, with no
+loader. `FeedBlock` runs outside a renderer: its hooks are answered by the test.
 """
 
 import inspect
@@ -45,7 +45,7 @@ EMPTY = EmptyState(
 
 @pytest.fixture(scope="module")
 def feed_2026() -> ConferenceData:
-    """The recorded 2026 feed, processed once for the module: it has a ``wifi`` block."""
+    """The recorded 2026 feed, processed once for the module: it has a `wifi` block."""
     return processed(2026)
 
 
@@ -75,10 +75,10 @@ def page(svc: Services) -> Iterator[FakePage]:
 def feed_block(
     monkeypatch: pytest.MonkeyPatch, svc: Services, page: FakePage
 ) -> Callable[[ConferenceData | None, str], ft.Control]:
-    """Render ``FeedBlock`` for the wifi page over a ``Conference`` holding ``data``."""
+    """Render `FeedBlock` for the wifi page over a `Conference` holding `data`."""
 
     def render(data: ConferenceData | None, block: str) -> ft.Control:
-        """``FeedBlock``'s body for ``block``, its hooks answered with ``data``."""
+        """`FeedBlock`'s body for `block`, its hooks answered with `data`."""
         conference = Conference()
         conference.data = data
         monkeypatch.setattr(info_page, "use_services", lambda: svc)
@@ -123,7 +123,7 @@ def test_an_info_page_is_capped_at_the_reading_width(
 def test_a_page_without_year_data_hands_its_body_to_the_feed_block(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """Without blocks, the body's one item is ``FeedBlock`` for the page's feed block."""
+    """Without blocks, the body's one item is `FeedBlock` for the page's feed block."""
     monkeypatch.setattr(info_page, "use_margin", phone_margin)
     with Renderer().with_context():  # what calling a component needs, as in a render
         body = InfoBody([], block="wifi", screen="wifi", empty=EMPTY)
@@ -166,7 +166,7 @@ def test_a_blank_feed_block_is_no_block(
 def test_a_feed_without_the_block_shows_the_page_s_empty_state(
     feed_block: Callable[[ConferenceData | None, str], ft.Control],
 ) -> None:
-    """2025's feed has no ``wifi`` block: the page shows its empty state."""
+    """2025's feed has no `wifi` block: the page shows its empty state."""
     assert feed_block(processed(2025), "wifi") is EMPTY
 
 

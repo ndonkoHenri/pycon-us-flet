@@ -1,10 +1,10 @@
 """Tests for how long Now's Happening now and Up next are at peak times (#222; D-327).
 
-The cut is pure (``now_fold.ordered()`` and ``cut()``); on the screen, at fixed times of
+The cut is pure (`now_fold.ordered()` and `cut()`); on the screen, at fixed times of
 the 2026 feed: the fold after your saved sessions and three others, the count in the
 button's words and its spoken label, the button's target (the rest in place, then
 "Show fewer sessions"), and a fold that holds through a minute and closes on a new
-slot. The screen runs in a real Flet session through ``tests/now_view.py``'s harness.
+slot. The screen runs in a real Flet session through `tests/now_view.py`'s harness.
 How far down Up next sits on a phone is checked on devices (the PR).
 """
 
@@ -26,7 +26,7 @@ OPEN_SPACES_AT_11 = ("9113", "9040", "9072", "9059", "9086")
 
 @pytest.fixture
 def show(render: Callable[..., Any]) -> Callable[..., Any]:  # noqa: F811
-    """``tests/now_view.py``'s ``render``: Now at a time, in a real Flet session."""
+    """`tests/now_view.py`'s `render`: Now at a time, in a real Flet session."""
     return render
 
 
@@ -38,7 +38,7 @@ def at_11() -> tuple[Session, ...]:
 
 
 def ids(sessions: list[Session]) -> list[str]:
-    """The ids of ``sessions``, in order."""
+    """The ids of `sessions`, in order."""
     return [session.id for session in sessions]
 
 

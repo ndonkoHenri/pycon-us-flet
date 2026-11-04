@@ -1,7 +1,7 @@
 """Tests for Settings' Data section: Refresh now, Schedule changes, the zone row (#422, #438).
 
-``DataSection`` runs outside a renderer, as ``DataActions`` does in
-``test_developer_data.py``: its hooks are replaced, and the feed fetch too, so no test
+`DataSection` runs outside a renderer, as `DataActions` does in
+`test_developer_data.py`: its hooks are replaced, and the feed fetch too, so no test
 reaches the network. How the section looks and reads is checked on devices (the PR).
 """
 
@@ -96,13 +96,13 @@ async def conference(svc: Services) -> Conference:
 
 @pytest.fixture
 def minutes() -> list[int]:
-    """The ``use_minute()`` calls: one per render."""
+    """The `use_minute()` calls: one per render."""
     return []
 
 
 @pytest.fixture
 def change_log() -> ChangeLog:
-    """The session's ``ChangeLog``: empty unless a test records a batch in it."""
+    """The session's `ChangeLog`: empty unless a test records a batch in it."""
     return ChangeLog()
 
 
@@ -121,7 +121,7 @@ def render(
     favorites: Favorites,
     minutes: list[int],
 ) -> Callable[[], ft.Column]:
-    """Render ``DataSection`` by hand, its one state kept across renders: its column."""
+    """Render `DataSection` by hand, its one state kept across renders: its column."""
     state: list[Any] = []
 
     def use_state(initial: Any) -> tuple[Any, Callable[[Any], None]]:
@@ -148,7 +148,7 @@ def render(
 
 
 def identified(root: ft.Control) -> dict[str, ft.Control]:
-    """The control under each identifier below ``root``."""
+    """The control under each identifier below `root`."""
     found: dict[str, ft.Control] = {}
 
     def visit(control: Any) -> None:
@@ -331,7 +331,7 @@ TALK = "142"
 
 
 def moved(session: str, at: datetime, *, seen: bool = False) -> Batch:
-    """A batch detected ``at`` that moved ``session`` from Room 104A to Room 103ABC."""
+    """A batch detected `at` that moved `session` from Room 104A to Room 103ABC."""
     start = datetime.fromisoformat("2026-05-16T10:30:00-07:00")
     end = start + timedelta(minutes=30)
     old = Listing("Python for Humans", start, end, "Room 104A")

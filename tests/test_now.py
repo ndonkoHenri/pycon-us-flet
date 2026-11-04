@@ -1,10 +1,10 @@
 """Tests for the Now tab's header words (#95; SCHED-25, SCHED-26; D-14, D-179).
 
-What is on and what is next is ``core.agenda`` (``test_agenda.py``); here, what Now says
+What is on and what is next is `core.agenda` (`test_agenda.py`); here, what Now says
 of it at fixed times of the 2026 feed: the header's words in every season. The words are
-pure (``season()``, ``header_copy()``, ``up_next_when()``) and run on their own. The
-screen is ``test_now_screen.py``'s and ``test_now_card.py``'s, over
-``tests/now_view.py``'s harness. How Now looks, wraps at 200 % and reads to TalkBack and
+pure (`season()`, `header_copy()`, `up_next_when()`) and run on their own. The
+screen is `test_now_screen.py`'s and `test_now_card.py`'s, over
+`tests/now_view.py`'s harness. How Now looks, wraps at 200 % and reads to TalkBack and
 VoiceOver is checked on devices (the PR).
 """
 
@@ -39,7 +39,7 @@ data = now_view.data
 
 
 def copy_at(data: ConferenceData, now: datetime, **kwargs: Any) -> tuple[str, ...]:
-    """The header's season, title and subtitle at ``now``, on a Pacific device."""
+    """The header's season, title and subtitle at `now`, on a Pacific device."""
     copy = header_copy(
         now_next(data, now),
         now,
@@ -145,7 +145,7 @@ def test_the_seasons_follow_the_phases_and_the_year_s_dates(
 def test_the_first_start_follows_the_device_s_clock_format(
     data: ConferenceData,
 ) -> None:
-    """On a 24-hour device, the first start reads ``07:30``, and the next ``11:30``."""
+    """On a 24-hour device, the first start reads `07:30`, and the next `11:30`."""
     _, _, subtitle = copy_at(data, may(15, 6), use_24h=True)
     assert subtitle == "First up today at 07:30"
     _, _, subtitle = copy_at(data, may(15, 11, 10), use_24h=True)

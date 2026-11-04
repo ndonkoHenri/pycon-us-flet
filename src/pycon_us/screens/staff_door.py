@@ -1,27 +1,27 @@
-"""Door check (``/more/staff/door``): the shared scan screen, for a session chosen first.
+"""Door check (`/more/staff/door`): the shared scan screen, for a session chosen first.
 
-A mount of ``ui/scan_screen.py``'s ``ScanScreen`` (D-416; DOOR-01, DOOR-02; #764). It
-re-checks ``use_tool_allowed(DOOR)`` on every render (architecture §12.4), else "Not
+A mount of `ui/scan_screen.py`'s `ScanScreen` (D-416; DOOR-01, DOOR-02; #764). It
+re-checks `use_tool_allowed(DOOR)` on every render (architecture §12.4), else "Not
 available for this account", so a deep link cannot bypass it. It is mounted at
-``/now/staff/door`` too and records itself as the last tool opened (D-421); More's row
+`/now/staff/door` too and records itself as the last tool opened (D-421); More's row
 and Now's card open it, with the outbox's counts (#766).
 
-What it checks in for is chosen on ``door_session.py``'s picker, pushed at
-``…/staff/door/session``, as the Lead scanner's sponsor (D-425, D-433). The choice
-(``staff_door_session()``) is read as the screen opens and again whenever the location
+What it checks in for is chosen on `door_session.py`'s picker, pushed at
+`…/staff/door/session`, as the Lead scanner's sponsor (D-425, D-433). The choice
+(`staff_door_session()`) is read as the screen opens and again whenever the location
 changes, so it is current when the picker goes back; until that read lands, scanning
 waits, so no badge is checked against the previous session's list. With none, the picker opens by
 itself once per visit and scanning is paused ("Choose a session to start checking in")
 with a "Choose session" button; with one, a chip "Async in depth · Wed 1:30 PM"
-(``door.session_chip``) heads the screen and reopens the picker.
+(`door.session_chip`) heads the screen and reopens the picker.
 
-Once a session is chosen, its attendee list loads (``door_preload.py``, DOOR-03):
+Once a session is chosen, its attendee list loads (`door_preload.py`, DOOR-03):
 scanning is paused with "Loading attendee list… 2 of 5", then the line under the chip
 says "Ready, works offline · 3 attendees", or "Badges will be checked online" with
-Retry, and scanning starts. A scan is ``door_check.check_in()``: decided on the device,
-queued as a ``door`` row of this visit (a uuid made on mount) and synced in the
+Retry, and scanning starts. A scan is `door_check.check_in()`: decided on the device,
+queued as a `door` row of this visit (a uuid made on mount) and synced in the
 background (DOOR-04, DOOR-07, D-441). Under the chip, "42 checked in"
-(``door_headcount.py``) counts the account's check-ins for the session on this device,
+(`door_headcount.py`) counts the account's check-ins for the session on this device,
 from the outbox (DOOR-06, D-442).
 """
 
@@ -65,11 +65,11 @@ NO_SESSION = "Choose a session to start checking in"
 
 @dataclass(frozen=True)
 class Read:
-    """The door's staff key as ``DoorTool`` last read it.
+    """The door's staff key as `DoorTool` last read it.
 
     Attributes:
         owner: The account it was read for; another's never stands (D-423).
-        arrival: ``DoorTool``'s token for the location it was read at; until the read
+        arrival: `DoorTool`'s token for the location it was read at; until the read
             with the current one lands, the choice may be stale, so scanning waits.
         choice: The session, or sessions, chosen, or None.
     """
@@ -96,11 +96,11 @@ def DoorTool(*, owner: str) -> ft.Control:
     """The scan screen, paused until a session is chosen and its list loaded.
 
     Until the key is read, an empty page under the title; the read takes a moment.
-    The list loads in ``use_preload()``, called on every render (D-70); scanning is
+    The list loads in `use_preload()`, called on every render (D-70); scanning is
     paused while it loads, and its line sits under the session chip.
 
     Args:
-        owner: The signed-in account (``Account.owner``).
+        owner: The signed-in account (`Account.owner`).
     """
     page = ft.context.page
     view_path = ft.use_view_path()
@@ -181,7 +181,7 @@ def DoorTool(*, owner: str) -> ft.Control:
 
 
 async def no_session(badge: Badge) -> ScanResult:
-    """The ``on_badge`` with no session chosen: scanning is paused, so never called.
+    """The `on_badge` with no session chosen: scanning is paused, so never called.
 
     Should a submit get through, nobody is checked in and the pause's words say why.
     """

@@ -1,8 +1,8 @@
-"""Tests for ``tools/gate.sh``'s sweep of the scratch worktrees that dead gates left (#898).
+"""Tests for `tools/gate.sh`'s sweep of the scratch worktrees that dead gates left (#898).
 
-A gate killed outright can't remove its scratch, and nothing else sweeps ``~/Library/Caches``.
-Each test runs the real script in a sandbox: its own ``$HOME``, no git config, and an origin
-without the PR asked for, so the gate stops after the sweep, before any check or ``gh`` call.
+A gate killed outright can't remove its scratch, and nothing else sweeps `~/Library/Caches`.
+Each test runs the real script in a sandbox: its own `$HOME`, no git config, and an origin
+without the PR asked for, so the gate stops after the sweep, before any check or `gh` call.
 """
 
 import os
@@ -18,7 +18,7 @@ HOUR = 3600
 
 @pytest.fixture
 def env(tmp_path: Path) -> dict[str, str]:
-    """Return an environment where git and the gate see only the sandbox's ``$HOME``."""
+    """Return an environment where git and the gate see only the sandbox's `$HOME`."""
     return {
         "PATH": os.environ["PATH"],
         "HOME": str(tmp_path / "home"),
@@ -33,7 +33,7 @@ def env(tmp_path: Path) -> dict[str, str]:
 
 @pytest.fixture
 def caches(env: dict[str, str]) -> Path:
-    """Return the sandbox's empty ``~/Library/Caches``, where the gate keeps its scratch."""
+    """Return the sandbox's empty `~/Library/Caches`, where the gate keeps its scratch."""
     path = Path(env["HOME"]) / "Library" / "Caches"
     path.mkdir(parents=True)
     return path
@@ -41,7 +41,7 @@ def caches(env: dict[str, str]) -> Path:
 
 @pytest.fixture
 def repo(tmp_path: Path, env: dict[str, str]) -> Path:
-    """Return a clone with one commit on ``main``, its origin, and a ``.flet-src`` to copy."""
+    """Return a clone with one commit on `main`, its origin, and a `.flet-src` to copy."""
     origin = tmp_path / "origin.git"
     path = tmp_path / "repo"
     git(tmp_path, env, "init", "-q", "--bare", "-b", "main", str(origin))
@@ -53,14 +53,14 @@ def repo(tmp_path: Path, env: dict[str, str]) -> Path:
 
 
 def git(cwd: Path, env: dict[str, str], *args: str) -> str:
-    """Run git in ``cwd`` with the sandbox's ``env`` and return its standard output."""
+    """Run git in `cwd` with the sandbox's `env` and return its standard output."""
     return subprocess.run(
         ["git", *args], cwd=cwd, env=env, capture_output=True, text=True, check=True
     ).stdout
 
 
 def age(path: Path, seconds: int) -> None:
-    """Make ``path`` look untouched for ``seconds``, as the gate judges a scratch's age."""
+    """Make `path` look untouched for `seconds`, as the gate judges a scratch's age."""
     then = time.time() - seconds
     os.utime(path, (then, then))
 
@@ -96,7 +96,7 @@ def test_a_worktree_a_dead_gate_left_is_removed_with_its_entry(
 def test_a_folder_git_no_longer_knows_is_removed_too(
     repo: Path, caches: Path, env: dict[str, str]
 ) -> None:
-    """A dead scratch that isn't a registered worktree still goes, by ``rm -rf``."""
+    """A dead scratch that isn't a registered worktree still goes, by `rm -rf`."""
     dead = caches / "gate.abc123"
     (dead / ".venv").mkdir(parents=True)
     age(dead, 25 * HOUR)
@@ -123,7 +123,7 @@ def test_a_scratch_younger_than_a_day_stays(
 def test_another_apps_cache_folder_stays_however_old(
     repo: Path, caches: Path, env: dict[str, str]
 ) -> None:
-    """The folder is shared with every app: only the name ``mktemp`` gives a scratch goes."""
+    """The folder is shared with every app: only the name `mktemp` gives a scratch goes."""
     other = caches / "gate.io"
     other.mkdir()
     age(other, 25 * HOUR)

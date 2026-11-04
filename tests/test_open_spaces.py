@@ -1,6 +1,6 @@
-"""Tests for the Open spaces page (``screens/open_spaces.py``; #105, EVT-01, EVT-02).
+"""Tests for the Open spaces page (`screens/open_spaces.py`; #105, EVT-01, EVT-02).
 
-The page runs in a real Flet session over the recorded feeds (``tests/sessions.py``).
+The page runs in a real Flet session over the recorded feeds (`tests/sessions.py`).
 How it looks, wraps at 200 % and reads to screen readers is checked on devices (the
 PR).
 """
@@ -83,7 +83,7 @@ async def show(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> AsyncIterator
 
 
 def tabs(page: Shown) -> ft.Tabs:
-    """The page's one ``Tabs`` control."""
+    """The page's one `Tabs` control."""
     (found,) = page.find(ft.Tabs)
     return found
 
@@ -200,7 +200,7 @@ async def test_a_star_tap_re_renders_one_day_and_one_row(
     """A star tap re-renders one day body and one row (D-153).
 
     Each day is memoised and given only its own saved ids; the test fails with
-    ``ft.memo`` taken off ``DayList`` or ``SessionRow``.
+    `ft.memo` taken off `DayList` or `SessionRow`.
     """
     days: list[date] = []
     slots = screen.by_slot
@@ -249,7 +249,7 @@ async def test_propose_opens_the_years_sign_up_in_the_in_app_browser(
 async def test_a_year_without_the_page_s_data_has_no_propose_and_no_intro(
     show: Show,
 ) -> None:
-    """2025's year data has no ``[open_spaces]``: its sessions show alone."""
+    """2025's year data has no `[open_spaces]`: its sessions show alone."""
     page = await show(year=2025)
     assert page.nodes("open_spaces.propose") == []
     assert len(page.nodes("open_spaces.session.")) == len(open_spaces(2025))
@@ -325,7 +325,7 @@ async def test_without_data_it_loads_then_offers_to_try_again(show: Show) -> Non
 
 
 def test_the_opening_day_is_today_with_open_spaces_else_the_first() -> None:
-    """``opening_day`` is today when today has open spaces, else the first day."""
+    """`opening_day` is today when today has open spaces, else the first day."""
     days = [date(2026, 5, 15), date(2026, 5, 16), date(2026, 5, 17)]
     assert screen.opening_day(days, date(2026, 5, 16)) == date(2026, 5, 16)
     assert screen.opening_day(days, date(2026, 5, 14)) == date(2026, 5, 15)

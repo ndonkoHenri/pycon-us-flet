@@ -3,7 +3,7 @@
 The mock commits the incident, then the reply is replaced: what a server that recorded
 it but answered unusably under HTTP 200 looks like. The dialog must say it may be on
 record, and nothing may send it again on its own; a real refusal stays a refusal.
-``tests/test_coc_review.py`` holds the rest of the review, and the helpers used here.
+`tests/test_coc_review.py` holds the rest of the review, and the helpers used here.
 """
 
 import asyncio

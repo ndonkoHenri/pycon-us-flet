@@ -6,15 +6,15 @@ behind. Ionic kept scan queues and the staff sponsor across a sign-out and share
 with the next person, and its "Clear scan data" missed the door-check keys.
 
 - **An account switch:** when a signed-in account's sync starts, every other account's
-  synced rows are deleted (``OutboxDb.forget_other_accounts()``, architecture §12.1);
+  synced rows are deleted (`OutboxDb.forget_other_accounts()`, architecture §12.1);
   their pending and failed rows stay, under their owner, until that owner signs in
-  again or Clear staff data deletes them. ``Account`` removes the staff keys
-  (``STAFF_PREFIX``) at a sign-out and at a sign-in as someone else.
+  again or Clear staff data deletes them. `Account` removes the staff keys
+  (`STAFF_PREFIX`) at a sign-out and at a sign-in as someone else.
 - **Clear staff data** (Developer › Data, DEV-03) and **Reset app** delete every row of
   every account and the staff keys, after a confirmation that names how many rows have
-  not synced (``clear_staff_data()``).
+  not synced (`clear_staff_data()`).
 
-``outbox-<year>.db`` is opened only where staff tools run (D-51): ``staff_counts()``
+`outbox-<year>.db` is opened only where staff tools run (D-51): `staff_counts()`
 answers zeros without opening a file that was never created. Another year's file is left
 alone, unsynced rows and all: this year's server would misattribute them, and no
 confirmation names them (D-466).
@@ -53,10 +53,10 @@ def staff_counts(db: OutboxDb | None) -> Counts | None:
 async def clear_staff_data(
     db: OutboxDb | None, storage: Storage, staff: Staff, *, named: bool = True
 ) -> bool:
-    """Delete every account's rows and every staff key, then zero ``Staff``'s counts.
+    """Delete every account's rows and every staff key, then zero `Staff`'s counts.
 
     The caller has confirmed it, naming how many rows have not synced (DEV-03); rows
-    that can't be counted now, or that the confirmation couldn't count (``named``),
+    that can't be counted now, or that the confirmation couldn't count (`named`),
     are not deleted, as no confirmation named them. The sync's own state (a pass
     under way, the last error) stays: a pass under way finds its rows gone, so it
     sends none of them and saves nothing.
@@ -64,7 +64,7 @@ async def clear_staff_data(
     Args:
         db: The outbox, or None where the session has none.
         storage: Where the staff keys are.
-        staff: The ``Staff`` store, whose counts drop to zero.
+        staff: The `Staff` store, whose counts drop to zero.
         named: Whether the confirmation named the rows; False when it said it
             couldn't read them, so they stay (Reset app's, D-414).
 

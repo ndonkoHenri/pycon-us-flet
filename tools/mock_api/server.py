@@ -1,11 +1,11 @@
-"""The mock API on the LAN: a stdlib HTTP server over ``handle`` (D-50, NEW-08).
+"""The mock API on the LAN: a stdlib HTTP server over `handle` (D-50, NEW-08).
 
-``python -m tools.mock_api.server`` serves the same pure ``handle`` the tests drive
-through ``transport.py`` to the companion client, emulators, simulators and phones. Its
-state is in memory, so a restart is a clean slate. It answers only from ``handle``: it
-never points at, proxies or copies a PSF host (D-51). ``--fault`` and ``--skew`` replay
-conference Wi-Fi on a device (D-57). Options and base URLs are in ``README.md``
-("Running it") and ``docs/development.md`` §6.
+`python -m tools.mock_api.server` serves the same pure `handle` the tests drive
+through `transport.py` to the companion client, emulators, simulators and phones. Its
+state is in memory, so a restart is a clean slate. It answers only from `handle`: it
+never points at, proxies or copies a PSF host (D-51). `--fault` and `--skew` replay
+conference Wi-Fi on a device (D-57). Options and base URLs are in `README.md`
+("Running it") and `docs/development.md` §6.
 """
 
 import argparse
@@ -26,7 +26,7 @@ MAX_BODY = 1_000_000
 """The largest request body read, in bytes; no request the app sends comes near it."""
 
 HOLD = 60.0
-"""Seconds the ``timeout`` fault keeps a request unanswered at most, if the client
+"""Seconds the `timeout` fault keeps a request unanswered at most, if the client
 doesn't hang up first; every Ionic timeout is shorter (20 s at most)."""
 
 DROPPED: dict[Fault, str] = {
@@ -44,27 +44,27 @@ ACCESS_CODE_IN_PATH = re.compile(r"(/lead_retrieval/)[^/]+(/note/)")
 
 
 def loggable(path: str) -> str:
-    """Return ``path`` as the log may show it: no query, and no access code.
+    """Return `path` as the log may show it: no query, and no access code.
 
     Args:
         path: The request target as received.
 
     Returns:
-        The path without its query, with the code in ``lead_retrieval/<code>/note/``
-        replaced by ``<code>``.
+        The path without its query, with the code in `lead_retrieval/<code>/note/`
+        replaced by `<code>`.
     """
     return ACCESS_CODE_IN_PATH.sub(r"\1<code>\2", path.partition("?")[0])
 
 
 class MockServer(ThreadingHTTPServer):
-    """A threaded HTTP server that answers every request with ``handle``.
+    """A threaded HTTP server that answers every request with `handle`.
 
-    One lock serialises the calls to ``handle``, since ``MockState`` is not thread-safe
+    One lock serialises the calls to `handle`, since `MockState` is not thread-safe
     and a request may both read and write it.
 
     Attributes:
         state: The mock's state, shared by every request.
-        lock: Held while ``handle`` runs.
+        lock: Held while `handle` runs.
     """
 
     daemon_threads = True  # a hung client never keeps Ctrl-C from stopping the server
@@ -82,10 +82,10 @@ class MockServer(ThreadingHTTPServer):
 
 
 class MockRequestHandler(BaseHTTPRequestHandler):
-    """Hands one HTTP request to ``handle`` and writes its reply back unchanged.
+    """Hands one HTTP request to `handle` and writes its reply back unchanged.
 
-    Every response, ``handle``'s or an error the server sends itself, logs exactly one
-    line through ``log_request``; the inherited request-line and error logging, which
+    Every response, `handle`'s or an error the server sends itself, logs exactly one
+    line through `log_request`; the inherited request-line and error logging, which
     would show the query, is replaced.
     """
 
@@ -101,7 +101,7 @@ class MockRequestHandler(BaseHTTPRequestHandler):
         self.log_message("%s %s %s", method, path, code)
 
     def log_error(self, format: str, *args: object) -> None:
-        """Log nothing: the error's response logs its own line (``log_request``).
+        """Log nothing: the error's response logs its own line (`log_request`).
 
         Args:
             format: Unused; the inherited message format.
@@ -109,16 +109,16 @@ class MockRequestHandler(BaseHTTPRequestHandler):
         """
 
     def answer(self) -> None:
-        """Answer the request with ``handle``'s reply, and log one line about it.
+        """Answer the request with `handle`'s reply, and log one line about it.
 
-        The request target and the body reach ``handle`` exactly as received, so the
+        The request target and the body reach `handle` exactly as received, so the
         signature is checked over the bytes the client signed. The reply's headers are
-        ``handle``'s alone: its ``Date`` comes from the mock's clock, which the client
-        learns clock skew from (D-53), so the server adds no ``Date`` of its own.
+        `handle`'s alone: its `Date` comes from the mock's clock, which the client
+        learns clock skew from (D-53), so the server adds no `Date` of its own.
 
-        A transport fault (D-57) sends no reply and closes the connection: ``connect``
-        at once, without running ``handle``; ``timeout`` once the client hangs up (or
-        after ``HOLD``), without running it; ``lost_response`` after ``handle`` has
+        A transport fault (D-57) sends no reply and closes the connection: `connect`
+        at once, without running `handle`; `timeout` once the client hangs up (or
+        after `HOLD`), without running it; `lost_response` after `handle` has
         run, so its writes stay.
         """
         server = cast(MockServer, self.server)
@@ -156,7 +156,7 @@ class MockRequestHandler(BaseHTTPRequestHandler):
 
         Args:
             fault: The fault taken.
-            status: ``handle``'s status when it ran (``lost_response``), else ``-``.
+            status: `handle`'s status when it ran (`lost_response`), else `-`.
         """
         self.log_request(f"{status} ({DROPPED[fault]})")
         self.close_connection = True
@@ -193,7 +193,7 @@ def banner(host: str, port: int, state: MockState, lan: Sequence[str]) -> str:
         host: The address the server is bound to.
         port: The port it listens on.
         state: The mock's state, for its year, capture semantics and accounts.
-        lan: This machine's LAN addresses (``lan_addresses()``).
+        lan: This machine's LAN addresses (`lan_addresses()`).
 
     Returns:
         The text printed on start. It names each account's email and password, all
@@ -298,7 +298,7 @@ def parser() -> argparse.ArgumentParser:
 
 
 def attendee_count(value: str) -> int:
-    """Read ``--attendees``: a whole number, 0 or more.
+    """Read `--attendees`: a whole number, 0 or more.
 
     Raises:
         argparse.ArgumentTypeError: For anything else, which argparse reports.
@@ -326,7 +326,7 @@ def main(argv: Sequence[str] | None = None) -> None:
     """Run the server until Ctrl-C.
 
     Args:
-        argv: The command-line arguments; None reads ``sys.argv``.
+        argv: The command-line arguments; None reads `sys.argv`.
     """
     args = parser().parse_args(argv)
     state = state_for(args)

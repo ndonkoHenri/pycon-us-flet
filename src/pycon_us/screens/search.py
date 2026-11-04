@@ -1,20 +1,20 @@
-"""Search (``/search?scope=<scope>``): the one search, over every day (NEW-02, D-19).
+"""Search (`/search?scope=<scope>`): the one search, over every day (NEW-02, D-19).
 
 A global modal route, opened from Now, Schedule, Map and More with a preset scope
-(``search_button()``), which also records where Back from search returns. A pill field
+(`search_button()`), which also records where Back from search returns. A pill field
 pinned under the app bar takes the focus as the View opens; scope chips (All, Sessions,
 Speakers, Places, Sponsors; D-351) sit under it. The field updates at every keystroke
 (D-157), and the search itself runs once the typing pauses for 250 ms (D-46), or at
-once on the keyboard's action key or a scope change, through ``core.search`` over an
+once on the keyboard's action key or a scope change, through `core.search` over an
 index built once per feed version (D-180). Results come grouped by type, sessions by
-day, each row pushing its detail on top of search (``/search/session/42``,
-``/search/sponsor/bloomberg``), a venue spot its floor plan with the pin
-(``/search/plan/concourse?pin=info-desk``), a booth the expo at it
-(``/search/plan/expo?booth=613``, #406); Back returns to the results with the query
+day, each row pushing its detail on top of search (`/search/session/42`,
+`/search/sponsor/bloomberg`), a venue spot its floor plan with the pin
+(`/search/plan/concourse?pin=info-desk`), a booth the expo at it
+(`/search/plan/expo?booth=613`, #406); Back returns to the results with the query
 intact, since this View stays mounted below the detail and the query and scope are
-also in ``ViewMemory`` (D-18, D-141).
+also in `ViewMemory` (D-18, D-141).
 
-The result list (``screens/search_results.py``) memoises its path as the Schedule's
+The result list (`screens/search_results.py`) memoises its path as the Schedule's
 does (D-153): a keystroke before the pause re-renders the field and nothing under the
 list, and a star tap one row. Search covers all days and ignores the Schedule's filters
 (D-20), and a miss says so.
@@ -79,12 +79,12 @@ def scope_of(requested: str | None, remembered: str) -> str:
     """Return the scope a Search View starts with (D-180).
 
     Args:
-        requested: The ``?scope=`` the opener passed, or None when the View mounted
+        requested: The `?scope=` the opener passed, or None when the View mounted
             without one (a deep entry below a result).
-        remembered: ``ViewMemory.search_scope``.
+        remembered: `ViewMemory.search_scope`.
 
     Returns:
-        ``requested`` when it is a scope, ``all`` for an unknown one, and the
+        `requested` when it is a scope, `all` for an unknown one, and the
         remembered scope when none was passed.
     """
     if requested is None:
@@ -93,30 +93,30 @@ def scope_of(requested: str | None, remembered: str) -> str:
 
 
 def _start_scope(requested: str | None, memory: ViewMemory) -> str:
-    """Return a new Search View's scope, recorded in ``memory`` for a later rebuild.
+    """Return a new Search View's scope, recorded in `memory` for a later rebuild.
 
     Args:
-        requested: The ``?scope=`` the opener passed, or None.
-        memory: The process's ``ViewMemory``.
+        requested: The `?scope=` the opener passed, or None.
+        memory: The process's `ViewMemory`.
     """
     memory.search_scope = scope_of(requested, memory.search_scope)
     return memory.search_scope
 
 
 def record_opening(location: str, memory: ViewMemory) -> None:
-    """Record a new opening of search in ``memory``, however it was opened (D-291).
+    """Record a new opening of search in `memory`, however it was opened (D-291).
 
     Called once, as a Search View mounts. When the last location the user saw is not
-    under ``/search``, this is a new opening: Back from search goes there
-    (``search_base``), and a Search View that is the top one starts empty. The Search
-    button records the same before it navigates (``search_button()``); a deep link
-    to ``/search`` has no button, and without this its Back went to whichever page
+    under `/search`, this is a new opening: Back from search goes there
+    (`search_base`), and a Search View that is the top one starts empty. The Search
+    button records the same before it navigates (`search_button()`); a deep link
+    to `/search` has no button, and without this its Back went to whichever page
     last opened search. A View that mounts below a result keeps the remembered query
     (D-193), and a cold start (nothing seen yet) keeps the defaults.
 
     Args:
-        location: ``page.route``, the location the View mounts at.
-        memory: The process's ``ViewMemory``.
+        location: `page.route`, the location the View mounts at.
+        memory: The process's `ViewMemory`.
     """
     seen = memory.last_location
     if not seen or in_search(seen):

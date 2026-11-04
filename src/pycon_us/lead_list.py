@@ -1,10 +1,10 @@
 """The account's leads read from the outbox, for the leads list and its count (#743).
 
-LEAD-08. ``leads()`` returns the signed-in account's ``lead`` rows, newest first, each
+LEAD-08. `leads()` returns the signed-in account's `lead` rows, newest first, each
 with whether a note row exists for its code and sponsor (D-459): pending, failed and
 synced alike, as synced rows are kept (D-56), and only that account's (D-414; other
-accounts' rows stay in Developer). ``lead_count()`` is the "Leads (42)" button's
-number. Both return None when the outbox can't be read (logged by ``OutboxDb``), never an empty list, so the
+accounts' rows stay in Developer). `lead_count()` is the "Leads (42)" button's
+number. Both return None when the outbox can't be read (logged by `OutboxDb`), never an empty list, so the
 page says so instead of "No leads yet" (D-120).
 """
 
@@ -18,11 +18,11 @@ def leads(db: OutboxDb | None, owner: str) -> list[tuple[Row, bool]] | None:
     An attendee scanned for two sponsors is two leads, so two rows (D-459).
 
     Args:
-        db: The outbox (``Services.outbox``).
+        db: The outbox (`Services.outbox`).
         owner: The signed-in account's lower-cased email.
 
     Returns:
-        ``(row, has_note)`` pairs by ``created_at`` then id, newest first; None when
+        `(row, has_note)` pairs by `created_at` then id, newest first; None when
         there is no outbox or its read failed.
     """
     rows = None if db is None else db.rows(owner, tuple(Status))  # oldest first
@@ -40,7 +40,7 @@ def lead_count(db: OutboxDb | None, owner: str) -> int | None:
     """Return how many leads the owner has, or None when the outbox can't be read.
 
     Args:
-        db: The outbox (``Services.outbox``).
+        db: The outbox (`Services.outbox`).
         owner: The signed-in account's lower-cased email.
     """
     found = leads(db, owner)

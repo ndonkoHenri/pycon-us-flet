@@ -1,7 +1,7 @@
-"""Tests for the venue hours' open-now rule (``core/hours.py``; MAP-09, D-282).
+"""Tests for the venue hours' open-now rule (`core/hours.py`; MAP-09, D-282).
 
 They run on 2026's year data and on small made-up services, under two machine time
-zones (``machine_tz``): the answers must not change with the device's zone (D-43).
+zones (`machine_tz`): the answers must not change with the device's zone (D-43).
 """
 
 from datetime import UTC, date, datetime, time
@@ -34,13 +34,13 @@ def pacific(day: int, hour: int, minute: int = 0, second: int = 0) -> datetime:
 def status(
     service: str, now: datetime, hours: tuple[ServiceHours, ...] = HOURS
 ) -> HoursStatus | None:
-    """The status ``service`` has at ``now`` in 12-hour form; None off-season."""
+    """The status `service` has at `now` in 12-hour form; None off-season."""
     statuses = hours_status(hours, now, PACIFIC, use_24h=False)
     return None if statuses is None else statuses[service]
 
 
 def label(service: str, now: datetime) -> str:
-    """The label 2026's ``service`` shows at ``now``; the season must be on."""
+    """The label 2026's `service` shows at `now`; the season must be on."""
     found = status(service, now)
     assert found is not None
     return found.label
@@ -106,7 +106,7 @@ def test_with_no_opening_left_it_is_closed_today() -> None:
     ],
 )
 def test_off_season_there_is_no_status(now: datetime) -> None:
-    """Outside the days a service opens on, ``hours_status()`` is None: no labels."""
+    """Outside the days a service opens on, `hours_status()` is None: no labels."""
     assert hours_status(HOURS, now, PACIFIC, use_24h=False) is None
 
 
@@ -184,6 +184,6 @@ def test_days_are_the_dates_any_service_opens_on() -> None:
 
 
 def test_a_naive_instant_is_refused() -> None:
-    """A ``now`` without a zone has no instant, so the rule refuses it (D-43)."""
+    """A `now` without a zone has no instant, so the rule refuses it (D-43)."""
     with pytest.raises(ValueError, match="aware"):
         hours_status(HOURS, datetime(2026, 5, 15, 10), PACIFIC, use_24h=False)  # noqa: DTZ001

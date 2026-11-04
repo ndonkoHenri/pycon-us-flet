@@ -1,10 +1,10 @@
-"""Tests for keeping E3's reminders in step with the app (``reminder_schedule.py``; #447).
+"""Tests for keeping E3's reminders in step with the app (`reminder_schedule.py`; #447).
 
-``current_plan()`` over the stores, and the hook in a real Flet session
-(``tests/sessions.py``) under a stand-in for ``App``, with a ``Scheduler`` over
-``tests/fakes.py``'s ``MemoryNotifications``: it applies once the start has loaded, at
+`current_plan()` over the stores, and the hook in a real Flet session
+(`tests/sessions.py`) under a stand-in for `App`, with a `Scheduler` over
+`tests/fakes.py`'s `MemoryNotifications`: it applies once the start has loaded, at
 each change of a watched field and on resume, and not for other changes (D-222, D-389).
-Then ``use_reminder_taps()``: taps navigate only while the boot gate is open (D-396).
+Then `use_reminder_taps()`: taps navigate only while the boot gate is open (D-396).
 """
 
 from collections.abc import AsyncIterator, Callable, Iterator
@@ -61,7 +61,7 @@ def year() -> YearData:
 
 @pytest.fixture
 def held() -> Iterator[None]:
-    """Hold ``clock.real_now()`` at ``BEFORE``; real time again afterwards."""
+    """Hold `clock.real_now()` at `BEFORE`; real time again afterwards."""
     clock.set_test_now(BEFORE)
     yield
     clock.set_test_now(None)
@@ -69,7 +69,7 @@ def held() -> Iterator[None]:
 
 @dataclass
 class Shown:
-    """The stand-in ``App`` rendering the hook, its stores and the fake OS."""
+    """The stand-in `App` rendering the hook, its stores and the fake OS."""
 
     svc: Services
     conference: Conference
@@ -105,12 +105,12 @@ def showing(year: YearData, tmp_path: Path, *, loaded: bool) -> Shown:
 
 @pytest.fixture
 async def shown(year: YearData, tmp_path: Path, held: None) -> AsyncIterator[Shown]:
-    """The hook under a stand-in ``App`` whose start has loaded, TALK saved."""
+    """The hook under a stand-in `App` whose start has loaded, TALK saved."""
     state = showing(year, tmp_path, loaded=True)
 
     @ft.component
     def Host() -> ft.Control:
-        """``App``'s part: the hook."""
+        """`App`'s part: the hook."""
         use_reminder_schedule(
             state.svc, state.conference, state.favorites, state.change_log, state.prefs
         )
@@ -181,7 +181,7 @@ async def test_other_changes_leave_the_reminders_alone(shown: Shown) -> None:
 
 
 async def test_a_resume_applies_again(shown: Shown) -> None:
-    """``on_resume()`` asks for an apply, which brings back what the OS dropped."""
+    """`on_resume()` asks for an apply, which brings back what the OS dropped."""
     shown.os.pending.clear()  # as a force-stop or the OS clears them
     shown.conference._started_at = clock.now()  # no refresh is due
     await on_resume(shown.svc, shown.conference, shown.prefs, Account())
@@ -198,7 +198,7 @@ async def test_nothing_is_applied_before_the_start_has_loaded(
 
     @ft.component
     def Host() -> ft.Control:
-        """``App``'s part: the hook, before the start ends."""
+        """`App`'s part: the hook, before the start ends."""
         use_reminder_schedule(
             state.svc, state.conference, state.favorites, state.change_log, state.prefs
         )
@@ -220,7 +220,7 @@ async def test_without_e3_the_hook_does_nothing(
 
     @ft.component
     def Host() -> ft.Control:
-        """``App``'s part: the hook, without E3."""
+        """`App`'s part: the hook, without E3."""
         use_reminder_schedule(svc, Conference(), Favorites(), ChangeLog(), prefs)
         return ft.Column()
 
@@ -232,7 +232,7 @@ async def test_without_e3_the_hook_does_nothing(
 async def test_taps_navigate_only_while_the_gate_is_open(
     year: YearData, tmp_path: Path, held: None
 ) -> None:
-    """Before the gate opens a tap is held for ``Start``; after, it navigates at once."""
+    """Before the gate opens a tap is held for `Start`; after, it navigates at once."""
     state = showing(year, tmp_path, loaded=False)
     scheduler = state.svc.reminders
     assert scheduler is not None
@@ -240,7 +240,7 @@ async def test_taps_navigate_only_while_the_gate_is_open(
 
     @ft.component
     def Host() -> ft.Control:
-        """``App``'s part: the hook, with the gate as the test sets it."""
+        """`App`'s part: the hook, with the gate as the test sets it."""
         ready, set_ready = ft.use_state(False)
         gate["open"] = lambda: set_ready(True)
         use_reminder_taps(state.svc, ready=ready)
@@ -262,10 +262,10 @@ async def test_taps_navigate_only_while_the_gate_is_open(
 async def test_a_tap_held_at_boot_opens_when_start_cannot_take_it(
     year: YearData, tmp_path: Path, held: None, start: str
 ) -> None:
-    """A start at a link, or ``/search`` over ``Start``, opens the held tap at the gate.
+    """A start at a link, or `/search` over `Start`, opens the held tap at the gate.
 
-    ``Start`` takes a held tap only as the top View, so elsewhere the gate opening
-    navigates to it and clears it; at ``/`` it stays for ``Start``.
+    `Start` takes a held tap only as the top View, so elsewhere the gate opening
+    navigates to it and clears it; at `/` it stays for `Start`.
     """
     state = showing(year, tmp_path, loaded=False)
     scheduler = state.svc.reminders
@@ -274,7 +274,7 @@ async def test_a_tap_held_at_boot_opens_when_start_cannot_take_it(
 
     @ft.component
     def Host() -> ft.Control:
-        """``App``'s part: the hook, with the gate as the test sets it."""
+        """`App`'s part: the hook, with the gate as the test sets it."""
         ready, set_ready = ft.use_state(False)
         gate["open"] = lambda: set_ready(True)
         use_reminder_taps(state.svc, ready=ready)

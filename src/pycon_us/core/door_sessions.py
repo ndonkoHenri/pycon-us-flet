@@ -1,12 +1,12 @@
 """Door check's sessions, in order, by day and searched, and the session chosen (#764).
 
-The picker (``screens/door_session.py``) lists a door category's products as sessions
-(DOOR-02): in ``product_sort_key()``'s order, by the date that starts each name (Ionic's
-pattern; ``session_parts()`` splits it from the title), under a heading per day, the
+The picker (`screens/door_session.py`) lists a door category's products as sessions
+(DOOR-02): in `product_sort_key()`'s order, by the date that starts each name (Ionic's
+pattern; `session_parts()` splits it from the title), under a heading per day, the
 undated ones last; a search keeps the sessions whose title or day and time hold every
-word (D-46). The choice is a ``DoorChoice``: one session, or all of a category's, with
-the label the scan screen's chip shows. ``pycon.staff_<year>_door_session`` keeps it
-(``to_stored()``, ``from_stored()``), a staff key (D-414, D-433).
+word (D-46). The choice is a `DoorChoice`: one session, or all of a category's, with
+the label the scan screen's chip shows. `pycon.staff_<year>_door_session` keeps it
+(`to_stored()`, `from_stored()`), a staff key (D-414, D-433).
 """
 
 import re
@@ -29,8 +29,8 @@ _WHEN = re.compile(
     r"\s+(\d{1,2}):(\d{2})\s+(AM|PM)\b",
     re.IGNORECASE | re.ASCII,
 )
-"""Ionic's session date (``door-check.page.ts`` 92), "Wed May 13 9:00 AM", weekday
-optional; ASCII ``\\w`` and ``\\d`` as in JavaScript."""
+"""Ionic's session date (`door-check.page.ts` 92), "Wed May 13 9:00 AM", weekday
+optional; ASCII `\\w` and `\\d` as in JavaScript."""
 
 _DATE_SEPARATOR = re.compile(r"^\s*[-\u2013\u2014:]?\s*")
 """What stands between a session's date and its title, " - " in the seed."""
@@ -67,7 +67,7 @@ class DoorChoice:
 
     Attributes:
         category_id: Their category's id.
-        product_ids: The product ids, the door's ``fetch_products`` and inventory ids.
+        product_ids: The product ids, the door's `fetch_products` and inventory ids.
         label: What the chip shows, "Async in depth · Wed 1:30 PM".
         all_sessions: It is every session of the category ("All sessions").
     """
@@ -81,13 +81,13 @@ class DoorChoice:
 def product_sort_key(name: str, year: int) -> tuple[int, datetime, str, str]:
     """Return a key that sorts products chronologically by the date in their name (DOOR-02).
 
-    Ionic's pattern (``door-check.page.ts`` 91-103), in ``year`` rather than its
+    Ionic's pattern (`door-check.page.ts` 91-103), in `year` rather than its
     hard-coded 2026: a session sorts by its start; a name without a valid date (a shirt
     size, "Feb 30") sorts after every dated one. Ties go by folded name, then the name.
 
     Args:
         name: The product's name, such as "Wed May 13 9:00 AM - All about decorators".
-        year: The conference year (``config.YEAR``).
+        year: The conference year (`config.YEAR`).
 
     Returns:
         The sort key.
@@ -98,7 +98,7 @@ def product_sort_key(name: str, year: int) -> tuple[int, datetime, str, str]:
 
 
 def _start(name: str, year: int) -> datetime | None:
-    """Return the start a product's name gives in ``year``, or None without a valid one."""
+    """Return the start a product's name gives in `year`, or None without a valid one."""
     match = _WHEN.match(name)
     if match is None:
         return None
@@ -139,10 +139,10 @@ def session_parts(name: str) -> tuple[str, str] | None:
 def door_sessions(
     catalog: Catalog, category: int, year: int
 ) -> tuple[DoorSession, ...]:
-    """Return a category's sessions, chronologically (``product_sort_key()``, DOOR-02).
+    """Return a category's sessions, chronologically (`product_sort_key()`, DOOR-02).
 
     Args:
-        catalog: The door's catalog (``door_catalog()``).
+        catalog: The door's catalog (`door_catalog()`).
         category: The category's id.
         year: The conference year, which a name's date is in.
     """
@@ -166,7 +166,7 @@ def by_day(
     """Return the sessions under their day, in their order; the undated ones under None.
 
     Args:
-        sessions: Sessions in ``door_sessions()``' order, so a day's are together and
+        sessions: Sessions in `door_sessions()`' order, so a day's are together and
             the undated ones last.
     """
     groups: list[tuple[date | None, list[DoorSession]]] = []
@@ -180,7 +180,7 @@ def by_day(
 def filter_sessions(
     sessions: tuple[DoorSession, ...], query: str
 ) -> tuple[DoorSession, ...]:
-    """Return the sessions whose title or day and time hold every word of ``query``.
+    """Return the sessions whose title or day and time hold every word of `query`.
 
     Folded as search folds (D-46), each word anywhere, so "async" finds "Async in
     depth" and "wed" Wednesday's sessions.
@@ -190,7 +190,7 @@ def filter_sessions(
         query: What the user typed.
 
     Returns:
-        The sessions found, in their order; ``sessions`` itself without a word.
+        The sessions found, in their order; `sessions` itself without a word.
     """
     return matching(sessions, query, lambda s: fold(f"{s.title} {s.when}"))
 
@@ -209,7 +209,7 @@ def choose_session(category: int, session: DoorSession) -> DoorChoice:
 
 
 def choose_all(category: Category, sessions: Iterable[DoorSession]) -> DoorChoice:
-    """Return the choice of every session of ``category``, "Tutorials · All sessions".
+    """Return the choice of every session of `category`, "Tutorials · All sessions".
 
     Args:
         category: The category.
@@ -222,13 +222,13 @@ def choose_all(category: Category, sessions: Iterable[DoorSession]) -> DoorChoic
 
 
 def to_stored(choice: DoorChoice) -> dict[str, Any]:
-    """Return the choice as ``pycon.staff_<year>_door_session`` keeps it.
+    """Return the choice as `pycon.staff_<year>_door_session` keeps it.
 
     Args:
         choice: The choice made on the picker.
 
     Returns:
-        ``{"category_id", "product_ids", "label", "all"}``.
+        `{"category_id", "product_ids", "label", "all"}`.
     """
     return {
         "category_id": choice.category_id,
@@ -239,10 +239,10 @@ def to_stored(choice: DoorChoice) -> dict[str, Any]:
 
 
 def from_stored(value: dict[str, Any]) -> DoorChoice | None:
-    """Return the choice ``pycon.staff_<year>_door_session`` holds, or None.
+    """Return the choice `pycon.staff_<year>_door_session` holds, or None.
 
     Args:
-        value: The stored object; ``{}`` when nothing was chosen.
+        value: The stored object; `{}` when nothing was chosen.
 
     Returns:
         The choice, or None when nothing was chosen or the value is unusable (no
@@ -258,5 +258,5 @@ def from_stored(value: dict[str, Any]) -> DoorChoice | None:
 
 
 def _is_id(value: object) -> TypeIs[int]:
-    """Return whether ``value`` is an id as the catalog reads them: an int, not a bool."""
+    """Return whether `value` is an id as the catalog reads them: an int, not a bool."""
     return isinstance(value, int) and not isinstance(value, bool) and value >= 0

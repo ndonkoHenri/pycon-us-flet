@@ -1,8 +1,8 @@
-"""Tests for ``core/expo.py``: the expo's booths and the job fair's tables.
+"""Tests for `core/expo.py`: the expo's booths and the job fair's tables.
 
 EXPO-02, D-254 (#401): a booth lists every sponsor with its number, a labelled booth
-has none, and 2026's gaps between ``map.toml`` and the feed are pinned, so a new one
-fails by name. The loader's booth rules are in ``test_year_map.py``. MAP-04 (#407): the
+has none, and 2026's gaps between `map.toml` and the feed are pinned, so a new one
+fails by name. The loader's booth rules are in `test_year_map.py`. MAP-04 (#407): the
 job fair's tables in natural order, every sponsor of a shared table, with its roles.
 """
 
@@ -17,7 +17,7 @@ from pycon_us.core.models import ConferenceData
 from tests.feeds import changed, processed, recorded, settings
 
 BOOTHS = load_year(2026).map.booths
-"""2026's booths, from ``map.toml``."""
+"""2026's booths, from `map.toml`."""
 
 
 def snapshot_2026() -> ConferenceData:
@@ -27,7 +27,7 @@ def snapshot_2026() -> ConferenceData:
 
 
 def with_booth(name: str, booth: object) -> ConferenceData:
-    """2026's recorded feed with the sponsor named ``name`` given ``booth_number``."""
+    """2026's recorded feed with the sponsor named `name` given `booth_number`."""
 
     def change(doc: dict[str, Any]) -> None:
         for sponsors in doc["conference"]["sponsors"].values():
@@ -135,7 +135,7 @@ def test_the_expo_is_built_once_per_feed() -> None:
 
 
 def with_table(name: str, table: object) -> ConferenceData:
-    """2026's recorded feed with the sponsor named ``name`` at job fair ``table``."""
+    """2026's recorded feed with the sponsor named `name` at job fair `table`."""
 
     def change(doc: dict[str, Any]) -> None:
         for sponsors in doc["conference"]["sponsors"].values():

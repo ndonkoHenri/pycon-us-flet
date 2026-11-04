@@ -1,9 +1,9 @@
-"""Tests for the bottom bar and the rail on ``AppScaffold``'s Views (#75, #387; D-144).
+"""Tests for the bottom bar and the rail on `AppScaffold`'s Views (#75, #387; D-144).
 
 Which View shows the bar or the rail, what separates the bar in high contrast, and what
 a tap or a re-tap on either does, built outside a renderer with the fixtures of
-``tests/chrome.py`` (#264). The bar's and the rail's own parts and the re-tap scroll
-are in ``test_navigation.py``.
+`tests/chrome.py` (#264). The bar's and the rail's own parts and the re-tap scroll
+are in `test_navigation.py`.
 """
 
 from types import SimpleNamespace
@@ -42,13 +42,13 @@ year, svc, page, conference, hooks = (
 
 
 def bar_of(view: ft.View) -> ft.NavigationBar:
-    """The ``NavigationBar`` of ``view``."""
+    """The `NavigationBar` of `view`."""
     assert isinstance(view.navigation_bar, ft.NavigationBar)
     return view.navigation_bar
 
 
 async def tap_tab(view: ft.View, root: str) -> None:
-    """Tap a destination as Flutter reports it: selected first, then ``on_change``."""
+    """Tap a destination as Flutter reports it: selected first, then `on_change`."""
     bar = bar_of(view)
     bar.selected_index = TAB_ROOTS.index(root)
     await cast(Any, bar.on_change)(SimpleNamespace(control=bar))
@@ -96,7 +96,7 @@ def test_a_pushed_view_in_high_contrast_has_no_bar_line(
 ) -> None:
     """A pushed View has no bar, so no line above one, in HC too.
 
-    Its only line is the one under its app bar (``test_hc_boundaries.py``).
+    Its only line is the one under its app bar (`test_hc_boundaries.py`).
     """
     hooks.tokens = HC_LIGHT_TOKENS
     view = view_at(hooks, page, "/schedule/session/42")
@@ -196,7 +196,7 @@ async def test_a_retap_that_fails_is_reported_and_the_bar_keeps_working(
 
 
 async def tap_rail(view: ft.View, root: str) -> None:
-    """Tap a rail destination as Flutter reports it: selected first, then ``on_change``."""
+    """Tap a rail destination as Flutter reports it: selected first, then `on_change`."""
     rail = rail_of(view)
     rail.selected_index = TAB_ROOTS.index(root)
     await cast(Any, rail.on_change)(SimpleNamespace(control=rail))
@@ -262,7 +262,7 @@ def test_pushed_views_show_neither_the_bar_nor_the_rail_from_600_dp(
 def test_ui_tests_find_each_tab_by_identifier_or_name_in_both_layouts(
     hooks: Hooks, page: FakePage, wide: bool
 ) -> None:
-    """Under 600 dp each tab carries ``app.nav.<tab>``; from 600 dp, its name (#163)."""
+    """Under 600 dp each tab carries `app.nav.<tab>`; from 600 dp, its name (#163)."""
     hooks.wide = wide
     view = view_at(hooks, page, "/now")
     if wide:

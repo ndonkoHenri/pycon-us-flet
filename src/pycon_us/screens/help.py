@@ -1,30 +1,30 @@
-"""Help & safety (``/more/help``): one place to look under stress (INFO-07, INFO-11).
+"""Help & safety (`/more/help`): one place to look under stress (INFO-07, INFO-11).
 
 Ionic had two pages, Code of Conduct and Help, that repeated the same report rows
 after their reading. This page merges them (ux.md §6.7, D-281), and its first content
 is what someone in trouble needs:
 
-- **Report a concern**, an outlined card with an ``error`` edge: a row per safety
-  contact from the year's data (``[[safety_contacts]]``, D-45), its title what a tap
+- **Report a concern**, an outlined card with an `error` edge: a row per safety
+  contact from the year's data (`[[safety_contacts]]`, D-45), its title what a tap
   does and its subtitle the number or the address, read together as one phrase, with
-  Copy beside it (``copy_contact()``): ``tel:`` opens nothing on an iPad or a
+  Copy beside it (`copy_contact()`): `tel:` opens nothing on an iPad or a
   simulator. Then the year's line on reporting in person to any staff member.
 - **At the venue:** where the information desk, lost and found and the quiet room
-  are, a line each, each followed by its ``LocationCard`` when ``[help]`` names its
-  pin (``spot_card()``, INFO-12), which pushes the floor viewer at it; under the
+  are, a line each, each followed by its `LocationCard` when `[help]` names its
+  pin (`spot_card()`, INFO-12), which pushes the floor viewer at it; under the
   quiet room the sponsor who provides it, which pushes its detail
-  (``SponsorCreditTile``, D-337); then All maps, which opens the Map tab on its Floor
+  (`SponsorCreditTile`, D-337); then All maps, which opens the Map tab on its Floor
   plans (#391).
 - **Code of Conduct:** its summary in our words, then the full text and how reports
   are handled, both on the PSF's site, in the in-app browser.
 - **The app:** Report a problem with the app, last on the page whatever the year has.
   While the repository is private it shares the app's log and diagnostics, as About
-  this app's Report a problem does; once ``SOURCE_URL`` is set it opens a new issue in
-  the in-app browser (``ReportProblem``, INFO-11, D-88, D-297).
+  this app's Report a problem does; once `SOURCE_URL` is set it opens a new issue in
+  the in-app browser (`ReportProblem`, INFO-11, D-88, D-297).
 
-Everything is bundled year data (``[help]``, ``year_info``), so the page works in
+Everything is bundled year data (`[help]`, `year_info`), so the page works in
 airplane mode with no loader. A year without it shows the feed's own
-``code-of-conduct`` block, and without that the page's empty state (``InfoBody``,
+`code-of-conduct` block, and without that the page's empty state (`InfoBody`,
 D-263).
 """
 
@@ -83,13 +83,13 @@ PLACES = (
     ("lost_and_found", "Lost & found", ft.Icons.INVENTORY_2_OUTLINED),
     ("quiet_room", "Quiet room", ft.Icons.SELF_IMPROVEMENT_OUTLINED),
 )
-"""The places the page names, in order: ``HelpInfo``'s field, the row's title, its icon."""
+"""The places the page names, in order: `HelpInfo`'s field, the row's title, its icon."""
 
 _NANP = re.compile(r"\+1(\d{3})(\d{3})(\d{4})")
 """A North American number in E.164, in its three groups."""
 
 _BREAK = "\u200b"
-"""A zero-width space: where a line may break, unseen (an address after its ``@``)."""
+"""A zero-width space: where a line may break, unseen (an address after its `@`)."""
 
 
 @ft.component
@@ -127,7 +127,7 @@ def ReportProblem() -> ft.Control:
     """The page's last section: Report a problem with the app, and how it ended.
 
     A component of its own, as About this app's Help us fix it is, so a share
-    re-renders these rows and not the page (``use_problem_report()``).
+    re-renders these rows and not the page (`use_problem_report()`).
     """
     report = use_problem_report()
     tokens = use_tokens()
@@ -153,16 +153,16 @@ def report_problem_row(
     sharing: bool,
     on_share: ft.ControlEventHandler[ft.ListTile],
 ) -> ft.Control:
-    """Return Report a problem with the app, which switches on ``SOURCE_URL`` (D-88).
+    """Return Report a problem with the app, which switches on `SOURCE_URL` (D-88).
 
     While the repository is private, an action that shares the log and diagnostics
-    (``share_console_log()``); once it is public, an external row that opens a new
+    (`share_console_log()`); once it is public, an external row that opens a new
     issue in the in-app browser and reads "Opens in browser" (INFO-14, D-182). One
     row either way: under stress, one way to report; Share log stays on About this app.
 
     Args:
-        source_url: ``SOURCE_URL``: None while the repository is private.
-        packaged: A packaged build, whose share adds ``console.log``.
+        source_url: `SOURCE_URL`: None while the repository is private.
+        packaged: A packaged build, whose share adds `console.log`.
         sharing: The share sheet is up: the row is disabled until it closes.
         on_share: The row's action while the repository is private.
     """
@@ -196,11 +196,11 @@ def help_blocks(
 
     Args:
         contacts: The year's safety contacts; the card shows when there is one.
-        info: The year's ``[help]`` table, or None; the loader refuses one without a
+        info: The year's `[help]` table, or None; the loader refuses one without a
             contact, so the card always heads it.
         quiet_room_credit: The quiet room's sponsor, credited under its line
             (D-337); None when the year names none.
-        map_data: The year's ``map.toml``, for the places' location cards and All
+        map_data: The year's `map.toml`, for the places' location cards and All
             maps; None or a year without plans shows neither.
     """
     map_data = map_data or MapData()
@@ -266,9 +266,9 @@ def report_card(
 ) -> ft.Control:
     """Return the Report a concern card: a heading, a row per contact, the last line.
 
-    An outlined card whose edge is ``error``, the colour M3 keeps for what is urgent;
+    An outlined card whose edge is `error`, the colour M3 keeps for what is urgent;
     the heading and its icon say it too, so colour is never the only signal (D-33).
-    Not one node (``semantic_container=False``, as the Lightning talks card, D-211): a
+    Not one node (`semantic_container=False`, as the Lightning talks card, D-211): a
     screen reader stops on the heading, then on each row and its Copy, then the line.
 
     Args:
@@ -327,9 +327,9 @@ def report_card(
 def contact_row(contact: SafetyContact) -> ft.Control:
     """Return a contact's row: what a tap does over the value, with Copy beside it.
 
-    ``LinkTile``'s external form (D-182): one node read as action plus value ("Email
+    `LinkTile`'s external form (D-182): one node read as action plus value ("Email
     the Code of Conduct team, pycon-us-report@python.org"), and for a phone or an
-    email a Copy button that is a stop of its own (``help.copy.<kind>``).
+    email a Copy button that is a stop of its own (`help.copy.<kind>`).
 
     Args:
         contact: The safety contact.
@@ -352,7 +352,7 @@ def contact_line(contact: SafetyContact) -> str:
 
     A North American number in groups ("+1 562-555-0100"), which a screen reader says
     digit group by digit group rather than as one large number; any other number as
-    written; an address with a break after its ``@``, so that at 200 % text a narrow
+    written; an address with a break after its `@`, so that at 200 % text a narrow
     row wraps it there, never inside the domain (#642); a web page by its host.
 
     Args:
@@ -370,14 +370,14 @@ def contact_line(contact: SafetyContact) -> str:
 def place(
     title: str, icon: ft.IconData, key: str, info: HelpInfo, map_data: MapData
 ) -> list[ft.Control]:
-    """Return a place's row, then its ``LocationCard`` when it has a pin.
+    """Return a place's row, then its `LocationCard` when it has a pin.
 
     Args:
         title: The place: "Information desk".
         icon: Its row's leading icon.
-        key: Its ``HelpInfo`` field (``quiet_room``); its pin is ``<key>_pin``.
-        info: The year's ``[help]``.
-        map_data: The year's ``map.toml``.
+        key: Its `HelpInfo` field (`quiet_room`); its pin is `<key>_pin`.
+        info: The year's `[help]`.
+        map_data: The year's `map.toml`.
     """
     controls = [place_row(title, getattr(info, key), icon, key)]
     card = spot_card(
@@ -396,15 +396,15 @@ def place(
 def place_row(title: str, line: str, icon: ft.IconData, key: str) -> ft.Control:
     """Return a place's row: its name over the line that says where it is.
 
-    A ``ListTile`` that opens nothing, laid out as a link row with a subtitle is
-    (``rows.SUBTITLED_TOP``), so its icon sits beside the name at any text size, and
+    A `ListTile` that opens nothing, laid out as a link row with a subtitle is
+    (`rows.SUBTITLED_TOP`), so its icon sits beside the name at any text size, and
     one node read as one phrase ("Quiet room, VIP Room A & B, …").
 
     Args:
         title: The place: "Information desk".
         line: Where it is, from the year's data.
         icon: Its leading icon, outlined.
-        key: Its ``HelpInfo`` field, its identifier's key (``help.info_desk``).
+        key: Its `HelpInfo` field, its identifier's key (`help.info_desk`).
     """
     tile = ft.ListTile(
         leading=ft.Icon(icon),

@@ -1,11 +1,11 @@
 """The people on stage at a keynote or panel, and session detail's enrichment (SESS-08).
 
 The feed names a keynote by its speaker and links its description to the site, so a
-keynote's or panel's detail adds what the year data says (``content.toml``'s
-``[[keynotes]]``, D-217): under Speakers, each person's photo, name and role, then their
+keynote's or panel's detail adds what the year data says (`content.toml`'s
+`[[keynotes]]`, D-217): under Speakers, each person's photo, name and role, then their
 bio; under About, the talk's own title over its abstract, which replaces the feed's
-link-only description. ``person_head()``, a person's photo beside their name and role,
-is the Keynotes page's too (``screens.keynote_card``). A module of its own, so session
+link-only description. `person_head()`, a person's photo beside their name and role,
+is the Keynotes page's too (`screens.keynote_card`). A module of its own, so session
 detail stays under D-66's 400 lines.
 """
 
@@ -31,7 +31,7 @@ def person_head(
 ) -> ft.Control:
     """Return a person's photo beside, or over, their name and role.
 
-    The photo is ``speaker_avatar()``'s (the photo over the initials), decorative: the
+    The photo is `speaker_avatar()`'s (the photo over the initials), decorative: the
     name beside it says who. With a heading level the name is a heading (a Keynotes
     card's, F40) and the role a line of its own; without, name and role are one node,
     as a row in session detail's Speakers section.
@@ -39,9 +39,9 @@ def person_head(
     Args:
         person: The person.
         radius: The photo's radius in dp: a card's 48, session detail's 24.
-        name_style: The name's type: ``TITLE_LARGE`` on a card, ``TITLE_MEDIUM`` in a
+        name_style: The name's type: `TITLE_LARGE` on a card, `TITLE_MEDIUM` in a
             list.
-        initials_style: The initials' type, for a larger photo (``speaker_avatar()``).
+        initials_style: The initials' type, for a larger photo (`speaker_avatar()`).
         heading_level: The name's heading level; None for no heading.
         identifier: The name's node's semantics identifier.
         stacked: The photo over the name, as on a Keynotes card: beside a 96 dp photo,
@@ -85,14 +85,14 @@ def keynote_speakers(keynote: Keynote, *, screen: str) -> ft.Control:
     """Return session detail's Speakers section for a keynote or panel (SESS-08).
 
     Each person's photo, name and role, then their bio when the year data has one, in
-    ``BODY_LARGE`` as a detail's text (ux.md §3.6), in full: a detail page cuts nothing.
+    `BODY_LARGE` as a detail's text (ux.md §3.6), in full: a detail page cuts nothing.
     No chevron: these people have no page in the app, since the feed links no speaker
     to a keynote.
 
     Args:
         keynote: The session's keynote data.
-        screen: The screen's name in the identifiers: ``<screen>.person.<n>`` and
-            ``<screen>.bio.<n>``, numbered in the year data's order.
+        screen: The screen's name in the identifiers: `<screen>.person.<n>` and
+            `<screen>.bio.<n>`, numbered in the year data's order.
     """
     title = "Speakers" if keynote.kind == "keynote" else "Panelists"
     blocks: list[ft.Control] = [SectionHeader(title, level=2, top=0)]
@@ -133,16 +133,16 @@ def keynote_about(
 ) -> ft.Control:
     """Return session detail's About section for a keynote or panel (SESS-08).
 
-    The talk's own title in ``TITLE_MEDIUM`` (the feed names a keynote by its speaker),
+    The talk's own title in `TITLE_MEDIUM` (the feed names a keynote by its speaker),
     then the year data's abstract; a keynote without one keeps the feed's description,
     a link to its entry on the site.
 
     Args:
         keynote: The session's keynote data.
-        description: The feed's description as Markdown (``Session.description_md``).
+        description: The feed's description as Markdown (`Session.description_md`).
         svc: The session's services, for the text's links.
-        screen: The screen's name in the identifiers: ``<screen>.keynote_title`` and
-            ``<screen>.description``.
+        screen: The screen's name in the identifiers: `<screen>.keynote_title` and
+            `<screen>.description`.
     """
     parts: list[ft.Control] = [SectionHeader("About", level=2, top=0)]
     if keynote.title:

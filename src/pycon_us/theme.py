@@ -1,14 +1,14 @@
 """The app's Material 3 themes and colour tokens (D-22..D-28).
 
 One theme per colour scheme, identical on Android and iOS (D-10): seeded from the PyCon
-indigo with neutral surfaces, the brand overrides of ``docs/ux.md`` §3.2, the bundled Roboto
+indigo with neutral surfaces, the brand overrides of `docs/ux.md` §3.2, the bundled Roboto
 (D-105), left-aligned app-bar titles, per-platform page transitions (D-11) and the system
-bar style of D-113. ``Tokens`` holds the colours Material 3 has no role for (D-24), the
-track badges among them (D-25, from ``theme_badges.py``). ``MARKDOWN_STYLE``, the one
-style sheet every feed text uses (D-116), is ``theme_markdown.py``'s.
+bar style of D-113. `Tokens` holds the colours Material 3 has no role for (D-24), the
+track badges among them (D-25, from `theme_badges.py`). `MARKDOWN_STYLE`, the one
+style sheet every feed text uses (D-116), is `theme_markdown.py`'s.
 
 The high-contrast schemes, their token colours and their card theme live in
-``theme_hc.py`` (THEME-04..06); the ``high_contrast`` flag selects them, and HC's tokens
+`theme_hc.py` (THEME-04..06); the `high_contrast` flag selects them, and HC's tokens
 outline every badge and carry the flag to the components (D-285).
 """
 
@@ -37,7 +37,7 @@ from pycon_us.theme_hc import (
 )
 
 SEED = "#3B3EA9"
-"""PyCon indigo: the seed of every scheme and the light ``primary`` (ux.md §3.1)."""
+"""PyCon indigo: the seed of every scheme and the light `primary` (ux.md §3.1)."""
 
 BOOTH_AMBER = "#F2C14E"
 """A selected expo booth's fill in every scheme, as the plan is the same (ux.md §6.2).
@@ -45,13 +45,13 @@ BOOTH_AMBER = "#F2C14E"
 A selected job fair table's too, on the print's purple at well over 3:1 (#402)."""
 
 BOOT_COLOR = "#680579"
-"""The splash's purple (``[tool.flet.splash]``, ux.md §2.6): the boot view and the start
+"""The splash's purple (`[tool.flet.splash]`, ux.md §2.6): the boot view and the start
 route show it in every scheme, so the launch never flashes."""
 
 FONT_FAMILY = "packages/roboto_fonts/Roboto"
 """Roboto 400/500/700 from the local Flutter package (D-26, D-105).
 
-``flet run`` has no such package and falls back to the system font (accepted, D-26).
+`flet run` has no such package and falls back to the system font (accepted, D-26).
 """
 
 # Flet builds ColorScheme.fromSeed, neutralises the surfaces, then applies these overrides
@@ -111,9 +111,9 @@ THEME_MODES = {
     "light": ft.ThemeMode.LIGHT,
     "dark": ft.ThemeMode.DARK,
 }
-"""``page.theme_mode`` for each Appearance setting (``Prefs.theme``, THEME-01).
+"""`page.theme_mode` for each Appearance setting (`Prefs.theme`, THEME-01).
 
-Under ``system`` Flutter itself switches between ``page.theme`` and ``page.dark_theme``
+Under `system` Flutter itself switches between `page.theme` and `page.dark_theme`
 when the OS changes mode.
 """
 
@@ -121,12 +121,12 @@ when the OS changes mode.
 def build_theme(*, dark: bool, high_contrast: bool) -> ft.Theme:
     """Build the theme for one colour scheme (architecture §15).
 
-    ``page.theme`` gets the light result and ``page.dark_theme`` the dark one.
+    `page.theme` gets the light result and `page.dark_theme` the dark one.
 
     Args:
         dark: Build the dark scheme instead of the light one.
         high_contrast: Build the high-contrast variant (THEME-04, THEME-05), which sets
-            every role by hand (``theme_hc.py``) and draws lines where fills drew
+            every role by hand (`theme_hc.py`) and draws lines where fills drew
             edges: cards, chips and the selected pill (THEME-06, D-306); the rest of
             the theme is the same.
 
@@ -170,13 +170,13 @@ def overlay_style(*, dark: bool, high_contrast: bool) -> ft.SystemOverlayStyle:
     The icons contrast with the scheme. Navigation-bar contrast is not enforced: the
     Android scrim put grey 3-button icons on dark grey (2.3:1, #311). The status bar is
     transparent, since the app draws under it. Below Android 15 the app does not draw
-    under the navigation bar, so that bar gets the ``NavigationBar``'s colour; a
+    under the navigation bar, so that bar gets the `NavigationBar`'s colour; a
     transparent one would show the window background, which a live dark-mode switch
     leaves in the old mode (D-151). Android 15 and later ignore that colour.
 
     Flet resolves a role in this style against the seeded, neutralised scheme, before
-    the overrides apply (``parseTheme`` in Flet's ``utils/theme.dart``). The standard
-    schemes keep that ramp's ``surface_container``, so the role is the bar's colour;
+    the overrides apply (`parseTheme` in Flet's `utils/theme.dart`). The standard
+    schemes keep that ramp's `surface_container`, so the role is the bar's colour;
     the high-contrast ones replace it, so they name their own (D-265).
 
     Args:
@@ -184,7 +184,7 @@ def overlay_style(*, dark: bool, high_contrast: bool) -> ft.SystemOverlayStyle:
         high_contrast: The scheme is a high-contrast one.
 
     Returns:
-        The style for ``Theme.system_overlay_style``.
+        The style for `Theme.system_overlay_style`.
     """
     icons = ft.Brightness.LIGHT if dark else ft.Brightness.DARK
     if high_contrast:
@@ -205,13 +205,13 @@ def overlay_style(*, dark: bool, high_contrast: bool) -> ft.SystemOverlayStyle:
 
 @dataclass(frozen=True)
 class Tokens:
-    """Colours Material 3 has no role for (D-24), as ``#RRGGBB`` for one scheme.
+    """Colours Material 3 has no role for (D-24), as `#RRGGBB` for one scheme.
 
     Each text colour reads at 4.5:1 or better on every surface of its scheme, and each
     badge's label on its fill (tests/test_theme.py, tests/test_theme_badges.py); 7:1
     in high contrast (tests/test_high_contrast.py). Compared and hashed by value, so
     they can be a dictionary key. Screens get the current scheme's tokens from
-    ``use_tokens()``.
+    `use_tokens()`.
 
     Attributes:
         live: Happening now, open now.
@@ -219,22 +219,22 @@ class Tokens:
         success: Scan accepted.
         favorite: The filled star.
         tracks: Each track's badge, by track key (D-25); read it through
-            ``track_badge()``, which knows the fallback.
+            `track_badge()`, which knows the fallback.
         unknown_track: The badge of a track the palette lacks: the neutral grey.
         spanish: The "En Español" badge (D-25).
-        registration: The "Registration required" badge, outlined in ``error``.
-        new_track: The "New track" badge, outlined in ``primary``: a mark of status,
+        registration: The "Registration required" badge, outlined in `error`.
+        new_track: The "New track" badge, outlined in `primary`: a mark of status,
             not another category among the tonal track fills (D-199).
         changed: The "Changed" badge of a session whose time, room or title changed in
-            the last 24 h, outlined in ``warning``: a mark of status, like New track,
+            the last 24 h, outlined in `warning`: a mark of status, like New track,
             and never En Español's fill (D-315).
         booth_outline: A selected expo booth's outline, 3:1 or better on white (the
-            booths), on ``surface`` and on ``booth_fill`` (EXPO-01).
+            booths), on `surface` and on `booth_fill` (EXPO-01).
         booth_fill: A selected booth's fill (ux.md §6.2), drawn see-through over the
             plan, and every booth's faint outline.
         high_contrast: The tokens are a high-contrast scheme's, whose structure
             differs too: a component that draws a line there instead of a fill or a
-            shadow reads it here, never from ``Prefs`` (D-285).
+            shadow reads it here, never from `Prefs` (D-285).
     """
 
     live: str
@@ -254,7 +254,7 @@ class Tokens:
     high_contrast: bool = False
 
     def track_badge(self, key: str) -> BadgeColors:
-        """Return the badge colours of track ``key``; the neutral grey if it has none."""
+        """Return the badge colours of track `key`; the neutral grey if it has none."""
         return self.tracks.get(key, self.unknown_track)
 
 
@@ -312,8 +312,8 @@ def _hc_tokens(
 ) -> Tokens:
     """Build a high-contrast scheme's tokens: every badge outlined (ux.md §3.4).
 
-    Tracks, En Español and Changed are outlined in ``on_surface``, which the star takes
-    too; Registration required keeps ``error`` and New track ``primary`` (D-315).
+    Tracks, En Español and Changed are outlined in `on_surface`, which the star takes
+    too; Registration required keeps `error` and New track `primary` (D-315).
     """
     ink, error, primary = str(scheme.on_surface), str(scheme.error), str(scheme.primary)
     outlined = BadgeColors(text=ink, border_width=HC_BADGE_BORDER)
@@ -348,7 +348,7 @@ HC_DARK_TOKENS = _hc_tokens(
 
 
 def build_tokens(*, dark: bool, high_contrast: bool) -> Tokens:
-    """Return the tokens that go with ``build_theme(dark=..., high_contrast=...)``.
+    """Return the tokens that go with `build_theme(dark=..., high_contrast=...)`.
 
     Args:
         dark: The dark scheme.
@@ -363,10 +363,10 @@ def build_tokens(*, dark: bool, high_contrast: bool) -> Tokens:
 
 
 TokensCtx = ft.create_context(LIGHT_TOKENS)
-"""Carries the current scheme's ``Tokens`` (D-150).
+"""Carries the current scheme's `Tokens` (D-150).
 
-``App`` provides ``build_tokens()`` for the scheme it shows. The value is plain, not an
-observable, so reading it subscribes to nothing: ``App`` re-renders when the scheme
+`App` provides `build_tokens()` for the scheme it shows. The value is plain, not an
+observable, so reading it subscribes to nothing: `App` re-renders when the scheme
 changes, and its subtree with it. Without a provider, the light tokens apply.
 """
 

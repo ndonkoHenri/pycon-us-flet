@@ -1,9 +1,9 @@
-"""A stand-in for ``flet-secure-storage``, for the credentials and Account tests (#684).
+"""A stand-in for `flet-secure-storage`, for the credentials and Account tests (#684).
 
-``MemoryKeystore`` is the extension's ``SecureStorage`` with only its transport
-replaced, as ``tests/fakes.py``'s ``MemoryPrefs`` is SharedPreferences: the calls the
+`MemoryKeystore` is the extension's `SecureStorage` with only its transport
+replaced, as `tests/fakes.py`'s `MemoryPrefs` is SharedPreferences: the calls the
 app makes, their arguments and the errors a platform reports go through Flet's own
-service class. It records each write and removal in ``journal``, so a test can see
+service class. It records each write and removal in `journal`, so a test can see
 when they happened.
 """
 
@@ -13,7 +13,7 @@ from flet_secure_storage import SecureStorage
 
 
 class MemoryKeystore(SecureStorage):
-    """``SecureStorage`` backed by a dict instead of the Android Keystore or keychain."""
+    """`SecureStorage` backed by a dict instead of the Android Keystore or keychain."""
 
     def init(self) -> None:
         """Start empty, with no failing method and nothing recorded."""
@@ -27,11 +27,11 @@ class MemoryKeystore(SecureStorage):
         arguments: dict[str, Any] | None = None,
         timeout: float | None = None,
     ) -> Any:
-        """Answer ``get``, ``set`` and ``remove`` from ``values``.
+        """Answer `get`, `set` and `remove` from `values`.
 
-        A method in ``failing`` raises the ``RuntimeError`` a platform error becomes
-        (``Session.invoke_method``), with the call's arguments in its message, as
-        Flet's does. Each write and removal is recorded as ``"<method> <key>"``.
+        A method in `failing` raises the `RuntimeError` a platform error becomes
+        (`Session.invoke_method`), with the call's arguments in its message, as
+        Flet's does. Each write and removal is recorded as `"<method> <key>"`.
         """
         assert arguments is not None
         if method_name in self.failing:

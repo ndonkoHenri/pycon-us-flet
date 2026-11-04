@@ -1,7 +1,7 @@
 """Tests for the Schedule keeping each day's place across a filter change (D-371, #333).
 
-The Schedule renders in ``tests/schedule_view.py``'s harness, with
-``tests/test_schedule_place.py``'s helpers: a keyed scroll is answered with a scroll end
+The Schedule renders in `tests/schedule_view.py`'s harness, with
+`tests/test_schedule_place.py`'s helpers: a keyed scroll is answered with a scroll end
 at 4,000 dp, an offset jump with one where it was asked. Saturday's first slots in the
 2026 feed, with the default filter (Open space hidden): 8:00 (notices, a break and
 lightning talks), 9:00, 9:25 (the keynote), 10:05 (a break), 10:30. Whether the rows
@@ -35,7 +35,7 @@ OPEN_SPACE = "slot-2026-05-16T10:00:00-07:00"
 
 
 async def _at_saturday(schedule: Shown, pixels: float) -> None:
-    """Show Saturday, its slots measured at ``HEIGHT``, scrolled by hand to ``pixels``."""
+    """Show Saturday, its slots measured at `HEIGHT`, scrolled by hand to `pixels`."""
     await schedule.change_day(SATURDAY)
     await test_schedule_place._measure(schedule, 40.0)
     await _report(schedule, SATURDAY, HEIGHT)
@@ -44,7 +44,7 @@ async def _at_saturday(schedule: Shown, pixels: float) -> None:
 
 
 async def _hide(schedule: Shown, *tracks: str) -> None:
-    """Hide ``tracks`` besides Open space, as a chip in the sheet does, and lay it out.
+    """Hide `tracks` besides Open space, as a chip in the sheet does, and lay it out.
 
     The slots then report their heights, as Flutter does once it has laid the new
     list out.
@@ -145,7 +145,7 @@ async def test_a_scroll_of_the_user_s_stops_the_put_back_between_its_jumps(
 
 
 def _user_scroll(event_type: str, pixels: float) -> dict[str, object]:
-    """A scroll event of the user's at ``pixels``, as Flutter sends it."""
+    """A scroll event of the user's at `pixels`, as Flutter sends it."""
     return {
         "event_type": event_type,
         "pixels": pixels,
@@ -281,7 +281,7 @@ def test_the_heights_a_filter_change_keeps(
 
 
 def test_a_slot_with_other_sessions_is_changed() -> None:
-    """``Slot``s compare their sessions: another tuple is another height."""
+    """`Slot`s compare their sessions: another tuple is another height."""
     one = next(iter(processed(2026).sessions.values()))
     before = {"a": Slot(schedule_view.DURING, (one,))}
     after = {"a": Slot(schedule_view.DURING, ())}

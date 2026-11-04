@@ -1,8 +1,8 @@
 """Tests for the Schedule's day lists: slots, rows, re-renders and empty days (#86).
 
-The screen renders in ``tests/schedule_view.py``'s harness, in a real Flet session, so
+The screen renders in `tests/schedule_view.py`'s harness, in a real Flet session, so
 the memoised path (D-153) and the two renders (D-156) run as Flet runs them. The day
-tabs, the now line and the states without data are in ``test_schedule.py``.
+tabs, the now line and the states without data are in `test_schedule.py`.
 """
 
 import gc
@@ -213,13 +213,13 @@ def _head_parts(schedule: Shown) -> list[ft.BaseControl]:
 
 
 def _in_a_list(schedule: Shown, control: ft.BaseControl) -> bool:
-    """Whether ``control`` is in one of the day lists."""
+    """Whether `control` is in one of the day lists."""
     lists = find(schedule.session, ft.ListView, lambda c: c.key is not None)
     return any(inside(control, day_list) for day_list in lists)
 
 
 def _slot(anchor: ft.Container) -> ft.Control:
-    """The slot a ``ScrollKey`` anchor marks: the control after it (D-242)."""
+    """The slot a `ScrollKey` anchor marks: the control after it (D-242)."""
     _, slot = cast(ft.Column, anchor.parent).controls
     return slot
 
@@ -251,7 +251,7 @@ async def test_one_indicator_around_the_day_pages_runs_the_strip_s_refresh(
 ) -> None:
     """SCHED-13, D-449: a pull on any day's list is the strip's Refresh.
 
-    One indicator around the ``TabBarView`` that takes the lists' nested scrolls, so it
+    One indicator around the `TabBarView` that takes the lists' nested scrolls, so it
     stays mounted when the pulled day leaves. Flet ends its spinner once; offline, no
     slot re-renders.
     """

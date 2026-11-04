@@ -1,18 +1,18 @@
-"""My schedule (``/my-schedule``): the saved sessions in time order, with their clashes.
+"""My schedule (`/my-schedule`): the saved sessions in time order, with their clashes.
 
-The personal agenda (NEW-01, SCHED-07, SCHED-08; ux.md §5.6): a ``SectionHeader`` per
+The personal agenda (NEW-01, SCHED-07, SCHED-08; ux.md §5.6): a `SectionHeader` per
 day and gutter slots that hold only saved sessions (D-31), from
-``agenda.my_schedule()``. Two saved sessions that overlap both say so, with an icon and
+`agenda.my_schedule()`. Two saved sessions that overlap both say so, with an icon and
 words (D-33), while the clash can still change a plan. What has ended folds away by
-``clock.now()``: the days before today into one tile at the top, today's ended sessions
-into a tile under today's header (``agenda.fold_ended()``), re-folded every minute
+`clock.now()`: the days before today into one tile at the top, today's ended sessions
+into a tile under today's header (`agenda.fold_ended()`), re-folded every minute
 while the screen shows (D-40). A star tap removes the session at once, with Undo (ux.md
 §4.4). The Schedule's filters never apply (D-20): a saved open space always shows.
 With something saved, the app bar's overflow exports it all to the calendar, and with
 E3 it opens Reminder settings (D-401); the list is headed by a notice once all of it
 has ended, and by another while some saved sessions are no longer in the schedule,
 which links to Schedule changes or forgets them (D-329;
-``screens.my_schedule_extras``).
+`screens.my_schedule_extras`).
 
 The list memoises its whole path (D-153): day sections given values that stay equal
 while nothing in the day changes, rows keyed by session id given views built once per
@@ -284,11 +284,11 @@ def _day(
     use_24h: bool,
     time_above: bool,
 ) -> ft.Control:
-    """Return ``day``'s slots as a memoised ``_Day``, keyed by the day and the part.
+    """Return `day`'s slots as a memoised `_Day`, keyed by the day and the part.
 
     Args:
         day: The day, or the part of today that has ended or is to come.
-        overlaps: The clashes still to come (``FoldedAgenda.overlaps``); empty for a
+        overlaps: The clashes still to come (`FoldedAgenda.overlaps`); empty for a
             folded day.
         part: Which part of the day it is, so today's two parts keep their own
             component when the fold moves a session from one to the other.
@@ -297,7 +297,7 @@ def _day(
         on_toggle: The list's one star handler.
         tokens: The scheme's tokens (D-150).
         use_24h: Whether the device uses the 24-hour clock.
-        time_above: Put each slot's time above its rows (``Prefs.time_above``,
+        time_above: Put each slot's time above its rows (`Prefs.time_above`,
             D-216).
     """
     # Only the day's own names: a clash elsewhere leaves this day's props equal.
@@ -334,7 +334,7 @@ def _Day(
     use_24h: bool,
     time_above: bool,
 ) -> ft.Control:
-    """A day's slots: each start's ``TimeGutter`` beside its saved sessions (D-31).
+    """A day's slots: each start's `TimeGutter` beside its saved sessions (D-31).
 
     Memoised (D-153): it runs only when the day's slots, their clashes or changes, the
     clock format, the slots' layout (D-216) or the scheme change. Every row is saved, so every
@@ -344,7 +344,7 @@ def _Day(
     slots: list[ft.Control] = []
     for index, slot in enumerate(day.slots):
         # No lookup can miss: the views cover every session of the feed version the
-        # agenda comes from (both memos key on ``conference.version``).
+        # agenda comes from (both memos key on `conference.version`).
         rows = [
             SessionRow(
                 views[session.id],
@@ -372,11 +372,11 @@ def _fold(
     identifier: str,
     high_contrast: bool,
 ) -> ft.Control:
-    """Return a ``FoldTile`` that folds what has ended away, collapsed until tapped.
+    """Return a `FoldTile` that folds what has ended away, collapsed until tapped.
 
-    ``title`` is "Earlier days (6 sessions)"; ``identifier`` names its header. In
+    `title` is "Earlier days (6 sessions)"; `identifier` names its header. In
     high contrast, where the open band's fill is the surface, lines above and below
-    it draw the band (D-306). The rest is ``FoldTile``'s.
+    it draw the band (D-306). The rest is `FoldTile`'s.
     """
     return FoldTile(
         # Quieter than the day header above it: a fold of what is over (ux.md §5.6).

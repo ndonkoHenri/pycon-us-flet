@@ -1,13 +1,13 @@
 """The Speakers list's query: the directory by letter, each with its first session.
 
-``directory()`` turns the processed feed's speaker directory into the list's entries,
-once per feed version, in the order D-46 gives it (``queries.speaker_order``: by
+`directory()` turns the processed feed's speaker directory into the list's entries,
+once per feed version, in the order D-46 gives it (`queries.speaker_order`: by
 displayed name, folded, then by id); each entry knows its letter, its first session and
-how many more it has (SPKR-01, DATA-21). ``letter_groups()`` cuts them into the list's
-sections, and ``filter_directory()`` keeps the entries a filter finds, with search's own
-matching (``search.search``, D-180), so no screen folds or matches on its own.
-``speaker_sessions()`` is a speaker's page's list (SPKR-03): their sessions by day, in
-the order the list's first session comes from; ``has_bio()`` says whether the page has a
+how many more it has (SPKR-01, DATA-21). `letter_groups()` cuts them into the list's
+sections, and `filter_directory()` keeps the entries a filter finds, with search's own
+matching (`search.search`, D-180), so no screen folds or matches on its own.
+`speaker_sessions()` is a speaker's page's list (SPKR-03): their sessions by day, in
+the order the list's first session comes from; `has_bio()` says whether the page has a
 bio to show.
 
 Pseudo-speakers ("Hosted by …") never reach the directory: feed processing keeps them as
@@ -39,7 +39,7 @@ class SpeakerEntry:
 
     Attributes:
         speaker: The directory speaker.
-        letter: The heading it is listed under (``letter_of()``).
+        letter: The heading it is listed under (`letter_of()`).
         first_session: Its first session in the Schedule's order, the day first; None
             for a speaker with none, which neither recorded feed has.
         more: How many other sessions it has: the row's "+1 more".
@@ -56,7 +56,7 @@ class LetterGroup:
     """The speakers under one letter heading, in the list's order.
 
     Attributes:
-        letter: The heading, e.g. ``A`` or ``Ж``.
+        letter: The heading, e.g. `A` or `Ж`.
         entries: The entries, never empty.
     """
 
@@ -67,9 +67,9 @@ class LetterGroup:
 def letter_of(name: str) -> str:
     """Return the heading a name is listed under: its folded first character (D-46).
 
-    The fold is search's (``queries.fold``), so ``Élodie`` is under E, ``Łukasz`` under
-    L and ``Ömer`` under O; a letter without a Latin base keeps its own heading
-    (``Жанна`` under Ж, ``张伟`` under 张), after Z in D-46's order. Taking the first
+    The fold is search's (`queries.fold`), so `Élodie` is under E, `Łukasz` under
+    L and `Ömer` under O; a letter without a Latin base keeps its own heading
+    (`Жанна` under Ж, `张伟` under 张), after Z in D-46's order. Taking the first
     character of the very text the list is sorted by keeps every heading's speakers
     together in that order, whatever the first character is.
 
@@ -77,7 +77,7 @@ def letter_of(name: str) -> str:
         name: A displayed name.
 
     Returns:
-        One upper-case character, or ``NO_LETTER`` for a name that folds to nothing.
+        One upper-case character, or `NO_LETTER` for a name that folds to nothing.
     """
     return fold(name)[:1].upper() or NO_LETTER
 
@@ -86,8 +86,8 @@ def initials(name: str) -> str:
     """Return a speaker's initials for an avatar: the first and last words' first letters.
 
     Upper-cased. Words without a letter (a dash, an emoji) are skipped, and accents stay,
-    as the name shows them: ``Lía Da Silva - Rojas`` gives ``LR``, ``Łukasz Langa``
-    ``ŁL``, ``Amethyst Reese 🌸`` ``AR``; a one-word name gives one letter (``张伟``
+    as the name shows them: `Lía Da Silva - Rojas` gives `LR`, `Łukasz Langa`
+    `ŁL`, `Amethyst Reese 🌸` `AR`; a one-word name gives one letter (`张伟`
     gives 张).
 
     Args:
@@ -111,13 +111,13 @@ def directory(data: ConferenceData) -> tuple[SpeakerEntry, ...]:
 
     Build it once per feed version. A speaker's sessions are every session that links
     it (DATA-15), poster details included, in the Schedule's order with the day first
-    (``schedule_order``).
+    (`schedule_order`).
 
     Args:
         data: The processed feed.
 
     Returns:
-        One entry per speaker, by ``speaker_order``.
+        One entry per speaker, by `speaker_order`.
     """
     sessions: dict[str, list[Session]] = {}
     for session in data.sessions.values():
@@ -141,7 +141,7 @@ def speaker_sessions(data: ConferenceData, speaker_id: str) -> tuple[DaySessions
     """Return a speaker's sessions by conference-local day, for their page (SPKR-03).
 
     Every session that links the speaker (DATA-15), poster details included, in the
-    Schedule's order with the day first: the order ``directory()`` takes the Speakers
+    Schedule's order with the day first: the order `directory()` takes the Speakers
     list's first session from, so the list and the page agree.
 
     Args:
@@ -184,15 +184,15 @@ def filter_directory(
 ) -> tuple[SpeakerEntry, ...]:
     """Return the entries a filter keeps: those whose name holds every word (D-46).
 
-    The matching is search's, over the same folded names (``search(index, query,
-    "speakers")``): accents and case ignored, each word anywhere in the name. A filter
-    with no word to match keeps every entry and returns ``entries`` itself: a blank one,
-    and one that folds to nothing, such as the lone ``’`` iOS types before ``O’Brien``,
+    The matching is search's, over the same folded names (`search(index, query,
+    "speakers")`): accents and case ignored, each word anywhere in the name. A filter
+    with no word to match keeps every entry and returns `entries` itself: a blank one,
+    and one that folds to nothing, such as the lone `’` iOS types before `O’Brien`,
     which search would answer with nothing.
 
     Args:
-        entries: The list's entries (``directory()``).
-        index: The search index of the same feed version (``search.search_index``).
+        entries: The list's entries (`directory()`).
+        index: The search index of the same feed version (`search.search_index`).
         query: What the user typed in the filter field.
 
     Returns:
@@ -208,7 +208,7 @@ def letter_groups(entries: Sequence[SpeakerEntry]) -> tuple[LetterGroup, ...]:
     """Return the entries cut into the list's sections, one per letter, in order.
 
     Args:
-        entries: Entries in the list's order (``directory()`` or a filtered part of it).
+        entries: Entries in the list's order (`directory()` or a filtered part of it).
 
     Returns:
         The groups; equal for equal entries, so an unchanged section compares equal.

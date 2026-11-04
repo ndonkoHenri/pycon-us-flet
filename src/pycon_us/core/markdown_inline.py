@@ -1,13 +1,13 @@
-r"""Markdown's inline layer for ``html_md``: escaped text, emphasis, links and code spans.
+r"""Markdown's inline layer for `html_md`: escaped text, emphasis, links and code spans.
 
-``html_md`` walks the parsed HTML and asks this module for the Markdown each inline
+`html_md` walks the parsed HTML and asks this module for the Markdown each inline
 piece becomes; nothing else imports it (D-201). It knows no HTML tree and imports nothing
-from ``html_md``, so the dependency runs one way. The rules are D-114, D-115 and D-131:
+from `html_md`, so the dependency runs one way. The rules are D-114, D-115 and D-131:
 
 - Text is escaped with numeric character references, never backslashes (D-115), and a
-  bare ``http(s)`` URL becomes an explicit link (D-114).
-- An inline run is a list of tokens: Markdown text, ``\n`` for a hard break, and
-  ``Emphasis`` pairs. Markup goes around tokens with their edge whitespace outside it,
+  bare `http(s)` URL becomes an explicit link (D-114).
+- An inline run is a list of tokens: Markdown text, `\n` for a hard break, and
+  `Emphasis` pairs. Markup goes around tokens with their edge whitespace outside it,
   and an emphasis pair that CommonMark could not read as one loses its markers before
   the run is joined into a paragraph.
 """
@@ -33,7 +33,7 @@ _DESTINATION_SAFE = ":/?#@!&'*+,;=%~-._"  # everything else is percent-encoded
 
 
 def escape(text: str, *, linkify: bool = True) -> str:
-    """Escape text; with ``linkify``, bare ``http(s)`` URLs become explicit links (D-114)."""
+    """Escape text; with `linkify`, bare `http(s)` URLs become explicit links (D-114)."""
     if not linkify:
         return _escape_chars(text)
     parts = []
@@ -75,7 +75,7 @@ class Emphasis:
     """One emphasis pair; it appears twice in a token list, as its opener then its closer.
 
     Attributes:
-        marker: ``**``, ``*`` or ``~~``.
+        marker: `**`, `*` or `~~`.
         kept: False once the pair is found unable to flank, so it renders as nothing.
     """
 
@@ -83,7 +83,7 @@ class Emphasis:
         """Create a pair that is kept until the flanking check drops it.
 
         Args:
-            marker: ``**``, ``*`` or ``~~``.
+            marker: `**`, `*` or `~~`.
         """
         self.marker = marker
         self.kept = True
@@ -120,7 +120,7 @@ def _merged(tokens: list[Token]) -> list[Token]:
 
 
 def link(inner: list[Token], href: str, site_url: str) -> list[Token]:
-    """Wrap a link's text in ``[...](url)``, or leave it as text (D-114)."""
+    """Wrap a link's text in `[...](url)`, or leave it as text (D-114)."""
     if not href:
         return inner
     try:
@@ -150,7 +150,7 @@ def code(text: str) -> list[Token]:
 
 
 def paragraph(tokens: list[Token]) -> str:
-    r"""Render an inline run as a paragraph; ``\n`` in it marks a hard break."""
+    r"""Render an inline run as a paragraph; `\n` in it marks a hard break."""
     lines = []
     for line in _resolve(tokens).split("\n"):
         # Space runs come from blocks inside inline elements; they are never meaningful.
@@ -189,9 +189,9 @@ def _resolve(tokens: list[Token]) -> str:
 
 
 def _flanks(tokens: list[Token], index: int, run: str, *, left: bool) -> bool:
-    """Whether the marker at ``index`` is left- (or right-) flanking in CommonMark.
+    """Whether the marker at `index` is left- (or right-) flanking in CommonMark.
 
-    Neighbouring markers of the same character (``run``) join it in one delimiter run.
+    Neighbouring markers of the same character (`run`) join it in one delimiter run.
     """
     before = _neighbour(tokens, range(index - 1, -1, -1), run, last=True)
     after = _neighbour(tokens, range(index + 1, len(tokens)), run, last=False)

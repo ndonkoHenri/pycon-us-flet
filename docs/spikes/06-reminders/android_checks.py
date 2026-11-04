@@ -1,13 +1,13 @@
 """The S6 checks on an Android emulator: schedule, disturb, time each reminder.
 
 Each check schedules through one of the app's start routes, then runs device
-steps from ``drive_android.py`` (swipe, lock, reboot, Doze, permissions) and
-waits for the reminder. Run from this folder with the release APK installed::
+steps from `drive_android.py` (swipe, lock, reboot, Doze, permissions) and
+waits for the reminder. Run from this folder with the release APK installed:
 
     uv run python android_checks.py [<check> ...]
     uv run python android_checks.py scenario <name> <route> <id> [<step> ...]
 
-With no check named, all of them run in order (``CHECKS``). The steps import
+With no check named, all of them run in order (`CHECKS`). The steps import
 nothing from here, so the two modules import one way only.
 """
 

@@ -1,8 +1,8 @@
 """Tests for the expo's Map | List switch and its List (#404; EXPO-01, EXPO-04, D-254).
 
-The rows' order and filter are ``core.expo``'s, tested over the 2026 feed and
-``map.toml``. The Map runs in a real Flet session (``tests/sessions.py``) on its Expo
-pane; ``ListView.scroll_to`` is recorded instead of sent to a client. How the List
+The rows' order and filter are `core.expo`'s, tested over the 2026 feed and
+`map.toml`. The Map runs in a real Flet session (`tests/sessions.py`) on its Expo
+pane; `ListView.scroll_to` is recorded instead of sent to a client. How the List
 looks, and what TalkBack and VoiceOver say, are checked on devices (the PR).
 """
 
@@ -134,10 +134,10 @@ def test_a_row_reads_as_its_booth_name_and_level() -> None:
 
 @dataclasses.dataclass
 class ListShown(harness.Shown):
-    """The harness's ``Shown`` on the Expo pane, with the scrolls its List asked for."""
+    """The harness's `Shown` on the Expo pane, with the scrolls its List asked for."""
 
     scrolls: list[dict[str, Any]] = dataclasses.field(default_factory=list)
-    """Each ``scroll_to``'s arguments."""
+    """Each `scroll_to`'s arguments."""
 
     @property
     def switch(self) -> ft.SegmentedButton:
@@ -152,7 +152,7 @@ class ListShown(harness.Shown):
         return [
             str(node.identifier).removeprefix("expo.")
             for item in listed.controls
-            # A row is a component: its rendered body is its ``_b`` (Flet's).
+            # A row is a component: its rendered body is its `_b` (Flet's).
             for node in descendants(getattr(item, "_b", item))
             if isinstance(node, ft.Semantics)
             and str(node.identifier or "").startswith(("expo.row.", "expo.sponsor."))
@@ -171,12 +171,12 @@ class ListShown(harness.Shown):
         await self.event(field, "change", None)
 
     async def tap_row(self, key: str) -> None:
-        """Tap a row: its ``Container``, around its node."""
+        """Tap a row: its `Container`, around its node."""
         await self.click(cast(ft.Container, self.node(f"expo.row.{key}").parent))
         await self.settle()
 
     async def scroll_end(self, pixels: float) -> None:
-        """What Flutter sends when a scroll of the List ends at ``pixels``."""
+        """What Flutter sends when a scroll of the List ends at `pixels`."""
         (listed,) = self.find(ft.ListView)
         data = {
             "event_type": "end",
@@ -195,7 +195,7 @@ type Render = Callable[..., Awaitable[ListShown]]
 async def render(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> AsyncIterator[Render]:
-    """Yield a function that opens the Map's Expo pane and returns its ``ListShown``.
+    """Yield a function that opens the Map's Expo pane and returns its `ListShown`.
 
     A screen reader can be on, and a view memory given, kept as the app keeps it.
     """
@@ -340,7 +340,7 @@ def test_the_count_line_says_match_or_matches() -> None:
 async def test_a_pushed_hall_keeps_its_zoom_across_the_list(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """``…/plan/expo``: Map, List, Map puts the zoom back, under the View's path (D-18)."""
+    """`…/plan/expo`: Map, List, Map puts the zoom back, under the View's path (D-18)."""
     viewer = FakeViewer()
     viewer.install(monkeypatch)
     path = "/map/plan/expo"

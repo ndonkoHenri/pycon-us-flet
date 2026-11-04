@@ -1,7 +1,7 @@
 """Which optional native pieces this build can use: constants, fixed at import (D-63).
 
 An extension counts only in a packaged build that bundles it. The companion app
-(``flet run --android/--ios``) runs Python on the laptop and is never embedded, so it
+(`flet run --android/--ios`) runs Python on the laptop and is never embedded, so it
 always gets the interim and is never sent a control its client may lack (F14). One
 module per capability imports the extension and owns its fallback; screens never
 import an extension (architecture §13). Core Flet gaps are not detected at run time:
@@ -14,13 +14,13 @@ from flet.utils import is_embedded
 
 
 def available(module: str) -> bool:
-    """Return whether this is a packaged build and ``module`` can be imported.
+    """Return whether this is a packaged build and `module` can be imported.
 
-    ``find_spec`` locates the module without importing it, so checking costs no
+    `find_spec` locates the module without importing it, so checking costs no
     import time (D-110).
 
     Args:
-        module: A top-level module name, e.g. ``"flet_secure_storage"``.
+        module: A top-level module name, e.g. `"flet_secure_storage"`.
     """
     return is_embedded() and find_spec(module) is not None
 
@@ -32,7 +32,7 @@ PERMISSIONS = available("flet_permission_handler")
 """Permission status, the camera request and the app's settings page (P2, D-61)."""
 
 REMINDERS = available("flet_notifications")
-"""Scheduled local notifications, E3 (P2, D-220): the monorepo's ``flet-notifications``,
+"""Scheduled local notifications, E3 (P2, D-220): the monorepo's `flet-notifications`,
 with Settings' live Reminders section and Welcome's reminders row (D-401); otherwise the
 interim (D-60)."""
 

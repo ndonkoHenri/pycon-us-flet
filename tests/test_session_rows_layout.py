@@ -1,10 +1,10 @@
 """Tests for what a session row and a notice row are made of (SCHED-03, SCHED-04; D-184).
 
-A ``SessionRow``'s text as one phrase, its badges, meta and speakers, a place that
+A `SessionRow`'s text as one phrase, its badges, meta and speakers, a place that
 wraps whole, no fixed heights, the push on a tap and the elapsed bar's contrast; then
-which sessions are notices and how a ``NoticeRow`` reads, opens and lines up with the
-gutter. Rows run in a real Flet session (``Rendered``, from ``tests/row_sessions.py``),
-as in ``test_session_rows.py``, which tests the memoised path, the Changed badge and the
+which sessions are notices and how a `NoticeRow` reads, opens and lines up with the
+gutter. Rows run in a real Flet session (`Rendered`, from `tests/row_sessions.py`),
+as in `test_session_rows.py`, which tests the memoised path, the Changed badge and the
 star. How tall a row is, how it wraps at 200 % and what TalkBack reads are checked on
 devices (#81's PR).
 """
@@ -117,7 +117,7 @@ async def test_a_tap_on_a_row_pushes_its_session_on_this_view(
 
 
 def _over(color: str, alpha: float, background: str) -> str:
-    """``color`` at ``alpha`` painted over ``background``, as #RRGGBB."""
+    """`color` at `alpha` painted over `background`, as #RRGGBB."""
     mix = (
         round(
             alpha * int(color[i : i + 2], 16)
@@ -134,8 +134,8 @@ def test_the_elapsed_bar_shows_its_fill_and_its_end_on_every_surface(
 ) -> None:
     """WCAG 1.4.11: the fill reads 3:1 on its track, and the stop dot marks the end.
 
-    The track itself is only a hint (about 1.4:1), on the list's ``surface`` and on
-    the next-session card's ``surface_container_highest`` alike; M3's stop dot is what
+    The track itself is only a hint (about 1.4:1), on the list's `surface` and on
+    the next-session card's `surface_container_highest` alike; M3's stop dot is what
     marks 100 % (#95).
     """
     live = DARK_TOKENS.live if dark else LIGHT_TOKENS.live
@@ -221,7 +221,7 @@ async def test_a_notice_s_icon_is_one_title_line_tall_at_every_text_size(
 
 
 def _children(control: ft.Control) -> Sequence[ft.Control]:
-    """A control's direct children: its ``content`` and its ``controls``."""
+    """A control's direct children: its `content` and its `controls`."""
     found: list[ft.Control] = []
     content = getattr(control, "content", None)
     if isinstance(content, ft.Control):

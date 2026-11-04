@@ -3,11 +3,11 @@
 At 11:10 AM on Friday of the 2026 feed ten sessions are on, and a slot of open spaces
 can hold fifteen: listed whole, the two sections would push Up next and the Schedule
 link several screens down. So each section shows your saved sessions, then the first
-``SHOWN`` others, then "Show all 10 sessions", which shows the rest in place and becomes
+`SHOWN` others, then "Show all 10 sessions", which shows the rest in place and becomes
 "Show fewer sessions". Saved sessions are never folded away.
 
-``ordered()`` and ``cut()`` are pure; ``folded()`` builds a section's rows and button.
-Apart from ``now.py`` so that the screen stays under about 400 lines (D-66).
+`ordered()` and `cut()` are pure; `folded()` builds a section's rows and button.
+Apart from `now.py` so that the screen stays under about 400 lines (D-66).
 """
 
 from collections.abc import Callable
@@ -29,9 +29,9 @@ SPOKEN = {HAPPENING: "happening now", UP_NEXT: "up next"}
 
 
 def ordered(sessions: tuple[Session, ...], saved: frozenset[str]) -> list[Session]:
-    """Return ``sessions``, saved ones first, and in each group open spaces last.
+    """Return `sessions`, saved ones first, and in each group open spaces last.
 
-    The sort is stable, so the rest is in the slot's order (``schedule_order``).
+    The sort is stable, so the rest is in the slot's order (`schedule_order`).
     Open spaces come last because they are the many small rooms of a slot, and the
     Schedule hides them by default (D-20): the first rows are its talks and keynotes.
 
@@ -47,7 +47,7 @@ def cut(
 ) -> tuple[list[Session], bool]:
     """Return the rows a section shows, and whether it has a "Show all" button.
 
-    Folded, it shows the saved sessions and the first ``SHOWN`` others; it folds only
+    Folded, it shows the saved sessions and the first `SHOWN` others; it folds only
     when that hides two rows or more, since a button in place of one row saves nothing.
 
     Args:
@@ -66,7 +66,7 @@ def fold_key(section: str, sessions: tuple[Session, ...]) -> str:
     """Return the key an opened section is kept under: its name and its sessions.
 
     A new slot is a new key, so a section the user opened folds again when the slot
-    changes; a minute keeps it open, and so does a star, since ``sessions`` are the
+    changes; a minute keeps it open, and so does a star, since `sessions` are the
     section's whole set: the card's session too, which a star moves in and out.
     """
     return f"{section}:{','.join(sorted(session.id for session in sessions))}"
@@ -82,14 +82,14 @@ def folded(
     *,
     whole: tuple[Session, ...],
 ) -> list[ft.Control]:
-    """Return a section's rows, cut by ``cut()``, and its "Show all" button if any.
+    """Return a section's rows, cut by `cut()`, and its "Show all" button if any.
 
     Args:
-        section: ``HAPPENING`` or ``UP_NEXT``: the identifier's and the label's.
-        sessions: The section's rows, in the slot's order: ``whole`` but the card's.
+        section: `HAPPENING` or `UP_NEXT`: the identifier's and the label's.
+        sessions: The section's rows, in the slot's order: `whole` but the card's.
         saved: The ids in My schedule.
         row: Builds one session's row.
-        opened: The keys (``fold_key()``) of the sections the user opened.
+        opened: The keys (`fold_key()`) of the sections the user opened.
         toggle: Opens or folds the section with that key.
         whole: All the section's sessions, the card's included: its key, so that a
             star that moves a session into the card or out of it keeps it open.

@@ -1,20 +1,20 @@
 """The in-app reminder Banner: a saved session starts soon (D-60's interim, NEW-05).
 
 Where the OS does not remind, the app says it itself while it is open: from
-``BANNER_LEAD`` before a saved session's shown start, a top ``Banner`` "Typing deep dive
+`BANNER_LEAD` before a saved session's shown start, a top `Banner` "Typing deep dive
 starts in 9 min · Room 103ABC" with Dismiss and Open (ux.md §6.9, architecture §14.2).
-``App`` holds its one ``ft.use_dialog`` slot through ``use_reminder_banner()``.
+`App` holds its one `ft.use_dialog` slot through `use_reminder_banner()`.
 
-What it shows is ``due_session()``'s answer, which is pure, asked again every
-``TICK_SECONDS`` while the app is in the foreground (``Services.run_every``, D-175), so
+What it shows is `due_session()`'s answer, which is pure, asked again every
+`TICK_SECONDS` while the app is in the foreground (`Services.run_every`, D-175), so
 the minutes count down; and at once when the favourites, the feed or the settings
 change in the foreground, so a session unsaved or removed goes without waiting for the
-tick. ``os_reminds()`` hides it while the OS shows the saved sessions' reminders
+tick. `os_reminds()` hides it while the OS shows the saved sessions' reminders
 itself: E3 schedules them, the OS shows the app's notifications and session reminders
 are on (D-396). Dismiss and Open remember the session until the app restarts; the
-Banner then closes by re-render, never by ``page.pop_dialog()``, which could close a
+Banner then closes by re-render, never by `page.pop_dialog()`, which could close a
 newer dialog. It is the app's, not a View's: navigating keeps it (Flutter's
-``ScaffoldMessenger`` sits above the Views).
+`ScaffoldMessenger` sits above the Views).
 """
 
 from collections.abc import Callable, Iterable
@@ -49,7 +49,7 @@ SCREEN = "reminder"
 
 @dataclass(frozen=True)
 class DueSession:
-    """A saved session the in-app Banner announces (``due_session()``).
+    """A saved session the in-app Banner announces (`due_session()`).
 
     Compared by value, so a tick that finds the same session at the same minute
     changes no state and renders nothing.
@@ -58,7 +58,7 @@ class DueSession:
         id: The session's id (D-42).
         name: The session's name.
         minutes: Whole minutes until its shown start, rounded up: 1 to 10.
-        location: Where it is (``display_location``); empty when the feed says nowhere.
+        location: Where it is (`display_location`); empty when the feed says nowhere.
         route: What Open lands on: the session over My schedule.
     """
 
@@ -81,9 +81,9 @@ def due_session(
     now: datetime,
     dismissed: Iterable[str] = (),
 ) -> DueSession | None:
-    """Return the saved session starting within ``BANNER_LEAD``, if any (D-60).
+    """Return the saved session starting within `BANNER_LEAD`, if any (D-60).
 
-    A session counts from ``BANNER_LEAD`` before the start the app shows until that
+    A session counts from `BANNER_LEAD` before the start the app shows until that
     start: an unsaved session, one no longer in the feed, one that has started and one
     the user dismissed or opened from the Banner never do. Of several, the soonest
     wins, then the lowest id, so the same inputs always give the same answer.
@@ -91,7 +91,7 @@ def due_session(
     Args:
         data: The processed feed.
         favorites: The saved session ids (My schedule).
-        now: The current time (``clock.now()``); aware.
+        now: The current time (`clock.now()`); aware.
         dismissed: The ids the Banner was dismissed or opened for, this app session.
 
     Returns:
@@ -124,14 +124,14 @@ def due_session(
 def os_reminds(scheduler: Scheduler | None, settings: ReminderSettings) -> bool:
     """Return whether the OS reminds of the saved sessions, so the Banner need not (D-396).
 
-    It does when E3 schedules the reminders (a ``Scheduler``), the OS shows the app's
-    notifications (``Scheduler.enabled``) and session reminders are on. Otherwise,
+    It does when E3 schedules the reminders (a `Scheduler`), the OS shows the app's
+    notifications (`Scheduler.enabled`) and session reminders are on. Otherwise,
     in the companion app, with notifications denied or session reminders off, the
     Banner keeps D-60's interim while the app is open.
 
     Args:
-        scheduler: The session's ``Scheduler``, None without E3.
-        settings: The reminder settings (``Prefs.reminders``).
+        scheduler: The session's `Scheduler`, None without E3.
+        settings: The reminder settings (`Prefs.reminders`).
     """
     return scheduler is not None and scheduler.enabled and settings.session_lead > 0
 
@@ -148,15 +148,15 @@ def use_reminder_banner(
 
     Call it on every render, before any early return. It subscribes to nothing that
     re-renders its component: the stores' changes, a read that changes
-    ``Scheduler.enabled`` and the minute tick each ask
-    ``due_session()`` again, unless ``os_reminds()``, and only a different answer
+    `Scheduler.enabled` and the minute tick each ask
+    `due_session()` again, unless `os_reminds()`, and only a different answer
     sets the state.
 
     Args:
-        svc: The session's services: the foreground ticks and the ``Scheduler``.
-        conference: The session's ``Conference`` store: the feed.
-        favorites: The session's ``Favorites`` store: My schedule.
-        prefs: The session's ``Prefs`` store: the reminder settings.
+        svc: The session's services: the foreground ticks and the `Scheduler`.
+        conference: The session's `Conference` store: the feed.
+        favorites: The session's `Favorites` store: My schedule.
+        prefs: The session's `Prefs` store: the reminder settings.
         ready: Whether the boot gate is open; nothing shows over the boot view.
     """
     page = ft.context.page
@@ -221,12 +221,12 @@ def reminder_banner(
 ) -> ft.Banner:
     """Return the Banner for a session about to start (ux.md §4.5, §6.9).
 
-    Flutter's ``MaterialBanner`` is a live region of its own, so a screen reader says
+    Flutter's `MaterialBanner` is a live region of its own, so a screen reader says
     it when it appears and as its minutes change (F118). A swipe or a screen reader's
     dismiss action counts as Dismiss.
 
     Args:
-        due: The session, from ``due_session()``.
+        due: The session, from `due_session()`.
         on_open: Open: the session over My schedule, and the Banner goes.
         on_dismiss: Dismiss: the Banner goes until the app restarts.
     """

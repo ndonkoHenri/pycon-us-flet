@@ -1,4 +1,4 @@
-"""The ``Staff`` store: the outbox's counts, the pass under way and its context (#692)."""
+"""The `Staff` store: the outbox's counts, the pass under way and its context (#692)."""
 
 import flet as ft
 import pytest
@@ -53,7 +53,7 @@ def test_clear_forgets_counts_and_the_last_pass_and_notifies() -> None:
 
 
 def test_use_staff_needs_a_provider(monkeypatch: pytest.MonkeyPatch) -> None:
-    """Without ``StaffCtx`` above it, the hook says so rather than returning None."""
+    """Without `StaffCtx` above it, the hook says so rather than returning None."""
     monkeypatch.setattr(staff_module.ft, "use_context", lambda _ctx: None)
     with pytest.raises(RuntimeError, match="StaffCtx"):
         use_staff()

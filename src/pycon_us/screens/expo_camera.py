@@ -1,15 +1,15 @@
 """Where the expo hall's camera goes when it is laid out (EXPO-05, D-312, D-377).
 
-A booth picked somewhere else, a List row or a ``?booth=`` link, arrives selected with
+A booth picked somewhere else, a List row or a `?booth=` link, arrives selected with
 its card, and at the fitted plan it can sit under that card or the zoom buttons above
-it. ``use_camera()`` places the camera once per hall: the pane's last zoom put back
+it. `use_camera()` places the camera once per hall: the pane's last zoom put back
 (D-312), unless the picked booth is out of sight there, in which case it zooms in just
 enough to bring the booth up into the band above the buttons, centred in it (D-377). A
 booth in sight at the fitted plan leaves the camera there; a tap on the plan never
 moves it, since the user is looking at the booth tapped.
 
-Until U3's ``set_transform`` the move is ``Zoom.restore()``'s reset, zoom and pan, so
-two or three frames show the steps; ``in_view()`` is pure and says where they land.
+Until U3's `set_transform` the move is `Zoom.restore()`'s reset, zoom and pan, so
+two or three frames show the steps; `in_view()` is pure and says where they land.
 """
 
 import flet as ft
@@ -24,7 +24,7 @@ FIT = Transform(1.0, 0.0, 0.0)
 """The fitted plan's transform: where a newly laid out viewer is."""
 
 type Rect = tuple[float, float, float, float]
-"""A ``left``, ``top``, ``width`` and ``height``, in logical pixels."""
+"""A `left`, `top`, `width` and `height`, in logical pixels."""
 
 
 def booth_rect(booth: Booth, box: Size, natural: Size) -> Rect:
@@ -42,9 +42,9 @@ def booth_rect(booth: Booth, box: Size, natural: Size) -> Rect:
 
 
 def shows(rect: Rect, at: Transform, width: float, free: float) -> bool:
-    """Return whether a rectangle of the content is on screen, above ``free``.
+    """Return whether a rectangle of the content is on screen, above `free`.
 
-    A content point ``p`` shows at ``s p + t`` (``ui.zoom_geometry.refocus()``).
+    A content point `p` shows at `s p + t` (`ui.zoom_geometry.refocus()`).
 
     Args:
         rect: The rectangle, in the content's units.
@@ -68,19 +68,19 @@ def in_view(
 ) -> Transform:
     """Return the transform that shows a booth above what covers the pane's bottom.
 
-    ``start`` when the booth shows there, else the fitted plan when it shows there,
+    `start` when the booth shows there, else the fitted plan when it shows there,
     else the least zoom that can put the booth's centre in the middle of the band
-    above ``cover``. The viewer keeps its content over the whole box, so at scale
-    ``s`` the translation stays in ``[box (1 - s), 0]`` on each axis; the centre ``c``
-    reaches a point ``p`` above it once ``s >= (box - p) / (box - c)``. The zoom stops
-    at ``top``, the viewer's maximum, and the translation is clamped as Flutter does.
+    above `cover`. The viewer keeps its content over the whole box, so at scale
+    `s` the translation stays in `[box (1 - s), 0]` on each axis; the centre `c`
+    reaches a point `p` above it once `s >= (box - p) / (box - c)`. The zoom stops
+    at `top`, the viewer's maximum, and the translation is clamped as Flutter does.
 
     Args:
         booth: The booth to show.
         box: The viewer's size; laid out, so not zero.
         natural: The plan image's size, in pixels.
         cover: How much of the pane, from its bottom, the card and the zoom buttons
-            take (``expo_layout.covered()``).
+            take (`expo_layout.covered()`).
         top: The viewer's maximum zoom.
         start: Where the camera would go without the booth: the pane's last zoom.
     """
@@ -110,16 +110,16 @@ def use_camera(
 ) -> None:
     """Place the hall's camera once, when it is laid out (a hook; D-312, D-377).
 
-    The pane's last zoom is put back, or, for a booth picked elsewhere, ``in_view()``
+    The pane's last zoom is put back, or, for a booth picked elsewhere, `in_view()`
     once the card under it is measured. Once per hall: a later render, a new card's
     height included, leaves the camera to the user.
 
     Args:
-        zoom: The hall's zoom layer (``use_zoom()``).
-        memory: The process's ``ViewMemory``, whose ``map_zooms`` keeps the zoom.
-        zoom_key: The pane's slug in ``map_zooms``; empty for a View that keeps none.
+        zoom: The hall's zoom layer (`use_zoom()`).
+        memory: The process's `ViewMemory`, whose `map_zooms` keeps the zoom.
+        zoom_key: The pane's slug in `map_zooms`; empty for a View that keeps none.
         reveal: The booth a List row or a link picked, selected now; None otherwise.
-        cover: ``expo_layout.covered()`` for the selected booth's card; 0 until its
+        cover: `expo_layout.covered()` for the selected booth's card; 0 until its
             body is measured.
     """
     placed: list[bool] = ft.use_memo(list, [])  # one for the hall's life

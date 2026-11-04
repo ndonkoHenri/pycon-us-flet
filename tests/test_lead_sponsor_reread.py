@@ -2,10 +2,10 @@
 
 Back from the picker, the sponsor shown is the old one until the read of the stored
 key lands. A row keeps the sponsor it was scanned for for good (STORE-11), so a
-``scans_for_sponsor()`` account's screen is paused until then. Each test holds the
-read at a gate in a real Flet session (``tests/harness.py``), around the real
-``capture()`` and an in-memory outbox. The location and the route are set by hand, as
-``tests/test_staff_lead.py``'s and ``tests/test_scan_screen.py``'s Back tests do.
+`scans_for_sponsor()` account's screen is paused until then. Each test holds the
+read at a gate in a real Flet session (`tests/harness.py`), around the real
+`capture()` and an in-memory outbox. The location and the route are set by hand, as
+`tests/test_staff_lead.py`'s and `tests/test_scan_screen.py`'s Back tests do.
 """
 
 import asyncio

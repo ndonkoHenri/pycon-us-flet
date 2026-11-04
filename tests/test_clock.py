@@ -18,7 +18,7 @@ def real_time() -> Iterator[None]:
 
 
 def test_real_time_is_aware_utc() -> None:
-    """Without a fake clock or an override, ``now()`` is real time, aware, in UTC."""
+    """Without a fake clock or an override, `now()` is real time, aware, in UTC."""
     before = datetime.now(UTC)
     now = clock.now()
     assert now.tzinfo is UTC
@@ -26,7 +26,7 @@ def test_real_time_is_aware_utc() -> None:
 
 
 class SteppedTime(datetime):
-    """Stands in for real time in ``clock``: it only moves when a test steps it."""
+    """Stands in for real time in `clock`: it only moves when a test steps it."""
 
     current = datetime(2026, 10, 12, 8, 0, tzinfo=UTC)
 
@@ -51,7 +51,7 @@ def test_fake_clock_runs_forward_with_real_time(
 
 
 def test_test_override_wins_over_the_fake_clock() -> None:
-    """A test's frozen ``now`` wins over the fake clock, set or not, until cleared."""
+    """A test's frozen `now` wins over the fake clock, set or not, until cleared."""
     clock.start_fake_clock(datetime(2026, 5, 15, 16, 0, tzinfo=UTC))
     frozen = datetime(2026, 5, 16, 9, 0, tzinfo=ZoneInfo("America/Los_Angeles"))
     clock.set_test_now(frozen)
@@ -65,7 +65,7 @@ def test_test_override_wins_over_the_fake_clock() -> None:
 
 
 def test_real_now_skips_the_fake_clock_but_not_a_test_override() -> None:
-    """``real_now()``, the reminders' time, stays real under the fake clock (D-389)."""
+    """`real_now()`, the reminders' time, stays real under the fake clock (D-389)."""
     clock.start_fake_clock(datetime(2026, 5, 15, 16, 0, tzinfo=UTC))
     assert abs(clock.real_now() - datetime.now(UTC)) < timedelta(seconds=5)
     frozen = datetime(2026, 5, 16, 9, 0, tzinfo=UTC)
@@ -74,7 +74,7 @@ def test_real_now_skips_the_fake_clock_but_not_a_test_override() -> None:
 
 
 def test_clearing_the_fake_clock_returns_to_real_time() -> None:
-    """Clearing the fake clock brings ``now()`` back to within seconds of real time."""
+    """Clearing the fake clock brings `now()` back to within seconds of real time."""
     clock.start_fake_clock(datetime(2030, 1, 1, tzinfo=UTC))
     clock.start_fake_clock(None)
     assert abs(clock.now() - datetime.now(UTC)) < timedelta(seconds=5)
@@ -91,7 +91,7 @@ def test_naive_datetimes_are_refused(setter) -> None:
 
 
 def test_a_clock_without_an_offset_is_conference_time() -> None:
-    """A clock typed without an offset, with a space or a ``T``, is conference time."""
+    """A clock typed without an offset, with a space or a `T`, is conference time."""
     assert clock.parse_fake_clock(
         " 2026-05-15 09:00 ", ZoneInfo("America/Los_Angeles")
     ) == datetime(2026, 5, 15, 9, 0, tzinfo=ZoneInfo("America/Los_Angeles"))

@@ -1,4 +1,4 @@
-"""About this app (``/more/app``): what the app is, its data and its build (INFO-03).
+"""About this app (`/more/app`): what the app is, its data and its build (INFO-03).
 
 The app's name and what it is, "Not an official PSF app." (D-36); **Conference data**:
 the conference and where the schedule on screen came from, with its age (D-292); **This
@@ -127,7 +127,7 @@ def HelpUsFixIt() -> ft.Control:
     A component of its own, as Developer's Data section is: whether the sheet is up and
     how the last share ended are its state, so a share re-renders these rows and not
     the page. The outcome is said in place, under the rows (D-29, D-210); a dismissed
-    sheet says nothing (``use_problem_report()``).
+    sheet says nothing (`use_problem_report()`).
     """
     report = use_problem_report()
     tokens = use_tokens()
@@ -150,7 +150,7 @@ def help_rows(
     sharing: bool,
     on_share: ft.ControlEventHandler[ft.ListTile],
 ) -> list[ft.Control]:
-    """Return Help us fix it's heading and rows, which switch on ``SOURCE_URL`` (D-297).
+    """Return Help us fix it's heading and rows, which switch on `SOURCE_URL` (D-297).
 
     While the repository is private, one row, **Report a problem**, shares the log and
     the diagnostics: a Share log row would open the same sheet. Once it is public,
@@ -158,8 +158,8 @@ def help_rows(
     under it shares what to attach.
 
     Args:
-        source_url: ``SOURCE_URL``: None while the repository is private (D-88).
-        packaged: A packaged build, whose share adds ``console.log``; the row says
+        source_url: `SOURCE_URL`: None while the repository is private (D-88).
+        packaged: A packaged build, whose share adds `console.log`; the row says
             beforehand whether it does.
         sharing: The share sheet is up: the share row is disabled until it closes.
         on_share: The share row's action.
@@ -207,7 +207,7 @@ def links(source_url: str | None) -> list[ft.Control]:
     reads as a link, "Opens in browser" (D-182).
 
     Args:
-        source_url: ``SOURCE_URL``: None while the repository is private, which hides
+        source_url: `SOURCE_URL`: None while the repository is private, which hides
             its row (D-88).
     """
     rows: list[ft.Control] = [
@@ -234,7 +234,7 @@ def links(source_url: str | None) -> list[ft.Control]:
 
 
 def shown_url(url: str) -> str:
-    """Return ``url`` as a row shows it, without scheme or final slash: "flet.dev"."""
+    """Return `url` as a row shows it, without scheme or final slash: "flet.dev"."""
     parts = urlsplit(url)
     return f"{parts.netloc}{parts.path}".rstrip("/")
 

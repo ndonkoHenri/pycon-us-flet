@@ -1,18 +1,18 @@
-"""Open spaces (``/more/open-spaces``): the open spaces by day and time (EVT-01, EVT-02).
+"""Open spaces (`/more/open-spaces`): the open spaces by day and time (EVT-01, EVT-02).
 
-The Tracks hub opens the same page as its child, ``/more/tracks/open-spaces``, so Back
+The Tracks hub opens the same page as its child, `/more/tracks/open-spaces`, so Back
 returns to the hub (D-207).
 
-The app bar's ``+`` proposes one: "Propose an open space" opens the site's sign-up,
-from the year data (``content.toml``'s ``[open_spaces]``, D-45), in the in-app browser
-(the link rule, INFO-14); a year whose site has no sign-up has no ``+``. Under it, day
+The app bar's `+` proposes one: "Propose an open space" opens the site's sign-up,
+from the year data (`content.toml`'s `[open_spaces]`, D-45), in the in-app browser
+(the link rule, INFO-14); a year whose site has no sign-up has no `+`. Under it, day
 tabs over swipeable day lists, a tab for each day the feed has open spaces on, named by
-its date (the Schedule's ``day_tab()``):
+its date (the Schedule's `day_tab()`):
 Ionic called every day after Saturday "Sunday". The page opens on today when it has
 open spaces, else on the first day.
 
 Each day's list starts with the year's intro line, so it scrolls away with the list,
-then its time slots (D-31): the ``TimeGutter`` beside ``SessionRow``s with their
+then its time slots (D-31): the `TimeGutter` beside `SessionRow`s with their
 stars (D-184), without the "Open space" badge every row would repeat (D-199), and
 without a thumbnail: an open space's image shows on its detail only (D-332). A tap
 pushes the session, one drill level (D-17). Each day is a memoised list given only its
@@ -175,7 +175,7 @@ def opening_day(dates: Sequence[date], current: date) -> date:
 
     Args:
         dates: The days with open spaces, in order; at least one.
-        current: Today, in conference time (``clock.now()``, D-43).
+        current: Today, in conference time (`clock.now()`, D-43).
     """
     return current if current in dates else dates[0]
 
@@ -183,7 +183,7 @@ def opening_day(dates: Sequence[date], current: date) -> date:
 def day_views(
     views: Sequence[SessionView], groups: Sequence[DaySessions]
 ) -> tuple[tuple[date, tuple[SessionView, ...]], ...]:
-    """Return each day's row views, in the order ``track_sessions()`` lists them.
+    """Return each day's row views, in the order `track_sessions()` lists them.
 
     Args:
         views: Every open space's view, built once per feed version.
@@ -204,7 +204,7 @@ def propose_button(url: str, svc: Services) -> ft.Control:
     stays out of the semantics, where iOS would read it after the name (D-184).
 
     Args:
-        url: The year's sign-up (``OpenSpacesInfo.propose_url``).
+        url: The year's sign-up (`OpenSpacesInfo.propose_url`).
         svc: The session's services, for the launcher.
     """
 
@@ -233,7 +233,7 @@ def none_yet(url: str, svc: Services, margin: float) -> ft.Control:
         url: The year's sign-up, or empty for a year without one: no button then, and
             the sentence says the app shows them on its own (D-175).
         svc: The session's services, for the launcher.
-        margin: The screen's side margin (``ui.widths.use_margin()``).
+        margin: The screen's side margin (`ui.widths.use_margin()`).
     """
     on_action = None
     if url:
@@ -279,8 +279,8 @@ def DayList(
     """Return one day's page: the intro line, then the day's open spaces by slot.
 
     A memoised component keyed by the day (D-153, F34): a star tap re-renders the day
-    whose ``saved`` changed and in it the one row (``SessionRow`` is memoised too). It
-    also follows the screen's side margin (``use_margin()``, D-305), which changes only
+    whose `saved` changed and in it the one row (`SessionRow` is memoised too). It
+    also follows the screen's side margin (`use_margin()`, D-305), which changes only
     with the window.
 
     Args:
@@ -288,10 +288,10 @@ def DayList(
         views: The day's row views, in schedule order; the same object per feed.
         saved: The saved ids among this day's open spaces only.
         changes: The recent changes of this day's open spaces only (D-315).
-        on_toggle: The page's one star handler (``use_favorite_toggle()``).
+        on_toggle: The page's one star handler (`use_favorite_toggle()`).
         tokens: The scheme's tokens (D-150).
         use_24h: Whether the device uses the 24-hour clock.
-        time_above: Put each slot's time above its rows (``Prefs.time_above``,
+        time_above: Put each slot's time above its rows (`Prefs.time_above`,
             D-216).
         intro: The year's intro line; empty for none.
         omit: Badge labels the page already says: "Open space".

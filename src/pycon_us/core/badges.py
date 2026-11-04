@@ -1,17 +1,17 @@
 """What a scanned badge says, the per-code scan cooldown and a scan's result (D-65).
 
-A badge's QR code, and what a HID scanner or manual entry types, is ``code:validator``
-(``tools/mock_api/badges.py`` prints it), possibly with more ``:`` segments.
-``parse_badge()`` keeps Ionic's rules, which the server expects (architecture §12.5):
+A badge's QR code, and what a HID scanner or manual entry types, is `code:validator`
+(`tools/mock_api/badges.py` prints it), possibly with more `:` segments.
+`parse_badge()` keeps Ionic's rules, which the server expects (architecture §12.5):
 the access code is segment 0; Door check and Swag pickup send segment 1 as
-``badge_validator``; the Lead scanner sends the **last** segment; CoC sends the code
-only. ``Cooldown`` accepts one result per code every 4 s, since a held code is reported
+`badge_validator`; the Lead scanner sends the **last** segment; CoC sends the code
+only. `Cooldown` accepts one result per code every 4 s, since a held code is reported
 about 3.6 times a second (D-293). Both are pure: the caller passes the time in.
-``parse_badge()`` refuses what cannot be a badge, a URL or a contact card from a QR
+`parse_badge()` refuses what cannot be a badge, a URL or a contact card from a QR
 code that is not one (D-477).
-``ScanResult`` is what a tool's handler returns for the scan screen's result panel
-(LEAD-01, LEAD-09; ``ui/scan_screen.py``), data only: the panel picks the colour and
-icon from its ``ScanOutcome``, and draws its ``Tag`` list (Door check's dietary needs
+`ScanResult` is what a tool's handler returns for the scan screen's result panel
+(LEAD-01, LEAD-09; `ui/scan_screen.py`), data only: the panel picks the colour and
+icon from its `ScanOutcome`, and draws its `Tag` list (Door check's dietary needs
 and allergy, DOOR-05) as chips.
 """
 
@@ -31,9 +31,9 @@ class Badge:
 
     Attributes:
         code: The attendee's access code, segment 0; what CoC sends and storage keys use.
-        door_validator: Segment 1, the ``badge_validator`` Door check and Swag pickup
+        door_validator: Segment 1, the `badge_validator` Door check and Swag pickup
             send.
-        lead_validator: The last segment, the ``badge_validator`` the Lead scanner sends.
+        lead_validator: The last segment, the `badge_validator` the Lead scanner sends.
     """
 
     code: str
@@ -54,7 +54,7 @@ QR_FORMATS = frozenset(
     {"begin", "mecard", "matmsg", "wifi", "smsto", "sms", "tel", "mailto", "geo"}
 )
 """The first word, in lower case, of the QR contents people scan that are not badges: a
-vCard or vCalendar (``BEGIN:``), MeCard, an email, Wi-Fi network (whose password would
+vCard or vCalendar (`BEGIN:`), MeCard, an email, Wi-Fi network (whose password would
 become the lead validator), SMS, phone or location. A HID scanner types a contact card
 one line per Enter, so its first line has no newline to catch. A short backstop, not a
 list of every scheme (D-477)."""
@@ -69,11 +69,11 @@ def parse_badge(raw: str) -> Badge | None:
 
     Returns:
         The badge, or None when it is not one (the screen says "Not a badge code"): no
-        ``:``; an access code that is empty, has a character outside ``CODE_SHAPE`` or
-        is one of ``QR_FORMATS`` (``BEGIN:VCARD``, ``WIFI:...``); a control character
-        anywhere (a vCard in one text); or ``//`` right after the first ``:`` (a URL,
-        ``https://...``). Empty validators are kept as ``""``: the server decides
-        about them. A URL scheme such as ``otpauth:`` still passes: it has a badge's
+        `:`; an access code that is empty, has a character outside `CODE_SHAPE` or
+        is one of `QR_FORMATS` (`BEGIN:VCARD`, `WIFI:...`); a control character
+        anywhere (a vCard in one text); or `//` right after the first `:` (a URL,
+        `https://...`). Empty validators are kept as `""`: the server decides
+        about them. A URL scheme such as `otpauth:` still passes: it has a badge's
         shape, and the server answers "not registered" (D-477).
     """
     text = raw.strip()
@@ -88,7 +88,7 @@ def parse_badge(raw: str) -> Badge | None:
 
 @dataclass
 class Cooldown:
-    """One accepted result per code every ``seconds``; a different code goes at once.
+    """One accepted result per code every `seconds`; a different code goes at once.
 
     Attributes:
         seconds: How long an accepted code is then ignored.
@@ -98,16 +98,16 @@ class Cooldown:
     _accepted: dict[str, float] = field(default_factory=dict, repr=False)
 
     def accept(self, code: str, now: float) -> bool:
-        """Say whether a scan of ``code`` counts, and remember it when it does.
+        """Say whether a scan of `code` counts, and remember it when it does.
 
         Args:
             code: The scanned access code.
             now: The time of the scan in seconds, from a clock that never goes back
-                (``time.monotonic()``).
+                (`time.monotonic()`).
 
         Returns:
-            True when ``code`` was not accepted in the last ``seconds``; a held code is
-            so accepted once per ``seconds``, from its first scan.
+            True when `code` was not accepted in the last `seconds`; a held code is
+            so accepted once per `seconds`, from its first scan.
         """
         # Forget codes whose cooldown has passed, so the memory stays a few entries.
         self._accepted = {
@@ -164,7 +164,7 @@ class ScanResult:
         tags: Chips right under the title, warnings first: Door check's "Allergy:
             peanuts" and "Vegetarian" (DOOR-05); the other tools give none.
         email: The attendee's email, for a tool that reveals it on request (CoC's
-            "Show email", MASK-05); empty without one. Never in ``spoken`` or the
+            "Show email", MASK-05); empty without one. Never in `spoken` or the
             repr, so neither a live region nor a log line holds it (D-72).
         sponsor: The sponsor a staff account's lead was scanned for, so "Add note" goes
             to that lead whatever is chosen since (D-459); None otherwise.
@@ -197,11 +197,11 @@ class ScanResult:
 NOT_A_BADGE = ScanResult(
     ScanOutcome.INVALID, "Not a badge code", details=("Check the code and try again.",)
 )
-"""The result of an entry ``parse_badge()`` refuses; the screen adds the text read (D-473)."""
+"""The result of an entry `parse_badge()` refuses; the screen adds the text read (D-473)."""
 
 ENTRY_TITLE_MAX = 60
 """The most characters of a refused entry the panel's title holds, and a screen reader
-says (#965): about two lines at normal text. ``ScanResult.entry`` keeps the whole."""
+says (#965): about two lines at normal text. `ScanResult.entry` keeps the whole."""
 
 
 def entry_title(text: str) -> str:
@@ -209,9 +209,9 @@ def entry_title(text: str) -> str:
 
     A URL or a contact card from a HID scan, or a long paste, would otherwise fill the
     panel and be read whole (#965). Whitespace, newlines included, collapses to single
-    spaces, and a text over ``ENTRY_TITLE_MAX`` characters ends in an ellipsis. The cut
+    spaces, and a text over `ENTRY_TITLE_MAX` characters ends in an ellipsis. The cut
     counts code points, so it can split an emoji sequence or a flag: accepted, since
-    badge text is mostly ASCII and the whole text is one tap away (``Edit code``).
+    badge text is mostly ASCII and the whole text is one tap away (`Edit code`).
 
     Args:
         text: What the field held when it was refused.

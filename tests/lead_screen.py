@@ -1,11 +1,11 @@
 """The Lead scanner's test rig: the route rendered for an account, its preferences shared.
 
-Shared by ``tests/test_staff_lead.py`` and ``tests/test_lead_note_sheet.py``: ``show``
-renders ``screens/staff_lead.py``'s ``LeadScanner`` in a real Flet session
-(``tests/harness.py``) signed in as an ``Account``, with a mock URL set or not (D-51),
-and its sessions share one SharedPreferences (``stored``), so a second render is a
-relaunch. A test module takes the fixtures with ``stored, show = lead_screen.stored,
-lead_screen.show``. It reads the sponsor's chip and the field's pause too.
+Shared by `tests/test_staff_lead.py` and `tests/test_lead_note_sheet.py`: `show`
+renders `screens/staff_lead.py`'s `LeadScanner` in a real Flet session
+(`tests/harness.py`) signed in as an `Account`, with a mock URL set or not (D-51),
+and its sessions share one SharedPreferences (`stored`), so a second render is a
+relaunch. A test module takes the fixtures with `stored, show = lead_screen.stored,
+lead_screen.show`. It reads the sponsor's chip and the field's pause too.
 """
 
 import json
@@ -45,7 +45,7 @@ def signed_in(
     door_check: bool = False,
     mask_violation: bool = False,
 ) -> Account:
-    """A signed-in ``Account`` with only the given role flags on."""
+    """A signed-in `Account` with only the given role flags on."""
     return Account(
         signed_in=True,
         email="a@example.com",
@@ -56,7 +56,7 @@ def signed_in(
 
 
 def choose(stored: dict[str, Any], sponsor: LeadSponsor) -> None:
-    """Store ``sponsor`` as the chosen one, as the picker saves it."""
+    """Store `sponsor` as the chosen one, as the picker saves it."""
     stored[staff_sponsor(2026).key] = json.dumps(to_stored(sponsor))
 
 
@@ -90,7 +90,7 @@ async def show(
 ) -> AsyncIterator[Show]:
     """Return a function that renders the Lead scanner for an account and a URL.
 
-    Its sessions keep their preferences in ``stored``; ``consent`` stores the
+    Its sessions keep their preferences in `stored`; `consent` stores the
     account's consent first, as an earlier visit left it.
     """
 
@@ -103,7 +103,7 @@ async def show(
     def sharing(
         year: YearData, directory: Path, memory: ViewMemory | None = None
     ) -> Services:
-        """Return the memory services over the test's one ``stored``."""
+        """Return the memory services over the test's one `stored`."""
         svc = memory_services(year, directory, memory)
         cast(MemoryPrefs, svc.storage.prefs).values = stored
         return svc
@@ -118,9 +118,9 @@ async def show(
             consent: bool = True,
             outbox: OutboxDb | None = None,
         ) -> Shown:
-            """Render the route signed in as ``account``, with or without a mock URL.
+            """Render the route signed in as `account`, with or without a mock URL.
 
-            ``outbox`` is the services' outbox, where a scan is queued; none by default.
+            `outbox` is the services' outbox, where a scan is queued; none by default.
             """
             if consent:
                 stored[SCANNER_CONSENT.key] = True

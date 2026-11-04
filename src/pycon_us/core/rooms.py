@@ -1,13 +1,13 @@
 """The rooms list the Map tab shows, and what is on in one room (ROOM-01, ROOM-02).
 
-``room_list()`` answers "where is it, and what is on there now?": every room of the feed
+`room_list()` answers "where is it, and what is on there now?": every room of the feed
 floor by floor, in natural order on each, with the sessions on in it at an instant, and
 apart from them the places the feed lists that are not rooms (year data,
-``Content.other_locations``). ``room_now()`` is one room's part of it, for room detail's
-"Now in this room". What is on comes from Now & Next's own rule (``agenda.now_next``,
+`Content.other_locations`). `room_now()` is one room's part of it, for room detail's
+"Now in this room". What is on comes from Now & Next's own rule (`agenda.now_next`,
 D-179), so the Map, room detail and Now never disagree.
 
-``seed_sprint_rooms()`` is the last step of feed processing (MAP-08): the rooms only the
+`seed_sprint_rooms()` is the last step of feed processing (MAP-08): the rooms only the
 sprints use, which no session names, join the rooms index empty, so the Map lists them.
 """
 
@@ -45,7 +45,7 @@ class Floor:
     Attributes:
         title: Its heading: the plan's title ("Concourse level"), or "Rooms" ("Other
             rooms" after the floors) for the rooms on no plan.
-        rooms: Its rooms, in natural order (``slugs.room_sort_key``).
+        rooms: Its rooms, in natural order (`slugs.room_sort_key`).
     """
 
     title: str
@@ -81,7 +81,7 @@ def session_count(count: int) -> str:
 def count_line(room: Room) -> str:
     """Return the line under a room's name: its session count, or "Sprints".
 
-    A room without sessions is a sprint-only room (``seed_sprint_rooms()``, MAP-08),
+    A room without sessions is a sprint-only room (`seed_sprint_rooms()`, MAP-08),
     which says what it is for rather than "0 sessions".
 
     Args:
@@ -96,14 +96,14 @@ def seed_sprint_rooms(
     """Return the rooms index with the sprint-only rooms added, empty (MAP-08).
 
     Ionic seeded them from its room registry, so the Seaside rooms the sprints use show
-    in the Rooms list though no session names them. A name is keyed by ``slugify_room``,
+    in the Rooms list though no session names them. A name is keyed by `slugify_room`,
     as the feed's rooms are, so a room the feed already has (S-1, which open spaces use)
     keeps its sessions and is never listed twice; a name given twice is seeded once.
 
     Args:
-        rooms: The feed's rooms index (``rules.rooms``), in natural order.
-        names: The sprint rooms' names (``FeedSettings.sprint_rooms``: the ``map.toml``
-            pins marked ``sprint``).
+        rooms: The feed's rooms index (`rules.rooms`), in natural order.
+        names: The sprint rooms' names (`FeedSettings.sprint_rooms`: the `map.toml`
+            pins marked `sprint`).
 
     Returns:
         The rooms by slug, the seeded ones among them, in natural order of name.
@@ -124,10 +124,10 @@ def room_list(
     other_locations: Collection[str],
     floors: Sequence[tuple[str, Collection[str]]] = (),
 ) -> RoomList:
-    """Return the Map's rooms list at ``now``, floor by floor (ROOM-01).
+    """Return the Map's rooms list at `now`, floor by floor (ROOM-01).
 
-    A session is on in a room while ``start <= now < end``, over the timeline only, as
-    "Happening now" counts it (``now_next``): a poster detail stays inside its Posters
+    A session is on in a room while `start <= now < end`, over the timeline only, as
+    "Happening now" counts it (`now_next`): a poster detail stays inside its Posters
     row, a notice (no duration) is never on, and outside the conference's sessions
     nothing is. A session listed in several rooms (a plenary, the lightning talks'
     streams) is on in each. When several are on in one room, the one that started
@@ -136,19 +136,19 @@ def room_list(
 
     Args:
         data: The processed feed.
-        now: An aware instant, in any zone (``clock.now()``).
+        now: An aware instant, in any zone (`clock.now()`).
         other_locations: The names of the places that are not rooms, from the year's
-            ``content.toml``; compared by room slug, so case and punctuation do not
+            `content.toml`; compared by room slug, so case and punctuation do not
             matter, and a name no room has is ignored.
         floors: Each floor plan's title and the pin keys on it, in the Map's order
-            (``MapData.floors()``); a room is on the floor of its pin, found by
-            ``normalize_room_key()``. A floor without rooms is left out.
+            (`MapData.floors()`); a room is on the floor of its pin, found by
+            `normalize_room_key()`. A floor without rooms is left out.
 
     Returns:
         The rooms by floor and the other locations, each group in natural order.
 
     Raises:
-        ValueError: ``now`` is naive.
+        ValueError: `now` is naive.
     """
     on = _on_by_room(data, now)
     others = {slugify_room(name) for name in other_locations}
@@ -176,25 +176,25 @@ def room_list(
 
 
 def room_now(data: ConferenceData, slug: str, now: datetime) -> tuple[Session, ...]:
-    """Return the sessions on in one room at ``now``: "Now in this room" (ROOM-02).
+    """Return the sessions on in one room at `now`: "Now in this room" (ROOM-02).
 
-    The same sessions in the same order as that room's ``RoomEntry.on_now`` in
-    ``room_list()``: the timeline only, ``start <= now < end``, the one that started
+    The same sessions in the same order as that room's `RoomEntry.on_now` in
+    `room_list()`: the timeline only, `start <= now < end`, the one that started
     last first.
 
     Args:
         data: The processed feed.
-        slug: The room's slug (``Room.slug``); a slug no room has gives ``()``.
-        now: An aware instant, in any zone (``clock.now()``).
+        slug: The room's slug (`Room.slug`); a slug no room has gives `()`.
+        now: An aware instant, in any zone (`clock.now()`).
 
     Raises:
-        ValueError: ``now`` is naive.
+        ValueError: `now` is naive.
     """
     return _latest_first(_on_by_room(data, now).get(slug, ()))
 
 
 def _on_by_room(data: ConferenceData, now: datetime) -> dict[str, list[Session]]:
-    """Return the sessions on at ``now`` by room slug, each in the Schedule's order."""
+    """Return the sessions on at `now` by room slug, each in the Schedule's order."""
     on: dict[str, list[Session]] = {}
     for session in now_next(data, now).happening:
         for name in session.rooms:

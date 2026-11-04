@@ -1,11 +1,11 @@
-"""Tests for the Lead scanner route, ``screens/staff_lead.py`` (LEAD-01, LEAD-14; D-416).
+"""Tests for the Lead scanner route, `screens/staff_lead.py` (LEAD-01, LEAD-14; D-416).
 
-The screen runs in a real Flet session (``tests/harness.py``) with an ``Account``
+The screen runs in a real Flet session (`tests/harness.py`) with an `Account`
 store set as the flags say, and a mock URL set or not (D-51). Its guard re-checks
-``may_open`` on every render (architecture §12.4); past it, the account's consent
-(LEAD-04, D-423) is asked once, on ``screens/lead_consent.py``'s page; its parse-only
+`may_open` on every render (architecture §12.4); past it, the account's consent
+(LEAD-04, D-423) is asked once, on `screens/lead_consent.py`'s page; its parse-only
 handler queues a seeded badge in the outbox and shows the row's state (D-426; the
-capture itself is ``tests/test_lead_capture.py``'s). One test's sessions share
+capture itself is `tests/test_lead_capture.py`'s). One test's sessions share
 one SharedPreferences, so a second render is a relaunch. Door staff choose the sponsor
 they scan for (LEAD-05, LEAD-06): the picker opens once by itself, the screen waits
 until one is chosen, then heads it with a "For: ..." chip; a sponsor's account sees none.
@@ -67,7 +67,7 @@ def is_open(shown: Shown) -> bool:
 async def test_the_route_opens_only_for_the_lead_rule(
     show: Show, flags: dict[str, bool], opens: bool
 ) -> None:
-    """``lead_retrieval or door_check`` opens it; any other account is refused."""
+    """`lead_retrieval or door_check` opens it; any other account is refused."""
     assert is_open(await show(signed_in(**flags))) is opens
 
 
@@ -138,7 +138,7 @@ def asks(shown: Shown) -> bool:
 
 
 def button(shown: Shown, identifier: str) -> ft.Control:
-    """The consent page's button under ``identifier``."""
+    """The consent page's button under `identifier`."""
     control = shown.node(identifier).content
     assert isinstance(control, ft.FilledButton | ft.OutlinedButton)
     return control
@@ -186,7 +186,7 @@ async def test_a_given_consent_is_remembered_after_a_relaunch(show: Show) -> Non
 async def test_cancel_goes_back_to_more_and_saves_nothing(
     show: Show, stored: dict[str, Any]
 ) -> None:
-    """Cancel goes where Back goes (``parent_of``), even with the box ticked."""
+    """Cancel goes where Back goes (`parent_of`), even with the box ticked."""
     shown = await show(signed_in(lead_retrieval=True), consent=False)
     await tick(shown)
     await shown.click(button(shown, "lead.consent.cancel"))
@@ -249,13 +249,13 @@ async def test_every_component_keeps_its_hooks_from_reading_to_scanning(
     """Each render runs all its component's hooks, read to consent to scanner (D-70).
 
     The stand-in scaffold calls a hook, as the real one does: called from
-    ``LeadTool``'s loading branch only, it would leave a hook unused after the read.
+    `LeadTool`'s loading branch only, it would leave a hook unused after the read.
     Door staff end on the paused scan screen, with no sponsor chosen yet.
     """
     stand_in = harness._scaffold
 
     def scaffold(**kwargs: Any) -> ft.Control:
-        """Call a hook, as ``AppScaffold`` does, then stand in for it."""
+        """Call a hook, as `AppScaffold` does, then stand in for it."""
         ft.use_state(0)
         return stand_in(**kwargs)
 
@@ -396,7 +396,7 @@ async def test_a_consent_that_can_t_be_saved_stays_given_at_the_next_read(
 async def test_a_sponsor_s_own_account_sees_no_chip_and_no_picker(
     show: Show, stored: dict[str, Any]
 ) -> None:
-    """``lead_retrieval`` scans for its own sponsor: no chip, no pause, no picker."""
+    """`lead_retrieval` scans for its own sponsor: no chip, no pause, no picker."""
     choose(stored, EXAMPLE)  # left by an earlier staff session, say
     for flags in (
         {"lead_retrieval": True},

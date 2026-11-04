@@ -1,8 +1,8 @@
-"""Tests for the row views lists hand their rows (``core/row_views.py``; SCHED-03, D-184).
+"""Tests for the row views lists hand their rows (`core/row_views.py`; SCHED-03, D-184).
 
 Also a row's places and people, and the slots a day's rows group into. The phrases a
 screen reader hears for a row (D-200) and the text Share sends (NEW-06) are tested in
-``test_row_views_phrases.py``.
+`test_row_views_phrases.py`.
 """
 
 from dataclasses import replace
@@ -87,7 +87,7 @@ def test_on_a_room_s_page_another_place_stays() -> None:
 
 
 def test_the_room_s_name_is_matched_by_slug() -> None:
-    """``Session.display_location`` and ``Room.slug`` meet through ``slugify_room``."""
+    """`Session.display_location` and `Room.slug` meet through `slugify_room`."""
     talk = replace(processed(2026).sessions["142"], display_location="grand ballroom A")
     view = session_view(talk, ZONE_2026, use_24h=False, in_room="grand-ballroom-a")
     assert view.place == ""
@@ -164,7 +164,7 @@ def test_a_speaker_s_row_views_all_leave_out_the_speaker() -> None:
 
 
 def test_row_views_keep_the_list_s_order_and_skip_unknown_ids() -> None:
-    """``session_views`` keeps the given order and skips ids the feed lacks."""
+    """`session_views` keeps the given order and skips ids the feed lacks."""
     views = session_views(
         processed(2026), ["74", "gone", "142"], ZONE_2026, use_24h=False
     )
@@ -190,7 +190,7 @@ def test_views_group_by_their_conference_local_day_in_order() -> None:
 
 
 def room_names(rooms: tuple[Room, ...]) -> list[str]:
-    """The names of ``rooms``, in order."""
+    """The names of `rooms`, in order."""
     return [room.name for room in rooms]
 
 
@@ -266,7 +266,7 @@ def test_a_room_listed_twice_is_folded_once() -> None:
 
 
 def names(found: tuple[Speaker | str, ...]) -> list[str]:
-    """Each entry's name, a pseudo-speaker's text marked with ``text:``."""
+    """Each entry's name, a pseudo-speaker's text marked with `text:`."""
     return [f"text:{e}" if isinstance(e, str) else e.name for e in found]
 
 
@@ -335,7 +335,7 @@ def test_by_slot_groups_a_days_rows_by_their_time_group_keeping_their_order() ->
 
 
 def test_by_slot_returns_its_slots_by_start_whatever_order_the_views_come_in() -> None:
-    """The open spaces hand it ``schedule_order``'s order, by the start a row shows."""
+    """The open spaces hand it `schedule_order`'s order, by the start a row shows."""
     data = processed(2026)
     sunday = [s for s in data.sessions.values() if s.day == date(2026, 5, 17)]
     starts = sorted({s.start for s in sunday})

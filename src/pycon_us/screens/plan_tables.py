@@ -1,21 +1,21 @@
-"""The job fair's tables on the floor viewer: ``…/plan/job-fair?table=T8`` (#464; MAP-04).
+"""The job fair's tables on the floor viewer: `…/plan/job-fair?table=T8` (#464; MAP-04).
 
-The ``job-fair`` plan is the print, whose logos and the feed disagree at T7, T8, T12 and
+The `job-fair` plan is the print, whose logos and the feed disagree at T7, T8, T12 and
 T16 (D-254), so a table shows its place on the plan and the feed says who is at it:
 
-- **A tap area per table** of ``map.toml``'s ``[[tables]]``: one positioned
-  ``Container`` in ``Semantics(button=True)`` (D-312), read "Table T7, Chainguard, Red
-  Hat" (``plan.table.T7``), "Table T13, no sponsor listed", or "Table T7" before the
+- **A tap area per table** of `map.toml`'s `[[tables]]`: one positioned
+  `Container` in `Semantics(button=True)` (D-312), read "Table T7, Chainguard, Red
+  Hat" (`plan.table.T7`), "Table T13, no sponsor listed", or "Table T7" before the
   feed is there. A tap selects it without moving the camera (until U3): an amber fill
   over the print and an amber outline, the node marked selected. So the plan has no
   double tap, which would delay every tap (D-312).
 - **The table's card** under the plan, outside the zoom layer: "Table T7" over a row
-  per sponsor the feed puts there, each pushing the sponsor (``plan.table_sponsor.
-  <slug>``), or "No sponsor listed at T13"; a table the feed names without a rectangle
+  per sponsor the feed puts there, each pushing the sponsor (`plan.table_sponsor.
+  <slug>`), or "No sponsor listed at T13"; a table the feed names without a rectangle
   is "Table T21 isn't on the plan yet", with its sponsors.
 
-``table_href()`` is the way in: the Job fair pane's "Show table T8 on the plan" and
-sponsor detail's "Job fair table T8". ``screens/plan.py`` holds the selection.
+`table_href()` is the way in: the Job fair pane's "Show table T8 on the plan" and
+sponsor detail's "Job fair table T8". `screens/plan.py` holds the selection.
 """
 
 from collections.abc import Callable
@@ -35,7 +35,7 @@ SCREEN = "plan"
 """The floor viewer's name in its semantics identifiers (decisions §M)."""
 
 TABLE_PARAM = "table"
-"""The query option that selects a table: ``…/plan/job-fair?table=T8``."""
+"""The query option that selects a table: `…/plan/job-fair?table=T8`."""
 
 FILL_OPACITY = 0.45
 """How much amber covers a selected table: its printed logo still shows."""
@@ -44,14 +44,14 @@ OUTLINE_DP = 4
 
 
 def table_href(view_path: str, number: str) -> str:
-    """Return the location that pushes the job fair plan with table ``number`` selected.
+    """Return the location that pushes the job fair plan with table `number` selected.
 
     Args:
-        view_path: The View to push it on (``ft.use_view_path()``).
+        view_path: The View to push it on (`ft.use_view_path()`).
         number: The table, as the feed writes it ("T8").
 
     Returns:
-        The location, e.g. ``/map/plan/job-fair?table=T8``.
+        The location, e.g. `/map/plan/job-fair?table=T8`.
     """
     plan = drill_href(view_path, "plan", JOB_FAIR_PLAN)
     return f"{plan}?{TABLE_PARAM}={quote(number, safe='')}"
@@ -67,7 +67,7 @@ def show_table_label(number: str) -> str:
 
 
 def sponsors_at(data: ConferenceData | None, number: str) -> tuple[Sponsor, ...] | None:
-    """Return the sponsors the feed puts at table ``number``, by folded name.
+    """Return the sponsors the feed puts at table `number`, by folded name.
 
     Args:
         data: The processed feed, or None before there is one.
@@ -88,7 +88,7 @@ def table_phrase(number: str, sponsors: tuple[Sponsor, ...] | None) -> str:
 
     Args:
         number: The table.
-        sponsors: Its sponsors (``sponsors_at()``).
+        sponsors: Its sponsors (`sponsors_at()`).
     """
     if sponsors is None:
         return f"Table {number}"
@@ -108,8 +108,8 @@ def table_area(
 
     Args:
         table: The table.
-        shown: The plan's fitted size (``ui.zoom_geometry.fitted()``).
-        sponsors: Its sponsors, for its words (``sponsors_at()``).
+        shown: The plan's fitted size (`ui.zoom_geometry.fitted()`).
+        sponsors: Its sponsors, for its words (`sponsors_at()`).
         on_select: Called with the table's number when it is tapped.
         selected: Whether it is the selected table.
     """
@@ -156,7 +156,7 @@ def table_card(
 
     Args:
         number: The table.
-        sponsors: Its sponsors (``sponsors_at()``); None without a feed, which shows
+        sponsors: Its sponsors (`sponsors_at()`); None without a feed, which shows
             the name alone.
         view_path: The floor viewer's View path, so a sponsor is pushed on top of it.
         placed: Whether the table has a rectangle on the plan; "Table T21 isn't on
@@ -189,8 +189,8 @@ def table_card(
 def sponsor_row(sponsor: Sponsor, view_path: str) -> ft.Control:
     """Return a sponsor's row in the table's card: its name and a chevron, 48 dp.
 
-    One button node, read "Red Hat, sponsor details" (``plan.table_sponsor.<slug>``),
-    that pushes ``…/sponsor/<slug>`` on the floor viewer, so Back returns to the plan.
+    One button node, read "Red Hat, sponsor details" (`plan.table_sponsor.<slug>`),
+    that pushes `…/sponsor/<slug>` on the floor viewer, so Back returns to the plan.
 
     Args:
         sponsor: A sponsor at the table.

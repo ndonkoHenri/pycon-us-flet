@@ -1,6 +1,6 @@
-"""Tests for E3's scheduling (``services/reminders.py``'s ``Scheduler``; #447, D-389).
+"""Tests for E3's scheduling (`services/reminders.py`'s `Scheduler`; #447, D-389).
 
-Against ``tests/fakes.py``'s ``MemoryNotifications``, which keeps the pending reminders
+Against `tests/fakes.py`'s `MemoryNotifications`, which keeps the pending reminders
 by id as the OS does: what an apply cancels and schedules, in which Android mode, what
 it does with each failure, and how a newer request supersedes an apply in flight
 (D-220, D-221, D-222, D-120).
@@ -43,7 +43,7 @@ INEXACT = AndroidScheduleMode.INEXACT_ALLOW_WHILE_IDLE
 
 
 def reminders(*ids: int) -> list[Reminder]:
-    """Return a plan of one reminder per id, a minute apart from ``AT``."""
+    """Return a plan of one reminder per id, a minute apart from `AT`."""
     return [
         Reminder(
             id=reminder_id,
@@ -62,7 +62,7 @@ def scheduler(
     *,
     android: bool = True,
 ) -> Scheduler:
-    """Return a ``Scheduler`` over the fakes, typed as over the real services."""
+    """Return a `Scheduler` over the fakes, typed as over the real services."""
     return Scheduler(
         cast(Notifications, notifications),
         cast(PermissionHandler | None, permissions),
@@ -231,7 +231,7 @@ async def test_a_newer_request_supersedes_the_apply_in_flight(
 async def test_the_loop_returns_once_the_session_closes(
     os: MemoryNotifications,
 ) -> None:
-    """A request after ``closed`` ends the loop without applying (D-147)."""
+    """A request after `closed` ends the loop without applying (D-147)."""
     closed = asyncio.Event()
     sched = scheduler(os)
     loop = asyncio.create_task(sched.keep_applied(lambda: reminders(142), closed))
@@ -270,7 +270,7 @@ ROUTE = "/my-schedule/session/142"
 
 
 def test_a_tap_before_the_app_routes_is_held_for_start(os: MemoryNotifications) -> None:
-    """Without ``navigate`` (the boot gate shut), a tap's route waits in ``tapped``."""
+    """Without `navigate` (the boot gate shut), a tap's route waits in `tapped`."""
     sched = scheduler(os)
     sched.on_tap(NotificationEvent(name="tap", control=None, id=142, payload=ROUTE))  # pyright: ignore[reportArgumentType]
     assert sched.tapped == ROUTE
@@ -279,7 +279,7 @@ def test_a_tap_before_the_app_routes_is_held_for_start(os: MemoryNotifications) 
 
 
 def test_a_tap_once_the_app_routes_navigates_at_once(os: MemoryNotifications) -> None:
-    """With ``navigate`` set, a tap opens its route and holds nothing."""
+    """With `navigate` set, a tap opens its route and holds nothing."""
     went: list[str] = []
     sched = scheduler(os)
     sched.navigate = went.append
@@ -292,7 +292,7 @@ def test_a_tap_once_the_app_routes_navigates_at_once(os: MemoryNotifications) ->
 def test_a_payload_that_is_no_route_opens_nothing(
     os: MemoryNotifications, payload: str | None, caplog: pytest.LogCaptureFixture
 ) -> None:
-    """A tap whose payload is not a path from ``/`` is logged and goes nowhere."""
+    """A tap whose payload is not a path from `/` is logged and goes nowhere."""
     went: list[str] = []
     sched = scheduler(os)
     sched.open_tapped(payload)
@@ -303,7 +303,7 @@ def test_a_payload_that_is_no_route_opens_nothing(
 
 
 async def test_reading_whether_notifications_show(os: MemoryNotifications) -> None:
-    """``read_enabled()`` keeps the OS's answer in ``enabled``."""
+    """`read_enabled()` keeps the OS's answer in `enabled`."""
     sched = scheduler(os)
     assert not sched.enabled  # unknown until read
     assert await sched.read_enabled()
@@ -330,7 +330,7 @@ async def test_a_failed_or_slow_read_reads_as_off(
 async def test_each_apply_reads_whether_notifications_show_first(
     os: MemoryNotifications,
 ) -> None:
-    """The loop re-reads ``enabled`` before each apply, so a resume sees a new answer."""
+    """The loop re-reads `enabled` before each apply, so a resume sees a new answer."""
     closed = asyncio.Event()
     sched = scheduler(os)
     os.enabled = False
@@ -349,7 +349,7 @@ async def test_each_apply_reads_whether_notifications_show_first(
 
 
 class Built:
-    """Stands in for E3's ``Notifications``: records what its constructor was given."""
+    """Stands in for E3's `Notifications`: records what its constructor was given."""
 
     def __init__(self, **kwargs: object) -> None:
         """Keep the keyword arguments, as the service's fields would be at registration."""
@@ -359,11 +359,11 @@ class Built:
 def test_e3_gets_the_tap_handler_as_it_is_built(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """``start()`` hands ``on_tap`` to the service's constructor (F246).
+    """`start()` hands `on_tap` to the service's constructor (F246).
 
     A service registers with the page as it is built, so a handler set afterwards
     never reaches the client, and E3 drops the tap that launched the app. The
-    handler given is the ``Scheduler``'s.
+    handler given is the `Scheduler`'s.
     """
     monkeypatch.setattr(capabilities, "REMINDERS", True)
     monkeypatch.setattr(flet_notifications, "Notifications", Built)

@@ -1,9 +1,9 @@
 """What the diagnostics tests share: the facts, the clock and the stores (INFO-04, D-72).
 
-``test_diagnostics.py`` tests ``diagnostics_text()`` on hand-made ``Facts``;
-``test_diagnostics_gather.py`` tests ``gather_facts()`` on a fake page and real stores.
-Both take ``frozen_clock`` (autouse) by assignment, the second ``year`` and ``storage``
-too (``docs/testing-and-quality.md`` §3.1).
+`test_diagnostics.py` tests `diagnostics_text()` on hand-made `Facts`;
+`test_diagnostics_gather.py` tests `gather_facts()` on a fake page and real stores.
+Both take `frozen_clock` (autouse) by assignment, the second `year` and `storage`
+too (`docs/testing-and-quality.md` §3.1).
 """
 
 import dataclasses
@@ -87,7 +87,7 @@ FACTS = Facts(
 
 @pytest.fixture(autouse=True)
 def frozen_clock() -> Iterator[None]:
-    """Freeze ``clock.now()`` at ``NOW`` for the test, then return to real time."""
+    """Freeze `clock.now()` at `NOW` for the test, then return to real time."""
     clock.set_test_now(NOW)
     yield
     clock.set_test_now(None)
@@ -101,7 +101,7 @@ def year() -> YearData:
 
 @pytest.fixture
 def storage(tmp_path: Path) -> Storage:
-    """A 2026 ``Storage`` in ``tmp_path``, over in-memory SharedPreferences."""
+    """A 2026 `Storage` in `tmp_path`, over in-memory SharedPreferences."""
     return Storage(prefs=MemoryPrefs(), directory=tmp_path, year=2026)
 
 
@@ -114,7 +114,7 @@ def fields(text: str) -> dict[str, str]:
 
 
 def text_of(**changes: object) -> dict[str, str]:
-    """Return the text of ``FACTS`` with ``changes``, by fact name."""
+    """Return the text of `FACTS` with `changes`, by fact name."""
     return fields(diagnostics_text(dataclasses.replace(FACTS, **changes)))  # pyright: ignore[reportArgumentType]
 
 
@@ -126,7 +126,7 @@ async def gathered(
     prefs: Prefs | None = None,
     favorites: Favorites | None = None,
 ) -> str:
-    """Return the text of the facts ``gather_facts()`` reads from these stores and page."""
+    """Return the text of the facts `gather_facts()` reads from these stores and page."""
     facts = await gather_facts(
         cast(ft.Page, page or FakePage()),
         info=year.conference,
@@ -138,7 +138,7 @@ async def gathered(
 
 
 async def bundled(storage: Storage, year: YearData) -> Conference:
-    """Return a ``Conference`` showing the bundled snapshot: no cache, no refresh yet."""
+    """Return a `Conference` showing the bundled snapshot: no cache, no refresh yet."""
     conference = Conference()
     await conference.load_local(storage, year)
     return conference

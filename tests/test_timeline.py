@@ -1,7 +1,7 @@
 """Tests for the schedule queries: the timeline, the track filter and Jump to now.
 
 #85: DATA-18, DATA-30, SCHED-16, SCHED-17; D-20, D-31, D-153, D-178. The track pages
-and a Posters row's posters are tested in ``test_timeline_tracks.py``.
+and a Posters row's posters are tested in `test_timeline_tracks.py`.
 """
 
 import ast
@@ -38,13 +38,13 @@ pytestmark = pytest.mark.usefixtures("machine_tz")
 
 
 def schedule_days(year: int) -> tuple[date, ...]:
-    """The Schedule's days of ``year``: every conference date, in order."""
+    """The Schedule's days of `year`: every conference date, in order."""
     conference = load_year(year).conference
     return days(processed(year), conference.first_day, conference.last_day)
 
 
 def slot_at(data: ConferenceData, start: str) -> Slot:
-    """The unfiltered slot of ``data`` that starts at ``start`` (ISO 8601)."""
+    """The unfiltered slot of `data` that starts at `start` (ISO 8601)."""
     day = date.fromisoformat(start[:10])
     return next(slot for slot in timeline(data, day, ()) if slot.key == f"slot-{start}")
 
@@ -177,7 +177,7 @@ def test_the_default_filter_hides_open_spaces_and_nothing_else() -> None:
 
 
 def test_one_string_is_not_a_filter() -> None:
-    """``timeline`` raises ``TypeError`` for a bare string as the filter."""
+    """`timeline` raises `TypeError` for a bare string as the filter."""
     with pytest.raises(TypeError):
         timeline(processed(2026), date(2026, 5, 15), "Open Space")
 
@@ -273,10 +273,10 @@ FILTER_USERS = {
 }
 """The modules that may name the Schedule's filter: its query, its preference, the
 Schedule (with its day lists' data) and its filter (#87, which edits the preference; its sheet module is given the
-hidden keys and names neither). The module ``core/timeline.py`` shares the function's
+hidden keys and names neither). The module `core/timeline.py` shares the function's
 name, so outside the Schedule import its names directly
-(``from pycon_us.core.timeline import DaySessions``); ``from pycon_us.core import
-timeline`` trips this scan (D-185)."""
+(`from pycon_us.core.timeline import DaySessions`); `from pycon_us.core import
+timeline` trips this scan (D-185)."""
 
 
 def test_only_the_schedule_reads_the_filter_or_calls_the_timeline() -> None:
@@ -314,7 +314,7 @@ FRIDAY = date(2026, 5, 15)
 
 
 def friday_at(hour: int, minute: int = 0) -> datetime:
-    """Friday, May 15, 2026 at ``hour``:``minute``, conference time."""
+    """Friday, May 15, 2026 at `hour`:`minute`, conference time."""
     return datetime(2026, 5, 15, hour, minute, tzinfo=PACIFIC)
 
 

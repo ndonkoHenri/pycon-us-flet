@@ -1,7 +1,7 @@
 """The PSF guard: the client never sends a private-API request to a PSF host (D-51).
 
 Exit criterion 4 of P3: whatever base URL the client is given, a request for any
-endpoint to ``pycon.org`` or a subdomain raises before anything reaches the transport,
+endpoint to `pycon.org` or a subdomain raises before anything reaches the transport,
 while a host that only looks like it goes through.
 """
 
@@ -31,14 +31,14 @@ LOOK_ALIKES = [
 
 
 def args_for(endpoint: Endpoint) -> tuple[str, ...]:
-    """Placeholder path segments for an endpoint's ``{}``s."""
+    """Placeholder path segments for an endpoint's `{}`s."""
     return ("1",) * endpoint.path.count("{}")
 
 
 @pytest.mark.parametrize("base_url", PSF_BASES)
 @pytest.mark.parametrize("endpoint", ENDPOINTS, ids=lambda e: f"{e.method}-{e.name}")
 async def test_client_refuses_psf_hosts(endpoint: Endpoint, base_url: str) -> None:
-    """Every endpoint to a PSF host raises ``PermissionError`` and sends nothing."""
+    """Every endpoint to a PSF host raises `PermissionError` and sends nothing."""
     recorder = replying(200, b'{"code": 200, "data": {}}')
     client = client_for(recorder, base_url=base_url)
     with pytest.raises(PermissionError, match="private PSF endpoint"):
@@ -51,7 +51,7 @@ async def test_client_refuses_psf_hosts(endpoint: Endpoint, base_url: str) -> No
 async def test_client_sends_to_look_alike_hosts(
     endpoint: Endpoint, base_url: str
 ) -> None:
-    """A host that merely contains ``pycon.org`` is not refused: the request is sent."""
+    """A host that merely contains `pycon.org` is not refused: the request is sent."""
     recorder = replying(200, b'{"code": 200, "data": {}}')
     client = client_for(recorder, base_url=base_url)
     await client.request(endpoint, *args_for(endpoint))

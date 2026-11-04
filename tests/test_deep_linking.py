@@ -1,8 +1,8 @@
 """Guard D-269: Android and iOS builds register the app's link scheme and host.
 
-Flet's build template registers a link once ``scheme`` resolves, but our links are
-``<scheme>://<host>/<route path>`` (D-269), so these tests want both: they run flet-cli's own
-resolver at the pin over ``pyproject.toml``, as ``flet build`` does.
+Flet's build template registers a link once `scheme` resolves, but our links are
+`<scheme>://<host>/<route path>` (D-269), so these tests want both: they run flet-cli's own
+resolver at the pin over `pyproject.toml`, as `flet build` does.
 """
 
 import re
@@ -38,14 +38,14 @@ class Resolver(BaseBuildCommand):
 
 
 def resolve(project_dir: Path, platform: str) -> tuple[object, object]:
-    """Return the ``(scheme, host)`` that ``flet build`` would use for ``platform``.
+    """Return the `(scheme, host)` that `flet build` would use for `platform`.
 
     Args:
-        project_dir: The folder whose ``pyproject.toml`` is read.
-        platform: flet-cli's package platform, ``"Android"`` or ``"iOS"``.
+        project_dir: The folder whose `pyproject.toml` is read.
+        platform: flet-cli's package platform, `"Android"` or `"iOS"`.
 
     Returns:
-        The resolved scheme and host, each ``None`` when it is not configured.
+        The resolved scheme and host, each `None` when it is not configured.
 
     Raises:
         ValueError: flet-cli would stop the build, as for a host with no scheme.
@@ -60,10 +60,10 @@ def resolve(project_dir: Path, platform: str) -> tuple[object, object]:
 
 
 def link_problems(project_dir: Path) -> list[str]:
-    """Say, per platform, what keeps a build of ``project_dir`` from registering its links.
+    """Say, per platform, what keeps a build of `project_dir` from registering its links.
 
     Args:
-        project_dir: The folder whose ``pyproject.toml`` is read.
+        project_dir: The folder whose `pyproject.toml` is read.
 
     Returns:
         One message per problem; an empty list when both platforms register a valid link.
@@ -85,18 +85,18 @@ def link_problems(project_dir: Path) -> list[str]:
 
 
 def write_pyproject(folder: Path, table: str) -> Path:
-    """Write a ``pyproject.toml`` holding only ``table`` into ``folder`` and return the folder."""
+    """Write a `pyproject.toml` holding only `table` into `folder` and return the folder."""
     (folder / "pyproject.toml").write_text(table, encoding="utf-8")
     return folder
 
 
 def test_both_platforms_register_the_link() -> None:
-    """Our ``pyproject.toml`` resolves a valid scheme and host for Android and for iOS."""
+    """Our `pyproject.toml` resolves a valid scheme and host for Android and for iOS."""
     assert link_problems(ROOT) == []
 
 
 def test_the_link_values_live_in_one_table() -> None:
-    """The scheme and host are set once, in ``[tool.flet.deep_linking]``, for #15 to swap."""
+    """The scheme and host are set once, in `[tool.flet.deep_linking]`, for #15 to swap."""
     pyproject = tomllib.loads((ROOT / "pyproject.toml").read_text(encoding="utf-8"))
     flet = pyproject["tool"]["flet"]
     assert set(flet["deep_linking"]) == {"scheme", "host"}

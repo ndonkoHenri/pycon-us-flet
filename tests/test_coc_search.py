@@ -1,11 +1,11 @@
-"""Tests for the CoC name search, ``ui/coc_search.py`` and its sheet (#761; MASK-02, MASK-03).
+"""Tests for the CoC name search, `ui/coc_search.py` and its sheet (#761; MASK-02, MASK-03).
 
 The tool runs in a real Flet session over the mock's transport, as in
-``tests/test_staff_coc.py``, whose fixtures these share. Find by name is disabled with
+`tests/test_staff_coc.py`, whose fixtures these share. Find by name is disabled with
 its reason until the directory has loaded and while offline; it opens a sheet that
 pauses scanning; typing finds rows (every folded word, D-46; at most 25); a row's tap
-opens the review dialog of ``tests/test_coc_review.py``, whose Record reaches the panel
-through ``ScanScreen(posted=)``; and the query, the rows and the access codes stay out
+opens the review dialog of `tests/test_coc_review.py`, whose Record reaches the panel
+through `ScanScreen(posted=)`; and the query, the rows and the access codes stay out
 of storage, identifiers and logs (D-56, D-72).
 """
 
@@ -59,7 +59,7 @@ def sheet(shown: Shown) -> ft.BottomSheet | None:
 
 
 def in_sheet(shown: Shown, prefix: str) -> list[ft.Semantics]:
-    """The open sheet's semantics nodes whose identifier starts with ``prefix``."""
+    """The open sheet's semantics nodes whose identifier starts with `prefix`."""
     current = sheet(shown)
     assert current is not None
     return [
@@ -97,7 +97,7 @@ async def open_find(shown: Shown) -> None:
 
 
 async def search_for(shown: Shown, text: str) -> None:
-    """Type ``text`` in the search field, as Flutter reports it."""
+    """Type `text` in the search field, as Flutter reports it."""
     (node,) = [n for n in in_sheet(shown, "coc.search") if n.identifier == "coc.search"]
     field = node.content
     assert isinstance(field, ft.TextField)
@@ -107,7 +107,7 @@ async def search_for(shown: Shown, text: str) -> None:
 
 
 async def tap_row(shown: Shown, index: int) -> asyncio.Task[None]:
-    """Tap row ``index`` as a task: it waits on the review it opens, until it opens."""
+    """Tap row `index` as a task: it waits on the review it opens, until it opens."""
     node = in_sheet(shown, f"coc.search.row.{index}")[0]
     container = next(
         c
@@ -374,7 +374,7 @@ def clear_button(shown: Shown) -> ft.IconButton:
 
 
 async def report(shown: Shown, text: str) -> None:
-    """Flutter's report of ``text`` in the search field, its event not run out."""
+    """Flutter's report of `text` in the search field, its event not run out."""
     field = search_field(shown)
     patch_dataclass(field, {"value": text})
     await shown.session.dispatch_event(field._i, "change", text)

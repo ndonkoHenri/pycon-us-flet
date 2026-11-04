@@ -1,7 +1,7 @@
-"""Tests for the Licences page and its texts (``licences.py``, ``screens/licences.py``).
+"""Tests for the Licences page and its texts (`licences.py`, `screens/licences.py`).
 
-#442 (INFO-03, D-296). The coverage test reads ``uv.lock``: every package a phone build
-bundles has a row (D-75). The screens run in a real Flet session (``tests/sessions.py``);
+#442 (INFO-03, D-296). The coverage test reads `uv.lock`: every package a phone build
+bundles has a row (D-75). The screens run in a real Flet session (`tests/sessions.py`);
 how they look, wrap at 200 % and read to screen readers is checked on devices (the PR).
 """
 
@@ -35,7 +35,7 @@ PHONES = (
 def runtime_packages(lock: dict[str, Any]) -> set[str]:
     """Return what a phone build bundles: the app's dependencies and theirs, not dev's.
 
-    Walks ``uv.lock`` from the ``pycon-us`` package's own dependencies (dev groups are
+    Walks `uv.lock` from the `pycon-us` package's own dependencies (dev groups are
     elsewhere in the lock), keeping an edge when its marker holds on either phone.
     """
     packages = {p["name"]: p for p in lock["package"]}
@@ -59,12 +59,12 @@ def missing_rows(lock: dict[str, Any]) -> set[str]:
 
 
 def read_lock() -> dict[str, Any]:
-    """The repository's ``uv.lock``, parsed."""
+    """The repository's `uv.lock`, parsed."""
     return tomllib.loads((ROOT / "uv.lock").read_text(encoding="utf-8"))
 
 
 def test_every_bundled_package_has_a_row() -> None:
-    """Each package of the phone builds' closure in ``uv.lock`` is listed (D-75)."""
+    """Each package of the phone builds' closure in `uv.lock` is listed (D-75)."""
     bundled = runtime_packages(read_lock())
     assert {"flet", "tzdata", "httpx", "msgpack"} <= bundled  # the walk reaches them
     assert "pytest" not in bundled and "ruff" not in bundled  # dev only
@@ -110,7 +110,7 @@ def test_the_bundled_notice_and_apache_texts_match_their_sources() -> None:
 
 
 def test_the_simple_icons_row_says_what_the_notice_says_of_cc0() -> None:
-    """The row and ``NOTICE``, on one page, both say CC0 doesn't reach every icon (#846)."""
+    """The row and `NOTICE`, on one page, both say CC0 doesn't reach every icon (#846)."""
     row = COMPONENTS["simple-icons"].copyright
     notice = " ".join((ROOT / "NOTICE").read_text().split())
     assert "public domain" not in row
@@ -119,7 +119,7 @@ def test_the_simple_icons_row_says_what_the_notice_says_of_cc0() -> None:
 
 
 def test_the_app_and_its_notice_come_first() -> None:
-    """The list opens with the app's licence, then its ``NOTICE`` (#442)."""
+    """The list opens with the app's licence, then its `NOTICE` (#442)."""
     assert list(COMPONENTS)[:2] == ["app", "notice"]
     assert GROUPS[0].components == (licences.APP, licences.NOTICE)
     assert licences.APP.licence == "Apache-2.0"  # the Ionic app's licence (D-87)
@@ -197,7 +197,7 @@ async def show(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> AsyncIterator
     async with AsyncExitStack() as stack:
 
         async def render(component: Callable[[], ft.Control], view_path: str) -> Shown:
-            """Render ``component`` as the View at ``view_path``."""
+            """Render `component` as the View at `view_path`."""
             return await stack.enter_async_context(
                 showing(
                     component,
@@ -227,14 +227,14 @@ async def test_the_list_shows_each_section_and_each_component(show: Show) -> Non
 
 
 async def test_a_row_opens_its_text_below_the_list(show: Show) -> None:
-    """A tap pushes ``/more/app/licences/<key>``, so Back returns to the list."""
+    """A tap pushes `/more/app/licences/<key>`, so Back returns to the list."""
     page = await show(screen.Licences, screen.LOCATION)
     await page.click(cast(ft.Control, page.node("licences.flet").content))
     assert page.went == ["/more/app/licences/flet"]
 
 
 def text_page(key: str) -> Callable[[], ft.Control]:
-    """The text page for ``key``, as its route renders it."""
+    """The text page for `key`, as its route renders it."""
     return lambda: screen.LicenceText(licence=key)
 
 
@@ -281,9 +281,9 @@ async def test_an_unknown_key_says_so_and_offers_the_list(show: Show) -> None:
 async def test_the_route_opens_the_text_its_location_names(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """The real Router at ``/more/app/licences/python`` shows Python's text.
+    """The real Router at `/more/app/licences/python` shows Python's text.
 
-    The route's param reaches the screen: a ``key=`` prop would be taken by Flet as
+    The route's param reaches the screen: a `key=` prop would be taken by Flet as
     the component's own key, and the text would never render.
     """
     async with showing(

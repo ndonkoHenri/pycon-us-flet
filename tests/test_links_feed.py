@@ -1,10 +1,10 @@
-"""Tests for the links in feed texts (D-197): ``feed_link`` and ``feed_markdown``.
+"""Tests for the links in feed texts (D-197): `feed_link` and `feed_markdown`.
 
-``core.links.feed_link`` reads the address a feed link names, and a feed text is shown
+`core.links.feed_link` reads the address a feed link names, and a feed text is shown
 in Markdown whose every tap goes through the link rule.
 
-The rule itself is tested in ``test_links.py``; both take the services and the page
-from ``tests/link_rule.py``.
+The rule itself is tested in `test_links.py`; both take the services and the page
+from `tests/link_rule.py`.
 """
 
 import logging
@@ -101,7 +101,7 @@ async def test_a_feed_link_opens_in_the_in_app_browser(
 async def test_a_site_relative_feed_link_is_a_web_page_not_an_app_page(
     page: FakePage, svc: Services
 ) -> None:
-    """``link_kind`` would push "/2026/…" as a page of the app."""
+    """`link_kind` would push "/2026/…" as a page of the app."""
     await open_feed_link(svc, "/2026/sponsors/")
     assert page.navigated == []
     assert launcher(svc).launched == [
@@ -165,7 +165,7 @@ async def test_a_tap_on_a_link_in_a_feed_text_opens_it(
 
 
 def _below(control: ft.Control) -> Iterator[ft.Control]:
-    """``control`` and every control in its ``content`` chain."""
+    """`control` and every control in its `content` chain."""
     node: object = control
     while isinstance(node, ft.Control):
         yield node

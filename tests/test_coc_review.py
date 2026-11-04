@@ -1,7 +1,7 @@
-"""Tests for the CoC review, ``ui/coc_review.py`` and its dialog, on the CoC tool (#760).
+"""Tests for the CoC review, `ui/coc_review.py` and its dialog, on the CoC tool (#760).
 
 The tool runs in a real Flet session over the mock's transport, as in
-``tests/test_staff_coc.py``, whose fixtures these share. A scan opens the review and
+`tests/test_staff_coc.py`, whose fixtures these share. A scan opens the review and
 the scan screen awaits it, so each test starts the scan as a task, works the dialog
 as Flutter reports it (the field's text, then the event), then awaits the scan.
 Record sends exactly one forced incident (D-430); Cancel and Back send none; errors
@@ -52,7 +52,7 @@ NOTES = "Hall B, 10:05: shouted at a volunteer"
 
 @pytest.fixture
 def mock(switch: Switch) -> MockState:
-    """The mock's state behind ``switch``, so a test reads its incidents and faults."""
+    """The mock's state behind `switch`, so a test reads its incidents and faults."""
     state = MockState.from_seed(now=time.time)
     switch.inner = mock_transport(state)
     return state
@@ -89,7 +89,7 @@ def badge_field(shown: Shown) -> ft.TextField:
 
 
 async def enter(shown: Shown, text: str) -> None:
-    """Type ``text`` in the badge field as Flutter reports it, then press Enter."""
+    """Type `text` in the badge field as Flutter reports it, then press Enter."""
     field = badge_field(shown)
     shown.session.apply_patch(field._i, {"value": text})
     await shown.event(field, "change", text)
@@ -105,7 +105,7 @@ def dialog(shown: Shown) -> ft.AlertDialog | None:
 
 
 def walk(control: Any) -> Iterator[Any]:
-    """Every control under ``control``: its title, content, controls and actions."""
+    """Every control under `control`: its title, content, controls and actions."""
     yield control
     for name in ("title", "content"):
         child = getattr(control, name, None)
@@ -118,7 +118,7 @@ def walk(control: Any) -> Iterator[Any]:
 
 
 def nodes(shown: Shown, identifier: str) -> list[ft.Semantics]:
-    """The open dialog's semantics nodes named ``identifier``."""
+    """The open dialog's semantics nodes named `identifier`."""
     current = dialog(shown)
     assert current is not None
     return [
@@ -129,7 +129,7 @@ def nodes(shown: Shown, identifier: str) -> list[ft.Semantics]:
 
 
 def in_dialog(shown: Shown, identifier: str) -> Any:
-    """The control under the open dialog's semantics node ``identifier``."""
+    """The control under the open dialog's semantics node `identifier`."""
     (node,) = nodes(shown, identifier)
     return node.content
 
@@ -159,7 +159,7 @@ def problem(shown: Shown) -> str | None:
 
 
 async def scan(shown: Shown, text: str = GRACE) -> asyncio.Task[None]:
-    """Start a scan of ``text``, which waits on the review it opens, until it opens.
+    """Start a scan of `text`, which waits on the review it opens, until it opens.
 
     It returns sooner when the scan ends without one (a dropped or held code).
     """
@@ -179,12 +179,12 @@ async def type_notes(shown: Shown, text: str) -> None:
 
 
 async def tap(shown: Shown, identifier: str) -> None:
-    """Tap the dialog's button ``identifier``."""
+    """Tap the dialog's button `identifier`."""
     await shown.click(in_dialog(shown, identifier))
 
 
 async def start(shown: Shown, identifier: str) -> asyncio.Task[None]:
-    """Tap the dialog's button ``identifier`` as a task: its call waits on a gate."""
+    """Tap the dialog's button `identifier` as a task: its call waits on a gate."""
     task = asyncio.create_task(tap(shown, identifier))
     await shown.settle()
     return task
@@ -198,7 +198,7 @@ def notes_text(shown: Shown) -> str:
 async def test_a_scan_opens_the_review_and_pauses_scanning(
     show: Show, mock: MockState, switch: Switch
 ) -> None:
-    """``MOCK0002``: Grace Sample, "Badge: Grace S.", 1 incident; nothing sent yet."""
+    """`MOCK0002`: Grace Sample, "Badge: Grace S.", 1 incident; nothing sent yet."""
     shown = await show()
     task = await scan(shown)
     assert texts(shown)[:4] == [
@@ -353,7 +353,7 @@ async def test_a_code_not_in_the_directory_is_reviewed_and_a_404_says_so(
 async def test_a_lost_reply_may_be_recorded_and_offers_record_anyway(
     show: Show, mock: MockState
 ) -> None:
-    """``lost_response``: "may have been recorded", Record anyway; never a resend."""
+    """`lost_response`: "may have been recorded", Record anyway; never a resend."""
     shown = await show()
     task = await scan(shown)
     await type_notes(shown, NOTES)
@@ -468,9 +468,9 @@ async def test_the_notes_never_reach_a_log(
 ) -> None:
     """D-72: recording, failing and recording again log no notes, name or code.
 
-    At the app's level, INFO (``setup_logging()``), and the app's own loggers at DEBUG;
+    At the app's level, INFO (`setup_logging()`), and the app's own loggers at DEBUG;
     Flet's DEBUG lines echo every event's data, typed text included, only under
-    ``flet run -vv``.
+    `flet run -vv`.
     """
     caplog.set_level(logging.INFO)
     caplog.set_level(logging.DEBUG, logger="pycon_us")

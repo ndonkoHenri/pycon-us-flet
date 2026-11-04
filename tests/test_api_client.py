@@ -1,6 +1,6 @@
 """The signed API client against the mock: round trips, errors and clock skew (D-53).
 
-Every call goes through ``tools/mock_api/transport.py``, so the mock checks each
+Every call goes through `tools/mock_api/transport.py`, so the mock checks each
 signature over the exact target and body the client sent.
 """
 
@@ -108,7 +108,7 @@ def test_the_round_trips_cover_every_endpoint() -> None:
 
 
 async def test_a_lead_note_follows_its_capture_with_the_code_in_the_path() -> None:
-    """A note posts to ``lead_retrieval/<code>/note/`` after the lead is captured."""
+    """A note posts to `lead_retrieval/<code>/note/` after the lead is captured."""
     client, recorder, state = await signed_in("sponsor")
     await client.request(LEAD_CAPTURE, query=lead_capture_query("MOCK0001", "v4l1d01"))
     note = {"accessCode": "MOCK0001", "note": "Interest: hot\nNotes: café"}
@@ -123,7 +123,7 @@ async def test_a_lead_note_follows_its_capture_with_the_code_in_the_path() -> No
 
 
 async def test_a_path_segment_is_percent_encoded() -> None:
-    """A path argument is encoded as ``encodeURIComponent`` would (API-11)."""
+    """A path argument is encoded as `encodeURIComponent` would (API-11)."""
     recorder = replying(200, b"{}")
     await client_for(recorder).request(LEAD_NOTE, "A/B C", payload={})
     assert (
@@ -132,7 +132,7 @@ async def test_a_path_segment_is_percent_encoded() -> None:
 
 
 async def test_the_wrong_number_of_path_args_is_a_type_error() -> None:
-    """``request`` refuses to send when the args don't fill the path's segments."""
+    """`request` refuses to send when the args don't fill the path's segments."""
     recorder = replying(200, b"{}")
     with pytest.raises(TypeError):
         await client_for(recorder).request(INVENTORY)
@@ -140,7 +140,7 @@ async def test_the_wrong_number_of_path_args_is_a_type_error() -> None:
 
 
 async def test_a_wrong_password_is_an_auth_error_with_the_servers_message() -> None:
-    """``authenticate`` refused is ``ApiError(401)`` with its ``message``, ``is_auth``."""
+    """`authenticate` refused is `ApiError(401)` with its `message`, `is_auth`."""
     client = client_for(mock_transport(state_at()))
     with pytest.raises(ApiError) as caught:
         await client.request(
@@ -154,7 +154,7 @@ async def test_a_wrong_password_is_an_auth_error_with_the_servers_message() -> N
 
 
 async def test_a_wrong_role_is_an_auth_error_sent_once() -> None:
-    """A 403 with the clocks in step is not retried, and ``is_auth`` is true."""
+    """A 403 with the clocks in step is not retried, and `is_auth` is true."""
     client, recorder, _ = await signed_in("attendee")
     with pytest.raises(ApiError) as caught:
         await client.request(REDEEMABLE)
@@ -165,7 +165,7 @@ async def test_a_wrong_role_is_an_auth_error_sent_once() -> None:
 
 
 async def test_signed_out_the_call_goes_without_a_key_and_is_401() -> None:
-    """With no credentials, ``X-API-Key`` is left out and the mock answers 401."""
+    """With no credentials, `X-API-Key` is left out and the mock answers 401."""
     recorder = Recorder(mock_transport(state_at()))
     with pytest.raises(ApiError) as caught:
         await client_for(recorder).request(CHECK_FEATURES)
@@ -174,7 +174,7 @@ async def test_signed_out_the_call_goes_without_a_key_and_is_401() -> None:
 
 
 async def test_an_unknown_attendee_is_an_api_error_that_is_not_auth() -> None:
-    """A 404 carries the envelope's ``error`` as its message, and isn't ``is_auth``."""
+    """A 404 carries the envelope's `error` as its message, and isn't `is_auth`."""
     client, _, _ = await signed_in("staff")
     query = fetch_products_query("MOCK9999", [3], door=False)
     with pytest.raises(ApiError) as caught:
@@ -208,7 +208,7 @@ async def test_an_unusable_reply_is_an_api_error(
     """An error status or envelope is a refusal; a success we can't read has no status.
 
     The server may have applied a call it answered unreadably, so non-JSON or a
-    missing envelope is ``status`` None, ``unreadable``, unlike a refusal (#874).
+    missing envelope is `status` None, `unreadable`, unlike a refusal (#874).
     """
     answer = 200 if status is None else status
     client = client_for(replying(answer, content, {"Location": "/elsewhere/"}))
@@ -219,7 +219,7 @@ async def test_an_unusable_reply_is_an_api_error(
 
 
 async def test_a_null_reply_to_a_committed_note_is_a_success() -> None:
-    """JSON ``null`` from a bare endpoint is returned, so the note isn't sent twice."""
+    """JSON `null` from a bare endpoint is returned, so the note isn't sent twice."""
     client, recorder, state = await signed_in("sponsor")
     await client.request(LEAD_CAPTURE, query=lead_capture_query("MOCK0001", "v4l1d01"))
     recorder.inner = ReplyReplaced(recorder.inner, b"null")
@@ -229,7 +229,7 @@ async def test_a_null_reply_to_a_committed_note_is_a_success() -> None:
 
 
 async def test_a_bare_reply_is_returned_whole() -> None:
-    """A bare endpoint's reply comes back as decoded, ``code`` and all."""
+    """A bare endpoint's reply comes back as decoded, `code` and all."""
     client = client_for(replying(200, b'{"code": 200, "data": {"x": 1}}'))
     assert await client.request(CHECK_FEATURES) == {"code": 200, "data": {"x": 1}}
 
@@ -245,7 +245,7 @@ async def test_a_bare_reply_is_returned_whole() -> None:
     ids=lambda error: type(error).__name__,
 )
 async def test_no_answer_is_a_network_error(error: httpx.TransportError) -> None:
-    """Every transport error, timeouts included, is ``NetworkError`` naming its type."""
+    """Every transport error, timeouts included, is `NetworkError` naming its type."""
 
     def fail(request: httpx.Request) -> httpx.Response:
         """Raise the transport error instead of answering."""
@@ -270,7 +270,7 @@ async def test_a_skewed_clock_is_corrected_with_one_retry_and_remembered() -> No
 
 
 async def test_a_refused_retry_is_not_retried_again() -> None:
-    """A wrong secret on a skewed clock: one retry, then ``ApiError(403)``, no third."""
+    """A wrong secret on a skewed clock: one retry, then `ApiError(403)`, no third."""
     recorder = Recorder(mock_transport(state_at(clock=Clock(NOW + 900))))
     client = client_for(recorder, Login("mock-key-attendee", "not-the-secret"))
     with pytest.raises(ApiError) as caught:
@@ -280,7 +280,7 @@ async def test_a_refused_retry_is_not_retried_again() -> None:
 
 
 async def test_an_unsigned_call_is_never_retried() -> None:
-    """``authenticate`` refused on a skewed clock is answered once, not retried."""
+    """`authenticate` refused on a skewed clock is answered once, not retried."""
     recorder = Recorder(mock_transport(state_at(clock=Clock(NOW + 900))))
     with pytest.raises(ApiError):
         await client_for(recorder).request(
@@ -290,7 +290,7 @@ async def test_an_unsigned_call_is_never_retried() -> None:
 
 
 async def test_a_403_without_a_date_is_not_retried() -> None:
-    """With no ``Date`` to learn from, a 403 is final and the skew stays as it was."""
+    """With no `Date` to learn from, a 403 is final and the skew stays as it was."""
     recorder = replying(403, b'{"code": 403, "error": "Wrong signature."}')
     client = client_for(recorder)
     with pytest.raises(ApiError):

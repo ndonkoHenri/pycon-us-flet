@@ -29,13 +29,13 @@ AMENDS = re.compile(r"\bamend(?:s|ing)\b(.*?)(?=keeps|;|\)|\. |<br>|$)", re.IGNO
 
 
 def _ids(path: str, pattern: str) -> list[str]:
-    """Return the ids that open a table row of ``path``, in file order."""
+    """Return the ids that open a table row of `path`, in file order."""
     return re.findall(pattern, (ROOT / path).read_text(), re.MULTILINE)
 
 
 def _amended(row: str) -> list[str]:
     """Return the ids a decision row says it amends, reading its prose without the code spans."""
-    # A ``)`` in a code span, as in `build_tile()`, isn't the end of the clause.
+    # A `)` in a code span, as in `build_tile()`, isn't the end of the clause.
     clauses = AMENDS.findall(CODE_SPAN.sub("", row))
     return [amended for clause in clauses for amended in re.findall(r"D-\d+", clause)]
 
@@ -94,7 +94,7 @@ def test_every_decision_fact_and_gap_id_has_one_row() -> None:
 def test_every_cited_id_resolves() -> None:
     """A D- or F-number cited in the docs, src or tests has its row, and a U-number is in the gaps doc.
 
-    ``docs/research`` is left out: it is the raw analysis, in the v1 numbers. So is "v1 D-nn", the v1 record's form.
+    `docs/research` is left out: it is the raw analysis, in the v1 numbers. So is "v1 D-nn", the v1 record's form.
     """
     known = {
         rf"(?<!v1 ){NOT_INSIDE}D-\d+\b": set(_ids(DECISIONS, DECISION_ROW)),
@@ -144,13 +144,13 @@ def test_a_row_that_amends_another_is_named_in_it() -> None:
 
 
 def test_a_code_span_does_not_end_an_amends_clause() -> None:
-    """An id amended after a code span holding a ``)`` is read, and "keeps" still ends the clause."""
+    """An id amended after a code span holding a `)` is read, and "keeps" still ends the clause."""
     row = "(amends D-50's `build_tile()` and D-62's signature, keeps D-70)"
     assert _amended(row) == ["D-50", "D-62"]
 
 
 def test_a_repeated_heading_gets_githubs_numbered_anchor(tmp_path: Path) -> None:
-    """The n-th repeat of a heading is linked as ``slug-n``, as GitHub numbers it; past the last repeat is broken."""
+    """The n-th repeat of a heading is linked as `slug-n`, as GitHub numbers it; past the last repeat is broken."""
     doc = tmp_path / "doc.md"
     doc.write_text("# Other issues\n\n## Other issues\n\n## Other issues\n")
     assert not _broken_link(doc, "#other-issues")

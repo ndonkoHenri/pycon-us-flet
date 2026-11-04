@@ -1,15 +1,15 @@
 """Drive the S4 reproducer on an iOS simulator with xcrun simctl only.
 
-Run from this folder after ``flet build ios-simulator``::
+Run from this folder after `flet build ios-simulator`:
 
     uv run python drive_ios.py <simulator udid>
 
-simctl cannot tap, so the app walks its own journeys (``S4_JOURNEY=1`` reaches it
-as ``SIMCTL_CHILD_S4_JOURNEY``) and this script screenshots each ``checkpoint``
+simctl cannot tap, so the app walks its own journeys (`S4_JOURNEY=1` reaches it
+as `SIMCTL_CHILD_S4_JOURNEY`) and this script screenshots each `checkpoint`
 line. Then it checks background and resume, a dark-mode switch and deep entry
-with the ``--route`` launch argument. The edge-swipe Back needs a human finger.
-Results print as ``PASS`` or ``FAIL``; screenshots, the log and a screen
-recording go to ``$S4_OUT`` (default ``./out``).
+with the `--route` launch argument. The edge-swipe Back needs a human finger.
+Results print as `PASS` or `FAIL`; screenshots, the log and a screen
+recording go to `$S4_OUT` (default `./out`).
 """
 
 import os
@@ -27,7 +27,7 @@ RESULTS = {"PASS": 0, "FAIL": 0}
 
 
 def simctl(*args: str, env: dict[str, str] | None = None) -> str:
-    """Run one ``xcrun simctl`` command and return its stdout."""
+    """Run one `xcrun simctl` command and return its stdout."""
     done = subprocess.run(
         ["xcrun", "simctl", *args],
         capture_output=True,
@@ -39,13 +39,13 @@ def simctl(*args: str, env: dict[str, str] | None = None) -> str:
 
 
 def lines() -> list[str]:
-    """Every ``S4`` line logged so far."""
+    """Every `S4` line logged so far."""
     text = LOG.read_text(errors="replace") if LOG.exists() else ""
     return [m[1] for m in re.finditer(r"(S4 [^\n]*)", text)]
 
 
 def wait(pattern: str, after: int, timeout: float = 10.0) -> str | None:
-    """Wait for an ``S4`` line matching pattern among lines()[after:]."""
+    """Wait for an `S4` line matching pattern among lines()[after:]."""
     end = time.time() + timeout
     while time.time() < end:
         for line in lines()[after:]:

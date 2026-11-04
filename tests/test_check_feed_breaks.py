@@ -1,8 +1,8 @@
 """Tests that each invariant of the weekly feed check fails on a broken model (D-77, D-84).
 
 An empty list proves nothing about an invariant that cannot fail, so each one is shown
-reporting a 2026 model broken for it (``BREAKS``), and two more read the JSON or the
-year's data. The check itself is ``test_check_feed.py``'s.
+reporting a 2026 model broken for it (`BREAKS`), and two more read the JSON or the
+year's data. The check itself is `test_check_feed.py`'s.
 """
 
 import json
@@ -41,56 +41,56 @@ def test_the_invariants_report_what_they_find() -> None:
 
 
 def with_session(data: ConferenceData, session: Session) -> ConferenceData:
-    """``data`` with ``session`` filed under its id, replacing any session there."""
+    """`data` with `session` filed under its id, replacing any session there."""
     return replace(data, sessions={**data.sessions, session.id: session})
 
 
 def with_talk_19(data: ConferenceData, **changes: Any) -> ConferenceData:
-    """``data`` with the 09:00 tutorial "All about decorators" changed, still at 19."""
+    """`data` with the 09:00 tutorial "All about decorators" changed, still at 19."""
     talk = replace(data.sessions["19"], **changes)
     return replace(data, sessions={**data.sessions, "19": talk})
 
 
 def with_first_day(data: ConferenceData, **changes: Any) -> ConferenceData:
-    """``data`` with its first day, 2026-05-13, changed."""
+    """`data` with its first day, 2026-05-13, changed."""
     return replace(data, days=(replace(data.days[0], **changes), *data.days[1:]))
 
 
 def without_sessions(data: ConferenceData, ids: set[str]) -> ConferenceData:
-    """``data`` without the sessions whose ids are in ``ids``."""
+    """`data` without the sessions whose ids are in `ids`."""
     return replace(
         data, sessions={k: s for k, s in data.sessions.items() if k not in ids}
     )
 
 
 def without_rows(data: ConferenceData, name: str) -> ConferenceData:
-    """``data`` without its collapsed rows called ``name``."""
+    """`data` without its collapsed rows called `name`."""
     rows = feed_invariants.collapsed_rows(data)
     return without_sessions(data, {row.id for row in rows if row.name == name})
 
 
 def break_called_lunch(data: ConferenceData) -> ConferenceData:
-    """``data`` with the Break row of 2026-05-13, a day without lunch, called Lunch."""
+    """`data` with the Break row of 2026-05-13, a day without lunch, called Lunch."""
     row = data.sessions["break--2026-05-13T12:30:00-07:00"]
     return with_session(data, replace(row, name="Lunch"))
 
 
 def reversed_9am_rows(data: ConferenceData) -> ConferenceData:
-    """``data`` with the five 09:00 rows of 2026-05-13 in reverse order."""
+    """`data` with the five 09:00 rows of 2026-05-13 in reverse order."""
     first, nine, *rest = data.days[0].groups
     nine = replace(nine, session_ids=tuple(reversed(nine.session_ids)))
     return with_first_day(data, groups=(first, nine, *rest))
 
 
 def reversed_room(data: ConferenceData, slug: str) -> ConferenceData:
-    """``data`` with the sessions of room ``slug`` in reverse order."""
+    """`data` with the sessions of room `slug` in reverse order."""
     room = data.rooms[slug]
     room = replace(room, session_ids=tuple(reversed(room.session_ids)))
     return replace(data, rooms={**data.rooms, slug: room})
 
 
 def in_utc(data: ConferenceData) -> ConferenceData:
-    """``data`` with the three times of session 19 in UTC: the same moments."""
+    """`data` with the three times of session 19 in UTC: the same moments."""
     talk = data.sessions["19"]
     return with_talk_19(
         data,
@@ -101,7 +101,7 @@ def in_utc(data: ConferenceData) -> ConferenceData:
 
 
 def with_bloomberg_twice(data: ConferenceData) -> ConferenceData:
-    """``data`` with a second Bloomberg, as ``BLOOMBERG``, at the end of the last level."""
+    """`data` with a second Bloomberg, as `BLOOMBERG`, at the end of the last level."""
     bloomberg = sponsor_by_slug(data, "bloomberg")
     assert bloomberg is not None
     *levels, last = data.sponsor_levels
@@ -111,13 +111,13 @@ def with_bloomberg_twice(data: ConferenceData) -> ConferenceData:
 
 
 def with_empty_top_level(data: ConferenceData) -> ConferenceData:
-    """``data`` with its top sponsor level, Visionary, emptied."""
+    """`data` with its top sponsor level, Visionary, emptied."""
     top, *rest = data.sponsor_levels
     return replace(data, sponsor_levels=(replace(top, sponsors=()), *rest))
 
 
 def with_mixed_top_level(data: ConferenceData) -> ConferenceData:
-    """``data`` with the top level's last sponsor given the next level's order."""
+    """`data` with the top level's last sponsor given the next level's order."""
     top, *rest = data.sponsor_levels
     *first, last = top.sponsors
     odd = replace(last, level_order=top.order + 1)
@@ -263,6 +263,6 @@ def test_each_invariant_reports_a_model_that_breaks_it(
 
 
 def test_every_invariant_has_a_way_to_break_it() -> None:
-    """Each invariant the weekly check runs is shown failing in ``BREAKS``."""
+    """Each invariant the weekly check runs is shown failing in `BREAKS`."""
     broken = {invariant.__name__ for _, invariant, _ in BREAKS}
     assert broken == {invariant.__name__ for invariant in feed_invariants.INVARIANTS}

@@ -1,10 +1,10 @@
 """Door check's test rig: its fixtures and readers, over the mock's own transport.
 
-Shared by ``tests/test_staff_door.py`` (the route and the picker) and
-``tests/test_door_preload.py`` (the attendee list): ``show`` renders ``DoorCheck`` or
-its picker in a real Flet session (``tests/harness.py``), signed with the seeded staff
-account's key, so what the screens fetch is what the mock's ``handle()`` answers; a
-``Switch`` takes the transport offline. One test's sessions share one
+Shared by `tests/test_staff_door.py` (the route and the picker) and
+`tests/test_door_preload.py` (the attendee list): `show` renders `DoorCheck` or
+its picker in a real Flet session (`tests/harness.py`), signed with the seeded staff
+account's key, so what the screens fetch is what the mock's `handle()` answers; a
+`Switch` takes the transport offline. One test's sessions share one
 SharedPreferences and one outbox, so a second render is a relaunch.
 """
 
@@ -58,7 +58,7 @@ def staff(
     lead_retrieval: bool = False,
     mask_violation: bool = False,
 ) -> Account:
-    """A signed-in ``Account`` with only the given flags; door staff by default."""
+    """A signed-in `Account` with only the given flags; door staff by default."""
     return Account(
         signed_in=True,
         email="staff@example.com",
@@ -89,9 +89,9 @@ async def show(
 ) -> AsyncIterator[Show]:
     """Return a function that renders Door check, or its picker, for an account.
 
-    ``view`` picks the page (``VIEW`` or ``PICKER``); ``chosen`` stores a choice first,
-    as an earlier pick left it; ``transport`` replaces ``switch``; ``outbox``
-    replaces the test's own (``tmp_path / "outbox"``, shared by its renders); ``prefs``
+    `view` picks the page (`VIEW` or `PICKER`); `chosen` stores a choice first,
+    as an earlier pick left it; `transport` replaces `switch`; `outbox`
+    replaces the test's own (`tmp_path / "outbox"`, shared by its renders); `prefs`
     replaces the default settings.
     """
 
@@ -104,7 +104,7 @@ async def show(
     def sharing(
         year: YearData, directory: Path, memory: ViewMemory | None = None
     ) -> Services:
-        """Return the memory services over the test's one ``stored``."""
+        """Return the memory services over the test's one `stored`."""
         svc = memory_services(year, directory, memory)
         cast(MemoryPrefs, svc.storage.prefs).values = stored
         return svc
@@ -126,7 +126,7 @@ async def show(
             outbox: OutboxDb | None = None,
             prefs: Prefs | None = None,
         ) -> Shown:
-            """Render ``view`` signed in as ``account``, door staff by default."""
+            """Render `view` signed in as `account`, door staff by default."""
             private_api = PrivateApi(
                 transport or switch, credentials=Login(who.key, who.secret)
             )
@@ -159,7 +159,7 @@ async def show(
 
 
 async def tap(shown: Shown, identifier: str) -> None:
-    """Tap the row, the chip or the button that ``identifier`` names."""
+    """Tap the row, the chip or the button that `identifier` names."""
     node = shown.node(identifier)
     target = node.content if identifier.startswith("door.category.") else node.parent
     await shown.click(cast(ft.Control, target))
@@ -189,6 +189,6 @@ def chip_text(shown: Shown) -> str | None:
 
 
 def preload_line(shown: Shown) -> str | None:
-    """What the attendee list's line says, as read (``door.preload``), or None."""
+    """What the attendee list's line says, as read (`door.preload`), or None."""
     nodes = shown.nodes("door.preload")
     return str(nodes[0].label) if nodes else None

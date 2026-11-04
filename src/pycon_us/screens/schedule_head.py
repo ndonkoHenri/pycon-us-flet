@@ -3,13 +3,13 @@
 Under the day tabs the Schedule says what the filter hides (D-20), whether its data is
 fresh (D-32) and that its times are Pacific Time (D-240). At sizes up to the largest
 standard text these lines stay fixed between the tabs and the day pages. At the
-Accessibility sizes, where a slot's time goes above its rows (``Prefs.time_above``,
+Accessibility sizes, where a slot's time goes above its rows (`Prefs.time_above`,
 D-216, the signal D-328 uses), they took most of what the app bar, the tabs and the
 bottom bar left (#331), so they head each day's list instead and scroll away with it,
 as "Now in this room" does on a room's page (D-194).
 
-``Head`` is what the head says, a plain value, so a memoised day list given it stays
-skipped while it is the same (D-153); ``ScheduleHead`` places it, and ``ListHead`` puts
+`Head` is what the head says, a plain value, so a memoised day list given it stays
+skipped while it is the same (D-153); `ScheduleHead` places it, and `ListHead` puts
 it at the top of a day list as one of its items: keyed, and reporting its height, as the
 slots do, so a text-size change keeps the reader's place there too (D-331).
 
@@ -17,7 +17,7 @@ Nothing here re-renders on its own: no state, no effect, no context. A component
 memoised day list that did (the strip's minute tick, a store it subscribed to) would
 re-render with its contexts lost once the list had been skipped, and the error stops
 every later re-render of the session (F150). So the Schedule holds the strip's state
-(``use_strip()``) and the head only draws its ``Strip`` value (``strip_view()``).
+(`use_strip()`) and the head only draws its `Strip` value (`strip_view()`).
 """
 
 from collections.abc import Callable
@@ -41,11 +41,11 @@ class Head:
     """What the Schedule's head says.
 
     Attributes:
-        summary: The filter summary, "Hidden: Open space" (``summary_text()``), or
+        summary: The filter summary, "Hidden: Open space" (`summary_text()`), or
             None while nothing is hidden.
-        zone_note: "Times are Pacific Time (PDT)" (``timefmt.zone_note()``), or None
+        zone_note: "Times are Pacific Time (PDT)" (`timefmt.zone_note()`), or None
             while the device is on conference time.
-        strip: The status strip (``use_strip()`` in the Schedule, D-32).
+        strip: The status strip (`use_strip()` in the Schedule, D-32).
     """
 
     summary: str | None
@@ -64,7 +64,7 @@ def ScheduleHead(
 
     Args:
         head: What it says.
-        on_show_all: What "Show all" does: hide no track (``TrackFilter.show_all``).
+        on_show_all: What "Show all" does: hide no track (`TrackFilter.show_all`).
         tokens: The scheme's tokens, for the strip (D-150).
     """
     return ft.Column(
@@ -88,7 +88,7 @@ def ListHead(
 ) -> ft.Control:
     """Return the head as a day list's first item (D-345).
 
-    Under an anchor keyed ``HEAD_KEY``, so a place at the head can be put back by a
+    Under an anchor keyed `HEAD_KEY`, so a place at the head can be put back by a
     keyed jump, and reporting its height, so the places below it count it (D-331).
 
     Args:

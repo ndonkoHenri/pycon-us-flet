@@ -1,9 +1,9 @@
 """The Map's Floor plans pane: a card per plan, in the Map's order (MAP-02, ux.md §5.8).
 
-Each card is an outlined ``Card`` with the plan's 16:10 thumbnail (bundled, so it shows
-offline from the first start), its title, what is on it and ``OPEN_IN_FULL``; one node
-for screen readers, a button, and a tap pushes the floor viewer (``…/plan/<id>``, one
-drill level, ux.md §6.1). The Map (``screens/map.py``) shows it under its tab bar.
+Each card is an outlined `Card` with the plan's 16:10 thumbnail (bundled, so it shows
+offline from the first start), its title, what is on it and `OPEN_IN_FULL`; one node
+for screen readers, a button, and a tap pushes the floor viewer (`…/plan/<id>`, one
+drill level, ux.md §6.1). The Map (`screens/map.py`) shows it under its tab bar.
 """
 
 from collections.abc import Sequence
@@ -20,7 +20,7 @@ SCREEN = "map"
 """The screen's name in its semantics identifiers (decisions §M)."""
 
 FLOOR_PLANS = "floor-plans"
-"""The pane's slug: its ``?tab=`` value, its list's key and its tab's identifier."""
+"""The pane's slug: its `?tab=` value, its list's key and its tab's identifier."""
 
 THUMB_RATIO = 16 / 10
 """The thumbnail's width to height: the plan is cropped to it, centred (MAP-02)."""
@@ -33,7 +33,7 @@ def floor_plans(plans: Sequence[Plan]) -> tuple[Plan, ...]:
     Floor plans listed five.
 
     Args:
-        plans: The year's plans (``MapData.plans``), in the Map's order.
+        plans: The year's plans (`MapData.plans`), in the Map's order.
     """
     return tuple(plan for plan in plans if plan.id not in {EXPO_PLAN, JOB_FAIR_PLAN})
 
@@ -54,7 +54,7 @@ def plan_card(plan: Plan, view_path: str) -> ft.Control:
     The texts wrap at any text size: nothing in the card has a fixed height but the
     thumbnail, whose height follows the card's width. One node, read "Concourse level
     floor plan, Tutorials, talk tracks, registration, expo entry, button", identifier
-    ``map.plan.<id>``.
+    `map.plan.<id>`.
 
     Args:
         plan: The plan.
@@ -127,16 +127,16 @@ def plans_pane(
     *,
     margin: float,
 ) -> ft.Control:
-    """Return the Floor plans pane: a card per floor plan, in ``map.toml``'s order.
+    """Return the Floor plans pane: a card per floor plan, in `map.toml`'s order.
 
-    The expo's and the job fair's plans are not among them (``floor_plans()``).
+    The expo's and the job fair's plans are not among them (`floor_plans()`).
 
     Args:
-        plans: The year's plans (``MapData.plans``).
+        plans: The year's plans (`MapData.plans`).
         view_path: The Map's View path.
         list_ref: The Map's list ref, which its re-tap scrolls.
         on_scroll: The Map's scroll handler, which remembers where a scroll ended.
-        margin: The screen's side margin (``use_margin()``).
+        margin: The screen's side margin (`use_margin()`).
     """
     return ft.ListView(
         [plan_card(plan, view_path) for plan in floor_plans(plans)],

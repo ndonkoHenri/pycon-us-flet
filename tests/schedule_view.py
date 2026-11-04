@@ -1,26 +1,26 @@
 """The Schedule's harness, times and shared helpers, for its test modules (#623).
 
-``test_schedule.py`` (the day tabs, the now line and the states without data),
-``test_schedule_lists.py`` (the day lists), ``test_schedule_jump.py`` (positions and
-Jump to now) and ``test_schedule_button.py`` (the jump's policy and the "Now" button)
-share it, as do ``test_schedule_filter.py``, ``test_schedule_place.py``,
-``test_schedule_place_turns.py`` and ``test_schedule_refilter.py``. A module takes the
-fixtures by assigning them to its own names, as ``docs/testing-and-quality.md`` §3.1
+`test_schedule.py` (the day tabs, the now line and the states without data),
+`test_schedule_lists.py` (the day lists), `test_schedule_jump.py` (positions and
+Jump to now) and `test_schedule_button.py` (the jump's policy and the "Now" button)
+share it, as do `test_schedule_filter.py`, `test_schedule_place.py`,
+`test_schedule_place_turns.py` and `test_schedule_refilter.py`. A module takes the
+fixtures by assigning them to its own names, as `docs/testing-and-quality.md` §3.1
 says.
 
-``Schedule`` renders in a real Flet session under the store providers
-(``tests/harness.py``'s ``showing()``), so the memoised path (D-153), the two renders
+`Schedule` renders in a real Flet session under the store providers
+(`tests/harness.py`'s `showing()`), so the memoised path (D-153), the two renders
 (D-156), the tabs' echo and the jumps run as Flet runs them. Two seams stand in for the
-device: ``AppScaffold`` is the harness's ``Column`` of the app bar's actions, the body
-and the "Now" button (the View and its bar are tested with ``tests/chrome.py``), and
-``ListView.scroll_to`` is recorded instead of sent to a client, answering a keyed scroll
+device: `AppScaffold` is the harness's `Column` of the app bar's actions, the body
+and the "Now" button (the View and its bar are tested with `tests/chrome.py`), and
+`ListView.scroll_to` is recorded instead of sent to a client, answering a keyed scroll
 with the scroll end Flutter would report (or with nothing, for a list already in place)
-and reading ``self.page`` first, as Flet does, so a list that has left the page raises
-Flet's error. ``Services.run_every`` is recorded, so a test moves the minute tick by
-hand (``Shown.at``). Each jump is recorded too (``Shown.jumps``): a jump may ask for its
+and reading `self.page` first, as Flet does, so a list that has left the page raises
+Flet's error. `Services.run_every` is recorded, so a test moves the minute tick by
+hand (`Shown.at`). Each jump is recorded too (`Shown.jumps`): a jump may ask for its
 scroll more than once (D-155), so the tests check which jumps ran and where they went,
 not how many scrolls they asked for. The tests wait for what they expect to happen
-(``Shown.until``, and every render returns only once no jump it started is still on its
+(`Shown.until`, and every render returns only once no jump it started is still on its
 way), never for a fixed time, so a loaded host only makes them slower (#237).
 """
 
@@ -72,7 +72,7 @@ BEFORE = datetime(2026, 4, 1, 12, 0, tzinfo=PACIFIC)
 """Six weeks before the conference."""
 
 TEN_30 = "slot-2026-05-15T10:30:00-07:00"
-"""Friday's 10:30 AM slot, on at ``DURING``: where a jump to now goes then."""
+"""Friday's 10:30 AM slot, on at `DURING`: where a jump to now goes then."""
 
 TALK = "142"
 """A Saturday talk: "Python for Humans - …", 10:30-11:00 AM, in the 10:30 slot."""
@@ -80,15 +80,15 @@ TALK = "142"
 
 @dataclass
 class Shown(harness.Shown):
-    """The harness's ``Shown`` on the Schedule: its scrolls, jumps and minute ticks.
+    """The harness's `Shown` on the Schedule: its scrolls, jumps and minute ticks.
 
-    It is ``tests/sessions.py``'s, with what the Schedule's stand-ins record.
+    It is `tests/sessions.py`'s, with what the Schedule's stand-ins record.
     """
 
     scrolls: list[tuple[ft.ListView, dict[str, Any]]] = field(default_factory=list)
-    """Each ``ListView.scroll_to`` asked: the list and its arguments."""
+    """Each `ListView.scroll_to` asked: the list and its arguments."""
     strips: list[bool] = field(default_factory=list)
-    """Each ``use_strip()``'s ``auto_refresh``, as the screen asked for it."""
+    """Each `use_strip()`'s `auto_refresh`, as the screen asked for it."""
     slots: list[str] = field(default_factory=list)
     """The time labels of the slot bodies that ran, in order."""
     leave: Callable[[], None] = lambda: None
@@ -99,25 +99,25 @@ class Shown(harness.Shown):
     late: bool = False
     """Whether the first keyed scroll's end comes too late, as on a loaded host (#237)."""
     hold: asyncio.Event | None = None
-    """When set to an event, each ``scroll_to`` waits for it before it returns."""
+    """When set to an event, each `scroll_to` waits for it before it returns."""
     ticks: list[Callable[[], object]] = field(default_factory=list)
-    """The minute ticks' actions (``Services.run_every``), called by ``at``."""
+    """The minute ticks' actions (`Services.run_every`), called by `at`."""
     rerender: Callable[[], None] = lambda: None
     """Re-render the Schedule's parent, keeping the Schedule mounted, as Back does."""
     jumps: list[tuple[str, scrolling.Jump]] = field(default_factory=list)
-    """Each jump that ended (``jump_to_key``): its target key and how it ended."""
+    """Each jump that ended (`jump_to_key`): its target key and how it ended."""
     jumping: int = 0
     """How many jumps are on their way."""
 
     @property
     def announced(self) -> list[str]:
-        """What the screen asked a screen reader to say (``announce_message``)."""
+        """What the screen asked a screen reader to say (`announce_message`)."""
         return cast(MemorySemantics, self.services.semantics).announced
 
     async def until(
         self, holds: Callable[[], object], *, timeout: float = 30.0
     ) -> None:
-        """Settle until ``holds()`` is true, or fail after ``timeout`` seconds (#237).
+        """Settle until `holds()` is true, or fail after `timeout` seconds (#237).
 
         A poll rather than a fixed wait, so a loaded host only makes it slower; the
         deadline is generous because a passing test never reaches it.
@@ -130,7 +130,7 @@ class Shown(harness.Shown):
         await self.settle()
 
     async def at(self, moment: datetime) -> None:
-        """Move the clock to ``moment`` and run the minute ticks, as time passing."""
+        """Move the clock to `moment` and run the minute ticks, as time passing."""
         clock.set_test_now(moment)
         for action in self.ticks:
             action()
@@ -158,12 +158,12 @@ class Shown(harness.Shown):
 
     @property
     def tabs(self) -> ft.Tabs:
-        """The screen's one ``Tabs``."""
+        """The screen's one `Tabs`."""
         (tabs,) = self.find(ft.Tabs)
         return tabs
 
     def list_of(self, day: date) -> ft.ListView:
-        """The one mounted ``ListView`` of ``day``."""
+        """The one mounted `ListView` of `day`."""
         found = [c for c in self.find(ft.ListView) if c.key == f"day-{day.isoformat()}"]
         assert len(found) == 1, day
         return found[0]
@@ -194,14 +194,14 @@ class Shown(harness.Shown):
         await self.click(self.fab)
 
     async def tap_star(self, session_id: str) -> None:
-        """Tap the star on ``session_id``'s row."""
+        """Tap the star on `session_id`'s row."""
         star = self.node(f"schedule.favorite.{session_id}").content
         assert star is not None
         await self.click(star)
 
 
 def _scroll_end(pixels: float) -> dict[str, object]:
-    """A scroll end event's data at ``pixels``, as Flutter sends it."""
+    """A scroll end event's data at `pixels`, as Flutter sends it."""
     return {
         "event_type": "end",
         "pixels": pixels,
@@ -212,7 +212,7 @@ def _scroll_end(pixels: float) -> dict[str, object]:
 
 
 def _assert_asks(schedule: Shown, day: date, key: str, duration: int) -> None:
-    """Assert that every keyed scroll ask so far went to ``key`` on the day's list.
+    """Assert that every keyed scroll ask so far went to `key` on the day's list.
 
     A jump asks once, or again when its scroll end comes late (D-155): how many asks
     a loaded host sees is not the jump's behaviour, where they go is (#237).
@@ -228,19 +228,19 @@ def _assert_asks(schedule: Shown, day: date, key: str, duration: int) -> None:
 
 @pytest.fixture
 def now() -> list[datetime | None]:
-    """The frozen clock: set ``now[0]`` before the screen renders; None lifts it."""
+    """The frozen clock: set `now[0]` before the screen renders; None lifts it."""
     return [DURING]
 
 
 @pytest.fixture
 def memory() -> ViewMemory:
-    """A fresh ``ViewMemory``, which a test may fill before the render."""
+    """A fresh `ViewMemory`, which a test may fill before the render."""
     return ViewMemory()
 
 
 @pytest.fixture
 def conference() -> Conference:
-    """The recorded 2026 feed as the bundled ``Conference``."""
+    """The recorded 2026 feed as the bundled `Conference`."""
     return Conference(data=processed(2026), source="bundled", version=1)
 
 
@@ -291,7 +291,7 @@ async def shown(
 
     def recorded_strip(*, auto_refresh: bool = False) -> status_strip.Strip:
         harness.current(Shown).strips.append(auto_refresh)
-        # The real strip, but a minute tick (``Shown.at``) starts no feed refresh.
+        # The real strip, but a minute tick (`Shown.at`) starts no feed refresh.
         return status_strip.use_strip(auto_refresh=False)
 
     def strip_stand_in(strip: status_strip.Strip, tokens: Tokens) -> ft.Control:
@@ -349,16 +349,16 @@ async def shown(
                 wait: bool = True,
                 **settings: Any,
             ) -> Shown:
-                """Render the Schedule with these ``Prefs`` settings.
+                """Render the Schedule with these `Prefs` settings.
 
-                ``moves``, ``late`` and ``hold`` are as in ``Shown``.
+                `moves`, `late` and `hold` are as in `Shown`.
 
-                With ``wait`` it returns once no jump is on its way, so the next step
+                With `wait` it returns once no jump is on its way, so the next step
                 never meets one (#237). The first display's jump, when there is one, has
-                ended by then: ``settle()`` has already started it, since the effect's
-                chain up to the jump is pure asyncio here (``MemoryPrefs`` answers
+                ended by then: `settle()` has already started it, since the effect's
+                chain up to the jump is pure asyncio here (`MemoryPrefs` answers
                 inline), with no timer or thread hop. A test that expects that jump also
-                checks ``jumps`` right after.
+                checks `jumps` right after.
                 """
                 clock.set_test_now(now[0])
                 result = await stack.enter_async_context(
@@ -385,14 +385,14 @@ async def shown(
 
 
 def _spoken(schedule: Shown, index: int) -> str:
-    """What a screen reader says for day tab ``index``."""
+    """What a screen reader says for day tab `index`."""
     node = schedule.node(f"schedule.day_tab.{index}")
     (text,) = find(schedule.session, ft.Text, lambda c: inside(c, node))
     return str(text.semantics_label)
 
 
 def inside(control: ft.BaseControl, ancestor: ft.BaseControl) -> bool:
-    """Whether ``control`` is mounted under ``ancestor``, components included."""
+    """Whether `control` is mounted under `ancestor`, components included."""
     node = control.parent
     while node is not None:
         if node is ancestor:
@@ -402,7 +402,7 @@ def inside(control: ft.BaseControl, ancestor: ft.BaseControl) -> bool:
 
 
 def friday_at(hour: int, minute: int = 0) -> datetime:
-    """Friday, May 15 2026 at ``hour``:``minute``, Pacific Time."""
+    """Friday, May 15 2026 at `hour`:`minute`, Pacific Time."""
     return datetime(2026, 5, 15, hour, minute, tzinfo=PACIFIC)
 
 

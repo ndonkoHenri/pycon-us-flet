@@ -1,8 +1,8 @@
-"""Tests for the shared states: ``EmptyState``, ``NoDataState`` and ``SkeletonList``.
+"""Tests for the shared states: `EmptyState`, `NoDataState` and `SkeletonList`.
 
-The builders run outside a renderer: ``SkeletonList``'s body runs unwrapped with the
-``Prefs`` the test gives it. How they look, and what TalkBack and VoiceOver read, is
-checked on devices (the PR). ``test_no_data_screens.py`` holds ``NoDataState`` on each
+The builders run outside a renderer: `SkeletonList`'s body runs unwrapped with the
+`Prefs` the test gives it. How they look, and what TalkBack and VoiceOver read, is
+checked on devices (the PR). `test_no_data_screens.py` holds `NoDataState` on each
 screen (#83, #902; ux.md §3.9, §4).
 """
 
@@ -122,9 +122,9 @@ def test_the_way_out_keeps_material_s_padding_at_every_text_size(
     """The way out pins its padding, so a large label never meets the pill's ends.
 
     Flutter shrinks the side padding as the text grows (D-344): a label-only button
-    takes ``LABEL_PADDING``, a web link's, with its icon, ``ICON_PADDING``. It stays
+    takes `LABEL_PADDING`, a web link's, with its icon, `ICON_PADDING`. It stays
     flat, enabled or disabled: with a style, Flet lifts every state to the button's
-    ``elevation``, 1 unless it is set to 0.
+    `elevation`, 1 unless it is set to 0.
     """
     state = EmptyState(
         "No talks yet",
@@ -171,7 +171,7 @@ def test_an_empty_state_whose_sentence_names_the_way_out_has_no_button() -> None
 def test_an_action_needs_both_its_label_and_its_handler(
     action: str | None, on_action: Callable[[], None] | None
 ) -> None:
-    """An action label without a handler, or the reverse, raises ``ValueError``."""
+    """An action label without a handler, or the reverse, raises `ValueError`."""
     with pytest.raises(ValueError, match="both a label and a handler"):
         EmptyState(
             "Can't load the schedule",
@@ -225,7 +225,7 @@ def test_no_data_shows_the_skeleton_until_a_fetch_has_failed(
 def test_a_failed_fetch_says_what_failed_why_and_offers_try_again(
     svc: Services, problem: Problem, body: str
 ) -> None:
-    """The title by the screen, the body by the problem, one button; ``identifier``'s."""
+    """The title by the screen, the body by the problem, one button; `identifier`'s."""
     state = NoDataState(Conference(problem=problem), svc, "x.no_data", title="Can't")
     assert texts(state) == ["Can't", body]
     assert only(state, ft.Icon).icon == ft.Icons.CLOUD_OFF_OUTLINED
@@ -292,7 +292,7 @@ def skeleton(
     reduce_motion: bool,
     tokens: Tokens = LIGHT_TOKENS,
 ) -> ft.Semantics:
-    """Build ``SkeletonList`` outside a renderer, with ``reduce_motion`` set."""
+    """Build `SkeletonList` outside a renderer, with `reduce_motion` set."""
     monkeypatch.setattr(states, "use_prefs", lambda: Prefs(reduce_motion=reduce_motion))
     monkeypatch.setattr(states, "use_tokens", lambda: tokens)
     result = inspect.unwrap(SkeletonList)()
@@ -301,7 +301,7 @@ def skeleton(
 
 
 def placeholder_rows(node: ft.Control) -> list[ft.Control]:
-    """The placeholder rows: the controls of the first Column in ``node``."""
+    """The placeholder rows: the controls of the first Column in `node`."""
     column = next(n for n in descendants(node) if isinstance(n, ft.Column))
     return list(column.controls)
 
@@ -344,7 +344,7 @@ def placeholders(node: ft.Control) -> list[ft.Container]:
 def test_in_high_contrast_the_shimmer_paints_unfilled_outlines(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """In HC each placeholder is an unfilled 1 dp outline, painted in ``outline``.
+    """In HC each placeholder is an unfilled 1 dp outline, painted in `outline`.
 
     The fill is the surface there; the shimmer paints whatever its rows paint, so a
     fill would turn the whole block to ink (D-306).

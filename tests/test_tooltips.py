@@ -1,9 +1,9 @@
 """Tests that every button's spoken tooltip is in the button's own node (F55, D-234).
 
-Flet wraps a control in its ``tooltip`` from outside, so a button's tooltip is a node of
+Flet wraps a control in its `tooltip` from outside, so a button's tooltip is a node of
 its own over the button, which is left unnamed ("Button" in TalkBack), unless a merge
-makes them one: ``named()``, ``merged()``, ``links.external()`` or a ``MergeSemantics``.
-An ``ast`` scan of every app module finds a ``*Button`` call whose tooltip is said and
+makes them one: `named()`, `merged()`, `links.external()` or a `MergeSemantics`.
+An `ast` scan of every app module finds a `*Button` call whose tooltip is said and
 that reaches no merge; the helpers' own behaviour is checked first.
 """
 
@@ -48,10 +48,10 @@ def test_the_now_button_says_what_it_does_from_inside() -> None:
 
 
 def says_its_tooltip(call: ast.Call) -> bool:
-    """Whether ``call`` passes a tooltip that screen readers get.
+    """Whether `call` passes a tooltip that screen readers get.
 
-    That is a tooltip that is not ``None``, and not a
-    ``Tooltip(..., exclude_from_semantics=True)``.
+    That is a tooltip that is not `None`, and not a
+    `Tooltip(..., exclude_from_semantics=True)`.
     """
     tooltip = next((k.value for k in call.keywords if k.arg == "tooltip"), None)
     if tooltip is None or (isinstance(tooltip, ast.Constant) and tooltip.value is None):
@@ -70,7 +70,7 @@ class Modules:
     """The parsed modules a scan reads, and each node's parent in them."""
 
     def __init__(self, sources: dict[str, str]) -> None:
-        """Parse ``sources``, module names to their source."""
+        """Parse `sources`, module names to their source."""
         self.trees = {name: ast.parse(source) for name, source in sources.items()}
         self.parents = {
             child: node
@@ -80,7 +80,7 @@ class Modules:
         }
 
     def calls_of(self, function: str) -> list[ast.Call]:
-        """Return every call of ``function`` by name, in every module."""
+        """Return every call of `function` by name, in every module."""
         return [
             node
             for tree in self.trees.values()
@@ -91,9 +91,9 @@ class Modules:
     def reaches_merge(
         self, node: ast.AST, seen: frozenset[ast.AST] = frozenset()
     ) -> bool:
-        """Whether the control that ``node`` builds ends up inside a merge.
+        """Whether the control that `node` builds ends up inside a merge.
 
-        Straight, or through a ``Semantics`` around it, a conditional, a name its
+        Straight, or through a `Semantics` around it, a conditional, a name its
         function assigns it to, whose every use must then reach one, or a function
         that returns it, whose every call must then reach one.
         """
@@ -132,7 +132,7 @@ class Modules:
 
 
 def unmerged_tooltips(sources: dict[str, str]) -> list[str]:
-    """Return ``module:line`` for each button whose spoken tooltip reaches no merge."""
+    """Return `module:line` for each button whose spoken tooltip reaches no merge."""
     modules = Modules(sources)
     return [
         f"{name}:{node.lineno}"
@@ -146,9 +146,9 @@ def unmerged_tooltips(sources: dict[str, str]) -> list[str]:
 
 
 def screen(*lines: str) -> dict[str, str]:
-    """Return one module, ``m``, with one function whose body is ``lines``.
+    """Return one module, `m`, with one function whose body is `lines`.
 
-    The function is ``def screen(control):``.
+    The function is `def screen(control):`.
     """
     return {"m": "def screen(control):\n" + "".join(f"    {x}\n" for x in lines)}
 

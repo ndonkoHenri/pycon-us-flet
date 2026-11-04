@@ -1,6 +1,6 @@
 """Tests for what has ended on the My schedule tab, and removal and Undo (SCHED-08).
 
-The screen runs in ``tests/my_schedule_view.py``'s harness, with the minute tick moved
+The screen runs in `tests/my_schedule_view.py`'s harness, with the minute tick moved
 by hand.
 """
 
@@ -77,7 +77,7 @@ def reduced(setup: Setup) -> None:
 async def test_the_folds_open_without_animation_under_reduced_motion(
     shown: Shown,
 ) -> None:
-    """D-173: the tiles' animation is ``prefs.motion_ms()`` long, 0 here."""
+    """D-173: the tiles' animation is `prefs.motion_ms()` long, 0 here."""
     for identifier in ("earlier_days", "earlier_today"):
         assert shown.fold(identifier).animation.duration == 0
 

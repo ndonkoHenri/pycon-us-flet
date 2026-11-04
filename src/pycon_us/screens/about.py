@@ -1,12 +1,12 @@
-"""About PyCon US (``/more/about``): who, when and where, in the conference's own words.
+"""About PyCon US (`/more/about`): who, when and where, in the conference's own words.
 
 From the top (INFO-02, INFO-05, D-28):
 
 - the band, the third brand moment: a compact indigo card with the year's name, its
-  dates and its city, all from ``conference.toml`` (D-35), where Ionic hard-coded dates
+  dates and its city, all from `conference.toml` (D-35), where Ionic hard-coded dates
   that disagreed with its own reminders. In high contrast it takes the HC roles, as
   Now's header does (D-306);
-- the feed's ``about`` block, converted to Markdown once per feed version (D-130) and
+- the feed's `about` block, converted to Markdown once per feed version (D-130) and
   rendered as every feed text is (D-116);
 - "Plan your visit": Help & safety and Venue & hours, pushed under this page so Back
   returns here (D-207's pattern), and the website, which opens in the browser.
@@ -86,7 +86,7 @@ def band_lines(info: ConferenceInfo) -> tuple[str, str]:
     """Return the band's two lines: the name, then "May 13–19 · Long Beach, CA".
 
     Args:
-        info: The year's facts, from ``conference.toml``.
+        info: The year's facts, from `conference.toml`.
     """
     return info.name, f"{date_range_label(info.first_day, info.last_day)} · {info.city}"
 
@@ -94,7 +94,7 @@ def band_lines(info: ConferenceInfo) -> tuple[str, str]:
 def band_phrase(info: ConferenceInfo) -> str:
     """Return what a screen reader says for the band: one phrase (D-33).
 
-    "PyCon US 2026. May 13 to 19, Long Beach, CA." (``spoken()``, as Now's header).
+    "PyCon US 2026. May 13 to 19, Long Beach, CA." (`spoken()`, as Now's header).
 
     Args:
         info: The year's facts.
@@ -105,10 +105,10 @@ def band_phrase(info: ConferenceInfo) -> str:
 def band_colors(*, dark: bool) -> tuple[ft.Colors, ft.Colors]:
     """Return the band's fill and ink roles: the brand indigo in both schemes.
 
-    Light ``primary`` with ``on_primary``; dark ``primary_container`` with
-    ``on_primary_container``, since the dark ``primary`` is a pale indigo. In high
-    contrast both containers equal ``primary``, so the same roles give HC's
-    ``primary`` / ``on_primary`` (D-306), as Now's header takes them.
+    Light `primary` with `on_primary`; dark `primary_container` with
+    `on_primary_container`, since the dark `primary` is a pale indigo. In high
+    contrast both containers equal `primary`, so the same roles give HC's
+    `primary` / `on_primary` (D-306), as Now's header takes them.
 
     Args:
         dark: The dark scheme is on screen.
@@ -122,13 +122,13 @@ def Band(info: ConferenceInfo, *, dark: bool) -> ft.Control:
     """Return the band: the year's name, dates and city on the brand indigo (D-28).
 
     Compact beside Now's header: no icon, two lines, 16 dp of padding. One heading
-    node, the first under the bar's title (level 2, D-211), read as ``band_phrase()``.
+    node, the first under the bar's title (level 2, D-211), read as `band_phrase()`.
     Its fill sets it apart from the page in every scheme, HC's included, so it needs no
     line there (D-306).
 
     Args:
         info: The year's facts.
-        dark: The dark scheme is on screen (``Prefs.dark``); in high contrast the
+        dark: The dark scheme is on screen (`Prefs.dark`); in high contrast the
             roles resolve against the HC scheme on their own.
     """
     fill, ink = band_colors(dark=dark)
@@ -172,7 +172,7 @@ def website_row(info: ConferenceInfo) -> ft.Control:
     """Return the website's row: an external link read "…, Opens in browser".
 
     Args:
-        info: The year's facts, for its ``site_url``.
+        info: The year's facts, for its `site_url`.
     """
     return LinkTile(
         f"{info.name} website",

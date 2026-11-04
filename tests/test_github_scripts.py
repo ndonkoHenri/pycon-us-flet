@@ -1,4 +1,4 @@
-"""Tests for ``tools/pr_shots.sh`` and ``tools/board.sh``, with stand-ins for ``gh`` and ``sips``."""
+"""Tests for `tools/pr_shots.sh` and `tools/board.sh`, with stand-ins for `gh` and `sips`."""
 
 import os
 import subprocess
@@ -16,10 +16,10 @@ BOARD_OPTIONS = {
 
 
 class Tools:
-    """A ``PATH`` whose ``gh`` records its calls and whose ``sips`` does nothing."""
+    """A `PATH` whose `gh` records its calls and whose `sips` does nothing."""
 
     def __init__(self, root: Path) -> None:
-        """Write the stand-ins under ``root``."""
+        """Write the stand-ins under `root`."""
         self.root = root
         self.calls = root / "gh-calls"
         bin_dir = root / "bin"
@@ -42,7 +42,7 @@ class Tools:
     def run(
         self, script: str, *args: str, **env: str
     ) -> subprocess.CompletedProcess[str]:
-        """Run ``tools/<script>`` with ``args`` and return what it did."""
+        """Run `tools/<script>` with `args` and return what it did."""
         return subprocess.run(
             [TOOLS / script, *args],
             check=False,
@@ -52,11 +52,11 @@ class Tools:
         )
 
     def called(self) -> str:
-        """Return every ``gh`` call so far."""
+        """Return every `gh` call so far."""
         return self.calls.read_text() if self.calls.exists() else ""
 
     def image(self, name: str) -> str:
-        """Write an image file called ``name`` and return its path."""
+        """Write an image file called `name` and return its path."""
         path = self.root / name
         path.write_bytes(b"png")
         return str(path)
@@ -69,7 +69,7 @@ def tools(tmp_path: Path) -> Tools:
 
 
 def test_shots_print_the_markdown_for_each_image(tools: Tools) -> None:
-    """Each uploaded image prints the line that embeds it from ``pr-assets``."""
+    """Each uploaded image prints the line that embeds it from `pr-assets`."""
     done = tools.run("pr_shots.sh", "5", tools.image("android-light.png"))
     assert done.returncode == 0, done.stderr
     assert done.stdout.strip() == (

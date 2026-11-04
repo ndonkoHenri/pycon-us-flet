@@ -1,18 +1,18 @@
 """Serve a change-log feed pair from this machine, for the change log's device check (#460).
 
 The pair is the recorded feed of the active year and a copy with named edits, built by
-``tests/feeds.py`` (D-255), served at one feed URL by ``tests/ui/feeds.py``'s
-``PairFeed``: the old feed until it is swapped, then the new one. In Developer options,
+`tests/feeds.py` (D-255), served at one feed URL by `tests/ui/feeds.py`'s
+`PairFeed`: the old feed until it is swapped, then the new one. In Developer options,
 set the feed URL it prints and Refresh now (no batch: the first refresh from a new URL
 is not diffed), save the session, swap, and Refresh now: the app records the change as
-it would a real one (testing-and-quality.md §9.2)::
+it would a real one (testing-and-quality.md §9.2):
 
     uv run python -m tools.feed_pair --move 123 "Room 103ABC" --move 142 "Room 101B"
     curl -X POST http://127.0.0.1:8460/swap    # serve the new feed; /reset: the old one
     curl -X POST http://127.0.0.1:8460/hold    # keep feed requests open; /release answers them
 
 It prints the changes the app will find, the feed URL on the Android emulator and on the
-iOS simulator, and the Maestro command of ``maestro/journeys/change_log.yaml``, then
+iOS simulator, and the Maestro command of `maestro/journeys/change_log.yaml`, then
 serves until Ctrl-C. Both addresses are the Mac's loopback, so a physical phone cannot
 reach them.
 """
@@ -108,7 +108,7 @@ def edits_of(args: argparse.Namespace) -> list[Edit]:
 
 
 def expected(old: bytes, new: bytes) -> list[str]:
-    """Return a line per change the app's diff finds from ``old`` to ``new``.
+    """Return a line per change the app's diff finds from `old` to `new`.
 
     The app's own parser and diff, with the active year's feed settings, so the
     edits are checked before a device is: an edit of a break finds nothing.
@@ -142,7 +142,7 @@ def report(changes: Sequence[str], port: int) -> list[str]:
 
 
 def wait() -> None:
-    """Block until Ctrl-C (``KeyboardInterrupt``); the server runs on its own thread."""
+    """Block until Ctrl-C (`KeyboardInterrupt`); the server runs on its own thread."""
     threading.Event().wait()
 
 
@@ -150,7 +150,7 @@ def main(argv: Sequence[str] | None = None) -> int:
     """Build the pair, say what it holds, and serve it until Ctrl-C.
 
     Args:
-        argv: The command-line arguments; ``sys.argv[1:]`` when None.
+        argv: The command-line arguments; `sys.argv[1:]` when None.
 
     Returns:
         The exit status: 0 after Ctrl-C, 1 when the edits find no change.

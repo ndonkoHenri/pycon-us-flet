@@ -1,6 +1,6 @@
-"""Tests for badge payloads and the scan cooldown, ``core/badges.py`` (LEAD-03, LEAD-01; D-65).
+"""Tests for badge payloads and the scan cooldown, `core/badges.py` (LEAD-03, LEAD-01; D-65).
 
-``tests/test_badges.py`` is the UI's track badges; these are the attendee badges the
+`tests/test_badges.py` is the UI's track badges; these are the attendee badges the
 staff tools scan. The mock API's seed shows the parsed parts are what it checks.
 """
 
@@ -117,7 +117,7 @@ def test_parse_badge_refuses_the_formats_a_qr_code_names_first(raw: str) -> None
     ],
 )
 def test_parse_badge_refuses_a_code_outside_the_url_unreserved_set(raw: str) -> None:
-    """An access code of anything but letters, digits and ``._~-`` is not a badge (D-477, #978)."""
+    """An access code of anything but letters, digits and `._~-` is not a badge (D-477, #978)."""
     assert parse_badge(raw) is None
 
 

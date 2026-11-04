@@ -1,13 +1,13 @@
 """Scrolling a list to a keyed item: Jump to now and the lists that open at a place.
 
-``scroll_to(scroll_key=...)`` reaches only an item Flutter has built (F7, F32), so a list
-that must reach any of its items gets ``cache_extent=FULL_LIST_EXTENT``, which builds
-them all (D-154): today's Schedule list, and My schedule's (#94). ``jump_to_key()`` is
-the one jump (D-155): it handles the ways a keyed ``scroll_to`` fails quietly or late,
+`scroll_to(scroll_key=...)` reaches only an item Flutter has built (F7, F32), so a list
+that must reach any of its items gets `cache_extent=FULL_LIST_EXTENT`, which builds
+them all (D-154): today's Schedule list, and My schedule's (#94). `jump_to_key()` is
+the one jump (D-155): it handles the ways a keyed `scroll_to` fails quietly or late,
 and says how it ended. The policy of when to jump (the Schedule's: once per conference
 day, never on Back, a refresh or a filter change, D-18 and D-204) is the screen's.
-A keyed item carries its ``ScrollKey`` on an empty anchor, ``anchored()`` (D-242).
-``pullable()`` puts a list under pull-to-refresh, the status strip's Refresh as a
+A keyed item carries its `ScrollKey` on an empty anchor, `anchored()` (D-242).
+`pullable()` puts a list under pull-to-refresh, the status strip's Refresh as a
 gesture (U1, D-449).
 """
 
@@ -21,46 +21,46 @@ import flet as ft
 logger = logging.getLogger(__name__)
 
 FULL_LIST_EXTENT = 100_000
-"""A list's ``cache_extent`` that builds every item, in logical pixels (D-154): more
+"""A list's `cache_extent` that builds every item, in logical pixels (D-154): more
 than three times the busiest day at 200 % text (about 26,000 px, S2)."""
 
 JUMP_MS = 400
 """How long a keyed jump takes (ux.md §3.8): to now on the Schedule, to the slot or
-the now line, and to a row on a room's page; ``prefs.motion_ms()`` makes it 0 under
+the now line, and to a row on a room's page; `prefs.motion_ms()` makes it 0 under
 reduced motion (D-34)."""
 
 SCROLL_EVENT_MS = 250
-"""How often a list may send each kind of scroll event (``scroll_interval``): the
+"""How often a list may send each kind of scroll event (`scroll_interval`): the
 screens read only the end of a scroll, so the many updates of a fling need not all
 cross to Python."""
 
 JUMP_TRIES = 3
-"""How many times ``jump_to_key()`` asks for the scroll before it gives up."""
+"""How many times `jump_to_key()` asks for the scroll before it gives up."""
 
 LANDING_S = 0.5
 """How long after its duration a scroll may take to report its end, in seconds."""
 
 
 type Jump = Literal["landed", "still", "failed"]
-"""How a jump ended: a scroll ended; no scroll in ``JUMP_TRIES`` tries; or no list."""
+"""How a jump ended: a scroll ended; no scroll in `JUMP_TRIES` tries; or no list."""
 
 LEFT_THE_PAGE = "added to the page first"
 """Part of the error Flet raises for a call on a control no longer under the page."""
 
 
 def anchored(key: str, content: ft.Control) -> ft.Control:
-    """Return ``content`` under an empty, 0 dp anchor that carries ``ScrollKey(key)``.
+    """Return `content` under an empty, 0 dp anchor that carries `ScrollKey(key)`.
 
     A keyed scroll puts the anchor's top, which is the content's, at the top of the
     list, as a key on the content itself would. The key is not on the content
-    because at the pin Flet gives a control with a ``ScrollKey`` a new ``GlobalKey``
+    because at the pin Flet gives a control with a `ScrollKey` a new `GlobalKey`
     each time it builds, so Flutter mounts it and everything under it again, with
     new semantics nodes (F62, U42): the screen reader's focus, which Flutter's
-    ``Navigator`` gives back to a node after Back (F54), found no row to return to
+    `Navigator` gives back to a node after Back (F54), found no row to return to
     (#303). The anchor holds nothing, so only it is mounted again (D-242).
 
     Args:
-        key: The item's ``ScrollKey`` value, e.g. a ``Slot.key``.
+        key: The item's `ScrollKey` value, e.g. a `Slot.key`.
         content: The item: a slot, a highlighted row, the now line.
     """
     return ft.Column(
@@ -77,11 +77,11 @@ def pullable(
     *,
     nested: bool = False,
 ) -> ft.RefreshIndicator:
-    """Return ``content``, a list, under pull-to-refresh (U1, D-449).
+    """Return `content`, a list, under pull-to-refresh (U1, D-449).
 
-    A pull far enough down from the list's top calls ``on_refresh``, and Flutter's
+    A pull far enough down from the list's top calls `on_refresh`, and Flutter's
     spinner turns until it returns: give it the refresh the status strip's Refresh
-    runs, ``Conference.refresh()``, which a refresh already running joins (single
+    runs, `Conference.refresh()`, which a refresh already running joins (single
     flight, D-145), so a pull during one sends no second request and its spinner
     lasts as long as that one. The strip keeps its button, the accessible way to
     refresh: a pull is a gesture a screen reader never makes (ux.md §9).
@@ -91,10 +91,10 @@ def pullable(
     be pulled (Flet's own physics, at the pin).
 
     Args:
-        content: The list: a ``ListView``, which the indicator takes the place of
-            in its column (``expand``); or, with ``nested``, what holds the lists.
-        on_refresh: The refresh, an ``async`` handler wrapped in ``report_errors``.
-        nested: The lists are deeper in ``content``: the Schedule's day pages. Flutter
+        content: The list: a `ListView`, which the indicator takes the place of
+            in its column (`expand`); or, with `nested`, what holds the lists.
+        on_refresh: The refresh, an `async` handler wrapped in `report_errors`.
+        nested: The lists are deeper in `content`: the Schedule's day pages. Flutter
             starts a pull only from a vertical drag at a list's top, so a swipe between
             the pages never pulls (D-449).
     """
@@ -114,15 +114,15 @@ async def jump_to_key(
     ended: asyncio.Event,
     tries: int = JUMP_TRIES,
 ) -> Jump:
-    """Scroll a list so the item with this ``ScrollKey`` is at the top (D-155).
+    """Scroll a list so the item with this `ScrollKey` is at the top (D-155).
 
-    Any scrollable will do: Search's scope row, a ``Row``, puts the item at its start
-    (``screens/search_scopes.py``, #794).
+    Any scrollable will do: Search's scope row, a `Row`, puts the item at its start
+    (`screens/search_scopes.py`, #794).
 
-    The list's ``on_scroll`` handler sets ``ended`` at each scroll's end, which is how
-    the jump knows it landed: Flutter answers ``scroll_to`` before the scroll runs, and
+    The list's `on_scroll` handler sets `ended` at each scroll's end, which is how
+    the jump knows it landed: Flutter answers `scroll_to` before the scroll runs, and
     does nothing when the item has not been built yet, so the call alone proves
-    nothing. Without an end in time the jump asks again, up to ``JUMP_TRIES`` times.
+    nothing. Without an end in time the jump asks again, up to `JUMP_TRIES` times.
     An item already in place never scrolls either, so a list that stays still is
     "still", not "failed": on a list that builds every item (D-154) that means the
     item is in place.
@@ -131,25 +131,25 @@ async def jump_to_key(
 
     - the ref is unset (the list was never built, or is gone);
     - the list has left the page: the user switched tabs (D-142) while a jump started
-      from a handler was waiting, and Flet raises a ``RuntimeError`` saying the
+      from a handler was waiting, and Flet raises a `RuntimeError` saying the
       control "must be added to the page first" (logged);
     - Flutter waited 10 s for a list that is not built yet (a tab still sliding in) to
-      register its methods, then failed with a ``TimeoutException``, which Flet raises
-      as a ``RuntimeError`` (logged as a warning).
+      register its methods, then failed with a `TimeoutException`, which Flet raises
+      as a `RuntimeError` (logged as a warning).
 
     Any other error propagates.
 
     Args:
         list_ref: The list's (or another scrollable's) ref.
-        key: The item's ``ScrollKey`` value, e.g. a ``Slot.key``.
+        key: The item's `ScrollKey` value, e.g. a `Slot.key`.
         duration: The scroll's length in milliseconds, already through
-            ``prefs.motion_ms()``.
-        ended: Set by the list's ``on_scroll`` when a scroll ends.
+            `prefs.motion_ms()`.
+        ended: Set by the list's `on_scroll` when a scroll ends.
         tries: How many times to ask before it is "still".
 
     Returns:
         "landed" when the list reported a scroll that ended, "still" when it reported
-        none in ``JUMP_TRIES`` tries, "failed" when there was no list to scroll.
+        none in `JUMP_TRIES` tries, "failed" when there was no list to scroll.
     """
     for attempt in range(1, tries + 1):
         list_view = list_ref.current

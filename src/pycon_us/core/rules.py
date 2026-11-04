@@ -1,16 +1,16 @@
 """Ionic's processing rules: what becomes a session, and how (D-41, D-42; DATA-04..16).
 
-``feed.process()`` decodes the feed into records (``core/records.py``), then applies these
-rules in Ionic's order (``processData`` in the original app's ``conference-data.ts``)
+`feed.process()` decodes the feed into records (`core/records.py`), then applies these
+rules in Ionic's order (`processData` in the original app's `conference-data.ts`)
 before it groups the sessions into days:
 
-1. ``drop_rule``: slots that are not sessions (DATA-04);
-2. ``register_speakers``: the speaker directory, linked to sessions by name (DATA-15);
-3. ``collapse``: poster and break slots fold into one row per day and name (DATA-06);
-4. ``slot_session``: every other slot is a session, its title cleaned (DATA-08..11);
-5. ``open_space_session``: scheduled open spaces are sessions too (DATA-05);
-6. ``poster_details``: one session per poster, outside the timeline (DATA-07);
-7. ``rooms``: every session under each of its rooms (DATA-16, ROOM-06).
+1. `drop_rule`: slots that are not sessions (DATA-04);
+2. `register_speakers`: the speaker directory, linked to sessions by name (DATA-15);
+3. `collapse`: poster and break slots fold into one row per day and name (DATA-06);
+4. `slot_session`: every other slot is a session, its title cleaned (DATA-08..11);
+5. `open_space_session`: scheduled open spaces are sessions too (DATA-05);
+6. `poster_details`: one session per poster, outside the timeline (DATA-07);
+7. `rooms`: every session under each of its rooms (DATA-16, ROOM-06).
 
 Each function is pure. Ionic's display quirks are not reproduced here (D-41); where a rule
 departs from Ionic on purpose, its docstring says so and names the decision.
@@ -55,25 +55,25 @@ class DisplayTimeOverride:
 
     @property
     def pattern(self) -> re.Pattern[str]:
-        """The compiled, case-insensitive ``match``; apply it with ``fullmatch``."""
+        """The compiled, case-insensitive `match`; apply it with `fullmatch`."""
         return re.compile(self.match, re.IGNORECASE)
 
 
 @dataclass(frozen=True)
 class FeedSettings:
-    """What processing needs from the year data (``config.YearData.feed_settings``).
+    """What processing needs from the year data (`config.YearData.feed_settings`).
 
     Attributes:
         time_zone: The conference zone: times are converted to it and days bucketed in it.
-        site_url: The year's site, ending in ``/``; site-relative links resolve against it.
-        hall_prefix: What the year's feed puts before a ``Hall …`` room elsewhere, e.g.
-            ``Expo `` in 2026, where ``Lunch (Hall AB)`` is served in ``Expo Hall AB``
+        site_url: The year's site, ending in `/`; site-relative links resolve against it.
+        hall_prefix: What the year's feed puts before a `Hall …` room elsewhere, e.g.
+            `Expo ` in 2026, where `Lunch (Hall AB)` is served in `Expo Hall AB`
             (D-122).
         lightning_talks_location: Where lightning talks are shown to happen, whatever
             rooms they are streamed to; empty for none (D-124).
         display_time_overrides: Displayed starts to shift (DATA-11).
-        sprint_rooms: The names of the rooms the sprints use (``map.toml``'s pins
-            marked ``sprint``), seeded into the rooms index when no session names
+        sprint_rooms: The names of the rooms the sprints use (`map.toml`'s pins
+            marked `sprint`), seeded into the rooms index when no session names
             them (MAP-08).
     """
 
@@ -88,7 +88,7 @@ class FeedSettings:
 def track(kind: str) -> str:
     """Return the track key of a kind (DATA-14): its first letter upper-cased.
 
-    ``sponsor-workshop`` is the one exception, as in Ionic: ``Sponsor Presentation``.
+    `sponsor-workshop` is the one exception, as in Ionic: `Sponsor Presentation`.
     """
     if kind == "sponsor-workshop":
         return "Sponsor Presentation"
@@ -100,14 +100,14 @@ def drop_rule(slot: Slot) -> str | None:
 
     The rules, in Ionic's order:
 
-    * ``available-open-space``: a free open-space room or time (``available-open-space``
-      and ``available-open-space-slot``);
-    * ``open-space-duplicate``: a booked open space, which ``open-spaces`` also lists;
-    * ``placeholder``: a cancelled talk's stub, named after its kind, with no description,
+    * `available-open-space`: a free open-space room or time (`available-open-space`
+      and `available-open-space-slot`);
+    * `open-space-duplicate`: a booked open space, which `open-spaces` also lists;
+    * `placeholder`: a cancelled talk's stub, named after its kind, with no description,
       contact or authors. Posters and breaks have that shape too and are never dropped,
       since they collapse into rows (Ionic's documented regression);
-    * ``posters-plenary``: a plenary named "Posters (Room)", a copy of the Posters row;
-    * ``blank``: a slot of kind ``blank`` or named ``Slot``.
+    * `posters-plenary`: a plenary named "Posters (Room)", a copy of the Posters row;
+    * `blank`: a slot of kind `blank` or named `Slot`.
     """
     if slot.kind.startswith("available-open-space"):
         return "available-open-space"
@@ -141,7 +141,7 @@ def register_speakers(records: Iterable[Speaker]) -> dict[str, Speaker]:
     """Return the speaker directory by id: the first record of each id wins (DATA-15).
 
     Pseudo-speakers such as "Hosted by Abigail, Chris, Cristián, and Lorena" are not
-    people: they stay out of the directory and show as text (``Session.speaker_names``).
+    people: they stay out of the directory and show as text (`Session.speaker_names`).
     Ionic listed them as speakers.
     """
     directory: dict[str, Speaker] = {}
@@ -157,19 +157,19 @@ def collapse(slots: Iterable[Slot], settings: FeedSettings) -> list[Session]:
     Slots share a row when they share Ionic's key: kind, conference-local day and name,
     plus the start for a break not named Lunch. So all of a day's posters make one row,
     a day's staggered lunches one row, and every other break one row per start. A row
-    spans its slots' earliest start to latest end. Its name is ``Posters`` for posters;
-    a Friday-to-Sunday ``Break`` that starts from 12:00 to 13:59 is renamed ``Lunch``. A
-    trailing ``(Room)`` moves from the name to the location, which keeps the first slot's
-    room otherwise, and a room named ``Hall …`` gets the year's ``hall_prefix`` (D-122).
-    A row still named ``Break`` is everywhere at once, so it shows no location.
+    spans its slots' earliest start to latest end. Its name is `Posters` for posters;
+    a Friday-to-Sunday `Break` that starts from 12:00 to 13:59 is renamed `Lunch`. A
+    trailing `(Room)` moves from the name to the location, which keeps the first slot's
+    room otherwise, and a room named `Hall …` gets the year's `hall_prefix` (D-122).
+    A row still named `Break` is everywhere at once, so it shows no location.
 
     Args:
-        slots: Slots of the kinds in ``COLLAPSED_KINDS``, in feed order.
+        slots: Slots of the kinds in `COLLAPSED_KINDS`, in feed order.
         settings: The year's processing settings.
 
     Returns:
         One session per row, in the order of each row's first slot. Its id keeps Ionic's
-        form ``<kind>-<room>-<start>`` (D-42), with the start in ISO 8601 at the
+        form `<kind>-<room>-<start>` (D-42), with the start in ISO 8601 at the
         conference's offset: what Ionic's id holds when the feed writes that offset.
     """
     rows: dict[tuple[object, ...], list[Slot]] = {}
@@ -221,13 +221,13 @@ def slot_session(
 ) -> Session:
     """Return the session of a slot that is neither dropped nor collapsed.
 
-    Its title is cleaned (``names.clean_title``; DATA-08..10). A plenary-like slot's
-    ``(Room)`` becomes its location, a ``Hall …`` room gets the year's prefix, and
-    lightning talks show the year's ``lightning_talks_location`` (D-124). Its displayed
+    Its title is cleaned (`names.clean_title`; DATA-08..10). A plenary-like slot's
+    `(Room)` becomes its location, a `Hall …` room gets the year's prefix, and
+    lightning talks show the year's `lightning_talks_location` (D-124). Its displayed
     start moves by the first display-time override that matches its whole title
     (DATA-11); its start, and so its time group, does not. Its speakers are the
     directory's people named in its authors (DATA-15), each once; the authors all stay
-    as text in ``speaker_names``.
+    as text in `speaker_names`.
     """
     title = clean_title(slot.name, slot.kind)
     location = title.room or slot.room
@@ -297,7 +297,7 @@ def poster_details(
     speakers: Mapping[str, Speaker],
     zone: ZoneInfo,
 ) -> list[Session]:
-    """Return one ``poster-detail-<conf_key>`` session per poster (DATA-07).
+    """Return one `poster-detail-<conf_key>` session per poster (DATA-07).
 
     They take the time, day and place of the first Posters row and stay out of the
     timeline, where the Posters row stands for them. Their speakers are their authors in
@@ -392,8 +392,8 @@ def _session(
 ) -> Session:
     """Build a session, deriving its track, rooms, displayed place and day.
 
-    The displayed location is ``display_location`` when given, else the first room, else
-    the location; ``no_location`` shows none (DATA-16).
+    The displayed location is `display_location` when given, else the first room, else
+    the location; `no_location` shows none (DATA-16).
     """
     room_names = _room_names(location)
     if no_location:

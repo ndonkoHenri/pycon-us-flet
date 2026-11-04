@@ -1,11 +1,11 @@
-"""The time column of a list's slots: ``TimeGutter``, ``TimeSlot`` and its probe (D-31).
+"""The time column of a list's slots: `TimeGutter`, `TimeSlot` and its probe (D-31).
 
-``TimeGutter`` is a slot's start, "9:25" over "AM", left of its rows (D-158), and
-``TimeSlot`` a slot, its time beside its ``SessionRow``s and ``NoticeRow``s
-(``ui.session_rows``; D-200). At the largest text sizes the gutter would take so much of
+`TimeGutter` is a slot's start, "9:25" over "AM", left of its rows (D-158), and
+`TimeSlot` a slot, its time beside its `SessionRow`s and `NoticeRow`s
+(`ui.session_rows`; D-200). At the largest text sizes the gutter would take so much of
 the width that titles and badge labels broke inside a word, so a slot then puts its
-time on a line of its own above its rows (``TimeAbove``; D-216). ``GutterProbe``, on
-every screen's ``AppScaffold``, measures which applies, since Flet cannot read the text
+time on a line of its own above its rows (`TimeAbove`; D-216). `GutterProbe`, on
+every screen's `AppScaffold`, measures which applies, since Flet cannot read the text
 scale (U16).
 """
 
@@ -35,12 +35,12 @@ row's title line, and 8 dp from the rows."""
 def time_above(gutter_width: float, width: float) -> bool:
     """Return whether a slot's time goes above its rows rather than beside them (D-216).
 
-    It does when the gutter would take more than ``MAX_GUTTER_SHARE`` of the slot's
+    It does when the gutter would take more than `MAX_GUTTER_SHARE` of the slot's
     width: at a large text size on a phone in portrait, never at the default size,
     and rarely in landscape, where the rows have room beside it.
 
     Args:
-        gutter_width: The gutter's width in dp, padding included (``GutterProbe``).
+        gutter_width: The gutter's width in dp, padding included (`GutterProbe`).
         width: The width a slot has, the screen's, in dp; 0 while unmeasured,
             which keeps the gutter.
     """
@@ -48,16 +48,16 @@ def time_above(gutter_width: float, width: float) -> bool:
 
 
 def slot_width(view_width: float) -> float:
-    """Return the width a slot has in a View ``view_width`` dp wide (D-216, D-277).
+    """Return the width a slot has in a View `view_width` dp wide (D-216, D-277).
 
     The View's own width, less the rail's from 600 dp, where tab roots show it beside
-    the body, and at most ``LIST_DP``: every list with slots is capped at a list's
-    width (D-305). Pushed Views have no rail, so there a slot has ``RAIL_WIDTH`` more
+    the body, and at most `LIST_DP`: every list with slots is capped at a list's
+    width (D-305). Pushed Views have no rail, so there a slot has `RAIL_WIDTH` more
     than this: one answer for every View errs towards the time above. The rail widens
     at large text, so this is the most a slot beside it can have.
 
     Args:
-        view_width: The View's width in dp, as ``GutterProbe`` measured it.
+        view_width: The View's width in dp, as `GutterProbe` measured it.
     """
     beside_rail = view_width - RAIL_WIDTH if is_wide(view_width) else view_width
     return min(beside_rail, LIST_DP)
@@ -70,10 +70,10 @@ def TimeGutter(label: str) -> ft.Control:
     grows with the text, is the same for every slot, and the rows beside it keep one
     left edge; a fixed 64 dp broke "7:30" over two lines at 200 % text (S2). It is a
     level-3 heading, a slot under its day (a level-2 day heading, or the selected day
-    tab), so screen readers move slot by slot (D-211), and reads once, as ``label``.
+    tab), so screen readers move slot by slot (D-211), and reads once, as `label`.
 
     Args:
-        label: The slot's start from ``timefmt.time_label()``: "9:25 AM", or "09:25"
+        label: The slot's start from `timefmt.time_label()`: "9:25 AM", or "09:25"
             on a 24-hour clock, which needs no second line.
     """
     time, _, meridiem = label.partition(" ")
@@ -92,14 +92,14 @@ def TimeAbove(label: str) -> ft.Control:
     """Return a slot's time on a line of its own, above its rows (D-216).
 
     What a slot shows instead of the gutter when the text is too large for one
-    (``time_above()``): "9:25 AM" in the gutter's type, from the screen's 16 dp
+    (`time_above()`): "9:25 AM" in the gutter's type, from the screen's 16 dp
     margin, and a heading read once, as the gutter. 20 dp above it and the rows' own
     12 dp below: further from the divider or now line over it than from its rows, so
     it reads as their heading.
 
     Args:
-        label: The slot's start from ``timefmt.time_label()``; shown through
-            ``timefmt.on_screen()``, so "AM" keeps to its time's line.
+        label: The slot's start from `timefmt.time_label()`; shown through
+            `timefmt.on_screen()`, so "AM" keeps to its time's line.
     """
     return _heading(
         label,
@@ -117,9 +117,9 @@ def slot_layout(label: str, rows: Sequence[ft.Control], *, above: bool) -> ft.Co
     """Return a slot's time and its rows: beside them in the gutter, or above them.
 
     Args:
-        label: The slot's start, e.g. "9:25 AM" (``timefmt.time_label()``).
-        rows: Its ``SessionRow``s and ``NoticeRow``s, in schedule order.
-        above: Put the time above the rows (``Prefs.time_above``, D-216), which
+        label: The slot's start, e.g. "9:25 AM" (`timefmt.time_label()`).
+        rows: Its `SessionRow`s and `NoticeRow`s, in schedule order.
+        above: Put the time above the rows (`Prefs.time_above`, D-216), which
             then take the slot's whole width.
     """
     if above:
@@ -141,10 +141,10 @@ def TimeSlot(
     """Return one time slot of a list (D-31): its time beside its rows, or above them.
 
     Args:
-        label: The slot's start, for ``TimeGutter`` or ``TimeAbove``.
-        rows: Its ``SessionRow``s and ``NoticeRow``s, in schedule order.
+        label: The slot's start, for `TimeGutter` or `TimeAbove`.
+        rows: Its `SessionRow`s and `NoticeRow`s, in schedule order.
         divider: Draw a 1 dp divider above it: every slot of a day but the first.
-        above: Put the time above the rows (``Prefs.time_above``, D-216).
+        above: Put the time above the rows (`Prefs.time_above`, D-216).
     """
     slot = slot_layout(label, rows, above=above)
     return ft.Column([ft.Divider(height=1), slot], spacing=0) if divider else slot
@@ -152,23 +152,23 @@ def TimeSlot(
 
 @ft.component
 def GutterProbe() -> ft.Control:
-    """Measure whether slots put their time above their rows, into ``Prefs`` (D-216).
+    """Measure whether slots put their time above their rows, into `Prefs` (D-216).
 
     Flet cannot read the OS text scale (U16), so an invisible copy of the widest
     gutter reports its width, and the box around it the screen's, through
-    ``on_size_change`` (F51): at mount, after a text size change and after a
-    rotation. ``Prefs.time_above`` changes only when ``time_above()``'s answer does,
-    so the lists re-render only then. ``AppScaffold`` places it on every screen, so
+    `on_size_change` (F51): at mount, after a text size change and after a
+    rotation. `Prefs.time_above` changes only when `time_above()`'s answer does,
+    so the lists re-render only then. `AppScaffold` places it on every screen, so
     the answer is known before a list with slots opens.
 
     The probe is 0 dp high, under the body in the View's column: it takes no space,
-    shows nothing (``opacity=0``) and is left out of the semantics tree. Not laid over
-    the body in a ``Stack``: a positioned control with ``on_size_change`` breaks the
+    shows nothing (`opacity=0`) and is left out of the semantics tree. Not laid over
+    the body in a `Stack`: a positioned control with `on_size_change` breaks the
     stack's layout (F51).
 
-    It measures the View's width, beside the body's ``SafeArea``, not inside it, and
+    It measures the View's width, beside the body's `SafeArea`, not inside it, and
     from 600 dp takes the rail's width off it and caps it at a list's 840 dp
-    (``slot_width()``, D-277, D-305). Only in
+    (`slot_width()`, D-277, D-305). Only in
     landscape on a phone with a notch or a cutout do the SafeArea's side insets make
     a slot narrower than that, by up to about 15 %, and there even the largest gutter
     stays under a fifth of the narrower width (D-216), so the answer is the same.
@@ -203,7 +203,7 @@ def GutterProbe() -> ft.Control:
 def _record(
     prefs: Prefs, widths: dict[str, float] | None, name: str, width: float
 ) -> None:
-    """Keep a measured width, and set ``Prefs.time_above`` once both are known."""
+    """Keep a measured width, and set `Prefs.time_above` once both are known."""
     assert widths is not None  # the probe's ref, set by its initialiser
     widths[name] = width
     if not (widths["gutter"] and widths["body"]):
@@ -218,7 +218,7 @@ def _record(
 
 
 def _heading(label: str, content: ft.Control) -> ft.Control:
-    """A slot's time as screen readers get it: a heading, read once, as ``label``.
+    """A slot's time as screen readers get it: a heading, read once, as `label`.
 
     Level 3: a slot under its day, a level-2 day heading or the selected day tab
     (D-211).

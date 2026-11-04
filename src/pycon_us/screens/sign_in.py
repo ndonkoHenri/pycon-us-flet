@@ -1,9 +1,9 @@
-"""Sign in (``/more/sign-in``): the one way into a mock account (AUTH-01, API-02, D-54).
+"""Sign in (`/more/sign-in`): the one way into a mock account (AUTH-01, API-02, D-54).
 
-The form of ux.md §7.1: an email and a password in an ``AutofillGroup``, so the OS
+The form of ux.md §7.1: an email and a password in an `AutofillGroup`, so the OS
 offers to fill them, and to save them once they signed someone in, never a wrong
 password; and "Sign in", disabled with a ring while the request is in flight, so
-repeated taps send one request (AUTH-02; ``Account.sign_in`` is the single flight).
+repeated taps send one request (AUTH-02; `Account.sign_in` is the single flight).
 The fields' text is read when the user signs in, from what Flutter last reported, not
 from a change event: Ionic's form missed what iOS autofilled. Every failure is said in
 its own words on one live-region line under the button, and the fields keep what was
@@ -61,7 +61,7 @@ UNAVAILABLE_BODY = (
 BUTTON_IN_SIGHT = 200
 """How much of the page under a field's text stays in sight when it takes the focus,
 in dp: Sign in and the error line under it, at large text too (Flutter's
-``scrollPadding``)."""
+`scrollPadding`)."""
 
 
 def signed_in_as(nickname: str, email: str) -> str:
@@ -236,7 +236,7 @@ def SignInPage() -> ft.View:
 
 
 def reveal() -> ft.Padding:
-    """Return a field's ``scroll_padding``: Sign in and its error line stay in sight."""
+    """Return a field's `scroll_padding`: Sign in and its error line stay in sight."""
     return ft.Padding.only(left=20, top=20, right=20, bottom=BUTTON_IN_SIGHT)
 
 
@@ -271,7 +271,7 @@ def submit_button(
     disabled button takes no second tap (AUTH-02).
 
     Args:
-        busy: A sign-in is in flight (``Account.signing_in``).
+        busy: A sign-in is in flight (`Account.signing_in`).
         on_click: Signs in.
     """
     return named(

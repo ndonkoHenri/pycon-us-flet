@@ -1,15 +1,15 @@
-"""Wi-Fi (``/more/wifi``): the conference network and its password, to read and copy.
+"""Wi-Fi (`/more/wifi`): the conference network and its password, to read and copy.
 
 The first thing attendees look for, often with no signal (INFO-08), so both values come
-from the bundled year data (``content.toml``'s ``[wifi]``, D-280) and show at once,
+from the bundled year data (`content.toml`'s `[wifi]`, D-280) and show at once,
 offline. Each is selectable monospace text, read with its label as one phrase; Copy
 beside the network and a "Copy password" button, the one way to copy the password, go
-through ``copy_text()``, which confirms each copy once and says when one fails (D-263),
+through `copy_text()`, which confirms each copy once and says when one fails (D-263),
 where Ionic copied only the password and assumed it worked. Under them, "Wi-Fi provided
 by Temporal" pushes the sponsor who provides it, named by the year data
-(``screens.sponsor_credit``, D-337). A year without the table
-shows the feed's own ``wifi`` block, and without that an empty state that sends the
-attendee to the information desk (``InfoBody``).
+(`screens.sponsor_credit`, D-337). A year without the table
+shows the feed's own `wifi` block, and without that an empty state that sends the
+attendee to the information desk (`InfoBody`).
 """
 
 import flet as ft
@@ -48,8 +48,8 @@ VALUE_STYLE = ft.TextStyle(
     font_family="monospace",  # Android's alias; iOS has no such family
     font_family_fallback=["Menlo"],  # so iOS takes its system monospace font
 )
-"""A value's font, as the feed's code spans have it (``theme_markdown.MARKDOWN_STYLE``): in a
-monospace font ``l``, ``1`` and ``I``, or ``O`` and ``0``, never look alike."""
+"""A value's font, as the feed's code spans have it (`theme_markdown.MARKDOWN_STYLE`): in a
+monospace font `l`, `1` and `I`, or `O` and `0`, never look alike."""
 
 
 @ft.component
@@ -134,7 +134,7 @@ def wifi_blocks(svc: Services, wifi: WifiInfo) -> list[ft.Control]:
 def value(label: str, text: str, identifier: str) -> ft.Control:
     """Return a value under its label, read as one phrase: "Network, PyConUS26".
 
-    The value is selectable, so it can also be copied by hand, in ``TITLE_LARGE`` and a
+    The value is selectable, so it can also be copied by hand, in `TITLE_LARGE` and a
     monospace font. For screen readers it is one node that says the label, then the
     value: a selectable text is otherwise a read-only text field of its own, away from
     its label, and copying is what the Copy buttons are for.
@@ -142,7 +142,7 @@ def value(label: str, text: str, identifier: str) -> ft.Control:
     Args:
         label: What the value is: "Network".
         text: The value, exactly as it is typed.
-        identifier: Its semantics identifier, ``wifi.<value>``.
+        identifier: Its semantics identifier, `wifi.<value>`.
     """
     return ft.Semantics(
         identifier=identifier,

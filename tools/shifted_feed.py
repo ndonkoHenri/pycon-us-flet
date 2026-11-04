@@ -2,25 +2,25 @@
 
 The Developer fake clock moves what the app shows, but the OS fires reminders at real
 instants, so a May session cannot be checked in October. This tool writes a copy of the
-bundled snapshot (``data/<year>/conference.json``) in which a chosen session starts a
+bundled snapshot (`data/<year>/conference.json`) in which a chosen session starts a
 few minutes from now, to serve to an emulator or a simulator through Developer › Feed
-URL (testing-and-quality.md §9.1)::
+URL (testing-and-quality.md §9.1):
 
     uv run python -m tools.shifted_feed 142 --in 5m               # session 142 in 5 minutes
     uv run python -m tools.shifted_feed 142 --in 5m --move 15m    # and a copy with it moved
 
-Every slot's and open space's ``start`` and ``end`` move by one delta of wall-clock time
+Every slot's and open space's `start` and `end` move by one delta of wall-clock time
 in the conference zone, so 9:00 stays on the hour and each offset is the one of its new
 date (D-43); ids are unchanged, so saved sessions stay saved. The chosen session starts
-at the current minute plus ``--in``, as an instant: on the night summer time ends, it is
+at the current minute plus `--in`, as an instant: on the night summer time ends, it is
 the right one of the repeated hour's two. A time that the delta moves into the hour
-skipped when summer time starts does not exist, so the tool refuses that ``--in``. With
-``--move``, a second file is the shifted feed with only that session's times moved by
+skipped when summer time starts does not exist, so the tool refuses that `--in`. With
+`--move`, a second file is the shifted feed with only that session's times moved by
 that much more: served under the same URL, it is a schedule change the app diffs (D-255).
 
-Before writing, it runs every invariant of ``tools/feed_invariants.py`` on each file,
+Before writing, it runs every invariant of `tools/feed_invariants.py` on each file,
 against the year's dates shifted by the same delta, and refuses a feed that breaks one.
-The files go to ``--out`` (``build/shifted-feed``, which git ignores) and are never
+The files go to `--out` (`build/shifted-feed`, which git ignores) and are never
 committed. It prints the feed URL for the Android emulator and the iOS simulator and the
 command that serves them.
 """
@@ -46,13 +46,13 @@ SHIFTED_FILE = "conference-shifted.json"
 """The shifted feed's name in the output folder: the one the app's feed URL names."""
 
 MOVED_FILE = "conference-moved.json"
-"""The shifted feed with the chosen session moved (``--move``)."""
+"""The shifted feed with the chosen session moved (`--move`)."""
 
 DEFAULT_OUT = Path("build") / "shifted-feed"
-"""Where the files go by default: under ``build/``, which git ignores."""
+"""Where the files go by default: under `build/`, which git ignores."""
 
 DEFAULT_PORT = 8765
-"""The port the printed ``http.server`` command serves the files on."""
+"""The port the printed `http.server` command serves the files on."""
 
 EMULATOR_HOST = "10.0.2.2"
 """The laptop's loopback as the Android emulator reaches it."""
@@ -61,7 +61,7 @@ SIMULATOR_HOST = "127.0.0.1"
 """The laptop's loopback as the iOS simulator reaches it (it shares the Mac's network)."""
 
 OPEN_SPACE_OFFSET = 9000
-"""An open space's session id is its ``conf_key`` plus this (D-42, DATA-26)."""
+"""An open space's session id is its `conf_key` plus this (D-42, DATA-26)."""
 
 _DURATION = re.compile(r"([+-]?\d+)([mh]?)")
 
@@ -76,11 +76,11 @@ class ShiftedFeed:
 
     Attributes:
         shifted: The shifted feed's bytes.
-        moved: The shifted feed with the session moved; None without ``--move``.
+        moved: The shifted feed with the session moved; None without `--move`.
         delta: How far every wall-clock time moved, in the conference zone.
         name: The session's title, as the app shows it.
         start: When the session starts in the shifted feed; aware, in the conference zone.
-        moved_start: When it starts in the moved feed; None without ``--move``.
+        moved_start: When it starts in the moved feed; None without `--move`.
     """
 
     shifted: bytes
@@ -92,10 +92,10 @@ class ShiftedFeed:
 
 
 def duration(text: str) -> timedelta:
-    """Read a command-line duration: ``5m``, ``2h``, ``-30m``; a bare number is minutes.
+    """Read a command-line duration: `5m`, `2h`, `-30m`; a bare number is minutes.
 
     Raises:
-        argparse.ArgumentTypeError: ``text`` is none of those.
+        argparse.ArgumentTypeError: `text` is none of those.
     """
     match = _DURATION.fullmatch(text.strip())
     if match is None:
@@ -113,12 +113,12 @@ def shift_feed(
     lead: timedelta,
     move: timedelta | None = None,
 ) -> ShiftedFeed:
-    """Shift ``raw`` so that ``session_id`` starts ``lead`` after the minute of ``now``.
+    """Shift `raw` so that `session_id` starts `lead` after the minute of `now`.
 
     Args:
         raw: The feed's bytes, the bundled snapshot's.
         year: The year's data: its zone, feed settings and dates.
-        session_id: The session's id in the app: a slot's ``conf_key``, or an open
+        session_id: The session's id in the app: a slot's `conf_key`, or an open
             space's plus 9000.
         now: The current instant; aware.
         lead: How long after the current minute the session starts.
@@ -167,9 +167,9 @@ def shift_feed(
 
 
 def shift_times(document: dict[str, Any], delta: timedelta, zone: ZoneInfo) -> None:
-    """Move every slot's and open space's ``start`` and ``end`` by ``delta``, in place.
+    """Move every slot's and open space's `start` and `end` by `delta`, in place.
 
-    The delta is wall-clock time in ``zone``: a 9:00 start stays on the hour across a
+    The delta is wall-clock time in `zone`: a 9:00 start stays on the hour across a
     daylight-saving change, and its offset becomes the one of its new date. A time that
     is missing or empty (an open space not scheduled yet) stays so.
 
@@ -184,7 +184,7 @@ def shift_times(document: dict[str, Any], delta: timedelta, zone: ZoneInfo) -> N
 
 
 def shifted_year(year: YearData, *deltas: timedelta) -> YearData:
-    """Return ``year`` with its conference dates moved as ``shift_times`` moves the feed.
+    """Return `year` with its conference dates moved as `shift_times` moves the feed.
 
     The first day becomes the date that its midnight lands on under the smallest delta,
     and the other dates the ones that their last moment lands on under the largest, so
@@ -194,7 +194,7 @@ def shifted_year(year: YearData, *deltas: timedelta) -> YearData:
     Args:
         year: The year's data.
         *deltas: The wall-clock deltas the feed's times moved by: one, or two when one
-            session moved further (``--move``).
+            session moved further (`--move`).
     """
     info, earliest, latest = year.conference, min(deltas), max(deltas)
     return replace(
@@ -209,10 +209,10 @@ def shifted_year(year: YearData, *deltas: timedelta) -> YearData:
 
 
 def main(argv: Sequence[str] | None = None, *, now: datetime | None = None) -> int:
-    """Write the shifted feed, and the moved one with ``--move``, then say how to serve them.
+    """Write the shifted feed, and the moved one with `--move`, then say how to serve them.
 
     Args:
-        argv: The command-line arguments; ``sys.argv[1:]`` when None.
+        argv: The command-line arguments; `sys.argv[1:]` when None.
         now: The current instant; the real time when None (tests pass one).
 
     Returns:
@@ -299,7 +299,7 @@ def report(feed: ShiftedFeed, session_id: str, out: Path, port: int) -> list[str
 
 
 def _record(document: dict[str, Any], session_id: str) -> dict[str, Any] | None:
-    """Return the slot or open space whose session id is ``session_id``, with times."""
+    """Return the slot or open space whose session id is `session_id`, with times."""
     for slot in document.get("schedule") or []:
         if str(slot.get("conf_key")) == session_id:
             return slot if slot.get("start") else None
@@ -311,7 +311,7 @@ def _record(document: dict[str, Any], session_id: str) -> dict[str, Any] | None:
 
 
 def _checked(document: dict[str, Any], year: YearData, name: str) -> bytes:
-    """Serialise ``document`` once every invariant holds for it, against ``year``.
+    """Serialise `document` once every invariant holds for it, against `year`.
 
     Raises:
         ShiftError: An invariant is broken; the error lists each one with its problems.
@@ -331,13 +331,13 @@ def _checked(document: dict[str, Any], year: YearData, name: str) -> bytes:
 def _pin(
     record: dict[str, Any], original: dict[str, Any], start: datetime, zone: ZoneInfo
 ) -> None:
-    """Make ``record`` start at the instant ``start`` and last as long as ``original``.
+    """Make `record` start at the instant `start` and last as long as `original`.
 
     Wall-clock arithmetic cannot tell the two 1:25s of the night summer time ends apart,
-    so the chosen session's times are set from instants instead, written in ``zone``.
+    so the chosen session's times are set from instants instead, written in `zone`.
 
     Raises:
-        ShiftError: The written start is not ``start`` (a guard: it never should be).
+        ShiftError: The written start is not `start` (a guard: it never should be).
     """
     begin = datetime.fromisoformat(original["start"])
     record["start"] = start.astimezone(zone).isoformat()
@@ -349,12 +349,12 @@ def _pin(
 
 
 def _shifted(text: str, delta: timedelta, zone: ZoneInfo) -> str:
-    """Return an ISO 8601 time moved by ``delta`` of wall-clock time in ``zone``.
+    """Return an ISO 8601 time moved by `delta` of wall-clock time in `zone`.
 
     A time in the repeated hour of the night summer time ends is its first occurrence.
 
     Raises:
-        ShiftError: The moved wall-clock time does not exist in ``zone``: it is in the
+        ShiftError: The moved wall-clock time does not exist in `zone`: it is in the
             hour skipped when summer time starts.
     """
     wall = _wall(datetime.fromisoformat(text), zone) + delta
@@ -367,22 +367,22 @@ def _shifted(text: str, delta: timedelta, zone: ZoneInfo) -> str:
 
 
 def _wall(moment: datetime, zone: ZoneInfo) -> datetime:
-    """Return ``moment``'s naive wall-clock time in ``zone``."""
+    """Return `moment`'s naive wall-clock time in `zone`."""
     return moment.astimezone(zone).replace(tzinfo=None)
 
 
 def _quoted(path: Path) -> str:
-    """Return ``path`` quoted for a POSIX shell, so a printed command can be pasted."""
+    """Return `path` quoted for a POSIX shell, so a printed command can be pasted."""
     return shlex.quote(str(path))
 
 
 def _moved(day: date, at: time, delta: timedelta) -> date:
-    """Return the date that ``at`` on ``day``, moved by ``delta``, falls on."""
+    """Return the date that `at` on `day`, moved by `delta`, falls on."""
     return (datetime.combine(day, at) + delta).date()
 
 
 def _moment(moment: datetime) -> str:
-    """Write an aware time for the report: ``2026-10-20 15:05-07:00``."""
+    """Write an aware time for the report: `2026-10-20 15:05-07:00`."""
     return moment.isoformat(sep=" ", timespec="minutes")
 
 

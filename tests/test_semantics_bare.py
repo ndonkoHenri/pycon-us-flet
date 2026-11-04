@@ -1,9 +1,9 @@
 """Tests for the scan that keeps a bare identifier off a button, chip, field or tile.
 
-F50, D-230: a ``Semantics`` identifier set beside such a control, not merged into it,
+F50, D-230: a `Semantics` identifier set beside such a control, not merged into it,
 splits from the control's node. The scan reads every app module's source
-(``tests/test_semantics.py``'s ``SOURCES``); the helpers and the other scans are
-``tests/test_semantics.py``'s (#623).
+(`tests/test_semantics.py`'s `SOURCES`); the helpers and the other scans are
+`tests/test_semantics.py`'s (#623).
 """
 
 import ast
@@ -18,8 +18,8 @@ from tests.test_semantics import NAMED_KEYWORDS, SOURCES, called
 TAKEN_IN = ("Button", "Chip", "TextField", "Tile")
 """The name endings of the controls that a bare identifier splits from (F50).
 
-Every ``*Button`` (``PopupMenuButton`` too), every ``*Chip``, ``TextField``, and every
-``*Tile``: ``ListTile``, ``ExpansionTile`` and the app's fold, ``FoldTile``, whose
+Every `*Button` (`PopupMenuButton` too), every `*Chip`, `TextField`, and every
+`*Tile`: `ListTile`, `ExpansionTile` and the app's fold, `FoldTile`, whose
 identifier goes on its header (D-354).
 """
 
@@ -56,17 +56,17 @@ class BareIdentifier(NamedTuple):
 
 
 def is_taken_in(name: str) -> bool:
-    """Whether a call of ``name`` builds a control that a bare identifier splits from."""
+    """Whether a call of `name` builds a control that a bare identifier splits from."""
     return name.endswith(TAKEN_IN)
 
 
 def bare_identifiers(source: str) -> list[BareIdentifier]:
-    """Return each bare identifier in ``source`` around a button, chip, field or tile.
+    """Return each bare identifier in `source` around a button, chip, field or tile.
 
-    A ``Semantics`` call that passes ``identifier`` and nothing else but ``content``
-    and ``disabled``, not straight inside a ``MergeSemantics``, whose ``content`` is
-    a call of one of ``TAKEN_IN``, or a name its function assigns such a call to
-    (screens build the control first: ``fold = FoldTile(...)``).
+    A `Semantics` call that passes `identifier` and nothing else but `content`
+    and `disabled`, not straight inside a `MergeSemantics`, whose `content` is
+    a call of one of `TAKEN_IN`, or a name its function assigns such a call to
+    (screens build the control first: `fold = FoldTile(...)`).
     """
     tree = ast.parse(source)
     parents = {
@@ -95,7 +95,7 @@ def bare_identifiers(source: str) -> list[BareIdentifier]:
 
 
 def scope_of(node: ast.AST, parents: dict[ast.AST, ast.AST]) -> ast.AST:
-    """Return the function around ``node``, or its module."""
+    """Return the function around `node`, or its module."""
     while node in parents and not isinstance(
         node, ast.FunctionDef | ast.AsyncFunctionDef
     ):
@@ -104,11 +104,11 @@ def scope_of(node: ast.AST, parents: dict[ast.AST, ast.AST]) -> ast.AST:
 
 
 def taken_in_names(scope: ast.AST) -> set[str]:
-    """Return the names that ``scope`` assigns a button, chip, field or tile to.
+    """Return the names that `scope` assigns a button, chip, field or tile to.
 
     Any of its own assignments counts (a nested function's or class's does not):
-    ``label: ft.Control = ft.Text(...)`` and then ``label = ft.Row(...)`` builds
-    neither, one ``ft.ListTile`` among them does.
+    `label: ft.Control = ft.Text(...)` and then `label = ft.Row(...)` builds
+    neither, one `ft.ListTile` among them does.
     """
     names = set()
     for node in own_nodes(scope):
@@ -128,9 +128,9 @@ NESTED_SCOPES = ast.FunctionDef | ast.AsyncFunctionDef | ast.ClassDef | ast.Lamb
 
 
 def own_nodes(scope: ast.AST) -> Iterator[ast.AST]:
-    """Yield the nodes of ``scope``, without those of the functions and classes in it.
+    """Yield the nodes of `scope`, without those of the functions and classes in it.
 
-    A nested helper's ``control = ft.TextButton(...)`` names its own ``control``, not
+    A nested helper's `control = ft.TextButton(...)` names its own `control`, not
     the outer function's parameter of that name.
     """
     pending = list(ast.iter_child_nodes(scope))
@@ -142,7 +142,7 @@ def own_nodes(scope: ast.AST) -> Iterator[ast.AST]:
 
 
 def is_merged(node: ast.Call, parents: dict[ast.AST, ast.AST]) -> bool:
-    """Whether ``node`` is the content of a ``MergeSemantics``, as ``named()`` does."""
+    """Whether `node` is the content of a `MergeSemantics`, as `named()` does."""
     above = parents.get(node)
     if isinstance(above, ast.keyword) and above.arg == "content":
         above = parents.get(above)
@@ -150,7 +150,7 @@ def is_merged(node: ast.Call, parents: dict[ast.AST, ast.AST]) -> bool:
 
 
 def screen(*lines: str) -> str:
-    """Return a module's source: ``screen(control)``, whose body is ``lines``."""
+    """Return a module's source: `screen(control)`, whose body is `lines`."""
     return "def screen(control):\n" + "".join(f"    {line}\n" for line in lines)
 
 
@@ -208,7 +208,7 @@ KEPT = {
 }
 """Function bodies the scan leaves: merged, saying more, or around no such control.
 
-A nested helper or class names its own ``control``, not the parameter it shadows.
+A nested helper or class names its own `control`, not the parameter it shadows.
 """
 
 
@@ -227,19 +227,19 @@ def test_the_bare_scan_flags_an_identifier_split_from_its_control(
 
 @pytest.mark.parametrize("lines", KEPT.values(), ids=KEPT.keys())
 def test_the_bare_scan_leaves_other_shapes(lines: list[str]) -> None:
-    """``named()``'s merge, a ``Semantics`` with more to say, or around no such control."""
+    """`named()`'s merge, a `Semantics` with more to say, or around no such control."""
     assert bare_identifiers(screen(*lines)) == []
 
 
 def site(path: Path, bare: BareIdentifier) -> tuple[str, str, str]:
-    """Return a bare identifier's key in ``ON_PURPOSE``."""
+    """Return a bare identifier's key in `ON_PURPOSE`."""
     return (path.name, bare.function, bare.identifier)
 
 
 def test_the_bare_scan_finds_every_identifier_left_bare_on_purpose() -> None:
     """A scan that matched nothing would pass whatever the code says.
 
-    Each site of ``ON_PURPOSE`` is found where it is, so a stale entry fails too.
+    Each site of `ON_PURPOSE` is found where it is, so a stale entry fails too.
     """
     found = {
         site(path, bare)
@@ -253,9 +253,9 @@ def test_the_bare_scan_finds_every_identifier_left_bare_on_purpose() -> None:
 def test_no_bare_identifier_splits_from_its_control(path: Path) -> None:
     """F50, D-214, D-230: a bare identifier around a control is a node beside it.
 
-    Around a button TalkBack stops on an empty ``View``, then on the button; around
+    Around a button TalkBack stops on an empty `View`, then on the button; around
     one with a tooltip the identifier's node holds the name and the button is
-    unnamed. ``named()`` merges the two into one node; the sites in ``ON_PURPOSE``
+    unnamed. `named()` merges the two into one node; the sites in `ON_PURPOSE`
     cannot be merged, and say why.
     """
     unexpected = [

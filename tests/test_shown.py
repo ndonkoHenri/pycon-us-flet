@@ -1,9 +1,9 @@
-"""Tests for ``Shown`` and the content line it logs (D-112, D-165).
+"""Tests for `Shown` and the content line it logs (D-112, D-165).
 
-``AppScaffold`` puts the screen's body in ``Shown``, the leaf that reads the feed's
+`AppScaffold` puts the screen's body in `Shown`, the leaf that reads the feed's
 version, so a refresh re-renders it and not the screen, and logs "Content shown" once
 per version. The builders run outside a renderer, with the fixtures of
-``tests/chrome.py`` (``test_scaffold.py`` has the rest of ``AppScaffold``).
+`tests/chrome.py` (`test_scaffold.py` has the rest of `AppScaffold`).
 """
 
 import asyncio
@@ -65,7 +65,7 @@ class SlowPrefs(MemoryPrefs):
     """SharedPreferences whose replies wait until the test releases them."""
 
     def init(self) -> None:
-        """Set up the store as ``MemoryPrefs`` does, with the event that releases it."""
+        """Set up the store as `MemoryPrefs` does, with the event that releases it."""
         super().init()
         self.release = asyncio.Event()
 
@@ -75,15 +75,15 @@ class SlowPrefs(MemoryPrefs):
         arguments: dict[str, Any] | None = None,
         timeout: float | None = None,
     ) -> Any:
-        """Answer as ``MemoryPrefs`` does, once the test sets ``release``."""
+        """Answer as `MemoryPrefs` does, once the test sets `release`."""
         await self.release.wait()
         return await super()._invoke_method(method_name, arguments, timeout)
 
 
 @pytest.fixture
 def slow_prefs() -> SlowPrefs:
-    """A ``SlowPrefs`` whose replies wait for the test."""
-    return SlowPrefs()  # before ``page``: a service registers with a bound page
+    """A `SlowPrefs` whose replies wait for the test."""
+    return SlowPrefs()  # before `page`: a service registers with a bound page
 
 
 async def test_a_newer_version_does_not_cancel_the_line_of_the_one_shown_before(
@@ -122,7 +122,7 @@ async def test_a_newer_version_does_not_cancel_the_line_of_the_one_shown_before(
 def test_only_a_leaf_component_reads_the_feed_so_a_refresh_skips_the_screen(
     hooks: Hooks, page: FakePage, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """``AppScaffold`` puts its body in ``Shown`` and never reads ``Conference``."""
+    """`AppScaffold` puts its body in `Shown` and never reads `Conference`."""
     monkeypatch.setattr(scaffold, "Shown", Shown)  # the real component
     reads: list[str] = []
     monkeypatch.setattr(scaffold, "use_conference", lambda: reads.append("read"))
@@ -140,7 +140,7 @@ def test_only_a_leaf_component_reads_the_feed_so_a_refresh_skips_the_screen(
 
 
 def test_shown_hands_back_the_same_body(hooks: Hooks, conference: Conference) -> None:
-    """``Shown`` returns its body as is, with one effect that depends on the version."""
+    """`Shown` returns its body as is, with one effect that depends on the version."""
     body = ft.Text("body")
     assert inspect.unwrap(Shown)(body) is body
     assert [deps for _, deps in hooks.effects] == [[conference.version]]

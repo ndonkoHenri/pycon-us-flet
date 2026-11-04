@@ -1,18 +1,18 @@
-"""About the PSF (``/more/psf``): the PSF's mission, Donate, and where to go next.
+"""About the PSF (`/more/psf`): the PSF's mission, Donate, and where to go next.
 
 The Python Software Foundation runs PyCon US. From the top (INFO-06, D-283):
 
 - its mission, once, where Ionic showed it twice (its own card, then again in the
   feed's block under it);
-- "Donate to the PSF", a ``FilledButton`` that opens the donation page in the in-app
-  browser, marked as a link as an external row is (``links.external()``);
+- "Donate to the PSF", a `FilledButton` that opens the donation page in the in-app
+  browser, marked as a link as an external row is (`links.external()`);
 - "Get involved", "Python resources" and "Follow the PSF": level-2 sections of
-  external ``LinkTile``s, each with its outlined icon or its brand's mark
-  (``brand_icon()``, D-264); a social profile opens in its own app (INFO-14).
+  external `LinkTile`s, each with its outlined icon or its brand's mark
+  (`brand_icon()`, D-264); a social profile opens in its own app (INFO-14).
 
-Everything comes from the year's ``content.toml`` (``[psf]``, D-45), so the page shows
-at once and offline. A year without the table shows the feed's own ``about-psf``
-block, and without that an empty state (``InfoBody``, D-263).
+Everything comes from the year's `content.toml` (`[psf]`, D-45), so the page shows
+at once and offline. A year without the table shows the feed's own `about-psf`
+block, and without that an empty state (`InfoBody`, D-263).
 """
 
 from typing import cast
@@ -45,7 +45,7 @@ SECTIONS = {
     "python_resources": "Python resources",
     "follow": "Follow the PSF",
 }
-"""Each section's heading, by its key in the year data (``year_links.PSF_SECTIONS``)."""
+"""Each section's heading, by its key in the year data (`year_links.PSF_SECTIONS`)."""
 
 NO_PSF = "Nothing about the PSF yet"
 NO_PSF_BODY = "It shows here as soon as the conference publishes it."
@@ -79,7 +79,7 @@ def psf_blocks(svc: Services, psf: PsfInfo) -> list[ft.Control]:
 
     Args:
         svc: The session's services, for the launcher.
-        psf: The year's ``[psf]`` table.
+        psf: The year's `[psf]` table.
     """
     blocks: list[ft.Control] = [
         SectionHeader(MISSION),
@@ -95,7 +95,7 @@ def psf_blocks(svc: Services, psf: PsfInfo) -> list[ft.Control]:
 
 
 def mission(text: str) -> ft.Control:
-    """Return the mission statement: one paragraph in ``BODY_LARGE``, in the gutter.
+    """Return the mission statement: one paragraph in `BODY_LARGE`, in the gutter.
 
     Args:
         text: The mission, as the PSF words it.
@@ -113,9 +113,9 @@ def mission(text: str) -> ft.Control:
 def donate_button(svc: Services, url: str) -> ft.Control:
     """Return "Donate to the PSF": a filled button that opens the donation page.
 
-    It leaves the app, so its icon is ``OPEN_IN_NEW`` and its name ends with "Opens
+    It leaves the app, so its icon is `OPEN_IN_NEW` and its name ends with "Opens
     in browser", on the text, since an icon's label is read before the text (D-186);
-    it is a link for screen readers, as an external row is (``links.external()``).
+    it is a link for screen readers, as an external row is (`links.external()`).
     It keeps its own width, at the gutter's start, and wraps at large text.
 
     Args:
@@ -143,7 +143,7 @@ def donate_button(svc: Services, url: str) -> ft.Control:
 
 
 def link_row(link: PsfLink) -> ft.Control:
-    """Return one of the page's links: an external ``LinkTile`` with its mark or icon.
+    """Return one of the page's links: an external `LinkTile` with its mark or icon.
 
     It reads "Opens in browser", or, for a profile, "Opens in another app" (INFO-14).
 

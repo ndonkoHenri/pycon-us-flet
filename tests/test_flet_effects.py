@@ -1,19 +1,19 @@
-"""``use_effect``'s cleanups at the Flet pin (F2, F39, D-387; #672).
+"""`use_effect`'s cleanups at the Flet pin (F2, F39, D-387; #672).
 
 The app's effects rely on these, so a pin bump (D-81) that changes one fails here
 first, not on a screen. Each test renders a small component in a real Flet session
-(``tests/sessions.py``'s ``rendering()``), re-renders or unmounts it through its own
+(`tests/sessions.py`'s `rendering()`), re-renders or unmounts it through its own
 state, and looks at what ran:
 
 - a cleanup a sync setup returns survives the component's re-renders and runs on
   unmount (flet-dev/flet#6983);
-- an ``async def`` setup still running when the component unmounts is cancelled,
+- an `async def` setup still running when the component unmounts is cancelled,
   with no cleanup at all (flet-dev/flet#7005), which is what stops every ticking loop
   and pending wait in the app;
 - a state setter called after the unmount renders nothing, so an answer landing before
-  that cancellation reaches the task needs no ``mounted`` guard
-  (``Component._schedule_update()`` and ``update()`` both refuse);
-- on a dependency change, the running setup is cancelled, and an ``async def``
+  that cancellation reaches the task needs no `mounted` guard
+  (`Component._schedule_update()` and `update()` both refuse);
+- on a dependency change, the running setup is cancelled, and an `async def`
   cleanup runs to its end before the next setup starts (flet-dev/flet#7005).
 """
 
@@ -47,7 +47,7 @@ async def test_a_returned_cleanup_runs_on_unmount_after_a_re_render() -> None:
 
     @ft.component
     def Root() -> ft.Control:
-        """Return the child while ``shown`` is 1, else an empty column."""
+        """Return the child while `shown` is 1, else an empty column."""
         shown, set_shown = ft.use_state(1)
         setters["root"] = set_shown
         return ft.Column([Child()] if shown else [])
@@ -81,7 +81,7 @@ async def test_an_async_setup_is_cancelled_on_unmount_without_a_cleanup() -> Non
 
     @ft.component
     def Root() -> ft.Control:
-        """Return the child while ``shown`` is 1, else an empty column."""
+        """Return the child while `shown` is 1, else an empty column."""
         shown, set_shown = ft.use_state(1)
         setters["root"] = set_shown
         return ft.Column([Child()] if shown else [])
@@ -97,7 +97,7 @@ async def test_an_async_setup_is_cancelled_on_unmount_without_a_cleanup() -> Non
 
 
 async def test_a_state_setter_after_unmount_renders_nothing() -> None:
-    """A late ``set_state`` raises nothing and never renders the unmounted component."""
+    """A late `set_state` raises nothing and never renders the unmounted component."""
     renders: list[int] = []
     setters: dict[str, Setter] = {}
 
@@ -111,7 +111,7 @@ async def test_a_state_setter_after_unmount_renders_nothing() -> None:
 
     @ft.component
     def Root() -> ft.Control:
-        """Return the child while ``shown`` is 1, else an empty column."""
+        """Return the child while `shown` is 1, else an empty column."""
         shown, set_shown = ft.use_state(1)
         setters["root"] = set_shown
         return ft.Column([Child()] if shown else [])

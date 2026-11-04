@@ -1,8 +1,8 @@
-"""Tests for the reminders primer (``ui/reminder_primer.py``; D-61, D-395, #448).
+"""Tests for the reminders primer (`ui/reminder_primer.py`; D-61, D-395, #448).
 
-The OS's answer so far (``Scheduler.access()``, ux.md §4.8) on each platform, and the
-primer in a real Flet session of starred rows (``tests/row_sessions.py``) over the
-fakes of ``tests/fakes.py``: the first star that adds shows it once, Allow asks the OS
+The OS's answer so far (`Scheduler.access()`, ux.md §4.8) on each platform, and the
+primer in a real Flet session of starred rows (`tests/row_sessions.py`) over the
+fakes of `tests/fakes.py`: the first star that adds shows it once, Allow asks the OS
 and turns session reminders on when it allows, Not now and a dismissal remember "not
 now", and nothing shows without E3, when the OS has answered, or after Undo.
 """
@@ -39,7 +39,7 @@ def scheduler(
     *,
     android: bool = False,
 ) -> Scheduler:
-    """Return a ``Scheduler`` over the fakes, typed as over the real services."""
+    """Return a `Scheduler` over the fakes, typed as over the real services."""
     return Scheduler(
         cast(Notifications, notifications),
         cast(PermissionHandler | None, permissions),
@@ -187,7 +187,7 @@ def sheets(shown: Rendered) -> list[ft.BottomSheet]:
 
 
 def in_sheet(sheet: ft.BottomSheet, identifier: str) -> ft.Control:
-    """The control under the sheet's semantics node ``identifier``."""
+    """The control under the sheet's semantics node `identifier`."""
     [node] = [
         c
         for c in descendants(sheet)
@@ -198,7 +198,7 @@ def in_sheet(sheet: ft.BottomSheet, identifier: str) -> ft.Control:
 
 
 def primer(shown: Rendered) -> ft.BottomSheet:
-    """The one primer shown, open, saying ``PRIMER``."""
+    """The one primer shown, open, saying `PRIMER`."""
     [sheet] = sheets(shown)
     assert sheet.open
     assert text_of(in_sheet(sheet, "reminder.primer")) == PRIMER
@@ -206,14 +206,14 @@ def primer(shown: Rendered) -> ft.BottomSheet:
 
 
 async def answer(shown: Rendered, button: str) -> None:
-    """Tap the primer's ``allow`` or ``not_now`` button."""
+    """Tap the primer's `allow` or `not_now` button."""
     control = in_sheet(primer(shown), f"reminder.primer.{button}")
     assert isinstance(control, ft.Button | ft.TextButton)
     await shown.click(control)
 
 
 async def stored(shown: Rendered) -> ReminderSettings:
-    """The reminder settings as written to storage (``pycon.reminders``)."""
+    """The reminder settings as written to storage (`pycon.reminders`)."""
     return ReminderSettings.from_stored(await shown.storage.get(REMINDERS))
 
 
@@ -328,7 +328,7 @@ async def test_an_unsaved_answer_says_so(shown: Rendered) -> None:
 async def test_the_companion_app_shows_no_primer(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """Without E3 (``Services.reminders`` None) a star shows nothing more (D-60)."""
+    """Without E3 (`Services.reminders` None) a star shows nothing more (D-60)."""
     async with rendering(tmp_path, monkeypatch) as rendered:
         await rendered.tap_star(row_sessions.TALK)
         assert sheets(rendered) == []
@@ -340,7 +340,7 @@ async def test_the_companion_app_shows_no_primer(
 
 @pytest.fixture
 def focused(monkeypatch: pytest.MonkeyPatch) -> list[ft.IconButton]:
-    """Record each ``IconButton.focus()`` call's button, at once after the answer."""
+    """Record each `IconButton.focus()` call's button, at once after the answer."""
     calls: list[ft.IconButton] = []
 
     async def focus(self: ft.IconButton) -> None:
@@ -353,7 +353,7 @@ def focused(monkeypatch: pytest.MonkeyPatch) -> list[ft.IconButton]:
 
 @pytest.fixture
 def now_with_e3(monkeypatch: pytest.MonkeyPatch, os: MemoryNotifications) -> None:
-    """Make ``render`` show Now in a build with E3 (iOS's status path)."""
+    """Make `render` show Now in a build with E3 (iOS's status path)."""
 
     def with_e3(year: YearData, directory: Path, memory: object = None) -> Services:
         svc = memory_services(year, directory)
@@ -404,7 +404,7 @@ async def test_a_sheet_taller_than_the_screen_scrolls_to_its_buttons(
 ) -> None:
     """At 200 % text in landscape the primer scrolls, so both buttons stay reachable.
 
-    The sheet may take the screen's height (``scrollable``), not 9/16 of it, and its
+    The sheet may take the screen's height (`scrollable`), not 9/16 of it, and its
     column scrolls inside a row of intrinsic height, so it is no taller than its
     content when that fits (ux.md §9).
     """

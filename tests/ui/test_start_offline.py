@@ -1,7 +1,7 @@
 """F1: with a feed that never answers, the Schedule keeps its rows and says it is offline.
 
 NEW-03, DATA-02, SCHED-14, D-32, D-39. Developer's feed URL is set to a feed on the
-laptop that takes each request and hangs up unanswered (the ``silent_feed`` fixture),
+laptop that takes each request and hangs up unanswered (the `silent_feed` fixture),
 as a person would set it, and Refresh now says the feed did not answer. The Schedule
 still lists the bundled snapshot's rows, with no error screen, and its status strip says
 "Offline"; the strip's Refresh asks the feed again, which the feed holds until the flow
@@ -40,10 +40,10 @@ from tests.ui.helpers import (
 from tests.ui.targets import bundled, day_rows, row_id
 
 OFFLINE = "^Offline · "
-"""The start of the strip's line after a refresh with no answer (``strip_line()``)."""
+"""The start of the strip's line after a refresh with no answer (`strip_line()`)."""
 
 UPDATING = "Updating the schedule…"
-"""The strip's line while a refresh the user asked for runs (``strip_line()``)."""
+"""The strip's line while a refresh the user asked for runs (`strip_line()`)."""
 
 
 async def test_start_offline_shows_schedule(
@@ -101,6 +101,6 @@ async def test_start_offline_shows_schedule(
 
 
 async def wait_for_offline_strip(t: RemoteTester) -> None:
-    """Wait until the status strip (``app.status``) says the app is offline."""
+    """Wait until the status strip (`app.status`) says the app is offline."""
     await wait_for_id(t, "app.status")
     await wait_for(t, lambda: t.find_by_text_containing(OFFLINE), "the offline strip")

@@ -1,10 +1,10 @@
-"""``LocationCard``: a floor plan's thumbnail with a pin, which opens the floor viewer.
+"""`LocationCard`: a floor plan's thumbnail with a pin, which opens the floor viewer.
 
 A place on the venue's plans, as one card (DATA-33, MAP-06; ux.md §3.9): the plan's
 thumbnail, 112 dp wide, with the pin on its spot, beside the pin's label, what happens
-there and the floor; a tap pushes the floor viewer at it, ``…/plan/<plan>?pin=<key>``
+there and the floor; a tap pushes the floor viewer at it, `…/plan/<plan>?pin=<key>`
 (ux.md §6.1). Room detail and session detail show a room's (ROOM-04, D-346, D-349;
-``room_card()``). Without a pin it is the plan's
+`room_card()`). Without a pin it is the plan's
 own card, which the job fair's uses (D-254): the thumbnail and the plan's title.
 
 **Better than the original:** Ionic's pin pulsed forever and the card said nothing to
@@ -12,11 +12,11 @@ a screen reader. Here the pin pulses twice when the card first shows, then stays
 and is still from the start under reduced motion (D-34, D-173); the card is one button
 node that says where it leads ("Show Room 104A on the Concourse level floor plan"), the
 thumbnail excluded. Help & safety and Venue & hours show a venue spot's card by its pin
-key (``spot_card()``); the job fair's pane shows its plan's (``job_fair_card()``). At
-large text (``Prefs.time_above``, D-216) the words go under the thumbnail rather than
+key (`spot_card()`); the job fair's pane shows its plan's (`job_fair_card()`). At
+large text (`Prefs.time_above`, D-216) the words go under the thumbnail rather than
 squeeze beside it, and the card keeps the list's width (#795); nothing has a fixed
 height but the image.
-Apart from ``ui/rows.py`` so that it stays under about 400 lines (D-66).
+Apart from `ui/rows.py` so that it stays under about 400 lines (D-66).
 """
 
 import asyncio
@@ -37,7 +37,7 @@ PIN_BOX = 32
 """The pin's box, centred on its point: room for the ring at its widest."""
 
 DOT_DP = 12
-"""The pin's dot, ``primary`` with an ``on_primary`` rim, as the floor viewer's."""
+"""The pin's dot, `primary` with an `on_primary` rim, as the floor viewer's."""
 
 RIM_DP = 2
 
@@ -78,7 +78,7 @@ def card_href(view_path: str, plan: Plan, pin: Pin | None) -> str:
 
 
 def thumb_size(plan: Plan) -> tuple[float, float]:
-    """Return the thumbnail's size in dp: ``THUMB_DP`` wide, the plan's aspect ratio.
+    """Return the thumbnail's size in dp: `THUMB_DP` wide, the plan's aspect ratio.
 
     Args:
         plan: The plan; its thumbnail is the plan fitted to 800 px, the same shape.
@@ -95,9 +95,9 @@ def pin_dot(
 
     Args:
         pin: The place marked.
-        size: The thumbnail's size (``thumb_size()``).
+        size: The thumbnail's size (`thumb_size()`).
         ring: Whether the ring is out, mid-pulse.
-        ring_ms: How long the ring takes out or back (``prefs.motion_ms()``).
+        ring_ms: How long the ring takes out or back (`prefs.motion_ms()`).
     """
     animation = ft.Animation(ring_ms, ft.AnimationCurve.EASE_OUT)
     halo = ft.Container(
@@ -142,15 +142,15 @@ def LocationCard(
 
     Args:
         plan: The plan to show.
-        pin: The place on it (``MapData.room_pin()``, ``MapData.pin()``), or None for
+        pin: The place on it (`MapData.room_pin()`, `MapData.pin()`), or None for
             the plan's own card.
-        identifier: For UI flows, ``<screen>.location``.
+        identifier: For UI flows, `<screen>.location`.
         seen: The pins already pulsed on this View, for a screen whose list builds
             the card again as it scrolls or changes tab (room detail's day lists): a
             card whose pin is in it stays still, and a card that pulses adds its pin.
             None: the card pulses each time it mounts.
         active: Whether the card shows: a card on a hidden tab waits, without
-            claiming its pin in ``seen``, and pulses when it first shows (#602).
+            claiming its pin in `seen`, and pulses when it first shows (#602).
     """
     key = f"{plan.id}:{pin.key if pin else ''}"
     # As SessionRow's: ft.component's typing leaves out the key= its wrapper takes.
@@ -172,14 +172,14 @@ def room_card(
     seen: set[str] | None = None,
     active: bool = True,
 ) -> ft.Control | None:
-    """Return a room's ``LocationCard``, or None for a room without a pin.
+    """Return a room's `LocationCard`, or None for a room without a pin.
 
     Args:
-        data: The year's ``map.toml``.
+        data: The year's `map.toml`.
         room_name: The room's name as the feed writes it, which finds its pin.
-        identifier: For UI flows, ``<screen>.location``.
-        seen: As ``LocationCard``'s.
-        active: As ``LocationCard``'s.
+        identifier: For UI flows, `<screen>.location`.
+        seen: As `LocationCard`'s.
+        active: As `LocationCard`'s.
     """
     pin = data.room_pin(room_name)
     plan = data.plan(pin.plan) if pin else None
@@ -189,15 +189,15 @@ def room_card(
 
 
 def spot_card(data: MapData, key: str, *, identifier: str) -> ft.Control | None:
-    """Return the ``LocationCard`` of the pin ``key``, or None without one.
+    """Return the `LocationCard` of the pin `key`, or None without one.
 
-    The loader refuses a key ``map.toml`` lacks, so None here is a place with no pin
+    The loader refuses a key `map.toml` lacks, so None here is a place with no pin
     (an empty key) or a year with no plans.
 
     Args:
-        data: The year's ``map.toml``.
-        key: A venue spot's pin key (``info-desk``), as ``content.toml`` names it.
-        identifier: The card's, ``<screen>.<place>.location``.
+        data: The year's `map.toml`.
+        key: A venue spot's pin key (`info-desk`), as `content.toml` names it.
+        identifier: The card's, `<screen>.<place>.location`.
     """
     pin = data.pin(key) if key else None
     plan = data.plan(pin.plan) if pin else None
@@ -207,16 +207,16 @@ def spot_card(data: MapData, key: str, *, identifier: str) -> ft.Control | None:
 
 
 def job_fair_card(data: MapData, *, identifier: str) -> ft.Control | None:
-    """Return the job fair plan's card, ``LocationCard``'s plan-only form, or None.
+    """Return the job fair plan's card, `LocationCard`'s plan-only form, or None.
 
     One card in three places (D-254): it heads the Map's Job fair pane (MAP-04) and Job
     listings (SPON-10), and follows the room's on Job Fair sessions (SESS-10). A tap
-    pushes ``…/plan/job-fair``, the floor viewer without pins. None for a year whose
-    ``map.toml`` has no ``job-fair`` plan.
+    pushes `…/plan/job-fair`, the floor viewer without pins. None for a year whose
+    `map.toml` has no `job-fair` plan.
 
     Args:
-        data: The year's ``map.toml``.
-        identifier: The card's, ``<screen>.job_fair.location``.
+        data: The year's `map.toml`.
+        identifier: The card's, `<screen>.job_fair.location`.
     """
     plan = data.plan(JOB_FAIR_PLAN)
     if plan is None:
@@ -229,7 +229,7 @@ def job_fair_card(data: MapData, *, identifier: str) -> ft.Control | None:
 def _LocationCard(
     plan: Plan, pin: Pin | None, *, identifier: str, seen: set[str] | None, active: bool
 ) -> ft.Control:
-    """The body of ``LocationCard``; it runs only when its plan or pin changes."""
+    """The body of `LocationCard`; it runs only when its plan or pin changes."""
     page = ft.context.page
     view_path = ft.use_view_path()
     svc = use_services()

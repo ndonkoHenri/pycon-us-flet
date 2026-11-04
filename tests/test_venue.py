@@ -1,7 +1,7 @@
-"""Tests for the Venue & hours page (``screens/venue.py``; #413, MAP-09, MAP-11, D-313).
+"""Tests for the Venue & hours page (`screens/venue.py`; #413, MAP-09, MAP-11, D-313).
 
-The page runs in a real Flet session (``tests/sessions.py``) over the bundled year data,
-with the clock frozen at a chosen instant (``clock.set_test_now``). How it looks, wraps
+The page runs in a real Flet session (`tests/sessions.py`) over the bundled year data,
+with the clock frozen at a chosen instant (`clock.set_test_now`). How it looks, wraps
 at 200 % and reads to screen readers is checked on devices (the PR).
 """
 
@@ -48,7 +48,7 @@ async def show(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> AsyncIterator
                 year: int = 2026,
                 feed: int | None = None,
             ) -> Shown:
-                """Render the page at ``now`` with ``year``'s data and ``feed``'s feed."""
+                """Render the page at `now` with `year`'s data and `feed`'s feed."""
                 clock.set_test_now(now)
                 conference = (
                     Conference()
@@ -73,7 +73,7 @@ async def show(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> AsyncIterator
 
 
 def status_text(page: Shown, key: str = REGISTRATION) -> ft.Text:
-    """The ``Text`` of a service's status label."""
+    """The `Text` of a service's status label."""
     return cast(ft.Text, page.node(f"{key}.status").content)
 
 
@@ -100,7 +100,7 @@ async def test_registration_s_label_follows_the_clock(
 
 
 async def test_open_now_is_live_and_read_as_words(show: Show) -> None:
-    """Open now is in ``live`` and says "Open now, until 6:00 PM" to a screen reader."""
+    """Open now is in `live` and says "Open now, until 6:00 PM" to a screen reader."""
     page = await show()
     text = status_text(page)
     assert text.color == theme.build_tokens(dark=False, high_contrast=False).live
@@ -108,7 +108,7 @@ async def test_open_now_is_live_and_read_as_words(show: Show) -> None:
 
 
 async def test_a_later_opening_is_in_the_supporting_colour(show: Show) -> None:
-    """Only Open now is in ``live``: a later opening is ``on_surface_variant``."""
+    """Only Open now is in `live`: a later opening is `on_surface_variant`."""
     page = await show(now=datetime(2026, 5, 14, 7, 0, tzinfo=PACIFIC))
     assert status_text(page).color == ft.Colors.ON_SURFACE_VARIANT
 
@@ -146,7 +146,7 @@ async def test_today_s_hours_are_bold_and_say_today(show: Show) -> None:
     page = await show()
 
     def lines(label: str) -> list[ft.Semantics]:
-        """The day lines a screen reader reads as ``label``."""
+        """The day lines a screen reader reads as `label`."""
         return [n for n in page.find(ft.Semantics) if n.label == label]
 
     (today,) = lines("Thursday, May 14, 7:30 AM to 6:00 PM, today")
@@ -179,7 +179,7 @@ async def test_today_s_hours_are_bold_and_say_today(show: Show) -> None:
 async def test_directions_opens_the_platform_s_maps_app(
     show: Show, platform: ft.PagePlatform, url: str
 ) -> None:
-    """Apple Maps on iOS, the ``geo:`` handler on Android, both outside the app."""
+    """Apple Maps on iOS, the `geo:` handler on Android, both outside the app."""
     page = await show()
     page.session.page.platform = platform
     node = page.node("venue.directions")
@@ -194,7 +194,7 @@ async def test_the_address_buttons_keep_their_padding_at_every_text_size(
     """Directions and Copy address pin M3's padding for a button with an icon (D-344).
 
     The tonal Directions also stays flat: with a style, Flet lifts it to its
-    ``elevation``, 1 unless it is set to 0.
+    `elevation`, 1 unless it is set to 0.
     """
     page = await show()
     for identifier in ("venue.directions", "venue.copy_address"):
@@ -209,7 +209,7 @@ async def test_the_address_buttons_keep_their_padding_at_every_text_size(
 async def test_directions_whose_launch_raises_say_so(show: Show) -> None:
     """A launch that raises says "Couldn't open the link" (D-182).
 
-    A launcher that returns ``false`` says nothing: the pin drops the result (U79).
+    A launcher that returns `false` says nothing: the pin drops the result (U79).
     """
     page = await show()
     page.launcher.error = RuntimeError("no maps app")
@@ -250,7 +250,7 @@ async def test_the_zone_note_shows_while_the_device_s_zone_differs(
 
 
 async def test_a_year_without_hours_shows_the_feed_s_block(show: Show) -> None:
-    """2025 has no ``[[venue_hours]]``: over a feed with the block, the page shows it."""
+    """2025 has no `[[venue_hours]]`: over a feed with the block, the page shows it."""
     page = await show(year=2025, feed=2026)
     assert page.nodes("venue.feed")
     assert not page.nodes(REGISTRATION) and not page.nodes("venue.empty")
@@ -259,7 +259,7 @@ async def test_a_year_without_hours_shows_the_feed_s_block(show: Show) -> None:
 async def test_without_hours_or_a_feed_block_the_page_sends_to_the_desk(
     show: Show,
 ) -> None:
-    """2025's own feed has no ``venues-hours`` block: the empty state names the way out."""
+    """2025's own feed has no `venues-hours` block: the empty state names the way out."""
     page = await show(year=2025, feed=2025)
     assert page.nodes("venue.empty")
     assert "information desk" in screen.NO_VENUE_BODY
@@ -295,7 +295,7 @@ async def test_each_service_with_a_pin_ends_with_its_location_card(
 async def test_a_service_s_card_pushes_the_floor_viewer_at_its_pin(
     show: Show,
 ) -> None:
-    """The tap pushes ``plan/<plan>?pin=<key>`` on Venue & hours' View."""
+    """The tap pushes `plan/<plan>?pin=<key>` on Venue & hours' View."""
     page = await show()
     tap = page.node("venue.service.swag_pickup.location").parent
     assert isinstance(tap, ft.Container) and tap.on_click is not None
@@ -305,7 +305,7 @@ async def test_a_service_s_card_pushes_the_floor_viewer_at_its_pin(
 
 @pytest.mark.parametrize("dark", [False, True], ids=["light", "dark"])
 def test_live_reads_at_aa_on_the_card(dark: bool) -> None:
-    """The outlined card's fill is the surface, where ``live`` reads at 4.5:1 (D-33)."""
+    """The outlined card's fill is the surface, where `live` reads at 4.5:1 (D-33)."""
     live = theme.build_tokens(dark=dark, high_contrast=False).live
     surface = hex_role(scheme(dark), "surface")
     assert contrast_ratio(surface, live) >= 4.5

@@ -1,10 +1,10 @@
 """The Developer screen's Data section fixtures and lookups, for its two test modules (#312).
 
-``test_developer_data.py`` (the rows, Refresh now, Clear cached feed and the words)
-and ``test_developer_data_reset.py`` (Share log, Show welcome again and Reset app) run ``DataActions`` outside a renderer, as ``Developer`` runs in
-``test_developer.py``: its hooks are replaced and a fake page is bound. The feed fetch is
+`test_developer_data.py` (the rows, Refresh now, Clear cached feed and the words)
+and `test_developer_data_reset.py` (Share log, Show welcome again and Reset app) run `DataActions` outside a renderer, as `Developer` runs in
+`test_developer.py`: its hooks are replaced and a fake page is bound. The feed fetch is
 replaced too, so no test reaches the network. A module takes the fixtures by assigning
-them to its own names, as ``docs/testing-and-quality.md`` §3.1 says.
+them to its own names, as `docs/testing-and-quality.md` §3.1 says.
 """
 
 import inspect
@@ -134,7 +134,7 @@ def account() -> Account:
 
 @pytest.fixture
 def staff() -> Staff:
-    """The session's ``Staff`` store, with no counts."""
+    """The session's `Staff` store, with no counts."""
     return Staff()
 
 
@@ -150,7 +150,7 @@ def packaged(monkeypatch: pytest.MonkeyPatch) -> Callable[[bool], None]:
 
 
 class Rendered:
-    """``DataActions`` rendered by hand: its state, the dialog it portals, its controls."""
+    """`DataActions` rendered by hand: its state, the dialog it portals, its controls."""
 
     def __init__(self) -> None:
         """Start with no state values and no dialog shown."""
@@ -159,7 +159,7 @@ class Rendered:
         self.dialogs: list[ft.DialogControl | None] = []
 
     def use_state(self, initial: Any) -> tuple[Any, Callable[[Any], None]]:
-        """Answer ``ft.use_state`` by call order, as Flet's renderer does."""
+        """Answer `ft.use_state` by call order, as Flet's renderer does."""
         if self.index == len(self.values):
             self.values.append(initial() if callable(initial) else initial)
         index = self.index
@@ -180,13 +180,13 @@ class Rendered:
 
 @pytest.fixture
 def rendered() -> Rendered:
-    """A fresh hand renderer for ``DataActions``."""
+    """A fresh hand renderer for `DataActions`."""
     return Rendered()
 
 
 @pytest.fixture
 def minutes() -> list[int]:
-    """The ``use_minute()`` calls: one per render."""
+    """The `use_minute()` calls: one per render."""
     return []
 
 
@@ -204,7 +204,7 @@ def render(
     page: FakePage,
     minutes: list[int],
 ) -> Callable[[], ft.Column]:
-    """Render ``DataActions`` and return its column; a memo is computed every render."""
+    """Render `DataActions` and return its column; a memo is computed every render."""
     monkeypatch.setattr(ft, "use_state", rendered.use_state)
     monkeypatch.setattr(ft, "use_memo", lambda compute, _deps: compute())
     monkeypatch.setattr(developer_data, "use_staff", lambda: staff)
@@ -228,7 +228,7 @@ def render(
 
 
 def identified(root: ft.Control) -> dict[str, ft.Control]:
-    """The control under each identifier below ``root``."""
+    """The control under each identifier below `root`."""
     found: dict[str, ft.Control] = {}
 
     def visit(control: Any) -> None:
@@ -245,14 +245,14 @@ def identified(root: ft.Control) -> dict[str, ft.Control]:
 
 
 def row(column: ft.Column, identifier: str) -> ft.ListTile:
-    """The list tile under ``identifier`` in the column."""
+    """The list tile under `identifier` in the column."""
     tile = identified(column)[identifier]
     assert isinstance(tile, ft.ListTile)
     return tile
 
 
 def subtitle(column: ft.Column, identifier: str) -> str:
-    """The subtitle's words of the row under ``identifier``."""
+    """The subtitle's words of the row under `identifier`."""
     return str(cast(ft.Text, row(column, identifier).subtitle).value)
 
 

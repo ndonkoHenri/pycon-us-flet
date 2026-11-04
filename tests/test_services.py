@@ -1,7 +1,7 @@
-"""Tests for ``Services``: ``run_every``'s ticks (D-40, #82) and ``permissions`` (#446).
+"""Tests for `Services`: `run_every`'s ticks (D-40, #82) and `permissions` (#446).
 
-The loop runs on the test's event loop with intervals of milliseconds; ``foreground``
-and ``closed`` are driven as the lifecycle handler and ``page.on_close`` drive them.
+The loop runs on the test's event loop with intervals of milliseconds; `foreground`
+and `closed` are driven as the lifecycle handler and `page.on_close` drive them.
 """
 
 import asyncio
@@ -30,7 +30,7 @@ INTERVAL = 0.01
 
 
 def memory_services(tmp_path: Path) -> Services:
-    """Return a session's services with the memory fakes, storing under ``tmp_path``."""
+    """Return a session's services with the memory fakes, storing under `tmp_path`."""
     storage = Storage(prefs=MemoryPrefs(), directory=tmp_path, year=2026)
     return Services(
         year=load_year(2026),
@@ -45,12 +45,12 @@ def memory_services(tmp_path: Path) -> Services:
 
 @pytest.fixture
 def svc(tmp_path: Path) -> Services:
-    """Return a session's services with the memory fakes, storing under ``tmp_path``."""
+    """Return a session's services with the memory fakes, storing under `tmp_path`."""
     return memory_services(tmp_path)
 
 
 class Ticks:
-    """Counts the calls of ``run_every``'s action, and says when a count is reached."""
+    """Counts the calls of `run_every`'s action, and says when a count is reached."""
 
     def __init__(self) -> None:
         """Start at no call, with no count awaited."""
@@ -64,7 +64,7 @@ class Ticks:
             event.set()
 
     async def reach(self, count: int) -> None:
-        """Wait until the action has been called ``count`` times."""
+        """Wait until the action has been called `count` times."""
         if self.count >= count:
             return
         event = self._reached.setdefault(count, asyncio.Event())
@@ -73,7 +73,7 @@ class Ticks:
 
 
 async def stopped(task: asyncio.Task[None]) -> None:
-    """Cancel ``task`` and wait until it has ended cancelled."""
+    """Cancel `task` and wait until it has ended cancelled."""
     task.cancel()
     with pytest.raises(asyncio.CancelledError):
         await task
@@ -87,7 +87,7 @@ def test_a_session_starts_in_the_foreground(svc: Services) -> None:
 
 
 async def test_a_closed_session_ends_the_wake_lock_s_loop(svc: Services) -> None:
-    """``keep_awake()`` lets go and returns once the session closes (D-147, #724)."""
+    """`keep_awake()` lets go and returns once the session closes (D-147, #724)."""
     lock = MemoryWakelock()
     svc = replace(svc, wakelock=lock)
     task = asyncio.create_task(keep_awake(svc))
@@ -168,7 +168,7 @@ def test_permissions_is_none_when_the_build_lacks_the_extension(svc: Services) -
 def test_permissions_is_the_extension_when_the_build_has_it(
     monkeypatch: pytest.MonkeyPatch, tmp_path: Path
 ) -> None:
-    """With ``capabilities.PERMISSIONS``, the session gets a ``PermissionHandler`` (D-61)."""
+    """With `capabilities.PERMISSIONS`, the session gets a `PermissionHandler` (D-61)."""
     from flet_permission_handler import PermissionHandler
 
     monkeypatch.setattr(capabilities, "PERMISSIONS", True)

@@ -1,7 +1,7 @@
 """Tests for the SnackBar a screen reader keeps until it is off (D-356, #343).
 
 The star's "Removed from My schedule · Undo" in a real Flet session
-(``tests/row_sessions.py``), with the watch's 4 s and its reads shortened; and the
+(`tests/row_sessions.py`), with the watch's 4 s and its reads shortened; and the
 screen reader's "Added to My schedule" (D-355), which is not kept, so not watched.
 """
 
@@ -39,7 +39,7 @@ async def rendered(
 
 
 def semantics(shown: Rendered) -> MemorySemantics:
-    """The session's fake ``SemanticsService``, whose flags the test sets."""
+    """The session's fake `SemanticsService`, whose flags the test sets."""
     return cast(MemorySemantics, shown.services.semantics)
 
 
@@ -59,7 +59,7 @@ async def wait_ticks(count: int = 5) -> None:
 
 
 async def until(holds: Callable[[], object], *, timeout: float = 30.0) -> None:
-    """Poll until ``holds()`` is true, or fail after ``timeout`` seconds (#237).
+    """Poll until `holds()` is true, or fail after `timeout` seconds (#237).
 
     A poll rather than a fixed wait, so a loaded host only makes it slower; the
     deadline is generous because a passing test never reaches it.

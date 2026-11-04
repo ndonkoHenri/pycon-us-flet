@@ -1,7 +1,7 @@
 """I/O at explicit boundaries: storage, the feed fetch, logging and errors.
 
-Each service is a small module with one job (docs/architecture.md). ``Services`` bundles
-what a session uses, built once by ``App`` and reached through ``use_services()``. Later
+Each service is a small module with one job (docs/architecture.md). `Services` bundles
+what a session uses, built once by `App` and reached through `use_services()`. Later
 phases add the scanner.
 """
 
@@ -32,7 +32,7 @@ if TYPE_CHECKING:  # imported only when the build has it (D-63)
 
 
 def _set_event() -> asyncio.Event:
-    """Return an ``asyncio.Event`` that is already set: a session starts in the foreground."""
+    """Return an `asyncio.Event` that is already set: a session starts in the foreground."""
     event = asyncio.Event()
     event.set()
     return event
@@ -41,9 +41,9 @@ def _set_event() -> asyncio.Event:
 def kick_on_reconnect(
     wake: asyncio.Event,
 ) -> Callable[[ft.ConnectivityChangeEvent], None]:
-    """Return the ``Connectivity`` handler that wakes the sync loop on a reconnection.
+    """Return the `Connectivity` handler that wakes the sync loop on a reconnection.
 
-    Any connection but ``NONE`` sets ``wake``: the worker trusts its transport errors,
+    Any connection but `NONE` sets `wake`: the worker trusts its transport errors,
     so a connection that reaches nothing only costs one pass (D-56, D-407).
     """
 
@@ -55,7 +55,7 @@ def kick_on_reconnect(
 
 
 def _permissions() -> PermissionHandler | None:
-    """Return a ``PermissionHandler`` when the build has the extension, else ``None``.
+    """Return a `PermissionHandler` when the build has the extension, else `None`.
 
     The extension is imported only then, so the companion app is never sent a control
     its client may lack (D-63, F14).
@@ -71,59 +71,59 @@ def _permissions() -> PermissionHandler | None:
 class Services:
     """What one session uses to reach the year's data, storage and the platform.
 
-    Built once per session by ``Services.create()`` in ``App``'s first render (architecture
-    §4.2); screens get it from ``use_services()`` and never build a Flet service
+    Built once per session by `Services.create()` in `App`'s first render (architecture
+    §4.2); screens get it from `use_services()` and never build a Flet service
     themselves. P1 and later add the Flet services their screens need.
 
     Attributes:
-        year: The active year's bundled data (``config.load_year()``).
+        year: The active year's bundled data (`config.load_year()`).
         storage: SharedPreferences and the durable data directory, for that year.
-        memory: The process's one ``ViewMemory`` (D-143).
-        semantics: The platform's accessibility services; ``App`` reads the OS flags
+        memory: The process's one `ViewMemory` (D-143).
+        semantics: The platform's accessibility services; `App` reads the OS flags
             through it (F13).
         haptics: The platform's haptic feedback: the star's selection click (D-30)
             and the scan screen's outcomes (ux.md §7.2).
-        launcher: Opens web pages, apps, ``tel:`` and ``mailto:`` links, by the link
-            rule in ``ui.links`` (INFO-14).
-        clipboard: Copy for phone numbers and email addresses (``ui.links``).
+        launcher: Opens web pages, apps, `tel:` and `mailto:` links, by the link
+            rule in `ui.links` (INFO-14).
+        clipboard: Copy for phone numbers and email addresses (`ui.links`).
         share: The platform's share sheet: the Developer screen's Share log (D-72).
-        paths: The platform's storage paths: where the packaged app's ``console.log``
+        paths: The platform's storage paths: where the packaged app's `console.log`
             is (F14).
         wakelock: Keeps the screen on while the scan screen is open (D-65, #724).
         file_picker: The system's save dialog: Add to calendar's file on Android
-            (``services.calendar``, D-272).
-        permissions: ``flet-permission-handler``'s service: permission status, the
-            app's settings page and the camera (D-61). ``None`` unless the build has it
-            (``capabilities.PERMISSIONS``), so always ``None`` in the companion app.
-        reminders: E3's ``Scheduler``, which schedules the reminder plan (D-389).
-            ``None`` unless the build has E3 (``capabilities.REMINDERS``), so always
-            ``None`` in the companion app, which keeps the interim (D-60).
-        closed: Set by ``close()`` when a new session has replaced this one (D-147).
+            (`services.calendar`, D-272).
+        permissions: `flet-permission-handler`'s service: permission status, the
+            app's settings page and the camera (D-61). `None` unless the build has it
+            (`capabilities.PERMISSIONS`), so always `None` in the companion app.
+        reminders: E3's `Scheduler`, which schedules the reminder plan (D-389).
+            `None` unless the build has E3 (`capabilities.REMINDERS`), so always
+            `None` in the companion app, which keeps the interim (D-60).
+        closed: Set by `close()` when a new session has replaced this one (D-147).
         foreground: Set while the app is in the foreground: the lifecycle handler
-            clears it on ``pause`` and sets it on ``resume``, and ``run_every()``
+            clears it on `pause` and sets it on `resume`, and `run_every()`
             loops wait for it, so nothing ticks in the background (D-40).
-        background: Its opposite, set from ``pause`` to ``resume``, for work that
+        background: Its opposite, set from `pause` to `resume`, for work that
             stops on the way out: the scan screen lets go of the wake lock (#724).
-        presence: Whether the app's window is in front, from ``inactive`` to
-            ``resume``: ``ui.focus_back`` waits on it for the return from another
+        presence: Whether the app's window is in front, from `inactive` to
+            `resume`: `ui.focus_back` waits on it for the return from another
             app's window (D-372).
         shown_versions: The feed versions this session has logged D-112's content line
-            for; ``AppScaffold``'s ``Shown`` logs each version once, from the first
+            for; `AppScaffold`'s `Shown` logs each version once, from the first
             screen that shows it (D-165).
-        private_api: Holds ``api``, rebuilt when Developer's mock API URL changes
-            (``services.private_api``, D-51).
+        private_api: Holds `api`, rebuilt when Developer's mock API URL changes
+            (`services.private_api`, D-51).
         credentials: Where the mock account's key and secret are kept: the keystore
-            when the build has ``flet-secure-storage``, else memory for the session
-            (``services.credentials``, D-49, D-63).
-        outbox: The staff outbox's database (``services.outbox_db``, D-49), which
-            opens ``outbox-<year>.db`` on first use: only the staff tools use it, and D-51
-            hides them without a mock API URL. ``None`` in tests that don't need it.
+            when the build has `flet-secure-storage`, else memory for the session
+            (`services.credentials`, D-49, D-63).
+        outbox: The staff outbox's database (`services.outbox_db`, D-49), which
+            opens `outbox-<year>.db` on first use: only the staff tools use it, and D-51
+            hides them without a mock API URL. `None` in tests that don't need it.
         favorites_sync: Keeps the favourites in step with the mock account while
-            signed in (``services.favorites_sync``, D-406); ``App`` runs it.
-        sync_wake: Set to ask the staff sync loop for a pass now (``kick_sync()``):
+            signed in (`services.favorites_sync`, D-406); `App` runs it.
+        sync_wake: Set to ask the staff sync loop for a pass now (`kick_sync()`):
             an enqueue, "Sync now", a resume and a reconnection (D-56).
         connectivity: The platform's connectivity: a change to anything but
-            ``NONE`` sets ``sync_wake`` (``kick_on_reconnect()``).
+            `NONE` sets `sync_wake` (`kick_on_reconnect()`).
     """
 
     year: YearData
@@ -170,9 +170,9 @@ class Services:
         A Flet service registers with the page that is current when it is constructed.
 
         Args:
-            memory: The process's one ``ViewMemory``, from ``main.py``.
-            credentials: What the private-API client signs with: the ``Account``
-                store's ``credentials`` (#684).
+            memory: The process's one `ViewMemory`, from `main.py`.
+            credentials: What the private-API client signs with: the `Account`
+                store's `credentials` (#684).
 
         Returns:
             The services, with SharedPreferences and the data directory read afresh
@@ -208,9 +208,9 @@ class Services:
         """Mark the session as replaced, so its long-running work stops (D-147).
 
         Flet closes a replaced session without unmounting it (F30): its effects keep
-        running, and a store write from one fails. ``page.on_close`` calls this, and only
+        running, and a store write from one fails. `page.on_close` calls this, and only
         it: a screen's own cleanup still stops just its own effect. Every long-running
-        loop, and a feed refresh before it writes, checks ``closed``. Until U24 (D-149).
+        loop, and a feed refresh before it writes, checks `closed`. Until U24 (D-149).
         """
         self.closed.set()
         # Wakes the run_every() loops that wait for a resume, so they see `closed` and
@@ -230,9 +230,9 @@ class Services:
         self.sync_wake.set()
 
     async def run_every(self, seconds: float, action: Callable[[], object]) -> None:
-        """Call ``action`` now, then every ``seconds`` while the app is in the foreground.
+        """Call `action` now, then every `seconds` while the app is in the foreground.
 
-        In the background it waits without doing anything, and calls ``action`` as soon
+        In the background it waits without doing anything, and calls `action` as soon
         as the app resumes when a call fell due meanwhile, so a screen catches up at
         once (D-40). It returns when the session closes (D-147); an effect's cleanup
         stops it sooner by cancelling its task.
@@ -252,14 +252,14 @@ class Services:
 
 
 ServicesCtx: ft.ContextProvider[Services | None] = ft.create_context(None)
-"""Provides the session's ``Services``; ``App`` writes the provider out (D-69)."""
+"""Provides the session's `Services`; `App` writes the provider out (D-69)."""
 
 
 def use_services() -> Services:
-    """Return the session's ``Services``; a plain value, so it subscribes to nothing.
+    """Return the session's `Services`; a plain value, so it subscribes to nothing.
 
     Raises:
-        RuntimeError: No ``ServicesCtx`` provider is above the calling component.
+        RuntimeError: No `ServicesCtx` provider is above the calling component.
     """
     services = ft.use_context(ServicesCtx)
     if services is None:

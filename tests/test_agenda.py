@@ -1,8 +1,8 @@
 """Tests for Now & Next: what is on, what is next and your next session.
 
 #93: SCHED-25; D-14, D-43, D-153, D-179. My schedule is
-``test_agenda_my_schedule.py``'s, the fold and the elapsed share
-``test_agenda_fold.py``'s.
+`test_agenda_my_schedule.py`'s, the fold and the elapsed share
+`test_agenda_fold.py`'s.
 """
 
 from datetime import UTC, date, datetime, timedelta, timezone, tzinfo
@@ -231,7 +231,7 @@ def test_the_same_answer_at_two_instants_compares_equal() -> None:
 
 
 def test_now_and_the_next_session_hold_the_model_s_own_sessions() -> None:
-    """Now and the next session hold the model's own ``Session`` objects.
+    """Now and the next session hold the model's own `Session` objects.
 
     D-185: a row gets its session itself, with no lookup by id.
     """

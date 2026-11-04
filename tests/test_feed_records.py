@@ -2,7 +2,7 @@
 
 Lone surrogates and CESU-8 emoji in text, bad slots and records in every section, and
 feeds that cannot be used at all, as deep copies of the recorded feeds with one record
-changed, under two machine time zones (``machine_tz``). Whole feeds are ``test_feed.py``'s.
+changed, under two machine time zones (`machine_tz`). Whole feeds are `test_feed.py`'s.
 """
 
 import logging
@@ -80,7 +80,7 @@ def test_an_emoji_sent_as_cesu_8_bytes_is_kept() -> None:
 
 
 def test_a_lone_surrogate_in_a_content_block_becomes_a_replacement_character() -> None:
-    """#152: the ``conference.content`` blocks bypass the record decoders."""
+    """#152: the `conference.content` blocks bypass the record decoders."""
 
     def add_surrogates(doc: dict[str, Any]) -> None:
         content = doc["conference"]["content"]
@@ -253,13 +253,13 @@ def test_bad_records_in_other_sections_are_skipped() -> None:
     ],
 )
 def test_unusable_feed_raises_feed_error(raw: bytes, problem: str) -> None:
-    """A body that is no JSON object with a readable slot raises ``FeedError``."""
+    """A body that is no JSON object with a readable slot raises `FeedError`."""
     with pytest.raises(FeedError, match=problem):
         process(raw, settings(2026))
 
 
 def test_optional_section_of_the_wrong_type_raises_feed_error() -> None:
-    """A ``sprints`` section that is not a list raises ``FeedError``."""
+    """A `sprints` section that is not a list raises `FeedError`."""
     raw = changed(2026, lambda doc: doc.update(sprints={"oops": 1}))
     with pytest.raises(FeedError, match="'sprints' is not a list"):
         process(raw, settings(2026))

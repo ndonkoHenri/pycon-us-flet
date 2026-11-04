@@ -1,6 +1,6 @@
 """Boot an emulator or a simulator of your own, set its text and contrast, shut it down.
 
-Usage, from the repo's root::
+Usage, from the repo's root:
 
     uv run python -m tools.device up android --port 5594 [--avd NAME] [--no-animations]
     uv run python -m tools.device up ios --name Claude-123-iPhone-17 [--model "iPhone 17"]
@@ -9,8 +9,8 @@ Usage, from the repo's root::
     uv run python -m tools.device down <device> [--delete]
     uv run python -m tools.device list
 
-``<device>`` is an emulator's serial, a simulator's udid or its name. ``up`` prints only the
-serial or the udid, so a script can keep it (``docs/development.md`` §5.5, D-102). A device
+`<device>` is an emulator's serial, a simulator's udid or its name. `up` prints only the
+serial or the udid, so a script can keep it (`docs/development.md` §5.5, D-102). A device
 the owner keeps is refused everywhere: flows and installs replace the app's data.
 """
 
@@ -34,7 +34,7 @@ BOOT_SECONDS = 240
 """How long a boot may take. A cold boot on a busy host has taken minutes (D-102)."""
 
 EMULATORS_BEFORE_WARNING = 2
-"""How many emulators may already run before ``up`` warns: memory is this Mac's limit, and
+"""How many emulators may already run before `up` warns: memory is this Mac's limit, and
 with three up, Android's system server has died under its watchdog (§5.5)."""
 
 IOS_TEXT = {
@@ -42,22 +42,22 @@ IOS_TEXT = {
     "200": "accessibility-large",
     "max": "accessibility-extra-extra-extra-large",
 }
-"""``simctl ui content_size`` for each text size; ``large`` is iOS's default."""
+"""`simctl ui content_size` for each text size; `large` is iOS's default."""
 
 ANDROID_TEXT = {"100": "1.0", "200": "2.0", "max": "2.0"}
-"""``font_scale`` for each text size: Android's largest is 200 %."""
+"""`font_scale` for each text size: Android's largest is 200 %."""
 
 BOLD_WEIGHT = "300"
-"""``font_weight_adjustment`` that Android's Bold text switch sets."""
+"""`font_weight_adjustment` that Android's Bold text switch sets."""
 
 
 def is_emulator(device: str) -> bool:
-    """Return whether ``device`` is an emulator's serial rather than a simulator's."""
+    """Return whether `device` is an emulator's serial rather than a simulator's."""
     return re.fullmatch(r"emulator-\d+", device) is not None
 
 
 def refuse_owners(device: str) -> None:
-    """Exit if ``device`` is an emulator or a simulator the owner keeps."""
+    """Exit if `device` is an emulator or a simulator the owner keeps."""
     if device in (OWNERS_SERIAL, OWNERS_SIMULATOR):
         sys.exit(f"device.py: {device} is the owner's: use a device of your own")
 
@@ -65,11 +65,11 @@ def refuse_owners(device: str) -> None:
 def android_prefs(
     serial: str, text: str | None, bold: bool, contrast: bool, dark: bool, reset: bool
 ) -> list[list[str]]:
-    """Return the ``adb`` commands that set an emulator's text, contrast and appearance.
+    """Return the `adb` commands that set an emulator's text, contrast and appearance.
 
     Args:
         serial: The emulator.
-        text: A key of ``ANDROID_TEXT``, or None to leave the size.
+        text: A key of `ANDROID_TEXT`, or None to leave the size.
         bold: Turn Bold text on.
         contrast: Turn Color contrast to high (F84; Android 14 and later).
         dark: Turn the dark theme on.
@@ -101,13 +101,13 @@ def android_prefs(
 def ios_prefs(
     udid: str, text: str | None, bold: bool, contrast: bool, dark: bool, reset: bool
 ) -> list[list[str]]:
-    """Return the ``simctl`` commands that set a simulator's text, contrast and appearance.
+    """Return the `simctl` commands that set a simulator's text, contrast and appearance.
 
     Bold Text is read at launch, so relaunch the app after it.
 
     Args:
         udid: The simulator.
-        text: A key of ``IOS_TEXT``, or None to leave the size.
+        text: A key of `IOS_TEXT`, or None to leave the size.
         bold: Turn Bold Text on.
         contrast: Turn Increase Contrast on.
         dark: Turn the dark appearance on.
@@ -139,10 +139,10 @@ def ios_prefs(
 
 
 def emulator_command(avd: str, port: int) -> list[str]:
-    """Return the line that boots ``avd`` on ``port``, leaving the AVD's disk as it was.
+    """Return the line that boots `avd` on `port`, leaving the AVD's disk as it was.
 
-    ``-read-only`` lets several emulators share one AVD, and ``-no-snapshot`` makes every
-    boot the same (``docs/testing-and-quality.md`` §8).
+    `-read-only` lets several emulators share one AVD, and `-no-snapshot` makes every
+    boot the same (`docs/testing-and-quality.md` §8).
     """
     sdk = os.environ.get("ANDROID_HOME") or os.environ.get("ANDROID_SDK_ROOT")
     root = Path(sdk) if sdk else Path.home() / "Library" / "Android" / "sdk"
@@ -154,10 +154,10 @@ def emulator_command(avd: str, port: int) -> list[str]:
 
 
 def serial_setup(serial: str, animations: bool) -> list[list[str]]:
-    """Return the ``adb`` commands that ready a booted emulator for flows.
+    """Return the `adb` commands that ready a booted emulator for flows.
 
-    The on-screen keyboard stays down (D-223); without animations is how ``flet test`` flows
-    run (``docs/testing-and-quality.md`` §5.2), not how a recording or a measurement should.
+    The on-screen keyboard stays down (D-223); without animations is how `flet test` flows
+    run (`docs/testing-and-quality.md` §5.2), not how a recording or a measurement should.
     """
     shell = ["adb", "-s", serial, "shell", "settings", "put"]
     commands = [[*shell, "secure", "show_ime_with_hard_keyboard", "0"]]
@@ -172,19 +172,19 @@ def serial_setup(serial: str, animations: bool) -> list[list[str]]:
 
 
 def _output(command: list[str]) -> str:
-    """Run ``command`` and return its output, or an empty string if it fails."""
+    """Run `command` and return its output, or an empty string if it fails."""
     done = subprocess.run(command, check=False, capture_output=True, text=True)
     return done.stdout.strip() if done.returncode == 0 else ""
 
 
 def _run_all(commands: list[list[str]]) -> None:
-    """Run ``commands`` in order, stopping at the first failure."""
+    """Run `commands` in order, stopping at the first failure."""
     for command in commands:
         subprocess.run(command, check=True, stdout=subprocess.DEVNULL)
 
 
 def _running_emulators() -> list[str]:
-    """Return the serials of the emulators ``adb`` can see."""
+    """Return the serials of the emulators `adb` can see."""
     return re.findall(r"^(emulator-\d+)\s", _output(["adb", "devices"]), re.MULTILINE)
 
 
@@ -223,7 +223,7 @@ def up_android(avd: str, port: int, animations: bool) -> str:
 
 
 def _simulators() -> list[dict[str, str]]:
-    """Return every available simulator, as ``simctl`` lists it."""
+    """Return every available simulator, as `simctl` lists it."""
     listed = json.loads(
         _output(["xcrun", "simctl", "list", "devices", "available", "-j"]) or "{}"
     )
@@ -231,7 +231,7 @@ def _simulators() -> list[dict[str, str]]:
 
 
 def udid_of(name: str) -> str | None:
-    """Return the udid of the simulator called ``name``, or of the udid itself, else None."""
+    """Return the udid of the simulator called `name`, or of the udid itself, else None."""
     for sim in _simulators():
         if name in (sim["name"], sim["udid"]):
             refuse_owners(sim["name"])
@@ -255,7 +255,7 @@ def up_ios(name: str, model: str, runtime: str) -> str:
 
 
 def down(device: str, delete: bool) -> None:
-    """Shut ``device`` down; a simulator can also be deleted."""
+    """Shut `device` down; a simulator can also be deleted."""
     refuse_owners(device)
     if is_emulator(device):
         subprocess.run(["adb", "-s", device, "emu", "kill"], check=True)

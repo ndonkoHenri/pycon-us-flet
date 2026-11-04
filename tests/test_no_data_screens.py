@@ -1,8 +1,8 @@
-"""Tests for ``NoDataState`` on every screen that shows the feed (#902; D-181, NEW-03).
+"""Tests for `NoDataState` on every screen that shows the feed (#902; D-181, NEW-03).
 
-Each of the 17 screens runs in a real Flet session (``tests/harness.py``'s ``showing()``)
+Each of the 17 screens runs in a real Flet session (`tests/harness.py`'s `showing()`)
 with no data, so a screen that goes back to its own disabled rule, title or skeleton
-label fails here by name. What the state itself says is ``test_states.py``'s.
+label fails here by name. What the state itself says is `test_states.py`'s.
 """
 
 import importlib
@@ -55,7 +55,7 @@ class FeedScreen:
     """A screen that shows the feed, and what it says without any."""
 
     module: ModuleType
-    """The screen's module, whose ``AppScaffold``, if any, the harness replaces."""
+    """The screen's module, whose `AppScaffold`, if any, the harness replaces."""
     make: Callable[[], ft.Control]
     """Makes the screen's component."""
     identifier: str
@@ -123,7 +123,7 @@ SCREENS = (
         "Loading tracks",
     ),
 )
-"""Every screen that uses ``NoDataState``; ``test_the_table_...`` keeps it complete."""
+"""Every screen that uses `NoDataState`; `test_the_table_...` keeps it complete."""
 
 every_screen = pytest.mark.parametrize(
     "screen", SCREENS, ids=[s.identifier.removesuffix(".no_data") for s in SCREENS]
@@ -134,13 +134,13 @@ type Show = Callable[[FeedScreen, Conference], Awaitable[Shown]]
 
 @pytest.fixture
 async def show(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> AsyncIterator[Show]:
-    """Return a function that shows a screen over a ``Conference``.
+    """Return a function that shows a screen over a `Conference`.
 
     The minute ticks don't run: a real strip's would start refreshes, the network.
     """
 
     async def no_ticks(*_: Any) -> None:
-        """Stand in for ``Services.run_every``: the tick never comes."""
+        """Stand in for `Services.run_every`: the tick never comes."""
 
     monkeypatch.setattr(Services, "run_every", no_ticks)
     async with AsyncExitStack() as stack:
@@ -164,7 +164,7 @@ async def show(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> AsyncIterator
 
 
 def test_the_table_lists_every_screen_that_uses_the_state() -> None:
-    """A new screen with ``NoDataState`` has to join the table, and its rule's tests."""
+    """A new screen with `NoDataState` has to join the table, and its rule's tests."""
     using = {
         name
         for _, name, _ in pkgutil.iter_modules(screens.__path__)
@@ -197,7 +197,7 @@ async def test_a_failed_first_fetch_names_what_failed_and_try_again_refreshes(
     refreshes: list[str] = []
 
     async def refresh(*_: Any, **__: Any) -> None:
-        """Count a refresh, the one thing ``Try again`` does."""
+        """Count a refresh, the one thing `Try again` does."""
         refreshes.append("refresh")
 
     # On the class: assigning to the store would notify, also when the patch is undone.

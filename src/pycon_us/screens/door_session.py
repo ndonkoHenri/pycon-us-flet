@@ -1,19 +1,19 @@
-"""The session picker (``…/staff/door/session``): what Door check checks in for (#764).
+"""The session picker (`…/staff/door/session`): what Door check checks in for (#764).
 
 DOOR-01 and DOOR-02, on a pushed page as the Lead scanner's sponsor picker (D-425,
-D-433; its parts are ``ui/staff_picker.py``'s), for accounts that may open Door check
+D-433; its parts are `ui/staff_picker.py`'s), for accounts that may open Door check
 (anyone else, and a deep link, sees "Not available for this account"). Ionic showed an
 empty "Category" header when its call failed, sorted dates in a hard-coded 2026 and hid
 the choice behind the camera once scanning started.
 
-Here, single-select category chips from the catalog's door part (``door.category.<id>``;
-a second tap clears), then, once one is chosen, a search field (``door.session.search``),
-"All sessions in this category" (``door.session.all``) and the category's sessions
-under a level-2 heading per day in ``product_sort_key()`` order, the undated ones last
-under "Other sessions" (``door.session.<id>``, one node read "All about decorators,
-Wednesday 9:00 AM, selected"). A tap saves the choice (``staff_door_session()``) and goes
+Here, single-select category chips from the catalog's door part (`door.category.<id>`;
+a second tap clears), then, once one is chosen, a search field (`door.session.search`),
+"All sessions in this category" (`door.session.all`) and the category's sessions
+under a level-2 heading per day in `product_sort_key()` order, the undated ones last
+under "Other sessions" (`door.session.<id>`, one node read "All about decorators,
+Wednesday 9:00 AM, selected"). A tap saves the choice (`staff_door_session()`) and goes
 back; Cancel (a close icon) and Back leave it as it was. The catalog is fetched each time
-the page opens and never kept (``fetch_door_catalog()``): a spinner meanwhile,
+the page opens and never kept (`fetch_door_catalog()`): a spinner meanwhile,
 "Couldn't load sessions" with Retry offline or on an error (D-120), "No sessions
 available" for none, "No sessions match “x”" with Clear search.
 """
@@ -62,7 +62,7 @@ from pycon_us.ui.states import EmptyState
 from pycon_us.ui.widths import LIST, use_margin
 
 SEGMENT = "session"
-"""The picker's segment under Door check's route, ``…/staff/door/session``."""
+"""The picker's segment under Door check's route, `…/staff/door/session`."""
 
 TITLE = "Choose session"
 """The app bar's title, and the scan screen's button that opens the page."""
@@ -85,7 +85,7 @@ def SessionPicker() -> ft.Control:
     """The picker, or "Not available" for an account that may not open Door check.
 
     Re-checked on every render, as Door check is (architecture §12.4): an account
-    without ``door_check``, a signed-out session or no mock URL (D-51) sees no list.
+    without `door_check`, a signed-out session or no mock URL (D-51) sees no list.
     """
     allowed = use_tool_allowed(ToolKey.DOOR)
     account = use_account()
@@ -198,7 +198,7 @@ def category_chips(
     Args:
         catalog: The door's catalog.
         category: The chosen category's id, or None.
-        on_click: Chooses the tapped chip's category (its ``data``), or clears it.
+        on_click: Chooses the tapped chip's category (its `data`), or clears it.
     """
     return ft.Container(
         ft.Row(
@@ -211,7 +211,7 @@ def category_chips(
                         show_checkmark=True,  # not colour alone (D-33)
                         data=c.id,
                         # A click, not on_select: Flutter would toggle the chip
-                        # itself, and ``selected`` is only ours (search's chips).
+                        # itself, and `selected` is only ours (search's chips).
                         on_click=on_click,
                     ),
                 )
@@ -243,7 +243,7 @@ def session_items(
         found: Those the search keeps (all of them without a search).
         searching: The search field holds words.
         chosen: The saved choice, or None.
-        on_pick: Saves a choice and goes back (``Picking.pick``).
+        on_pick: Saves a choice and goes back (`Picking.pick`).
     """
     mine = chosen if chosen is not None and chosen.category_id == category.id else None
     items: list[ft.Control] = []
@@ -307,7 +307,7 @@ def _SessionRow(
     selected: bool,
     on_pick: Callable[[DoorChoice], Awaitable[None]],
 ) -> ft.Control:
-    """The body of ``SessionRow``: the title and the time, a tick when selected."""
+    """The body of `SessionRow`: the title and the time, a tick when selected."""
 
     @report_errors
     async def pick() -> None:

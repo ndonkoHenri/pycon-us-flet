@@ -1,8 +1,8 @@
-"""Tests for ``door_check.check_in()``: a door admission, decided on the device, queued.
+"""Tests for `door_check.check_in()`: a door admission, decided on the device, queued.
 
-Each test signs a real ``Account`` in as the mock's door staff (``tests/sync_rig.py``),
+Each test signs a real `Account` in as the mock's door staff (`tests/sync_rig.py`),
 loads the session's attendee list from the mock as Door check does, and scans through
-``check_in()``; a real ``SyncWorker`` sends what was queued when the test drains it.
+`check_in()`; a real `SyncWorker` sends what was queued when the test drains it.
 The mock checks every signature and records every redemption, so "redeemed once" is
 its own count (#766; DOOR-04, DOOR-07, STORE-12, API-07; D-56, D-57, D-410, D-441).
 """
@@ -66,13 +66,13 @@ class Door:
     Attributes:
         rig: The signed-in session.
         products: The session's products.
-        inventory: The attendee list, as ``list()`` loaded it.
+        inventory: The attendee list, as `list()` loaded it.
         session: The visit's id, part of each row's key.
         kicks: How often a scan asked the worker for a pass.
     """
 
     def __init__(self, rig: Rig, products: Iterable[int], session: str = "v1") -> None:
-        """Hold the rig and the products; the list is empty until ``load()``."""
+        """Hold the rig and the products; the list is empty until `load()`."""
         self.rig = rig
         self.products = tuple(products)
         self.inventory = Inventory()
@@ -87,7 +87,7 @@ class Door:
         self.inventory = loaded.inventory
 
     async def scan(self, badge: Badge = ADA) -> ScanResult:
-        """Scan ``badge`` as the signed-in account; a kick is only counted."""
+        """Scan `badge` as the signed-in account; a kick is only counted."""
 
         def kick() -> None:
             """Count the request for a pass: the test drains the worker itself."""
@@ -117,7 +117,7 @@ async def rig(db: OutboxDb, storage: Storage, credentials: CredentialStorage) ->
 
 
 async def door(rig: Rig, *products: int) -> Door:
-    """A visit for ``products`` (both tutorials by default), its list loaded."""
+    """A visit for `products` (both tutorials by default), its list loaded."""
     visit = Door(rig, products or (DECORATORS, ASYNC))
     await visit.load()
     return visit
@@ -417,7 +417,7 @@ async def test_a_reply_with_errors_syncs_the_row_and_keeps_the_message(
 async def test_a_lost_answer_flags_the_row_and_loses_nothing(
     db: OutboxDb, storage: Storage, credentials: CredentialStorage
 ) -> None:
-    """Non-idempotent with ``lost_response``: flagged, then synced once (D-57, D-410)."""
+    """Non-idempotent with `lost_response`: flagged, then synced once (D-57, D-410)."""
     rig = Rig(db, storage, credentials, "non_idempotent")
     await rig.sign_in("staff")
     visit = await door(rig)

@@ -1,32 +1,32 @@
 """S2 reproducer: the busiest schedule day in components mode, in several variants.
 
 Spike S2 (docs/spikes/02-day-list.md). The app processes the bundled 2026 snapshot with the
-real ``pycon_us`` code and draws the schedule as ux.md §5.2 and §3.9 describe it: day tabs, a
+real `pycon_us` code and draws the schedule as ux.md §5.2 and §3.9 describe it: day tabs, a
 search field, and for each day one list item per time slot, with the time in a 64 dp gutter
 beside the slot's rows. Session rows carry a track badge, the title, "time · room", the
 speakers and a 48 dp star; notices and breaks are compact rows without a star.
 
-The launch route picks the variant, ``/<rows>/<list>/<days>``:
+The launch route picks the variant, `/<rows>/<list>/<days>`:
 
-- rows: ``memo`` (each row an ``@ft.component`` keyed by session id and wrapped in
-  ``ft.memo``, so it re-renders only when ``(row, is_fav)`` changes), ``component`` (the same
-  component without ``ft.memo``), ``plain`` (plain controls rebuilt by the day list) or
-  ``tree`` (``memo`` rows inside memoised slot components, inside memoised day lists that
+- rows: `memo` (each row an `@ft.component` keyed by session id and wrapped in
+  `ft.memo`, so it re-renders only when `(row, is_fav)` changes), `component` (the same
+  component without `ft.memo`), `plain` (plain controls rebuilt by the day list) or
+  `tree` (`memo` rows inside memoised slot components, inside memoised day lists that
   receive only their own day's favourites, so a change re-renders one path of the tree);
-- list: ``lazy`` (``ListView``, ``build_controls_on_demand=True``, the default), ``eager``
-  (``ListView(build_controls_on_demand=False)``), ``column`` (``Column(scroll=AUTO)``),
-  ``cache`` (a lazy ``ListView`` with a 100,000 px ``cache_extent``) or ``today`` (lazy
-  lists, and the 100,000 px ``cache_extent`` on the busiest day's only, as if it were today:
+- list: `lazy` (`ListView`, `build_controls_on_demand=True`, the default), `eager`
+  (`ListView(build_controls_on_demand=False)`), `column` (`Column(scroll=AUTO)`),
+  `cache` (a lazy `ListView` with a 100,000 px `cache_extent`) or `today` (lazy
+  lists, and the 100,000 px `cache_extent` on the busiest day's only, as if it were today:
   D-154);
-- days: ``all`` (every day's list is rendered at start, as a ``TabBarView`` page),
-  ``visited`` (a day's list is rendered the first time its tab is shown) or ``deferred``
+- days: `all` (every day's list is rendered at start, as a `TabBarView` page),
+  `visited` (a day's list is rendered the first time its tab is shown) or `deferred`
   (the shown day first; the other days in a second render once Flutter has applied the
   first, which a SharedPreferences round trip shows; no frame boundary is guaranteed).
 
-Every measurement is a line ``S2 <event> wall=<epoch> py_ms=<since main.py> ...`` on stdout
-(logcat tag ``flet.python`` on Android, the unified log on iOS). An action (a star tap, a
-keystroke, a day switch, a jump) logs ``<action>-in`` in its handler, then ``patched`` when the
-re-render has been sent to Flutter, and ``acked`` when a SharedPreferences round trip made
+Every measurement is a line `S2 <event> wall=<epoch> py_ms=<since main.py> ...` on stdout
+(logcat tag `flet.python` on Android, the unified log on iOS). An action (a star tap, a
+keystroke, a day switch, a jump) logs `<action>-in` in its handler, then `patched` when the
+re-render has been sent to Flutter, and `acked` when a SharedPreferences round trip made
 after it returns: Flutter handles messages in order, so the patch has been applied by then,
 but the reply does not wait for a frame (the S1 proxy, D-112).
 """
@@ -105,7 +105,7 @@ SPANISH_BADGE = (("#FFD7F3", "#5E0058"), ("#5E0058", "#FFD7F3"))
 class RowView:
     """What a row shows, computed once per session (rows never format times themselves).
 
-    Frozen with identity equality (D-70 rule 6), so ``ft.memo`` compares it by identity.
+    Frozen with identity equality (D-70 rule 6), so `ft.memo` compares it by identity.
     """
 
     id: str
@@ -193,7 +193,7 @@ PENDING: dict[str, object] = {}
 
 
 def begin(action: str, **values: object) -> None:
-    """Log the start of a user action and remember it for the next ``patched`` line."""
+    """Log the start of a user action and remember it for the next `patched` line."""
     PENDING.clear()
     PENDING.update(action=action, rows_before=ROW_RENDERS[0])
     log(f"{action}-in", **values)
@@ -206,11 +206,11 @@ class Variant:
     rows: str = "memo"
     list: str = "lazy"
     days: str = "all"
-    auto: bool = False  # ``?auto=1``: the app drives itself (no taps on a simulator)
+    auto: bool = False  # `?auto=1`: the app drives itself (no taps on a simulator)
 
     @staticmethod
     def from_route(route: str) -> Variant:
-        """Parse ``/<rows>/<list>/<days>``; missing or unknown parts take the defaults."""
+        """Parse `/<rows>/<list>/<days>`; missing or unknown parts take the defaults."""
         parts = [p for p in route.split("?")[0].split("/") if p]
         rows = (
             parts[0]
@@ -434,7 +434,7 @@ def SlotItem(
     on_toggle,
     dark: bool,
 ) -> ft.Control:
-    """A slot item as a component (``tree``): props are the slot, its rows, its favourites."""
+    """A slot item as a component (`tree`): props are the slot, its rows, its favourites."""
     return slot_item(slot, list(rows), favs_here, on_toggle, dark, "memo")
 
 
@@ -570,7 +570,7 @@ def App(variant: Variant, dark: bool) -> list[ft.View]:
     ft.use_effect(after_render, [favs, query, day, rest])
 
     async def drive() -> None:
-        """With ``?auto=1``: jump, star, filter and switch days through the handlers."""
+        """With `?auto=1`: jump, star, filter and switch days through the handlers."""
         if not variant.auto:
             return
         await asyncio.sleep(3)

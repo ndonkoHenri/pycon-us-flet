@@ -1,10 +1,10 @@
 """The Map's harness, for its tabs' and its panes' test modules (#391, #623).
 
-``tests/test_map_tabs.py`` (the tabs and the panes' places) and
-``tests/test_map_panes.py`` (Floor plans' cards, Job fair and the app bar) take
-``render`` by assignment (§3.1): ``Map`` runs in a real Flet session
-(``tests/harness.py``'s ``showing()``) over the 2026 feed and ``map.toml``, with
-``ListView.scroll_to`` recorded in a ``MapShown`` instead of sent to a client.
+`tests/test_map_tabs.py` (the tabs and the panes' places) and
+`tests/test_map_panes.py` (Floor plans' cards, Job fair and the app bar) take
+`render` by assignment (§3.1): `Map` runs in a real Flet session
+(`tests/harness.py`'s `showing()`) over the 2026 feed and `map.toml`, with
+`ListView.scroll_to` recorded in a `MapShown` instead of sent to a client.
 """
 
 import dataclasses
@@ -30,26 +30,26 @@ YEAR = load_year(2026)
 
 
 PLAN_IDS = ["campus", "concourse", "upper", "arena", "seaside"]
-"""The 2026 floor plans, in ``map.toml``'s order (MAP-02): the expo's and the job
+"""The 2026 floor plans, in `map.toml`'s order (MAP-02): the expo's and the job
 fair's are not among them."""
 
 
 @dataclasses.dataclass
 class MapShown(Shown):
-    """The harness's ``Shown`` on the Map, with the scrolls its lists were asked for."""
+    """The harness's `Shown` on the Map, with the scrolls its lists were asked for."""
 
     scrolls: list[tuple[str, dict[str, Any]]] = dataclasses.field(default_factory=list)
-    """Each ``scroll_to``: the list's key and its arguments."""
+    """Each `scroll_to`: the list's key and its arguments."""
 
     @property
     def tabs(self) -> ft.Tabs:
-        """The Map's one ``Tabs``."""
+        """The Map's one `Tabs`."""
         (found,) = self.find(ft.Tabs)
         return found
 
     @property
     def pane(self) -> ft.ListView:
-        """The one pane shown: the ``ListView`` under the tab bar."""
+        """The one pane shown: the `ListView` under the tab bar."""
         (found,) = self.find(ft.ListView)
         return found
 
@@ -70,7 +70,7 @@ class MapShown(Shown):
         await self.settle()
 
     async def scroll_end(self, pixels: float) -> None:
-        """What Flutter sends when a scroll of the pane shown ends at ``pixels``."""
+        """What Flutter sends when a scroll of the pane shown ends at `pixels`."""
         data = {
             "event_type": "end",
             "pixels": pixels,
@@ -88,9 +88,9 @@ type Render = Callable[..., Awaitable[MapShown]]
 async def render(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> AsyncIterator[Render]:
-    """Yield a function that opens the Map at a route and returns its ``MapShown``.
+    """Yield a function that opens the Map at a route and returns its `MapShown`.
 
-    The route is ``/map`` unless the test gives another (a query); the view memory and
+    The route is `/map` unless the test gives another (a query); the view memory and
     the year can be given too, a memory kept across sessions as the app keeps it.
     """
     shown_now: list[MapShown] = []

@@ -2,13 +2,13 @@
 
 Another app's window over the app (the in-app browser, the share sheet, a maps app)
 is no route of Flutter's `Navigator`, so nothing gives the screen reader's focus back
-when it closes (F54, #302). ``ui.focus_back`` does, and needs to know when the app has
-left and come back: the lifecycle handler (``app.start()``) calls ``leave()`` on
-``inactive`` and ``come_back()`` on ``resume``, which Flet reports for every change of
+when it closes (F54, #302). `ui.focus_back` does, and needs to know when the app has
+left and come back: the lifecycle handler (`app.start()`) calls `leave()` on
+`inactive` and `come_back()` on `resume`, which Flet reports for every change of
 Flutter's lifecycle (F192). On Android the browser and the share sheet are other
-activities, so the app goes ``inactive`` under them. Where a window opens over the app
+activities, so the app goes `inactive` under them. Where a window opens over the app
 without that (iOS presents both inside the app, which may stay active: not checked
-yet), the app never leaves, and nothing waits for a return (``back_since()``).
+yet), the app never leaves, and nothing waits for a return (`back_since()`).
 """
 
 import asyncio
@@ -19,7 +19,7 @@ class Presence:
 
     Attributes:
         returns: How many times the app has come back to the front this session; a
-            caller reads it before it opens another app's window (``back_since()``).
+            caller reads it before it opens another app's window (`back_since()`).
     """
 
     def __init__(self) -> None:
@@ -31,12 +31,12 @@ class Presence:
         self._away = asyncio.Event()
 
     def leave(self) -> None:
-        """Note that another window has come in front of the app's (``inactive``)."""
+        """Note that another window has come in front of the app's (`inactive`)."""
         self._in_front.clear()
         self._away.set()
 
     def come_back(self) -> None:
-        """Note that the app's window is in front again (``resume``)."""
+        """Note that the app's window is in front again (`resume`)."""
         self.returns += 1
         self._away.clear()
         self._in_front.set()
@@ -48,10 +48,10 @@ class Presence:
         self._in_front.set()
 
     async def back_since(self, returns: int, *, leave_within: float) -> bool:
-        """Wait until the app has left and come back since ``returns`` was read.
+        """Wait until the app has left and come back since `returns` was read.
 
         Args:
-            returns: ``returns`` as read before the other window was asked for.
+            returns: `returns` as read before the other window was asked for.
             leave_within: How long, in seconds, the app may take to leave once this
                 is called. A window that has not come within it never came (a link
                 with no app to open it), so nothing waits for a return that is not

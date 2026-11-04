@@ -1,8 +1,8 @@
 """Pure route helpers for the S4 reproducer: tab roots, drill links and Back targets.
 
-They import nothing from Flet, so ``check_routes.py`` tests them on the host. The
+They import nothing from Flet, so `check_routes.py` tests them on the host. The
 shapes follow decisions §M and architecture §5.3: five tab roots, More pages, the
-global modal ``/search`` and a recursive drill of ``<kind>/<id>`` pairs.
+global modal `/search` and a recursive drill of `<kind>/<id>` pairs.
 """
 
 from urllib.parse import quote, urlparse
@@ -29,9 +29,9 @@ def tab_of(path: str) -> int | None:
 def parent_of(route: str, search_base: str = "/now") -> str:
     """Where Back goes from route (D-19).
 
-    Drop the last drill pair, else walk up to the nearest page. ``/search``
+    Drop the last drill pair, else walk up to the nearest page. `/search`
     itself returns to search_base, the location (query included) it was opened
-    from. A tab root returns ``/``, which the start route sends to Now.
+    from. A tab root returns `/`, which the start route sends to Now.
     """
     parts = urlparse(route).path.strip("/").split("/")
     if parts == ["search"]:

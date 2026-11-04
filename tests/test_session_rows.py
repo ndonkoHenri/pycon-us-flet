@@ -1,15 +1,15 @@
-"""Tests for the session rows: ``SessionRow`` and ``NoticeRow`` (D-184).
+"""Tests for the session rows: `SessionRow` and `NoticeRow` (D-184).
 
-Rows run in a real Flet session (``Rendered``, from ``tests/row_sessions.py``): a list
+Rows run in a real Flet session (`Rendered`, from `tests/row_sessions.py`): a list
 owner like the screens' renders memoised rows under the store providers, a star tap is
 a dispatched click, and Flet's own scheduler re-renders what changed, so a test sees
 what a device would get. How tall a row is, how it wraps at 200 % and what TalkBack
 reads are checked on devices (#81's PR); here, the semantics a screen reader is given.
-What a row and a notice are made of is tested in ``test_session_rows_layout.py``.
+What a row and a notice are made of is tested in `test_session_rows_layout.py`.
 
-The session is ``tests/harness.py``'s ``showing()``, which reaches into Flet internals
-as Flet's own component tests do (SnackBars from ``page._dialogs``, clicks through
-``Session.dispatch_event(control._i, ...)``). A Flet pin bump (D-81) that renames one
+The session is `tests/harness.py`'s `showing()`, which reaches into Flet internals
+as Flet's own component tests do (SnackBars from `page._dialogs`, clicks through
+`Session.dispatch_event(control._i, ...)`). A Flet pin bump (D-81) that renames one
 of them breaks that module, not the rows: look there first.
 """
 
@@ -83,7 +83,7 @@ async def test_the_handler_is_the_same_object_on_every_render(
 ) -> None:
     """Every row gets the same star handler object across renders and taps.
 
-    With ``use_callback(..., [])`` the handler never changes, so memoised rows stay
+    With `use_callback(..., [])` the handler never changes, so memoised rows stay
     skipped.
     """
     handlers: set[int] = set()
@@ -110,7 +110,7 @@ DETECTED = datetime(2026, 5, 15, 17, 0, tzinfo=UTC)
 
 @pytest.fixture
 def frozen_clock() -> Iterator[None]:
-    """Freeze ``clock.now()`` an hour after ``DETECTED``; real time again after."""
+    """Freeze `clock.now()` an hour after `DETECTED`; real time again after."""
     clock.set_test_now(DETECTED + timedelta(hours=1))
     yield
     clock.set_test_now(None)
@@ -128,7 +128,7 @@ def badge_labels(rendered: Rendered, session_id: str) -> list[str]:
 
 
 async def record(rendered: Rendered, *changes: tuple[str, ChangeKind]) -> None:
-    """Record one batch of ``(session id, kind)`` changes, as a refresh would."""
+    """Record one batch of `(session id, kind)` changes, as a refresh would."""
     batch = Batch(
         DETECTED, tuple(Change(key, kind, None, None) for key, kind in changes)
     )

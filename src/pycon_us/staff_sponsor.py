@@ -1,8 +1,8 @@
 """The sponsor door staff scan for: the list from the mock, the choice in storage (#740).
 
-``fetch_sponsors()`` asks ``lead_sponsors`` each time the picker opens: the list is
+`fetch_sponsors()` asks `lead_sponsors` each time the picker opens: the list is
 never kept, since it is needed only to change sponsor (LEAD-05). The choice is
-``staff_sponsor()``, a staff key of the year (D-414, D-466), so a sign-out, a sign-in as
+`staff_sponsor()`, a staff key of the year (D-414, D-466), so a sign-out, a sign-in as
 another account and Clear staff data remove it with no code of their own; it is in no
 store, and the Lead scanner reads it as it opens, as it does the consent (D-423, D-425).
 """
@@ -23,10 +23,10 @@ async def fetch_sponsors(api: ApiClient) -> tuple[LeadSponsor, ...]:
     """Return the sponsors the signed-in staff account can scan for (API-09).
 
     Args:
-        api: ``Services.api``, signed in.
+        api: `Services.api`, signed in.
 
     Returns:
-        The sponsors, sorted by name (``parse_sponsors()``).
+        The sponsors, sorted by name (`parse_sponsors()`).
 
     Raises:
         NetworkError: No answer arrived.

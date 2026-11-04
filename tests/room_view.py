@@ -1,15 +1,15 @@
 """Room detail's sessions and harness, for its three test modules (#312).
 
-``test_room.py`` (the highlight), ``test_room_days.py`` (the day lists and "Now in this
-room") and ``test_room_location.py`` (an unknown room, a sprint-only room and the
-location card) run ``RoomDetail`` in a real Flet session, as session detail does in
-``test_session.py``: ``tests/harness.py``'s ``showing()`` puts the store providers
-above it and replaces ``AppScaffold`` by a column that keeps the title and the body, and
+`test_room.py` (the highlight), `test_room_days.py` (the day lists and "Now in this
+room") and `test_room_location.py` (an unknown room, a sprint-only room and the
+location card) run `RoomDetail` in a real Flet session, as session detail does in
+`test_session.py`: `tests/harness.py`'s `showing()` puts the store providers
+above it and replaces `AppScaffold` by a column that keeps the title and the body, and
 the scroll to the row is a recorder, since no Flutter answers it here. The sessions are
 the recorded 2026 feed's, and the clock is fixed in conference time. The highlight's
-wait is held until a test ends it (``tests/timers.py``), so a slow host never ends it
+wait is held until a test ends it (`tests/timers.py`), so a slow host never ends it
 before the test looks (#270). A module takes the fixtures by assigning them to its own
-names, as ``docs/testing-and-quality.md`` §3.1 says.
+names, as `docs/testing-and-quality.md` §3.1 says.
 """
 
 import asyncio
@@ -74,7 +74,7 @@ class Scroll:
 
 @dataclass
 class Room(harness.Shown):
-    """The harness's ``Shown`` (``tests/harness.py``) on one ``RoomDetail``."""
+    """The harness's `Shown` (`tests/harness.py`) on one `RoomDetail`."""
 
     scrolls: list[Scroll] = field(default_factory=list)
     """The scrolls the room asked for, in order."""
@@ -85,12 +85,12 @@ class Room(harness.Shown):
 
     @property
     def tabs(self) -> ft.Tabs:
-        """The screen's one ``Tabs``, the day tabs."""
+        """The screen's one `Tabs`, the day tabs."""
         (found,) = self.find(ft.Tabs)
         return found
 
     def anchor(self) -> ft.Container:
-        """The highlighted row's ``ScrollKey``: an empty anchor atop its box."""
+        """The highlighted row's `ScrollKey`: an empty anchor atop its box."""
         (found,) = [
             c for c in self.find(ft.Container) if isinstance(c.key, ft.ScrollKey)
         ]
@@ -103,12 +103,12 @@ class Room(harness.Shown):
         return box
 
     async def wait(self, seconds: float) -> None:
-        """Let ``seconds`` pass: for tests that check nothing more happened."""
+        """Let `seconds` pass: for tests that check nothing more happened."""
         await asyncio.sleep(seconds)
         await self.settle()
 
     async def until(self, holds: Callable[[], bool], *, timeout: float = 30.0) -> None:
-        """Settle until ``holds()`` is true, or fail after ``timeout`` seconds.
+        """Settle until `holds()` is true, or fail after `timeout` seconds.
 
         A poll rather than a fixed wait, so a loaded host only makes it slower; the
         deadline is generous because a passing test never reaches it (#237).
@@ -143,9 +143,9 @@ type Render = Callable[..., Awaitable[Room]]
 async def render(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> AsyncIterator[Render]:
-    """Yield a function that opens ``RoomDetail`` at a route and returns its ``Room``.
+    """Yield a function that opens `RoomDetail` at a route and returns its `Room`.
 
-    The room is ``ROOM`` unless ``slug`` names another; the clock, reduced motion, the
+    The room is `ROOM` unless `slug` names another; the clock, reduced motion, the
     view memory and the feed can be set too. The screen's sleeps are held and its
     scrolls recorded.
     """
@@ -214,7 +214,7 @@ async def render(
 
 
 def highlighted(session_id: str) -> str:
-    """The location a session's room tile pushes (``when_where.room_href``)."""
+    """The location a session's room tile pushes (`when_where.room_href`)."""
     return f"{VIEW}?highlight={quote(session_id, safe='')}"
 
 
@@ -224,7 +224,7 @@ def phrase_of(room: Room, session_id: str) -> str:
 
 
 def ancestors(control: ft.BaseControl) -> list[ft.BaseControl]:
-    """The controls ``control`` is in, from its parent up to the page."""
+    """The controls `control` is in, from its parent up to the page."""
     found: list[ft.BaseControl] = []
     parent = control.parent
     while parent is not None:

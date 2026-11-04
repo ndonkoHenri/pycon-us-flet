@@ -28,7 +28,7 @@ def day_ids(days: Iterable[AgendaDay]) -> list[tuple[date, list[tuple[str, ...]]
 
 
 def folded_at(now: datetime) -> tuple[list[date], list[tuple[str, ...]], list[date]]:
-    """The earlier days, today's ended slots and the days ahead at ``now``."""
+    """The earlier days, today's ended slots and the days ahead at `now`."""
     zone = load_year(2026).conference.zone
     result = fold_ended(my_schedule(processed(2026), FOLDED), now, zone)
     today = day_ids([result.earlier_today]) if result.earlier_today else []
@@ -124,7 +124,7 @@ def test_the_fold_is_equal_from_minute_to_minute_until_a_session_ends() -> None:
 
 
 def test_folding_needs_an_aware_instant() -> None:
-    """Folding at a naive instant raises ``ValueError``."""
+    """Folding at a naive instant raises `ValueError`."""
     agenda = my_schedule(processed(2026), FOLDED)
     with pytest.raises(ValueError, match="aware"):
         naive = datetime(2026, 5, 14, 10)  # noqa: DTZ001
@@ -190,7 +190,7 @@ def test_the_elapsed_share_follows_the_start_a_row_shows() -> None:
 def test_the_elapsed_share_counts_instants_across_the_end_of_summer_time() -> None:
     """A session from 1:40 PDT to 1:10 PST is 30 minutes long, not minus 30 (#513).
 
-    The start, the end and ``now`` share the conference zone, where wall clocks would
+    The start, the end and `now` share the conference zone, where wall clocks would
     read the end as before the start.
     """
     zone = load_year(2026).conference.zone
@@ -201,7 +201,7 @@ def test_the_elapsed_share_counts_instants_across_the_end_of_summer_time() -> No
     )
 
     def at(hour: int, minute: int) -> int:
-        """Return the talk's share at ``hour:minute`` UTC, read in the conference zone."""
+        """Return the talk's share at `hour:minute` UTC, read in the conference zone."""
         return elapsed_percent(
             talk, datetime(2026, 11, 1, hour, minute, tzinfo=UTC).astimezone(zone)
         )

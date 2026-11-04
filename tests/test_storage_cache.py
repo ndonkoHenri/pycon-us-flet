@@ -1,8 +1,8 @@
 """Tests for the storage service's data directory and feed cache (STORE-01).
 
 The service runs over the in-memory SharedPreferences and a temporary directory, from
-``tests/memory_storage.py``; the key table, preferences and clearing them are
-``test_storage.py``'s.
+`tests/memory_storage.py`; the key table, preferences and clearing them are
+`test_storage.py`'s.
 """
 
 import asyncio
@@ -27,7 +27,7 @@ prefs, store = memory_storage.prefs, memory_storage.store
 def test_data_dir_comes_from_the_environment(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """``data_dir`` is ``FLET_APP_STORAGE_DATA``, created if it is missing."""
+    """`data_dir` is `FLET_APP_STORAGE_DATA`, created if it is missing."""
     monkeypatch.setenv("FLET_APP_STORAGE_DATA", str(tmp_path / "app" / "data"))
     assert data_files.data_dir() == tmp_path / "app" / "data"
     assert (tmp_path / "app" / "data").is_dir()
@@ -47,7 +47,7 @@ def test_data_dir_is_read_again_on_every_call(
 def test_data_dir_falls_back_to_the_flet_run_layout_under_the_working_directory(
     value: str | None, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """Unset or empty, the variable gives way to ``.flet/storage/data`` in the cwd."""
+    """Unset or empty, the variable gives way to `.flet/storage/data` in the cwd."""
     if value is None:
         monkeypatch.delenv("FLET_APP_STORAGE_DATA", raising=False)
     else:
@@ -81,7 +81,7 @@ async def test_a_written_feed_reads_back_byte_for_byte_with_its_save_time(
 async def test_the_cache_file_is_named_after_the_year(
     store: Storage, tmp_path: Path
 ) -> None:
-    """The 2026 feed cache is a single file named ``feed-2026.json``."""
+    """The 2026 feed cache is a single file named `feed-2026.json`."""
     await store.write_feed(b"{}")
     assert sorted(path.name for path in tmp_path.iterdir()) == ["feed-2026.json"]
 
@@ -98,7 +98,7 @@ async def test_a_new_feed_replaces_the_old_one(store: Storage) -> None:
 async def test_writes_go_through_a_temp_file_and_os_replace(
     store: Storage, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """A feed is written to ``feed-2026.json.tmp``, then moved by ``os.replace``."""
+    """A feed is written to `feed-2026.json.tmp`, then moved by `os.replace`."""
     replaced: list[tuple[str, str, bytes]] = []
     real_replace = os.replace
 
@@ -242,7 +242,7 @@ def test_data_dir_raises_when_it_cannot_be_created(
 async def test_deleting_the_cache_says_whether_it_is_gone(
     store: Storage, tmp_path: Path
 ) -> None:
-    """``delete_feed`` is True once no cache is left, False when removal fails."""
+    """`delete_feed` is True once no cache is left, False when removal fails."""
     await store.write_feed(b"feed")
     assert await store.delete_feed("Clear cached feed (Developer)") is True
     assert not store.feed_path.exists()

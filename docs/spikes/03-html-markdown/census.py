@@ -4,9 +4,9 @@ Run from the repository root (stdlib only, no network):
 
     python3 -I docs/spikes/03-html-markdown/census.py
 
-It reads ``tests/fixtures/feeds/conference-<year>.json``, prints the census and
-the coverage tables used in ``docs/spikes/03-html-markdown.md``, and writes the
-render samples to ``docs/spikes/03-html-markdown/src/samples.json``.
+It reads `tests/fixtures/feeds/conference-<year>.json`, prints the census and
+the coverage tables used in `docs/spikes/03-html-markdown.md`, and writes the
+render samples to `docs/spikes/03-html-markdown/src/samples.json`.
 """
 
 import html
@@ -94,7 +94,7 @@ HAZARD = "Tickets cost 5$ or 10$ at the door. Read ( the notes ) and [ the FAQ ]
 
 
 def walk(value: object, path: str = "") -> object:
-    """Yield (path, string) for every string in the feed; list indices become ``[]``."""
+    """Yield (path, string) for every string in the feed; list indices become `[]`."""
     if isinstance(value, dict):
         for key, child in value.items():
             yield from walk(child, f"{path}.{key}")
@@ -159,7 +159,7 @@ def html_text(value: str) -> str:
 def markdown_text(markdown: str) -> str:
     """Our Markdown's visible characters: our syntax removed, references decoded, whitespace removed.
 
-    Outside code spans every raw ``*``, ``~``, ``[`` and ``#`` is ours, because text
+    Outside code spans every raw `*`, `~`, `[` and `#` is ours, because text
     escapes them; code spans show their content as is.
     """
     shown = []

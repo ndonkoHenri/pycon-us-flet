@@ -1,9 +1,9 @@
-"""Tests for Help & safety's Report a problem with the app (``/more/help``; D-281).
+"""Tests for Help & safety's Report a problem with the app (`/more/help`; D-281).
 
-``ReportProblem`` runs outside a renderer over the fixtures of ``tests/help_page.py``,
-with the help section's stand-ins from ``tests/about_page.py``: while the repository is
+`ReportProblem` runs outside a renderer over the fixtures of `tests/help_page.py`,
+with the help section's stand-ins from `tests/about_page.py`: while the repository is
 private the row shares the log and the diagnostics, once public it opens a new issue.
-The page around it is tested in ``test_help.py``.
+The page around it is tested in `test_help.py`.
 """
 
 import inspect
@@ -37,7 +37,7 @@ svc, page = help_page.svc, help_page.page
 
 @pytest.fixture
 def report_svc(svc: Services, tmp_path: Path) -> Services:
-    """``svc`` with a share sheet and a packaged build's one-line ``console.log``.
+    """`svc` with a share sheet and a packaged build's one-line `console.log`.
 
     Made before a page is bound, as Flet makes a session's services.
     """
@@ -52,7 +52,7 @@ def report_svc(svc: Services, tmp_path: Path) -> Services:
 async def report_section(
     monkeypatch: pytest.MonkeyPatch, report_svc: Services, page: FakePage
 ) -> tuple[Callable[[], list[ft.Control]], Services]:
-    """Render ``ReportProblem`` in a packaged build, while the repository is private.
+    """Render `ReportProblem` in a packaged build, while the repository is private.
 
     Returns the render and the services it shares through.
     """
@@ -68,7 +68,7 @@ async def report_section(
     monkeypatch.setattr(rows, "use_services", lambda: services)
 
     def render() -> list[ft.Control]:
-        """``ReportProblem``'s controls, its state kept from the last render."""
+        """`ReportProblem`'s controls, its state kept from the last render."""
         states.index = 0
         column = inspect.unwrap(ReportProblem)()
         assert isinstance(column, ft.Column)
@@ -118,7 +118,7 @@ async def test_once_public_the_row_opens_a_new_issue_in_the_browser(
     report_section: tuple[Callable[[], list[ft.Control]], Services],
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """With ``SOURCE_URL`` set, the row is external: it reads "Opens in browser".
+    """With `SOURCE_URL` set, the row is external: it reads "Opens in browser".
 
     It opens the repository's new issue page in the in-app browser (INFO-14, D-182).
     """

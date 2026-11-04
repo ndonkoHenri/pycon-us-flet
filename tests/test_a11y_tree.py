@@ -1,7 +1,7 @@
-"""Tests for ``tools/a11y_tree.py``, which prints Android's accessibility tree with headings (#257).
+"""Tests for `tools/a11y_tree.py`, which prints Android's accessibility tree with headings (#257).
 
-No device: the More screen's dump in ``fixtures/a11y_tree/more.xml`` was recorded with the
-tool on an Android emulator, and ``am instrument``'s output is written out here.
+No device: the More screen's dump in `fixtures/a11y_tree/more.xml` was recorded with the
+tool on an Android emulator, and `am instrument`'s output is written out here.
 """
 
 from pathlib import Path
@@ -36,7 +36,7 @@ def test_the_recorded_more_screen_lists_its_headings():
 
 
 def test_the_recorded_headings_carry_their_identifier():
-    """``--headings`` prints ``HEADING`` and the identifier, so a check names the node it means."""
+    """`--headings` prints `HEADING` and the identifier, so a check names the node it means."""
     lines = render(parse(MORE), headings=True).splitlines()
     assert len(lines) == 4
     assert all(" HEADING " in line for line in lines)
@@ -44,7 +44,7 @@ def test_the_recorded_headings_carry_their_identifier():
 
 
 def test_a_label_with_a_newline_is_read_back():
-    """A tab's two-line label survives the one-line XML (``&#10;``) and prints on one line."""
+    """A tab's two-line label survives the one-line XML (`&#10;`) and prints on one line."""
     tab = next(n for n in parse(MORE) if n.ident == "app.nav.more")
     assert tab.label == "More\nTab 5 of 5"
     assert '"More\\nTab 5 of 5"' in render([tab])
@@ -52,7 +52,7 @@ def test_a_label_with_a_newline_is_read_back():
 
 
 def test_a_node_reads_as_one_line_with_its_states():
-    """Class, ``HEADING``, ``#identifier``, the label and the states are one line per node."""
+    """Class, `HEADING`, `#identifier`, the label and the states are one line per node."""
     root, title, button = parse(SMALL)
     assert (root.depth, title.depth) == (0, 1)
     assert render([title]) == '  View HEADING #more.title "More" [focusable]'
@@ -72,7 +72,7 @@ def test_the_tree_is_indented_by_depth():
 
 
 def test_the_xml_is_read_from_the_result_bundle():
-    """``am instrument -w -r`` prints the bundle's ``xml`` key on one line; that line is the dump."""
+    """`am instrument -w -r` prints the bundle's `xml` key on one line; that line is the dump."""
     output = f"INSTRUMENTATION_RESULT: xml={SMALL}\nINSTRUMENTATION_CODE: -1\n"
     assert result_xml(output) == SMALL
 
@@ -98,7 +98,7 @@ def test_a_run_without_a_tree_says_why(output, message):
 
 
 def test_a_route_opens_through_the_app_deep_link():
-    """``--route`` becomes the D-269 link ``<scheme>://<host>/<route path>``, with or without a leading slash.
+    """`--route` becomes the D-269 link `<scheme>://<host>/<route path>`, with or without a leading slash.
 
     The scheme can still be renamed (D-452), so the test reads the scheme and host from the link.
     """

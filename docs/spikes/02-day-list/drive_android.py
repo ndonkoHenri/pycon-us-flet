@@ -1,36 +1,36 @@
 """Drive the S2 reproducer on an Android emulator with adb and measure each variant.
 
-Run from this folder with the release APK installed (``flet build apk``, then
-``adb install -r``)::
+Run from this folder with the release APK installed (`flet build apk`, then
+`adb install -r`):
 
     uv run --group measure python drive_android.py <suite> <variant> [<variant> ...]
 
-A variant is the launch route without its leading slash, e.g. ``memo/lazy/all``
+A variant is the launch route without its leading slash, e.g. `memo/lazy/all`
 (src/main.py). Suites:
 
-- ``cold``: ``$S2_N`` cold starts (default 10): force-stop, then a deep link with the
-  variant; the time from logcat's ``START u0`` line to the app's ``acked action=first``
+- `cold`: `$S2_N` cold starts (default 10): force-stop, then a deep link with the
+  variant; the time from logcat's `START u0` line to the app's `acked action=first`
   line (the S1 method, D-112), and Python's own split of it.
-- ``star``: a sync keystroke, then 12 taps on one star while the screen is recorded; from
-  each tap's ``star-in`` line to the frame where the star's fill changed, on the device
-  clock (``star_latencies`` explains the sync).
-- ``search``: types ``python`` into the day's search field one key at a time, then deletes
+- `star`: a sync keystroke, then 12 taps on one star while the screen is recorded; from
+  each tap's `star-in` line to the frame where the star's fill changed, on the device
+  clock (`star_latencies` explains the sync).
+- `search`: types `python` into the day's search field one key at a time, then deletes
   it, 12 keystrokes; from the first change in the field to the first and the last change
   in the list below it.
-- ``days``: 12 taps on the day tabs; from the first change in the tab bar to the first and
+- `days`: 12 taps on the day tabs; from the first change in the tab bar to the first and
   the last change in the list.
-- ``jump``: on a fresh launch, the two jump buttons (``scroll_to(scroll_key=...)`` and the
+- `jump`: on a fresh launch, the two jump buttons (`scroll_to(scroll_key=...)` and the
   two-step jump), three times each; whether the target slot's gutter is on screen after.
-- ``fling``: twelve flings (six down the day, six back up); the intervals between the
-  frames SurfaceFlinger presented for the app's surface (``dumpsys SurfaceFlinger
-  --latency``), and the frames that took over 1.5 vsyncs (25 ms).
-- ``tabframes``: the same frame intervals for 12 day-tab taps, and each tap's worst frame.
-- ``all``: all of the above.
+- `fling`: twelve flings (six down the day, six back up); the intervals between the
+  frames SurfaceFlinger presented for the app's surface (`dumpsys SurfaceFlinger
+  --latency`), and the frames that took over 1.5 vsyncs (25 ms).
+- `tabframes`: the same frame intervals for 12 day-tab taps, and each tap's worst frame.
+- `all`: all of the above.
 
-``$S2_SCALE`` sets the system font scale first (e.g. ``2.0``) and restores 1.0 after.
+`$S2_SCALE` sets the system font scale first (e.g. `2.0`) and restores 1.0 after.
 Every action's Python split (handler → patch sent → SharedPreferences round trip) comes
-from the app's ``S2`` log lines. Results print as lines and are appended to
-``$S2_OUT/results.jsonl`` (default ``./out``); recordings stay in ``$S2_OUT``.
+from the app's `S2` log lines. Results print as lines and are appended to
+`$S2_OUT/results.jsonl` (default `./out`); recordings stay in `$S2_OUT`.
 """
 
 import itertools
@@ -70,7 +70,7 @@ def adb(*args: str, check: bool = True) -> str:
 
 
 def events() -> list[dict[str, str]]:
-    """The app's ``S2`` log lines since the last ``logcat -c``, as field dicts."""
+    """The app's `S2` log lines since the last `logcat -c`, as field dicts."""
     out = adb("logcat", "-d", "-v", "epoch", "-s", "flet.python:I")
     found = []
     for raw in out.splitlines():
@@ -83,7 +83,7 @@ def events() -> list[dict[str, str]]:
 
 
 def wait_for(event: str, timeout: float = 15.0, **values: str) -> dict[str, str] | None:
-    """Wait for an ``S2`` line with this event (and field values); return it or None."""
+    """Wait for an `S2` line with this event (and field values); return it or None."""
     end = time.time() + timeout
     while time.time() < end:
         for found in events():
@@ -213,7 +213,7 @@ def change_times(
 
 
 def triggers(times: list[float], quiet: float = 0.8) -> list[float]:
-    """The first change of each burst: a change after at least ``quiet`` s of none."""
+    """The first change of each burst: a change after at least `quiet` s of none."""
     starts, last = [], -10.0
     for t in times:
         if t < 1.4:  # the recording's first frames, before the first action
@@ -229,8 +229,8 @@ def star_latencies(path: Path, star: Box, field: Box) -> list[float]:
 
     An instant tap draws no press feedback before the star changes (the ripple shows up
     with the fill), so the recording starts with a sync keystroke instead: the frame where
-    its character appears and its ``key-in`` log line map the video's clock onto the
-    device clock. Each fill frame is then compared with its tap's ``star-in`` line. Both
+    its character appears and its `key-in` log line map the video's clock onto the
+    device clock. Each fill frame is then compared with its tap's `star-in` line. Both
     actions reach Python the same way, so the result is the time the star takes beyond a
     change Flutter draws on its own (about one frame).
     """
@@ -480,7 +480,7 @@ def flutter_layer() -> str:
 
 
 def motion_intervals(presents: list[float], window: float = 1500.0) -> list[float]:
-    """Intervals between the frames presented within ``window`` ms of the gesture's first.
+    """Intervals between the frames presented within `window` ms of the gesture's first.
 
     The window covers a fling or a tab slide, so a stall inside it counts, however
     long; the frames after it (a ripple fading, the list at rest) are left out.

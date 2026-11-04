@@ -1,9 +1,9 @@
 """The Account store's fixtures, for its two test modules (#684).
 
-``test_account.py`` (restore, sign-out, reset) and ``test_account_sign_in.py`` (sign-in
+`test_account.py` (restore, sign-out, reset) and `test_account_sign_in.py` (sign-in
 against the mock) run the store over the in-memory SharedPreferences of
-``tests/fakes.py`` and the keystore of ``tests/keystore.py``. A module takes the
-fixtures by assigning them to its own names, as ``docs/testing-and-quality.md`` §3.1
+`tests/fakes.py` and the keystore of `tests/keystore.py`. A module takes the
+fixtures by assigning them to its own names, as `docs/testing-and-quality.md` §3.1
 says.
 """
 
@@ -22,7 +22,7 @@ from tests.fakes import MemoryPrefs
 from tests.keystore import MemoryKeystore
 
 ALL = {"email": "all@example.com", "nickname": "Robin Everything"}
-"""The seeded ``all`` account's profile, without its flags."""
+"""The seeded `all` account's profile, without its flags."""
 
 EVERY_FLAG = {
     "lead_retrieval": True,
@@ -30,7 +30,7 @@ EVERY_FLAG = {
     "mask_violation": True,
     "is_speaker": True,
 }
-"""The ``all`` account's flags, by their API names."""
+"""The `all` account's flags, by their API names."""
 
 
 @pytest.fixture
@@ -41,7 +41,7 @@ def shared() -> MemoryPrefs:
 
 @pytest.fixture
 def storage(shared: MemoryPrefs, tmp_path: Path) -> Storage:
-    """The 2026 storage service over ``shared``."""
+    """The 2026 storage service over `shared`."""
     return Storage(prefs=shared, directory=tmp_path, year=2026)
 
 
@@ -53,7 +53,7 @@ def keystore() -> MemoryKeystore:
 
 @pytest.fixture
 def credentials(keystore: MemoryKeystore) -> CredentialStorage:
-    """The credentials' storage over ``keystore``."""
+    """The credentials' storage over `keystore`."""
     return CredentialStorage(secure=keystore)
 
 
@@ -68,7 +68,7 @@ def save_account(
     """Leave on the device what an earlier session saved: any of the three parts.
 
     Args:
-        shared: SharedPreferences, for ``pycon.account`` (JSON, as stored).
+        shared: SharedPreferences, for `pycon.account` (JSON, as stored).
         keystore: The keystore, for the key and the secret.
         profile: The account's JSON object, a string stored as is, or None for none.
         api_key: The key, or None for none.
@@ -100,7 +100,7 @@ class Changes:
 
 
 def changes(account: Account) -> Changes:
-    """Subscribe a ``Changes`` to ``account`` and return it; keep it for the test."""
+    """Subscribe a `Changes` to `account` and return it; keep it for the test."""
     listener = Changes()
     assert isinstance(account, ft.Observable)
     account.subscribe(listener)
@@ -108,6 +108,6 @@ def changes(account: Account) -> Changes:
 
 
 def stored_account(shared: MemoryPrefs) -> dict[str, Any] | None:
-    """Return ``pycon.account`` as saved, decoded, or None when it is absent."""
+    """Return `pycon.account` as saved, decoded, or None when it is absent."""
     value = shared.values.get(ACCOUNT.key)
     return None if value is None else json.loads(value)

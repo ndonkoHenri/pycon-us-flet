@@ -1,15 +1,15 @@
-r"""Measure an Android app's cold start the way ``docs/testing-and-quality.md`` §8 says.
+r"""Measure an Android app's cold start the way `docs/testing-and-quality.md` §8 says.
 
-Usage, with the release APK installed and its scene set::
+Usage, with the release APK installed and its scene set:
 
     uv run python -m tools.cold_start --serial emulator-5594 -n 10
     uv run python -m tools.cold_start --serial emulator-5594 -n 10 \\
         --package io.github.ndonkohenri.pyconus.s2 \\
         --uri s2spike://s2/tree/today/deferred --marker "S2 acked"
 
-Each start is ``am force-stop``, 2 s, ``logcat -c``, ``am start -W``, 6 s with no ``adb``
-traffic, then one ``logcat -d -v epoch``: polling during a start adds about 70 ms. The marker
-is timed from logcat's ``START u0`` line (D-112). The first start of a run is left out, and
+Each start is `am force-stop`, 2 s, `logcat -c`, `am start -W`, 6 s with no `adb`
+traffic, then one `logcat -d -v epoch`: polling during a start adds about 70 ms. The marker
+is timed from logcat's `START u0` line (D-112). The first start of a run is left out, and
 Maestro's on-device driver is stopped first, since it makes Flutter report a screen reader
 (F72). Don't run it while builds run; read the numbers against the reproducer in one window
 (D-453).
@@ -38,10 +38,10 @@ _TOTAL_TIME = re.compile(r"^TotalTime:\s*(\d+)", re.MULTILINE)
 
 
 def marker_ms(log: str, marker: str) -> float | None:
-    """Return the ms from logcat's ``START u0`` to the first line with ``marker``, or None.
+    """Return the ms from logcat's `START u0` to the first line with `marker`, or None.
 
     Args:
-        log: The output of ``logcat -d -v epoch``.
+        log: The output of `logcat -d -v epoch`.
         marker: A regular expression for the line that ends the start.
     """
     start = None
@@ -58,13 +58,13 @@ def marker_ms(log: str, marker: str) -> float | None:
 
 
 def total_time(output: str) -> int | None:
-    """Return ``TotalTime`` from what ``am start -W`` printed, or None without one."""
+    """Return `TotalTime` from what `am start -W` printed, or None without one."""
     found = _TOTAL_TIME.search(output)
     return int(found.group(1)) if found else None
 
 
 def summary(name: str, values: list[float]) -> str:
-    """Return a line with the median and the range of ``values``, in ms."""
+    """Return a line with the median and the range of `values`, in ms."""
     if not values:
         return f"{name}: no readings"
     return (
@@ -74,14 +74,14 @@ def summary(name: str, values: list[float]) -> str:
 
 
 def _adb(serial: str, *args: str) -> str:
-    """Run ``adb`` on ``serial`` and return its output."""
+    """Run `adb` on `serial` and return its output."""
     return subprocess.run(
         ["adb", "-s", serial, *args], check=True, capture_output=True, text=True
     ).stdout
 
 
 def one_start(serial: str, package: str, uri: str) -> tuple[str, str]:
-    """Run one cold start and return what ``am start -W`` printed, and the log."""
+    """Run one cold start and return what `am start -W` printed, and the log."""
     _adb(serial, "shell", "am", "force-stop", package)
     time.sleep(SETTLE_SECONDS)
     _adb(serial, "logcat", "-c")

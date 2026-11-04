@@ -2,16 +2,16 @@
 
 NEW-04, D-255, D-335. A refresh that records a batch with something other than
 additions gets one floating SnackBar, "2 saved sessions changed" or "Schedule updated ·
-3 changes" (``core/change_views.snackbar_text()``), whose **Review** pushes the list on
-the View on top (``changes/<year>``, a drill level), so Back returns there. It keeps
+3 changes" (`core/change_views.snackbar_text()`), whose **Review** pushes the list on
+the View on top (`changes/<year>`, a drill level), so Back returns there. It keeps
 the Undo SnackBar's timing: 4 s, kept for a screen reader until used or replaced
 (D-184). Showing the list closes it, by any route, and so does Mark all as seen
-(``close_review()``), as D-251 closes the favourites SnackBar: the page's last Review
-SnackBar is held weakly, and closing it is ``open = False`` and ``update()``, never
-``page.pop_dialog()``. Review on a View that already is the list only closes it.
+(`close_review()`), as D-251 closes the favourites SnackBar: the page's last Review
+SnackBar is held weakly, and closing it is `open = False` and `update()`, never
+`page.pop_dialog()`. Review on a View that already is the list only closes it.
 
 The Schedule's overflow ("More options") holds "Schedule changes" (ux.md §5.2 item 1),
-pushing ``/schedule/changes/<year>``.
+pushing `/schedule/changes/<year>`.
 """
 
 from collections.abc import Callable
@@ -49,18 +49,18 @@ def use_review_snack_bar(
 ) -> None:
     """Show the Review SnackBar for each batch the change log announces (a hook, D-70).
 
-    ``App`` calls it on every render, before the boot gate's early return. It
-    subscribes to the store rather than reading it in a render, so ``App`` never
+    `App` calls it on every render, before the boot gate's early return. It
+    subscribes to the store rather than reading it in a render, so `App` never
     re-renders for a batch: the listener takes the batch to announce, once
-    (``ChangeLog.take_announcement()``), and shows its SnackBar; a recorded batch of
+    (`ChangeLog.take_announcement()`), and shows its SnackBar; a recorded batch of
     additions only, a load and a deletion have none to take.
 
     Args:
         svc: The session's services: the active year, whose log the store keeps, and
-            the ``SemanticsService`` that says when no screen reader is on.
-        change_log: The session's ``ChangeLog`` store.
-        favorites: The session's ``Favorites`` store: the saved sessions counted first.
-        prefs: The session's ``Prefs`` store: a screen reader keeps the SnackBar,
+            the `SemanticsService` that says when no screen reader is on.
+        change_log: The session's `ChangeLog` store.
+        favorites: The session's `Favorites` store: the saved sessions counted first.
+        prefs: The session's `Prefs` store: a screen reader keeps the SnackBar,
             until none is on (D-356).
     """
     page = ft.context.page
@@ -97,12 +97,12 @@ def use_review_snack_bar(
 def show_review(page: ft.Page, text: str, year: str, *, keep: bool) -> ft.SnackBar:
     """Show a batch's floating SnackBar, its one action Review; it replaces the last one.
 
-    Flet's ``SnackBarControl`` removes the SnackBar showing before it shows one
+    Flet's `SnackBarControl` removes the SnackBar showing before it shows one
     (D-251), so the next batch's, or any other, replaces it.
 
     Args:
         page: The session's page.
-        text: What it says, ``snackbar_text()``'s words.
+        text: What it says, `snackbar_text()`'s words.
         year: The conference year, the list's drill id.
         keep: A screen reader is on: the SnackBar stays until it is used, replaced or
             closed (D-184).
@@ -138,8 +138,8 @@ def close_review(page: ft.Page) -> None:
 
     For the list when it shows and for Mark all as seen (D-255): with a screen reader
     on, D-184 would otherwise keep "Schedule updated · Review" over the list it points
-    to. Only that SnackBar, never ``page.pop_dialog()``'s top dialog; one already gone
-    (Flet sets ``open`` False once it has) is not sent again.
+    to. Only that SnackBar, never `page.pop_dialog()`'s top dialog; one already gone
+    (Flet sets `open` False once it has) is not sent again.
 
     Args:
         page: The session's page.
@@ -170,11 +170,11 @@ def use_close_review() -> None:
 def ScheduleOverflow(*, source: str) -> ft.Control:
     """The Schedule's overflow ("More options"): "Schedule changes" (ux.md §5.2 item 1).
 
-    The item pushes the list on the Schedule, ``/schedule/changes/<year>``, so Back
+    The item pushes the list on the Schedule, `/schedule/changes/<year>`, so Back
     returns to the Schedule (D-255).
 
     Args:
-        source: The Schedule's ``__name__``, for View source (D-461).
+        source: The Schedule's `__name__`, for View source (D-461).
     """
     page = ft.context.page
     svc = use_services()

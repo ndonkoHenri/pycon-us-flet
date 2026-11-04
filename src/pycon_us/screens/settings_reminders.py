@@ -1,21 +1,21 @@
 """Settings' Reminders section: the live controls with E3, else D-60's interim (NOTIF-01).
 
-**Live** (``RemindersSection``, a build with E3: ``Services.reminders``; ux.md §6.9,
-D-401): a level-2 heading; a card while notifications need the user (``card_for()``):
+**Live** (`RemindersSection`, a build with E3: `Services.reminders`; ux.md §6.9,
+D-401): a level-2 heading; a card while notifications need the user (`card_for()`):
 "Allow notifications" while the OS can still ask, both it and "Open settings" once
 Android refused a request again (it may still ask, or answer without a prompt: F259),
 "Open settings" once only the system settings can change it, and on Android, while session reminders are on, the Alarms &
 reminders card (D-221); the "Remind me before sessions in My schedule" switch, with
-the 5 · 10 · 15 min ``SegmentedButton`` only while it is on; and the three conference
-moments. Each row is a ``ListTile(toggle_inputs=True)`` that saves silently: the
-scheduler re-plans on any change of ``Prefs.reminders`` (D-389), and only a failed write
+the 5 · 10 · 15 min `SegmentedButton` only while it is on; and the three conference
+moments. Each row is a `ListTile(toggle_inputs=True)` that saves silently: the
+scheduler re-plans on any change of `Prefs.reminders` (D-389), and only a failed write
 says so (D-120). Turning the switch on while the primer was never accepted shows it
-(``reminder_primer.ask()``, D-61, D-275). The cards follow the OS: its answers are read
+(`reminder_primer.ask()`, D-61, D-275). The cards follow the OS: its answers are read
 when the section mounts, after a change of the settings, after a card's button, and
-whenever the ``Scheduler`` reads a change on resume or before an apply
-(``Scheduler.watch()``).
+whenever the `Scheduler` reads a change on resume or before an apply
+(`Scheduler.watch()`).
 
-**Interim** (``interim_section()``, without E3, always in the companion app, D-63): a
+**Interim** (`interim_section()`, without E3, always in the companion app, D-63): a
 level-2 heading and one sentence that says reminders aren't available in this build and
 what covers for them, with no switch that would do nothing. On iOS the sentence adds
 that calendar exports carry an alarm; Android's calendar import drops it (D-272).
@@ -61,7 +61,7 @@ MOMENT_ROWS: tuple[tuple[str, str, ft.IconData], ...] = (
     ("lightning", "Lightning-talk sign-ups", ft.Icons.BOLT_OUTLINED),
     ("open_space", "Open-space sign-ups", ft.Icons.FORUM_OUTLINED),
 )
-"""Each moment's ``ReminderSettings`` field, title and decorative icon, in order."""
+"""Each moment's `ReminderSettings` field, title and decorative icon, in order."""
 
 ASK_TEXT = "Reminders show only once you allow notifications."
 ASK_ACTION = "Allow notifications"
@@ -94,18 +94,18 @@ def card_for(
     unread or unknown status shows nothing, as §4.8 says.
 
     Args:
-        access: ``Scheduler.access()``'s answer; None until read.
+        access: `Scheduler.access()`'s answer; None until read.
         settings: The reminder settings: what is on, and whether the app has asked
-            (``primer`` ``accepted``).
+            (`primer` `accepted`).
         android: The app runs on Android, the one platform with the exact-alarm card.
-        exact: Whether Android allows exact alarms (``Scheduler.exact``); None until
+        exact: Whether Android allows exact alarms (`Scheduler.exact`); None until
             read.
 
     Returns:
-        ``"ask"`` while the OS may still ask; ``"refused"`` once Android refused a
-        request again while it may still ask (F259); ``"blocked"`` once only the system
+        `"ask"` while the OS may still ask; `"refused"` once Android refused a
+        request again while it may still ask (F259); `"blocked"` once only the system
         settings can allow notifications, which on iOS is also "askable" after the
-        app has asked, since iOS shows its prompt once (F245); ``"exact"`` on Android
+        app has asked, since iOS shows its prompt once (F245); `"exact"` on Android
         while session reminders are on, notifications allowed and exact alarms not.
     """
     moments = settings.keynote or settings.lightning or settings.open_space
@@ -259,17 +259,17 @@ def RemindersSection(slot: int) -> ft.Control:
 
 
 async def save(page: ft.Page, svc: Services, prefs: Prefs, **changes: Any) -> None:
-    """Save the reminder settings with ``changes``, silently unless the write fails.
+    """Save the reminder settings with `changes`, silently unless the write fails.
 
-    Through ``Prefs.change_reminders()``, so overlapping taps each keep the other's
-    change. The scheduler re-plans on the change of ``Prefs.reminders`` (D-389); a failed
+    Through `Prefs.change_reminders()`, so overlapping taps each keep the other's
+    change. The scheduler re-plans on the change of `Prefs.reminders` (D-389); a failed
     write keeps the change for the session and says so (D-120).
 
     Args:
         page: The session's page.
         svc: The session's services: the storage.
-        prefs: The session's ``Prefs``, whose ``reminders`` change.
-        **changes: ``ReminderSettings`` fields and their new values.
+        prefs: The session's `Prefs`, whose `reminders` change.
+        **changes: `ReminderSettings` fields and their new values.
     """
     saved = await prefs.change_reminders(
         svc.storage, lambda current: dataclasses.replace(current, **changes)
@@ -290,16 +290,16 @@ def toggle_row(
     """Return a switch row: one node with its identifier, toggled by the whole row.
 
     Read as its title and the switch's state; its decorative icon is centred in
-    ``slot``, so the title starts where Appearance's do (ux.md §6.9).
+    `slot`, so the title starts where Appearance's do (ux.md §6.9).
 
     Args:
-        identifier: For UI flows, e.g. ``settings.reminders.sessions``.
+        identifier: For UI flows, e.g. `settings.reminders.sessions`.
         title: What the switch turns on.
         icon: The decorative icon.
-        on: The switch's state, from ``Prefs.reminders`` (controlled, D-157).
+        on: The switch's state, from `Prefs.reminders` (controlled, D-157).
         on_change: Saves the new state.
         slot: The width the icon is centred in.
-        data: The switch's ``data``: the moment's field, which its handler reads.
+        data: The switch's `data`: the moment's field, which its handler reads.
     """
     return named(
         identifier,
@@ -317,12 +317,12 @@ def toggle_row(
 def lead_picker(
     lead: int, on_change: Callable[[ft.Event[ft.SegmentedButton]], object]
 ) -> ft.Control:
-    """Return the 5 · 10 · 15 min ``SegmentedButton``, the session reminders' lead.
+    """Return the 5 · 10 · 15 min `SegmentedButton`, the session reminders' lead.
 
     Each segment is read as its label, a button and its state; its identifier is
-    ``settings.reminders.lead.<minutes>``, merged into the segment's node as the
-    Expo's view switch's are. As wide as the list's content (``expand`` in a
-    ``Row``), so "15 min" has the most room at 200 % text.
+    `settings.reminders.lead.<minutes>`, merged into the segment's node as the
+    Expo's view switch's are. As wide as the list's content (`expand` in a
+    `Row`), so "15 min" has the most room at 200 % text.
 
     Args:
         lead: The chosen lead, in minutes (not 0: the picker shows while on).
@@ -364,14 +364,14 @@ def notice_card(
     """Return a card that says what the OS needs, with the buttons that get there.
 
     The sentence is a live region, so a screen reader says a card that appears on
-    resume; each button is its own stop, ``<identifier>.action`` and
-    ``<identifier>.settings``.
+    resume; each button is its own stop, `<identifier>.action` and
+    `<identifier>.settings`.
 
     Args:
-        identifier: For UI flows, e.g. ``settings.reminders.exact``.
+        identifier: For UI flows, e.g. `settings.reminders.exact`.
         text: The card's sentence.
         action: The button's label; None for no button (no system settings to open).
-        on_click: The button's tap; its event's control is the opener ``focus_back()``
+        on_click: The button's tap; its event's control is the opener `focus_back()`
             focuses again (D-372).
         settings_click: The tap of a second button, "Open settings", after the first;
             None for none.

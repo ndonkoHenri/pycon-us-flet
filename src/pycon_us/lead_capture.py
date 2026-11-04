@@ -1,12 +1,12 @@
 """A lead scan through the outbox, with its result at once (#741; LEAD-07, LEAD-09).
 
-``capture()`` is the Lead scanner's ``on_badge``. It enqueues the scan as a ``lead``
-row (``core/outbox_enqueue.scan_lead``, one row per owner, code and sponsor, D-459), so
+`capture()` is the Lead scanner's `on_badge`. It enqueues the scan as a `lead`
+row (`core/outbox_enqueue.scan_lead`, one row per owner, code and sponsor, D-459), so
 it survives airplane mode and a kill (D-56); the row keeps the sponsor it was scanned
 for (STORE-11), and a staff account's result says which sponsor that is, and any other
-it has the attendee in its leads for. It then kicks the ``SyncWorker``, which stays the
-only sender (D-407), waits up to ``WAIT_SECONDS`` for the worker's pass to take the row, and reads the row
-back by id: its state is the result (D-426). A ``Staff`` change marks each step of a
+it has the attendee in its leads for. It then kicks the `SyncWorker`, which stays the
+only sender (D-407), waits up to `WAIT_SECONDS` for the worker's pass to take the row, and reads the row
+back by id: its state is the result (D-426). A `Staff` change marks each step of a
 pass, so the wait is driven by the worker's reports, never by polling (LEAD-09).
 """
 
@@ -60,13 +60,13 @@ async def capture(
     """Queue a lead scan, let the worker send it, and say how it went.
 
     Args:
-        db: The outbox (``Services.outbox``); None says the scan couldn't be saved.
-        staff: The ``Staff`` store: its counts are updated, and its changes end
+        db: The outbox (`Services.outbox`); None says the scan couldn't be saved.
+        staff: The `Staff` store: its counts are updated, and its changes end
             the wait.
-        kick: Asks the worker for a pass (``Services.kick_sync``).
+        kick: Asks the worker for a pass (`Services.kick_sync`).
         badge: The badge scanned; the lead's validator is its last segment. Last of
-            the positional arguments, so the screen passes a ``functools.partial``
-            of the others as its ``on_badge``.
+            the positional arguments, so the screen passes a `functools.partial`
+            of the others as its `on_badge`.
         owner: The signed-in account's lower-cased email.
         sponsor: The sponsor a staff account scans for; None for a sponsor's own.
         clock: The time of the scan, epoch seconds as the worker's (D-407).
@@ -107,7 +107,7 @@ def attributed(result: ScanResult, row: Row, others: tuple[str, ...]) -> ScanRes
     Args:
         result: The scan's result.
         row: The lead row it is about.
-        others: The other sponsors' names (``Enqueued.others``).
+        others: The other sponsors' names (`Enqueued.others`).
     """
     lines = (for_line(row.sponsor_name),) if row.sponsor_name else ()
     also = (f"{ALSO_FOR} {', '.join(others)}",) if others else ()
@@ -123,13 +123,13 @@ async def sent(
 ) -> Row | None:
     """Kick the worker and return the row once a send has moved it, or at the limit.
 
-    Each ``Staff`` change (a pass starting, its report) reads the row again; it stops
+    Each `Staff` change (a pass starting, its report) reads the row again; it stops
     as soon as the row is synced, failed, counted a refusal or put off after a
-    network error, or after ``WAIT_SECONDS`` (a backlog, no worker): the row as it is.
+    network error, or after `WAIT_SECONDS` (a backlog, no worker): the row as it is.
 
     Args:
         db: The outbox.
-        staff: The ``Staff`` store the worker reports to.
+        staff: The `Staff` store the worker reports to.
         kick: Asks the worker for a pass.
         row: The row just enqueued, stored (with its id).
 
@@ -165,7 +165,7 @@ def moved(before: Row, after: Row) -> bool:
     """Whether a send has changed the row since its enqueue: its outcome is known.
 
     A success syncs it; a refusal counts a try (the tenth fails it); a network
-    error, or a refused key, puts it off a tick (``next_at``).
+    error, or a refused key, puts it off a tick (`next_at`).
     """
     return (
         after.status is not Status.PENDING

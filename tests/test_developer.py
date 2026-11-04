@@ -1,8 +1,8 @@
 """Tests for the Developer screen: its controls, fields and flags (#88; D-73).
 
-The fixtures and lookups are ``tests/developer_screen.py``'s; Apply, Reset and the
-pickers are ``test_developer_apply.py``'s. The parsing helpers are pure; the pickers on
-their own are ``test_developer_clock.py``'s. How the screen looks, and the pickers on a
+The fixtures and lookups are `tests/developer_screen.py`'s; Apply, Reset and the
+pickers are `test_developer_apply.py`'s. The parsing helpers are pure; the pickers on
+their own are `test_developer_clock.py`'s. How the screen looks, and the pickers on a
 device, are checked on devices (the PR).
 """
 
@@ -119,7 +119,7 @@ def test_the_fields_show_what_is_in_effect(
 
 
 def helper(text_field: ft.TextField) -> ft.Text:
-    """A field's helper, a ``Text`` in Material's helper style."""
+    """A field's helper, a `Text` in Material's helper style."""
     text = text_field.helper
     assert isinstance(text, ft.Text)
     assert text.theme_style == ft.TextThemeStyle.BODY_SMALL

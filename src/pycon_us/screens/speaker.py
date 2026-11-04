@@ -1,13 +1,13 @@
-"""Speaker detail (``…/speaker/<id>``): who, when they speak, then their bio (SPKR-03).
+"""Speaker detail (`…/speaker/<id>`): who, when they speak, then their bio (SPKR-03).
 
 The intro is the speaker's photo over their initials and their name, the page's
 level-1 heading (the app bar's title stays empty, as on session detail, D-186). Then
 "when do they speak", before the bio (ux.md §5.7): every session that links them, by
-day under level-2 day headings (F40), as ``SessionRow``s with their stars (D-184), each
-day one memoised item (``ui.day_groups``, D-153). The rows leave out the speaker the
+day under level-2 day headings (F40), as `SessionRow`s with their stars (D-184), each
+day one memoised item (`ui.day_groups`, D-153). The rows leave out the speaker the
 page names: their speakers line names only the co-speakers, "With Ana Lima", in what
-they show and what they say (``session_view(of_speaker=...)``, D-203). Then "About",
-the bio as Markdown whose links open by the link rule (``ui.links.feed_markdown``,
+they show and what they say (`session_view(of_speaker=...)`, D-203). Then "About",
+the bio as Markdown whose links open by the link rule (`ui.links.feed_markdown`,
 D-116, D-197), left out when the feed's bio is only a placeholder dash. A speaker
 the feed links to no session (neither recorded feed has one) shows an empty state
 where the days would be, as a track page without sessions does (D-199).
@@ -148,13 +148,13 @@ def intro(speaker: Speaker, *, large_text: bool) -> ft.Control:
     """Return the page's intro: the speaker's photo over their initials, then the name.
 
     Centred (ux.md §5.7). The name is the page's heading (level 1, F40), a
-    ``PageTitle`` selectable to copy (D-26), where a long name wraps rather than
+    `PageTitle` selectable to copy (D-26), where a long name wraps rather than
     being cut as an app bar title is at large text (D-186). The photo is decorative:
     the heading says whose it is.
 
     Args:
         speaker: The directory speaker.
-        large_text: The text is large for the width (``Prefs.time_above``): the
+        large_text: The text is large for the width (`Prefs.time_above`): the
             name steps down (D-328).
     """
     photo = ft.Semantics(

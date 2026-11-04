@@ -2,15 +2,15 @@
 
 Every build carries the app's own code, Python, Flet, Flutter and the Python packages
 they pull in, the Roboto font, Material icons and the brand marks; their licences ask
-that the build carry their notices. ``COMPONENTS`` lists them by group, in the page's
-order, the app and its ``NOTICE`` first. Each names the text file in
-``licence_texts/`` that it opens: the component's own licence file, as its package
-ships it, or ``apache-2.0.txt`` for one whose licence is Apache 2.0 with no file of its
-own. The texts sit next to the code, so ``flet build`` bundles them and they open
+that the build carry their notices. `COMPONENTS` lists them by group, in the page's
+order, the app and its `NOTICE` first. Each names the text file in
+`licence_texts/` that it opens: the component's own licence file, as its package
+ships it, or `apache-2.0.txt` for one whose licence is Apache 2.0 with no file of its
+own. The texts sit next to the code, so `flet build` bundles them and they open
 offline, as the year data does (F15).
 
-Flutter's per-package list (``NOTICES.Z``) waits on Flet (U51): until then this lists
-the direct components. A test keeps every runtime package of ``uv.lock`` here (D-75).
+Flutter's per-package list (`NOTICES.Z`) waits on Flet (U51): until then this lists
+the direct components. A test keeps every runtime package of `uv.lock` here (D-75).
 """
 
 import re
@@ -20,7 +20,7 @@ from pathlib import Path
 from pycon_us import APP_NAME
 
 TEXTS_DIR = Path(__file__).parent / "licence_texts"
-"""Where the licence texts live; ``flet build`` bundles them with the package (F15)."""
+"""Where the licence texts live; `flet build` bundles them with the package (F15)."""
 
 
 @dataclass(frozen=True)
@@ -28,17 +28,17 @@ class Component:
     """One thing a build ships, its licence and who holds its copyright."""
 
     key: str
-    """Its segment in ``/more/app/licences/<key>`` and its identifier's last part."""
+    """Its segment in `/more/app/licences/<key>` and its identifier's last part."""
     name: str
     """What the page calls it."""
     licence: str
-    """Its licence's SPDX identifier, which the row shows: ``Apache-2.0``, ``MIT``."""
+    """Its licence's SPDX identifier, which the row shows: `Apache-2.0`, `MIT`."""
     copyright: str
     """Its copyright line, as its licence file or project states it."""
     text: str
-    """The file in ``licence_texts/`` that holds its full text."""
+    """The file in `licence_texts/` that holds its full text."""
     package: str | None = None
-    """Its name in ``uv.lock`` when it is a Python package, for the coverage test."""
+    """Its name in `uv.lock` when it is a Python package, for the coverage test."""
 
 
 @dataclass(frozen=True)
@@ -68,11 +68,11 @@ NOTICE = Component(
     "What the app reuses, and whose marks it names",
     "notice.txt",
 )
-"""The repository's ``NOTICE``, which Apache 2.0 asks a build to carry (D-87)."""
+"""The repository's `NOTICE`, which Apache 2.0 asks a build to carry (D-87)."""
 
 
 def _package(key: str, name: str, licence: str, copyright: str) -> Component:
-    """Return a Python package's entry: its ``uv.lock`` name is ``key``."""
+    """Return a Python package's entry: its `uv.lock` name is `key`."""
     return Component(key, name, licence, copyright, f"{key}.txt", package=key)
 
 
@@ -230,14 +230,14 @@ def read_text(component: Component) -> str:
 
 
 _OWN_LINE = re.compile(r"\s*(?:[-*•] |#|\d{1,2}\. |\(\w{1,3}\) |[a-z]\) |Copyright )")
-"""A line that starts a line of its own: a list item (``* Redistributions``, ``1.``,
-``(a)``), a Markdown heading or a copyright line."""
+"""A line that starts a line of its own: a list item (`* Redistributions`, `1.`,
+`(a)`), a Markdown heading or a copyright line."""
 
 _COLUMNS = re.compile(r"\S {3,}\S")
 """Three spaces or more between words: columns, as in Python's table of releases."""
 
 _RULE = re.compile(r"\s*[=\-*_]{3,}\s*")
-"""A line of ``=``, ``-``, ``*`` or ``_`` alone: a heading's underline or a rule."""
+"""A line of `=`, `-`, `*` or `_` alone: a heading's underline or a rule."""
 
 
 @dataclass(frozen=True)

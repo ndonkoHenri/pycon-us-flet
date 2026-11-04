@@ -1,8 +1,8 @@
 """Tests for the route table (SHELL-03, SHELL-04; D-17, D-19).
 
-Locations are matched with the Router's own matcher (``tests/route_levels.py``), as
-S4's ``check_routes.py`` did, so a Flet bump that changes matching fails here first.
-The location helpers are tested in ``test_routes_locations.py``; the screens
+Locations are matched with the Router's own matcher (`tests/route_levels.py`), as
+S4's `check_routes.py` did, so a Flet bump that changes matching fails here first.
+The location helpers are tested in `test_routes_locations.py`; the screens
 themselves are checked on devices (the PR).
 """
 
@@ -184,7 +184,7 @@ def known_locations() -> list[str]:
 
 @pytest.mark.parametrize("location", known_locations())
 def test_the_catch_all_matches_no_page_and_no_drill(location: str) -> None:
-    """Every page and every drill still opens its own screens, never ``NotFound``."""
+    """Every page and every drill still opens its own screens, never `NotFound`."""
     screens = [name for name, _, _ in view_levels(location)]
     assert "NotFound" not in screens
 
@@ -208,7 +208,7 @@ DRILL_SCREENS = {
 
 
 def drill_screen(monkeypatch: pytest.MonkeyPatch, kind: str) -> object:
-    """What ``Drill``'s body returns for a level of kind with the quoted id ``a%2Fb``.
+    """What `Drill`'s body returns for a level of kind with the quoted id `a%2Fb`.
 
     The body runs without a renderer: the params hook and the screens are stand-ins,
     each screen returning its own name and keyword arguments.
@@ -230,7 +230,7 @@ def test_each_drill_kind_opens_its_own_screen_with_the_unquoted_id(
 
 
 def test_the_expo_plan_opens_the_expo_hall(monkeypatch: pytest.MonkeyPatch) -> None:
-    """``…/plan/expo`` is ``ExpoPlan``, the expo hall with its booths (EXPO-01)."""
+    """`…/plan/expo` is `ExpoPlan`, the expo hall with its booths (EXPO-01)."""
     monkeypatch.setattr(
         ft, "use_route_params", lambda: {"kind": "plan", "ident": "expo"}
     )
@@ -241,13 +241,13 @@ def test_the_expo_plan_opens_the_expo_hall(monkeypatch: pytest.MonkeyPatch) -> N
 def test_a_drill_kind_without_a_screen_is_an_error_not_another_screen(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """A drill kind with no screen raises ``ValueError`` naming it."""
+    """A drill kind with no screen raises `ValueError` naming it."""
     with pytest.raises(ValueError, match="'poster'"):
         drill_screen(monkeypatch, "poster")
 
 
 def page_paths(routes: list, prefix: str = "") -> set[str]:
-    """Return the path of every page under ``routes``, joined to ``prefix``.
+    """Return the path of every page under `routes`, joined to `prefix`.
 
     Index routes and the drill are skipped; a path may still hold a parameter.
     """
@@ -261,6 +261,6 @@ def page_paths(routes: list, prefix: str = "") -> set[str]:
 
 
 def test_pages_lists_every_page_of_the_route_table_without_a_parameter() -> None:
-    """``PAGES`` is every route without a parameter, and holds every tab root."""
+    """`PAGES` is every route without a parameter, and holds every tab root."""
     assert {path for path in page_paths(ROUTES) if ":" not in path} == PAGES
     assert set(TAB_ROOTS) <= PAGES

@@ -1,4 +1,4 @@
-"""Helpers that read a ``ui.fold.FoldTile`` in a built tree: its header, state and rows."""
+"""Helpers that read a `ui.fold.FoldTile` in a built tree: its header, state and rows."""
 
 from collections.abc import Iterable
 from dataclasses import dataclass
@@ -11,7 +11,7 @@ from pycon_us.ui import fold
 
 @dataclass(frozen=True)
 class Fold:
-    """A ``FoldTile``'s parts: its identifier's node, its header and what it holds."""
+    """A `FoldTile`'s parts: its identifier's node, its header and what it holds."""
 
     root: ft.Container
     node: ft.Semantics
@@ -54,7 +54,7 @@ class Fold:
 
 
 def as_fold(control: ft.BaseControl) -> Fold | None:
-    """Return ``control``'s parts when it is a ``FoldTile``, else None."""
+    """Return `control`'s parts when it is a `FoldTile`, else None."""
     if not isinstance(control, ft.Container) or not isinstance(
         column := control.content, ft.Column
     ):
@@ -78,11 +78,11 @@ def as_fold(control: ft.BaseControl) -> Fold | None:
 
 
 def folds(controls: Iterable[ft.BaseControl]) -> list[Fold]:
-    """Return the ``FoldTile``s among ``controls``, in their order."""
+    """Return the `FoldTile`s among `controls`, in their order."""
     return [found for control in controls if (found := as_fold(control))]
 
 
 def fold_named(controls: Iterable[ft.BaseControl], identifier: str) -> Fold:
-    """Return the one ``FoldTile`` among ``controls`` whose header is ``identifier``."""
+    """Return the one `FoldTile` among `controls` whose header is `identifier`."""
     (found,) = [f for f in folds(controls) if f.identifier == identifier]
     return found

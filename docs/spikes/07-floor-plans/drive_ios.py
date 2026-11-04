@@ -1,16 +1,16 @@
 """Drive the S7 reproducer on an iOS simulator with Maestro and measure it (#361).
 
-Run from this folder with the debug build installed and launched::
+Run from this folder with the debug build installed and launched:
 
     S7_UDID=<udid> uv run python drive_ios.py <step> [<arg> ...] [/ <step> ...]
 
-Steps (each prints ``S7-DRIVE`` lines):
+Steps (each prints `S7-DRIVE` lines):
 
-- ``tap <text>``: Maestro's ``tapOn`` the text (the free local CLI, never Cloud).
-- ``point <x> <y>``: a tap at a point, in points.
-- ``swipe <x1> <y1> <x2> <y2>``: one drag, in points.
-- ``pans <n>``: n drags across the plan, in four directions.
-- ``mem <label>``: the app's ``phys_footprint`` and its peak (``footprint``), in MB.
+- `tap <text>`: Maestro's `tapOn` the text (the free local CLI, never Cloud).
+- `point <x> <y>`: a tap at a point, in points.
+- `swipe <x1> <y1> <x2> <y2>`: one drag, in points.
+- `pans <n>`: n drags across the plan, in four directions.
+- `mem <label>`: the app's `phys_footprint` and its peak (`footprint`), in MB.
 """
 
 import os
@@ -68,7 +68,7 @@ def mem(label: str) -> None:
 
 
 def main() -> None:
-    """Run the steps named on the command line, separated by ``/``."""
+    """Run the steps named on the command line, separated by `/`."""
     words = sys.argv[1:]
     while words:
         cut = words.index("/") if "/" in words else len(words)

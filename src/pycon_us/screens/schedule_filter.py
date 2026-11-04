@@ -2,19 +2,19 @@
 
 Only the Schedule filters (D-20, D-178): this module is what it places for that.
 
-- ``use_track_filter()``, the Schedule's hook: the ``TUNE`` action ("Filter sessions"),
+- `use_track_filter()`, the Schedule's hook: the `TUNE` action ("Filter sessions"),
   with a dot only when the filter differs from the default; the summary's words
   whenever a track is hidden, the default included ("Hidden: Open space"); and the
-  sheet (``screens/schedule_sheet.py``, ux.md §5.3), a modal ``BottomSheet`` shown
-  through ``ft.use_dialog``.
-- ``summary_line()``, those words with "Show all", which the Schedule's head places
-  under the day tabs (``screens/schedule_head.py``, D-345).
-- The words, as pure functions: ``hidden_tracks()``, ``summary_text()`` and
-  ``differs_from_default()``.
+  sheet (`screens/schedule_sheet.py`, ux.md §5.3), a modal `BottomSheet` shown
+  through `ft.use_dialog`.
+- `summary_line()`, those words with "Show all", which the Schedule's head places
+  under the day tabs (`screens/schedule_head.py`, D-345).
+- The words, as pure functions: `hidden_tracks()`, `summary_text()` and
+  `differs_from_default()`.
 
-A chip applies at once and persists (``Prefs.save``), so a swipe that dismisses the
+A chip applies at once and persists (`Prefs.save`), so a swipe that dismisses the
 sheet keeps it (Ionic dropped the changes). The filter is the stored list of hidden
-track keys, ``Prefs.excluded_tracks``: absent, the default (open spaces hidden); an
+track keys, `Prefs.excluded_tracks`: absent, the default (open spaces hidden); an
 explicit empty list hides nothing. Changing it never scrolls a list (#313): the
 Schedule's memoised path re-renders only the slots the change touched (D-153, D-178).
 """
@@ -55,18 +55,18 @@ theirs (D-229). Material shrinks a text button's side padding as text grows (12 
 at 100 %, 8 at 200 %, 4 from 300 %), which left a wrapped label out of line."""
 
 SUMMARY_ICON = 20
-"""The ``FILTER_LIST`` mark's size at 100 %, in dp: one ``BODY_MEDIUM`` line, which
+"""The `FILTER_LIST` mark's size at 100 %, in dp: one `BODY_MEDIUM` line, which
 it stays at every text size (D-373)."""
 
 
 @dataclass(frozen=True)
 class TrackFilter:
-    """What the Schedule places for its filter (``use_track_filter()``).
+    """What the Schedule places for its filter (`use_track_filter()`).
 
     Attributes:
-        button: The app bar's ``TUNE`` action, which opens the sheet.
-        summary: The summary's words (``summary_text()``), or None while nothing
-            is hidden; the Schedule's head places them (``summary_line()``, D-345).
+        button: The app bar's `TUNE` action, which opens the sheet.
+        summary: The summary's words (`summary_text()`), or None while nothing
+            is hidden; the Schedule's head places them (`summary_line()`, D-345).
         show_all: Hide no track; stable across renders, so a memoised day list given
             it ("Clear filters") stays skipped (D-153).
     """
@@ -87,7 +87,7 @@ def hidden_tracks(
     Args:
         info: The year's facts.
         tracks: The track keys the feed's schedule holds.
-        excluded: The stored filter, ``Prefs.excluded_tracks``.
+        excluded: The stored filter, `Prefs.excluded_tracks`.
     """
     hidden = set(excluded)
     return tuple(
@@ -101,14 +101,14 @@ def hidden_tracks(
 def summary_text(info: ConferenceInfo, hidden: Sequence[str]) -> str | None:
     """Return the summary under the day tabs: "Hidden: Open space", or None.
 
-    Names the first ``SUMMARY_NAMES`` tracks by ``track_name()``, as their chips and
+    Names the first `SUMMARY_NAMES` tracks by `track_name()`, as their chips and
     badges do, then "and N more": "Hidden: Talk, Tutorial, Poster", "Hidden: Talk,
     Keynote, AI and 4 more". A list of labels, not a sentence: "Hiding: Talk and Open
     space" read as one talk and one open space, where the badge names stand for kinds.
 
     Args:
         info: The year's facts.
-        hidden: The hidden tracks, from ``hidden_tracks()``.
+        hidden: The hidden tracks, from `hidden_tracks()`.
     """
     if not hidden:
         return None
@@ -127,7 +127,7 @@ def differs_from_default(tracks: Collection[str], excluded: Iterable[str]) -> bo
 
     Args:
         tracks: The track keys the feed's schedule holds.
-        excluded: The stored filter, ``Prefs.excluded_tracks``.
+        excluded: The stored filter, `Prefs.excluded_tracks`.
     """
     present = set(tracks)
     return set(excluded) & present != set(DEFAULT_HIDDEN) & present
@@ -215,7 +215,7 @@ async def _save(
     lock: asyncio.Lock,
     change: Callable[[tuple[str, ...]], tuple[str, ...]],
 ) -> None:
-    """Store the filter ``change`` makes of the current one, one edit at a time.
+    """Store the filter `change` makes of the current one, one edit at a time.
 
     The lock makes a second tap wait for the first one's write, so it reads the filter
     that one saved: without it, both would start from the same filter and the second
@@ -229,13 +229,13 @@ async def _save(
 
 
 def _toggled(excluded: tuple[str, ...], key: str, *, shown: bool) -> tuple[str, ...]:
-    """Return ``excluded`` with ``key`` shown (removed) or hidden (added at the end)."""
+    """Return `excluded` with `key` shown (removed) or hidden (added at the end)."""
     kept = tuple(k for k in excluded if k != key)
     return kept if shown else (*kept, key)
 
 
 def _button(changed: bool, on_click: Callable[[], None]) -> ft.Control:
-    """Return the ``TUNE`` action: "Filter sessions", with a dot when changed (D-20)."""
+    """Return the `TUNE` action: "Filter sessions", with a dot when changed (D-20)."""
     return ft.MergeSemantics(  # the identifier on the button's own node (D-190)
         content=ft.Semantics(
             identifier=f"{SCREEN}.filter",
@@ -265,11 +265,11 @@ def summary_line(text: str, on_show_all: Callable[[], object]) -> ft.Control:
 
     The words and the button share a wrapping row, the button at its end: at large
     text the button moves under the words whole, instead of squeezing them into a
-    narrow column beside it. The ``FILTER_LIST`` mark is in the words' own row, one
+    narrow column beside it. The `FILTER_LIST` mark is in the words' own row, one
     line tall at every text size and at its top, so it stays beside their first line
     whether they share the button's run or not (D-373, as the status strip's icon,
-    D-215). The words start ``SHOW_ALL_INSET`` after the mark, and the button is
-    indented so that its label, ``SHOW_ALL_INSET`` into it, lines up with the words
+    D-215). The words start `SHOW_ALL_INSET` after the mark, and the button is
+    indented so that its label, `SHOW_ALL_INSET` into it, lines up with the words
     when it takes a run of its own; at 100 % it ends 20 dp from the edge, as before.
     """
     words = ft.Row(

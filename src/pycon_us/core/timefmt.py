@@ -1,10 +1,10 @@
 """Conference-local days and time labels (D-35, D-43; DATA-12, SCHED-18).
 
 Times are always shown in the conference's zone, whatever the device's zone. Every function
-here is pure: the instant (``now`` included) and the zone are arguments, and the 12/24-hour
-choice is passed in by the UI (from ``page.media.always_use_24_hour_format``). Day and month
+here is pure: the instant (`now` included) and the zone are arguments, and the 12/24-hour
+choice is passed in by the UI (from `page.media.always_use_24_hour_format`). Day and month
 names come from fixed English tuples and labels are built by hand, so nothing depends on the
-device locale or on ``strftime`` flags. Naive datetimes are refused: they have no instant.
+device locale or on `strftime` flags. Naive datetimes are refused: they have no instant.
 """
 
 from dataclasses import dataclass
@@ -36,27 +36,27 @@ _MONTHS = (
 
 
 def instant(moment: datetime) -> datetime:
-    """Return an aware ``moment`` in UTC, to compare or subtract as an instant (D-43, #535).
+    """Return an aware `moment` in UTC, to compare or subtract as an instant (D-43, #535).
 
-    Two datetimes that share a ``ZoneInfo`` compare and subtract by wall clock and
-    ignore ``fold`` (PEP 495), so 1:10 AM PST, after the end of summer time, would come
+    Two datetimes that share a `ZoneInfo` compare and subtract by wall clock and
+    ignore `fold` (PEP 495), so 1:10 AM PST, after the end of summer time, would come
     before 1:40 AM PDT. In UTC they come in the order they happen.
     """
     return moment.astimezone(UTC)
 
 
 def local_date(moment: datetime, zone: tzinfo) -> date:
-    """Return the conference-local date of ``moment``: the day it belongs to (its day bucket)."""
+    """Return the conference-local date of `moment`: the day it belongs to (its day bucket)."""
     return _local(moment, zone).date()
 
 
 def today(now: datetime, zone: tzinfo) -> date:
-    """Return the conference-local date at ``now``: the app's one definition of "today"."""
+    """Return the conference-local date at `now`: the app's one definition of "today"."""
     return local_date(now, zone)
 
 
 def time_label(moment: datetime, zone: tzinfo, *, use_24h: bool) -> str:
-    """Return the conference-local time of ``moment``: "9:25 AM", or "09:25" in 24-hour form."""
+    """Return the conference-local time of `moment`: "9:25 AM", or "09:25" in 24-hour form."""
     local = _local(moment, zone)
     if use_24h:
         return f"{local.hour:02d}:{local.minute:02d}"
@@ -92,10 +92,10 @@ def on_screen(label: str) -> str:
     Unicode allows in it (D-229). No word joiner at the dash: with no break left,
     Flutter breaks a run wider than its line inside a time ("9:00 AM–12" / ":30 PM",
     D-186), and a range always starts its own line, so a joiner never keeps one whole.
-    Shared text (``row_views.share_text()``) and spoken labels keep plain spaces.
+    Shared text (`row_views.share_text()`) and spoken labels keep plain spaces.
 
     Args:
-        label: A ``time_label()`` or ``time_range_label()``.
+        label: A `time_label()` or `time_range_label()`.
     """
     return label.replace(" ", "\N{NO-BREAK SPACE}")
 
@@ -115,7 +115,7 @@ def day_tab_label(day: date) -> str:
 
     One line, so the tab keeps its text at 200 %, where a second line is clipped by
     the tab bar's fixed height (S2); the month is in the spoken label
-    (``day_heading()``).
+    (`day_heading()`).
     """
     return f"{_WEEKDAYS[day.weekday()][:3]} {day.day}"
 
@@ -143,7 +143,7 @@ def day_range_label(first: date, last: date) -> str:
     """Return a span of days with their weekdays: "Mon, May 18 – Tue, May 19".
 
     One day when both ends are the same ("Mon, May 18"). For a span whose weekdays
-    matter, as the key dates and the sprints are; ``date_range_label()`` is the short
+    matter, as the key dates and the sprints are; `date_range_label()` is the short
     form.
     """
     if first == last:
@@ -152,9 +152,9 @@ def day_range_label(first: date, last: date) -> str:
 
 
 def ago_label(then: datetime, now: datetime) -> str:
-    """Return how long before ``now`` ``then`` was, in words (DATA-31).
+    """Return how long before `now` `then` was, in words (DATA-31).
 
-    "just now" under a minute (and for a ``then`` after ``now``, as a fake clock can
+    "just now" under a minute (and for a `then` after `now`, as a fake clock can
     make it), then whole minutes, hours or days, rounded down: "1 minute ago",
     "9 hours ago", "3 days ago". Words, not "9 h", so screen readers say them.
     """
@@ -174,7 +174,7 @@ def seconds_ago(seconds: float) -> str:
 
     The scan screen's result line ("Read 12 seconds ago", ux.md §7.2), where a scan a
     few seconds old must read differently from the one before it: "just now" under a
-    second, then whole seconds, then ``ago_label()``'s minutes, hours and days. Words,
+    second, then whole seconds, then `ago_label()`'s minutes, hours and days. Words,
     not "12 s", so screen readers say them.
 
     Args:
@@ -201,8 +201,8 @@ class TimeStatus:
     Attributes:
         label: What the screen shows: "Starts in 25 min", "Happening now", "Ended".
         spoken: The same in words for screen readers: "Starts in 25 minutes"
-            (D-165's rule for "h"); equal to ``label`` when it has no unit.
-        happening: Whether the session is on, which the screen draws in ``live``.
+            (D-165's rule for "h"); equal to `label` when it has no unit.
+        happening: Whether the session is on, which the screen draws in `live`.
     """
 
     label: str
@@ -220,7 +220,7 @@ ENDED = TimeStatus("Ended", "Ended")
 def time_status(
     start: datetime, end: datetime, now: datetime, zone: tzinfo
 ) -> TimeStatus | None:
-    """Return where a session stands at ``now``, or None when there is nothing to say.
+    """Return where a session stands at `now`, or None when there is nothing to say.
 
     A session is on from its start up to, not including, its end (D-179's half-open
     interval), so at 10:30 a talk that ends then has ended. Before it starts, the
@@ -231,8 +231,8 @@ def time_status(
 
     Args:
         start: When the session starts, aware.
-        end: When it ends, aware; equal to ``start`` for a notice.
-        now: ``clock.now()``.
+        end: When it ends, aware; equal to `start` for a notice.
+        now: `clock.now()`.
         zone: The conference's zone, for "its own day" (D-43).
     """
     on_its_day = local_date(now, zone) == local_date(start, zone)  # refuses naive
@@ -265,8 +265,8 @@ def zone_note(
         now: The current instant.
         zone: The conference zone.
         zone_name: Its display name from the year data, e.g. "Pacific Time".
-        device_offset: The device's UTC offset at ``now``; the UI passes
-            ``now.astimezone().utcoffset()``.
+        device_offset: The device's UTC offset at `now`; the UI passes
+            `now.astimezone().utcoffset()`.
 
     Returns:
         The note, or None when the device shows the same wall-clock time as the conference.
@@ -281,7 +281,7 @@ def utc_offset_label(offset: timedelta) -> str:
     """Return a UTC offset as people write it: "UTC−07:00", "UTC+05:30" or "UTC".
 
     Args:
-        offset: The offset from UTC, e.g. ``now.astimezone().utcoffset()``.
+        offset: The offset from UTC, e.g. `now.astimezone().utcoffset()`.
     """
     if not offset:
         return "UTC"

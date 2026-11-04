@@ -1,6 +1,6 @@
-"""Tests for the Sponsors list (``screens/sponsors.py``; SPON-01, D-37, D-279, #395).
+"""Tests for the Sponsors list (`screens/sponsors.py`; SPON-01, D-37, D-279, #395).
 
-The page runs in a real Flet session (``tests/harness.py``'s ``showing()``) on the
+The page runs in a real Flet session (`tests/harness.py`'s `showing()`) on the
 recorded 2026 feed: 13 levels, 105 sponsors. These tests read the control tree: the
 levels' headings, each tier's shape, the one node per sponsor, where a tap goes, the
 states without data, and that a re-render with the same feed runs no item body
@@ -39,7 +39,7 @@ VIEW = "/more/sponsors"
 
 
 def sponsor(slug: str) -> Sponsor:
-    """Return the 2026 sponsor whose slug is ``slug``."""
+    """Return the 2026 sponsor whose slug is `slug`."""
     found = sponsor_by_slug(DATA, slug)
     assert found is not None
     return found
@@ -57,7 +57,7 @@ class Listed(Shown):
 async def show(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> AsyncIterator[Any]:
     """Render the Sponsors page and record which item bodies ran.
 
-    It takes a ``conference``, the recorded 2026 one by default, and ``prefs``, the
+    It takes a `conference`, the recorded 2026 one by default, and `prefs`, the
     defaults by default. Each item body asks for its phrase once, so counting the
     calls counts the bodies (S2).
     """
@@ -94,7 +94,7 @@ async def show(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> AsyncIterator
 
 
 def item_of(shown: Shown, slug: str) -> ft.MergeSemantics:
-    """Return the merged node that holds the sponsor ``slug``'s phrase."""
+    """Return the merged node that holds the sponsor `slug`'s phrase."""
     node: ft.BaseControl | None = shown.node(f"{NODE}{slug}")
     while node is not None and not isinstance(node, ft.MergeSemantics):
         node = node.parent
@@ -103,7 +103,7 @@ def item_of(shown: Shown, slug: str) -> ft.MergeSemantics:
 
 
 def plates(control: ft.BaseControl) -> list[ft.Container]:
-    """Return the white logo plates under ``control``, in no set order."""
+    """Return the white logo plates under `control`, in no set order."""
     found: list[ft.Container] = []
     stack: list[Any] = [control]
     while stack:
@@ -120,7 +120,7 @@ def plates(control: ft.BaseControl) -> list[ft.Container]:
 
 
 def inside[T: ft.BaseControl](control: ft.BaseControl, kind: type[T]) -> T | None:
-    """Return the nearest ``kind`` that ``control`` is mounted under, or None."""
+    """Return the nearest `kind` that `control` is mounted under, or None."""
     node = control.parent
     while node is not None and not isinstance(node, kind):
         node = node.parent
@@ -164,7 +164,7 @@ def test_a_row_outside_its_level_says_the_level_with_the_booth() -> None:
 
 
 async def test_2026_has_a_level_two_heading_per_level_in_order(show: Any) -> None:
-    """13 sections in ``level_order``, from Visionary to Community, after the intro."""
+    """13 sections in `level_order`, from Visionary to Community, after the intro."""
     shown = await show()
     headings = [
         text_of(node)
@@ -231,7 +231,7 @@ async def test_the_next_two_levels_are_logo_cards_sharing_a_responsive_row(
 
 
 def test_logo_cards_take_a_whole_row_only_at_large_text() -> None:
-    """``logo_columns()``: two or more to a row, one at large text (#649)."""
+    """`logo_columns()`: two or more to a row, one at large text (#649)."""
     assert screen.logo_columns(False) == screen.LOGO_COLUMNS
     assert screen.logo_columns(True) == 12  # all of a ResponsiveRow's columns
 
@@ -241,7 +241,7 @@ async def test_logo_cards_go_one_to_a_row_when_the_text_grows_large(
 ) -> None:
     """At the largest sizes half a phone's width broke a name inside a word (#649).
 
-    The probe's answer (``Prefs.time_above``) reaches the memoised cards: each takes
+    The probe's answer (`Prefs.time_above`) reaches the memoised cards: each takes
     the whole row, and the other tiers keep their shape.
     """
     prefs = Prefs(loaded=True)
@@ -280,7 +280,7 @@ async def test_every_logo_falls_back_to_initials_on_a_plate_of_fixed_height(
 
 
 async def test_a_tap_pushes_the_sponsors_detail_on_this_view(show: Any) -> None:
-    """A card or a row pushes ``…/sponsor/<slug>``, one drill level (D-17)."""
+    """A card or a row pushes `…/sponsor/<slug>`, one drill level (D-17)."""
     shown = await show()
     for slug in ("bloomberg", "microsoft", "sentinelone"):
         tapped = item_of(shown, slug).content

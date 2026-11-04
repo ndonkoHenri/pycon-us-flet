@@ -1,15 +1,15 @@
 """What the Schedule measures of its day lists, and the places it records (D-331, D-371).
 
-The knowledge half of ``screens/schedule_place.py``'s ``PlaceKeeper``, which adds the
+The knowledge half of `screens/schedule_place.py`'s `PlaceKeeper`, which adds the
 jumps that put a place back:
 
-- ``layout_probe()``, above the day pages, reports a time's width and the screen's, so
-  a text-size change (or a rotation) shows; ``LayoutRecord.relaid()`` turns it into
+- `layout_probe()`, above the day pages, reports a time's width and the screen's, so
+  a text-size change (or a rotation) shows; `LayoutRecord.relaid()` turns it into
   stale places;
-- ``LayoutRecord`` keeps each day list's item heights, records the place at each scroll
-  end (``scrolled()``) and carries the places across a filter change (``lay_out()``,
-  ``refilter()``), with the pure helpers ``divider_above()``, ``unchanged_keys()`` and
-  ``known_empties()``.
+- `LayoutRecord` keeps each day list's item heights, records the place at each scroll
+  end (`scrolled()`) and carries the places across a filter change (`lay_out()`,
+  `refilter()`), with the pure helpers `divider_above()`, `unchanged_keys()` and
+  `known_empties()`.
 """
 
 import asyncio
@@ -32,7 +32,7 @@ PROBE_TEXT = "10:00"
 
 DIVIDER = 1.0
 """The divider above a slot's time, in dp: a keyed jump puts the slot's anchor, under
-it, at the top (``schedule_days.SlotItem``)."""
+it, at the top (`schedule_days.SlotItem`)."""
 
 type Measured = ft.EventHandler[ft.LayoutSizeChangeEvent[ft.LayoutControl]]
 """The probe's handler of one width."""
@@ -60,7 +60,7 @@ def layout_probe(on_text: Measured, on_width: Measured) -> ft.Control:
 
 
 def divider_above(keys: Sequence[str], key: str) -> float:
-    """Return the divider over an item's anchor, in dp, as ``DayList`` draws it.
+    """Return the divider over an item's anchor, in dp, as `DayList` draws it.
 
     Every slot but the first has one, except the slot right under the now line; the
     now line has none.
@@ -80,7 +80,7 @@ def unchanged_keys(
     """Return the items of a day list whose height a filter change kept.
 
     The now line, and each slot with the same sessions and the same divider above it
-    (``divider_above()``): ``Slot``s compare their sessions by identity.
+    (`divider_above()`): `Slot`s compare their sessions by identity.
 
     Args:
         before: The list's items before the change, in order.
@@ -126,19 +126,19 @@ def known_empties(
 class LayoutRecord:
     """What the Schedule knows of its day lists' layout, and the places it records.
 
-    ``PlaceKeeper`` (``schedule_place.py``) adds the jumps that use it; plain, so a
-    report re-renders nothing. The places themselves live in ``ViewMemory``, so a tab
+    `PlaceKeeper` (`schedule_place.py`) adds the jumps that use it; plain, so a
+    report re-renders nothing. The places themselves live in `ViewMemory`, so a tab
     return finds them (D-18).
 
     Attributes:
-        memory: The process's ``ViewMemory``.
+        memory: The process's `ViewMemory`.
         heights: Each day's reported item heights by key, in dp, for the current
             layout and text size.
         keys: Each day's items in order, as the last render laid them out.
         slots: Each day's slots by key, as the last render laid them out.
         layout: What the lists were laid out from: the feed version and the filter.
         refiltered: A filter change waits for the shown list's put-back
-            (``put_back_refiltered()``).
+            (`put_back_refiltered()`).
         reported: Set by every height report: Flutter has laid out a change.
         text: The probe's time width, in dp; 0 until reported.
         width: The screen's width, in dp; 0 until reported.
@@ -146,7 +146,7 @@ class LayoutRecord:
         moving: The days whose list is scrolling: a put-back would fight the user.
         jumping: The days whose list a put-back has asked to move, until its scroll
             end: a scroll that starts at any other time is the user's.
-        last_end: When each day list's last scroll end came (``time.monotonic()``).
+        last_end: When each day list's last scroll end came (`time.monotonic()`).
         round: Counts put-backs and what supersedes them (a layout change, a jump to
             now), so an older put-back still waiting stops.
     """
@@ -178,14 +178,14 @@ class LayoutRecord:
         """Note what the render laid out: the feed version, the filter and the items.
 
         Another feed forgets every height but the 0 dp ones of items it still lays out
-        (``known_empties()``), and its places say nothing of it. Another filter of the
+        (`known_empties()`), and its places say nothing of it. Another filter of the
         same feed keeps the heights of the items it left as they were and carries each
-        place into the new list, to be put back (``refilter()``, D-371).
+        place into the new list, to be put back (`refilter()`, D-371).
 
         Args:
             version: The feed's version.
-            excluded: The filter, ``Prefs.excluded_tracks``.
-            keys: Each day's items in order (``schedule_slots.slot_keys()``).
+            excluded: The filter, `Prefs.excluded_tracks`.
+            keys: Each day's items in order (`schedule_slots.slot_keys()`).
             slots: Each day's slots by key.
         """
         layout = (version, excluded)
@@ -206,10 +206,10 @@ class LayoutRecord:
     ) -> None:
         """Carry each day's place into the list a filter change lays out (#333, D-371).
 
-        Its item, or the next one still shown (``carried()``), stale, so the list is
+        Its item, or the next one still shown (`carried()`), stale, so the list is
         built in full and put back by key; a place from an older layout, which says
         nothing, is left as it is. The heights of the items the change kept stay
-        (``unchanged_keys()``): Flutter reports no size that did not change.
+        (`unchanged_keys()`): Flutter reports no size that did not change.
         """
         kept: dict[date, dict[str, float]] = known_empties(self.heights, keys)
         places = self.memory.schedule_places
@@ -254,7 +254,7 @@ class LayoutRecord:
         (D-154), else from the place before, as a lazy list's items report while the
         user scrolls through them; unknown, the place is forgotten. A place that waits
         for its put-back is kept at a put-back's own end, as the heights may still be on
-        their way, and dropped when the user starts a scroll (``jumping``, D-371).
+        their way, and dropped when the user starts a scroll (`jumping`, D-371).
         """
         if e.event_type in (ft.ScrollType.START, ft.ScrollType.UPDATE):
             self.moving.add(day)
@@ -294,7 +294,7 @@ class LayoutRecord:
         The first complete measurement only records the basis. After that, a change of
         the text size, the width or the time's position forgets every height but the
         0 dp ones, which no change of size reports again, and marks every place to be
-        put back by key (``pending()``).
+        put back by key (`pending()`).
 
         Args:
             text: The probe's time width, in dp.

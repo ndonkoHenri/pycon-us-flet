@@ -1,9 +1,9 @@
 """Tests for session detail's speakers and description (SESS-06, -07; ux.md §5.5).
 
-The header and When and where are ``test_session.py``'s.
+The header and When and where are `test_session.py`'s.
 
-``SessionDetail`` runs in a real Flet session (``tests/session_detail.py``), as the
-rows do in ``test_session_rows.py``. How the screen looks, at 200 % text and in dark
+`SessionDetail` runs in a real Flet session (`tests/session_detail.py`), as the
+rows do in `test_session_rows.py`. How the screen looks, at 200 % text and in dark
 mode, is checked on devices (the PR); here, what it says and what a tap does.
 """
 
@@ -37,7 +37,7 @@ render = session_detail.render
 
 
 def speaker_rows(detail: Detail) -> list[ft.Semantics]:
-    """Return the detail's speaker rows, the nodes named ``session.speaker.<id>``."""
+    """Return the detail's speaker rows, the nodes named `session.speaker.<id>`."""
     return [
         node
         for node in detail.session.index.values()
@@ -136,7 +136,7 @@ async def test_a_session_without_speakers_has_no_speakers_section(
 
 
 def markdown(detail: Detail) -> ft.Markdown:
-    """Return the one ``Markdown`` control in the detail's description."""
+    """Return the one `Markdown` control in the detail's description."""
     (found,) = [
         n
         for n in descendants(detail.node("session.description"))
@@ -162,7 +162,7 @@ async def test_the_description_follows_the_speakers_under_its_own_heading(
 async def test_a_link_in_a_description_opens_in_the_in_app_browser(
     render: Render,
 ) -> None:
-    """A description's link opens in the in-app browser, with ``https://`` added."""
+    """A description's link opens in the in-app browser, with `https://` added."""
     detail = await render(OPEN_SPACE)
     text = markdown(detail)
     assert "[pytest](pytest.org)" in text.value

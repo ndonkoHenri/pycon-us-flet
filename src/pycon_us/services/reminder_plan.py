@@ -1,8 +1,8 @@
 """The plan of local reminders: what to schedule, pure (D-59, D-222; NOTIF-05, NEW-05).
 
-``plan()`` turns the feed, My schedule, the reminder settings and the conference
-moments into the reminders to schedule, soonest first and at most ``MAX_PENDING``.
-``services/reminders.py``'s ``Scheduler`` hands them to E3; this module imports no
+`plan()` turns the feed, My schedule, the reminder settings and the conference
+moments into the reminders to schedule, soonest first and at most `MAX_PENDING`.
+`services/reminders.py`'s `Scheduler` hands them to E3; this module imports no
 extension (D-63), so the companion app and the tests use it as is.
 """
 
@@ -37,12 +37,12 @@ class Reminder:
     """One local notification to schedule.
 
     Attributes:
-        id: Its notification id, the same at every plan (D-59): ``reminder_id()`` for a
+        id: Its notification id, the same at every plan (D-59): `reminder_id()` for a
             saved session, the moment's for a conference moment.
         at: When it fires; aware.
         title: The notification's title.
         body: The notification's text.
-        route: What a tap opens, e.g. ``/my-schedule/session/142``.
+        route: What a tap opens, e.g. `/my-schedule/session/142`.
     """
 
     id: int
@@ -60,7 +60,7 @@ def reminder_id(session_id: str) -> int:
 
     Returns:
         The id itself when it is a number, as a slot's conference key and an open
-        space's are; else ``SYNTHETIC_BASE`` plus its CRC-32 modulo 1,000,000, for a
+        space's are; else `SYNTHETIC_BASE` plus its CRC-32 modulo 1,000,000, for a
         poster detail or a collapsed row. The same session always gets the same id, so
         a moved session keeps its reminder's.
     """
@@ -81,11 +81,11 @@ def plan(
 ) -> list[Reminder]:
     """Return every future reminder the user asked for, soonest first, at most 60.
 
-    A saved session still in the feed gets one ``settings.session_lead`` minutes before
+    A saved session still in the feed gets one `settings.session_lead` minutes before
     the start the app shows; a moment of a category that is on gets its own. Only what
-    fires after ``now`` is kept. A saved keynote would get both its own reminder and its
+    fires after `now` is kept. A saved keynote would get both its own reminder and its
     keynote moment: it gets the earlier of the two only (the moment on a tie). The
-    plan is cut to the ``MAX_PENDING`` soonest (D-222); equal times go by id, so the
+    plan is cut to the `MAX_PENDING` soonest (D-222); equal times go by id, so the
     same inputs always give the same plan.
 
     Args:
@@ -93,9 +93,9 @@ def plan(
             one has its new time.
         favorites: The saved session ids (My schedule).
         settings: The reminder settings: the lead (0 for none) and the categories.
-        moments: The conference moments: ``Content.event_reminders`` and
-            ``year_moments.keynote_moments()`` of the same feed.
-        now: The current time (``clock.now()``); aware.
+        moments: The conference moments: `Content.event_reminders` and
+            `year_moments.keynote_moments()` of the same feed.
+        now: The current time (`clock.now()`); aware.
         zone: The conference's time zone: a session reminder says its start in
             conference time, as the schedule does.
         use_24h: Whether that time is in 24-hour form.

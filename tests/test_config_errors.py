@@ -18,7 +18,7 @@ def data_dir(tmp_path: Path) -> Path:
 
 
 def edit(path: Path, old: str, new: str) -> None:
-    """Replace the first ``old`` in ``path`` with ``new``; ``old`` must be there."""
+    """Replace the first `old` in `path` with `new`; `old` must be there."""
     text = path.read_text(encoding="utf-8")
     assert old in text, f"{old!r} not in {path.name}"
     path.write_text(text.replace(old, new, 1), encoding="utf-8")
@@ -319,7 +319,7 @@ def test_malformed_file_names_file_key_and_problem(
 
 
 def test_a_capture_time_without_an_offset_is_refused(data_dir: Path) -> None:
-    """``snapshot_captured_at`` must say its offset; refreshes write -07:00 or -08:00."""
+    """`snapshot_captured_at` must say its offset; refreshes write -07:00 or -08:00."""
     file = data_dir / "2026" / "conference.toml"
     text = file.read_text(encoding="utf-8")
     file.write_text(
@@ -366,7 +366,7 @@ def test_a_pages_copy_must_be_a_table(data_dir: Path) -> None:
 
 
 def test_content_without_overrides_has_none(data_dir: Path) -> None:
-    """A ``content.toml`` with nothing set has no overrides and no other locations."""
+    """A `content.toml` with nothing set has no overrides and no other locations."""
     (data_dir / "2026" / "content.toml").write_text("# nothing yet\n", encoding="utf-8")
     content = load_year(2026, data_dir).content
     assert content.display_time_overrides == ()
@@ -374,20 +374,20 @@ def test_content_without_overrides_has_none(data_dir: Path) -> None:
 
 
 def test_missing_file_is_named(data_dir: Path) -> None:
-    """A missing ``content.toml`` raises an error naming that file."""
+    """A missing `content.toml` raises an error naming that file."""
     (data_dir / "2026" / "content.toml").unlink()
     with pytest.raises(YearDataError, match=r"^2026/content\.toml: file not found$"):
         load_year(2026, data_dir)
 
 
 def test_missing_snapshot_file_is_named(data_dir: Path) -> None:
-    """A missing ``conference.json`` is named when the snapshot is read."""
+    """A missing `conference.json` is named when the snapshot is read."""
     (data_dir / "2026" / "conference.json").unlink()
     with pytest.raises(YearDataError, match=r"^2026/conference\.json: file not found$"):
         load_year(2026, data_dir).read_snapshot()
 
 
 def test_missing_year_is_named(data_dir: Path) -> None:
-    """A year without a folder raises an error naming its ``conference.toml``."""
+    """A year without a folder raises an error naming its `conference.toml`."""
     with pytest.raises(YearDataError, match=r"^2031/conference\.toml: file not found$"):
         load_year(2031, data_dir)

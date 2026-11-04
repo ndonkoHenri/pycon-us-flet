@@ -1,6 +1,6 @@
 """Tests for the Developer screen's Data section: rows, refresh, clear the cache, words (#107).
 
-The fixtures and lookups are ``tests/data_section.py``'s. How the section looks is
+The fixtures and lookups are `tests/data_section.py`'s. How the section looks is
 checked on devices (the PR).
 """
 
@@ -113,7 +113,7 @@ async def test_a_disabled_row_s_node_says_it_is_disabled(
 ) -> None:
     """A disabled row's identifier node is disabled too, and an enabled row's is not.
 
-    Flet's Semantics says "enabled" from its own ``disabled``, and the merged node kept
+    Flet's Semantics says "enabled" from its own `disabled`, and the merged node kept
     it: Android dumped Clear cached feed, disabled, as enabled="true" (F42, #239). The
     row's identifier node takes the tile's state (D-214).
     """

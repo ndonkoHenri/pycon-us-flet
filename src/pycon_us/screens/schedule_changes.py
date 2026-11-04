@@ -1,11 +1,11 @@
-"""Schedule changes (``…/changes/<year>``): what the refreshes changed (NEW-04, D-47, D-255).
+"""Schedule changes (`…/changes/<year>`): what the refreshes changed (NEW-04, D-47, D-255).
 
 A drill level, pushed on the View that opens it, so Back returns there (D-255). Under
 the app bar's "Schedule changes", "Affects My schedule" first, then "All changes"
 (level-2 headings), each grouped by when the refresh found its changes, newest first
-(level-3 headings: "Today, 10:42 AM"). The words are ``core/change_views.py``'s: each
+(level-3 headings: "Today, 10:42 AM"). The words are `core/change_views.py`'s: each
 item shows its kind's icon (decorative), the session's newest title and "old → new",
-the old value struck through and the new one in ``W_600``, and reads as one sentence
+the old value struck through and the new one in `W_600`, and reads as one sentence
 that never relies on the strikethrough (ux.md §6.4). The star beside it is its own
 stop, with Undo as everywhere (D-184, D-251).
 
@@ -20,7 +20,7 @@ screen reader's focus is not moved away from the item just tapped. An id that is
 the active year shows the not-found state on its own level (D-186, D-255).
 
 An unseen item has a dot and reads "New: " first; the list marks what it shows seen
-after 2 s, and the overflow has Mark all as seen (``schedule_changes_seen.py``).
+after 2 s, and the overflow has Mark all as seen (`schedule_changes_seen.py`).
 """
 
 import flet as ft
@@ -72,7 +72,7 @@ ICONS = {
     ChangeKind.ADDED: ft.Icons.NEW_RELEASES_OUTLINED,
     ChangeKind.REMOVED: ft.Icons.EVENT_BUSY_OUTLINED,
 }
-"""Each kind's leading icon; a time, room or title change has ``CHANGE_CIRCLE_OUTLINED``."""
+"""Each kind's leading icon; a time, room or title change has `CHANGE_CIRCLE_OUTLINED`."""
 
 ARROW = " → "
 """Between an item's old and new values on screen."""
@@ -190,9 +190,9 @@ def ChangeItem(
             stay.
         saved: Whether the session is in My schedule.
         unseen: Whether the item's batch is unseen: a dot, and "New: " first.
-        on_toggle: The list's one star handler (``use_favorite_toggle()``).
+        on_toggle: The list's one star handler (`use_favorite_toggle()`).
         tokens: The scheme's tokens (D-150), for the star's colour.
-        fade_ms: How long the dot fades once seen (``prefs.motion_ms()``).
+        fade_ms: How long the dot fades once seen (`prefs.motion_ms()`).
     """
     page = ft.context.page
     view_path = ft.use_view_path()
@@ -258,7 +258,7 @@ def change_line(view: ChangeView) -> ft.Text:
 
     An addition has only its new value; a removal its last value, struck through,
     then "Removed from the latest schedule", so the strikethrough is never the only
-    cue (ux.md §6.4). Supporting text, in ``on_surface_variant``.
+    cue (ux.md §6.4). Supporting text, in `on_surface_variant`.
 
     Args:
         view: The change's view.

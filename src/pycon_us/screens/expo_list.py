@@ -1,10 +1,10 @@
 """The expo List: every exhibitor by booth or by name, filtered, a tap to the Map (#404).
 
-``ExpoPane`` (``screens/expo_pane.py``) shows it under its Map | List switch. It keeps
-its filter, its order and its scroll in ``ViewMemory``, so a trip to the Map and back
+`ExpoPane` (`screens/expo_pane.py`) shows it under its Map | List switch. It keeps
+its filter, its order and its scroll in `ViewMemory`, so a trip to the Map and back
 finds it as it was (D-18).
 
-The List has one row per exhibitor (D-254, ``core.expo.list_rows()``): by booth number
+The List has one row per exhibitor (D-254, `core.expo.list_rows()`): by booth number
 in natural order, a shared booth's exhibitors together by name, or by name with the
 "Sort by name" chip; a booth without an exhibitor is a row by its label. Each row is
 one node, "Booth 726, PyBeach, Community sponsor", and a tap switches to the Map with
@@ -43,7 +43,7 @@ from pycon_us.ui.states import EmptyState
 from pycon_us.ui.widths import LIST, capped, sides, use_margin
 
 SCREEN = "expo"
-"""The screen's name in the identifiers: ``expo.filter``, ``expo.row.613.bloomberg``."""
+"""The screen's name in the identifiers: `expo.filter`, `expo.row.613.bloomberg`."""
 
 FILTER_HINT = "Filter by name or booth"
 """The filter field's hint, and its name for screen readers once it holds text."""
@@ -58,7 +58,7 @@ UNPLACED = "Not on the map yet"
 """The heading over the sponsors whose booth the plan does not draw."""
 
 type OnPick = Callable[[str], None]
-"""Shows the booth of a number on the Map: ``ExpoPane``'s one handler for every row."""
+"""Shows the booth of a number on the Map: `ExpoPane`'s one handler for every row."""
 
 
 def row_line(row: ExpoRow) -> str:
@@ -100,7 +100,7 @@ def ExpoList(on_pick: OnPick) -> ft.Control:
     """The List: the filter pinned over the rows, by booth or by name (ux.md §6.2).
 
     Args:
-        on_pick: ``ExpoPane``'s handler that shows a booth on the Map.
+        on_pick: `ExpoPane`'s handler that shows a booth on the Map.
     """
     svc = use_services()
     conference = use_conference()
@@ -217,7 +217,7 @@ def ExpoList(on_pick: OnPick) -> ft.Control:
 def sort_chip(selected: bool, on_click: Callable[[], None]) -> ft.Control:
     """Return the "Sort by name" chip, checked while the List is in name order.
 
-    Read as its label, "selected" when it is, and a button (``expo.sort``).
+    Read as its label, "selected" when it is, and a button (`expo.sort`).
 
     Args:
         selected: Whether the List is sorted by name.
@@ -233,7 +233,7 @@ def sort_chip(selected: bool, on_click: Callable[[], None]) -> ft.Control:
                         selected=selected,
                         show_checkmark=True,  # not colour alone (D-33)
                         # A click, not on_select: Flutter would toggle the chip
-                        # itself, and ``selected`` is only ours (search's chips).
+                        # itself, and `selected` is only ours (search's chips).
                         on_click=on_click,
                     ),
                 )
@@ -244,11 +244,11 @@ def sort_chip(selected: bool, on_click: Callable[[], None]) -> ft.Control:
 
 
 def list_row(row: ExpoRow, on_pick: OnPick) -> ft.Control:
-    """Return one row of the List: a memoised component keyed by ``row.key`` (D-153).
+    """Return one row of the List: a memoised component keyed by `row.key` (D-153).
 
     Args:
         row: The exhibitor at its booth, or the booth without one.
-        on_pick: ``ExpoPane``'s handler, the same function on every render.
+        on_pick: `ExpoPane`'s handler, the same function on every render.
     """
     # ft.component's typing (its ParamSpec) leaves out the key= its wrapper takes.
     return _ListRow(row, on_pick, key=row.key)  # pyright: ignore[reportCallIssue]
@@ -257,9 +257,9 @@ def list_row(row: ExpoRow, on_pick: OnPick) -> ft.Control:
 @ft.memo
 @ft.component
 def _ListRow(row: ExpoRow, on_pick: OnPick) -> ft.Control:
-    """The body of ``list_row()``: logo or place, name and booth; a tap shows it.
+    """The body of `list_row()`: logo or place, name and booth; a tap shows it.
 
-    One node, a button read as ``row_phrase()``, built as a Sponsors row is so it
+    One node, a button read as `row_phrase()`, built as a Sponsors row is so it
     grows with the text; it runs only when its props change (F34).
     """
     number = row.number

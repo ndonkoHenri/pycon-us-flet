@@ -1,13 +1,13 @@
-"""Social media (``/more/social``): the hashtags to copy, and where to follow PyCon US.
+"""Social media (`/more/social`): the hashtags to copy, and where to follow PyCon US.
 
-The year's ``[social]`` table (``content.toml``, D-284) gives both, so the page shows at
+The year's `[social]` table (`content.toml`, D-284) gives both, so the page shows at
 once, offline (INFO-05, INFO-10). Each hashtag is a chip that copies it through
-``copy_text()``, with one confirmation (D-263), where Ionic's chips looked tappable and
+`copy_text()`, with one confirmation (D-263), where Ionic's chips looked tappable and
 did nothing. Then the profiles, under PyCon US and the PSF, and the blogs: link rows
 with the brand's mark and the handle under the name. A profile opens in its app, a blog
 in the in-app browser (the link rule, ux.md §4.7). A year without the table shows the
-feed's own ``social-media`` block, and without that an empty state that points to the
-website (``InfoBody``).
+feed's own `social-media` block, and without that an empty state that points to the
+website (`InfoBody`).
 """
 
 from urllib.parse import urlsplit
@@ -38,7 +38,7 @@ HASHTAG_NOT_COPIED = "Couldn't copy the hashtag"
 
 BLOGS = "blogs"
 """The section of web pages: every other section's links are profiles, which open in
-their app (``app=True``), where a blog opens in the in-app browser (ux.md §4.7)."""
+their app (`app=True`), where a blog opens in the in-app browser (ux.md §4.7)."""
 
 NO_BRAND_ICON = ft.Icons.RSS_FEED_OUTLINED
 """A link without a brand mark (a blog on its own site) leads with a feed."""
@@ -50,7 +50,7 @@ def copy_label(hashtag: str) -> str:
     """Return what a screen reader says for a hashtag's chip: "Copy hashtag #PyConUS".
 
     Args:
-        hashtag: The hashtag, with its ``#``.
+        hashtag: The hashtag, with its `#`.
     """
     return f"Copy hashtag {hashtag}"
 
@@ -78,7 +78,7 @@ def empty_state(site: str) -> ft.Control:
     data (ux.md §4.6's way out in a sentence).
 
     Args:
-        site: The year's site's host, ``us.pycon.org``.
+        site: The year's site's host, `us.pycon.org`.
     """
     return EmptyState(
         NO_SOCIAL,
@@ -115,7 +115,7 @@ def hashtag_chips(svc: Services, hashtags: tuple[str, ...]) -> ft.Control:
 
     Args:
         svc: The session's services, for the clipboard.
-        hashtags: The hashtags, with their ``#``.
+        hashtags: The hashtags, with their `#`.
     """
     return ft.Container(
         ft.Column(
@@ -145,14 +145,14 @@ def hashtag_chip(svc: Services, index: int, hashtag: str) -> ft.Control:
     """Return one hashtag's chip: a tap copies it, and says so once.
 
     One node for screen readers, a button named "Copy hashtag #PyConUS", with the
-    identifier ``social.hashtag.<index>``. Its copy icon is decorative: the name
+    identifier `social.hashtag.<index>`. Its copy icon is decorative: the name
     says what a tap does. Flutter's chip keeps a 48 dp target around its 32 dp shape
-    (``MaterialTapTargetSize.padded``, D-33).
+    (`MaterialTapTargetSize.padded`, D-33).
 
     Args:
         svc: The session's services, for the clipboard.
         index: The hashtag's place on the page, from 0, for its identifier.
-        hashtag: The hashtag, with its ``#``, exactly as it is copied.
+        hashtag: The hashtag, with its `#`, exactly as it is copied.
     """
 
     @report_errors
@@ -181,7 +181,7 @@ def chip_label(hashtag: str) -> ft.Container:
     same width both times.
 
     Args:
-        hashtag: The hashtag, with its ``#``.
+        hashtag: The hashtag, with its `#`.
     """
     return ft.Container(
         ft.Row(

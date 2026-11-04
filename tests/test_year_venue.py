@@ -1,7 +1,7 @@
 """Tests for the venue's address and directions in the year data (MAP-11, D-313).
 
-``conference.toml``'s optional ``address`` and ``[directions]``, which Venue & hours
-shows, copies and opens a maps app at; their rules are ``year_info.check_directions()``.
+`conference.toml`'s optional `address` and `[directions]`, which Venue & hours
+shows, copies and opens a maps app at; their rules are `year_info.check_directions()`.
 """
 
 import pytest
@@ -53,7 +53,7 @@ def test_a_broken_rule_names_the_file_and_the_key(
 
 
 def test_a_coordinate_without_a_decimal_point_is_refused() -> None:
-    """TOML's ``33`` is an integer, not a coordinate: the schema says what it expects."""
+    """TOML's `33` is an integer, not a coordinate: the schema says what it expects."""
     raw = {"label": "Venue", "latitude": 33, "longitude": -118.0}
     with pytest.raises(YearDataError, match="a number with a decimal point"):
         build(Directions, raw, FILE, "directions")

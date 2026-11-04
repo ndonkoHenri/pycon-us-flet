@@ -1,20 +1,20 @@
 """The fixtures and lookups of the shared chrome's tests, outside a renderer (#264).
 
-- The services, the page and the ``Conference`` store (``year``, ``svc``, ``page``,
-  ``conference``): for ``AppScaffold``'s tests and the status strip's
-  (``tests/strip.py`` has the strip's own ``hooks``).
-- ``AppScaffold``'s ``hooks`` and lookups, for ``test_scaffold.py`` (the app bar, Back
-  and the body), ``test_shown.py`` (``Shown`` and the content line) and
-  ``test_navigation_views.py`` (the bottom bar on a View): the hooks ``AppScaffold`` calls
-  (``ft.use_view_path``, ``ft.use_effect``, the store hooks and ``use_tokens``) are
-  answered by ``Hooks``, and a fake page is bound as Flet binds a session's page.
+- The services, the page and the `Conference` store (`year`, `svc`, `page`,
+  `conference`): for `AppScaffold`'s tests and the status strip's
+  (`tests/strip.py` has the strip's own `hooks`).
+- `AppScaffold`'s `hooks` and lookups, for `test_scaffold.py` (the app bar, Back
+  and the body), `test_shown.py` (`Shown` and the content line) and
+  `test_navigation_views.py` (the bottom bar on a View): the hooks `AppScaffold` calls
+  (`ft.use_view_path`, `ft.use_effect`, the store hooks and `use_tokens`) are
+  answered by `Hooks`, and a fake page is bound as Flet binds a session's page.
 
 A test module takes the fixtures by assigning them to its own names, which is where
-pytest looks a fixture up: ``year, svc, page, conference, hooks = (chrome.year,
-...)``. An import would do the same, but ruff reads an imported fixture as unused and
+pytest looks a fixture up: `year, svc, page, conference, hooks = (chrome.year,
+...)`. An import would do the same, but ruff reads an imported fixture as unused and
 each test's parameter as its redefinition (F401, F811). A fixture finds the fixtures
-it takes the same way, by name in the test's module: both families' ``hooks`` take
-``svc`` (which takes ``year``) and ``conference``, so a module that assigns a ``hooks``
+it takes the same way, by name in the test's module: both families' `hooks` take
+`svc` (which takes `year`) and `conference`, so a module that assigns a `hooks`
 assigns those three too, or pytest stops with "fixture 'svc' not found".
 """
 
@@ -53,7 +53,7 @@ def year() -> YearData:
 
 @pytest.fixture
 def svc(year: YearData, tmp_path: Path) -> Services:
-    """The services with the memory fakes, storing under the test's ``tmp_path``."""
+    """The services with the memory fakes, storing under the test's `tmp_path`."""
     storage = Storage(prefs=MemoryPrefs(), directory=tmp_path, year=2026)
     return Services(
         year=year,
@@ -76,7 +76,7 @@ def page() -> Iterator[FakePage]:
 
 @pytest.fixture
 def conference() -> Conference:
-    """An empty ``Conference`` store."""
+    """An empty `Conference` store."""
     return Conference()
 
 
@@ -84,7 +84,7 @@ def conference() -> Conference:
 def hooks(
     monkeypatch: pytest.MonkeyPatch, svc: Services, conference: Conference
 ) -> Hooks:
-    """Answer ``AppScaffold``'s hooks, and run ``Shown``'s body inline."""
+    """Answer `AppScaffold`'s hooks, and run `Shown`'s body inline."""
     hooks = Hooks()
     monkeypatch.setattr(ft, "use_view_path", lambda: hooks.view_path)
     monkeypatch.setattr(ft, "use_effect", hooks.use_effect)
@@ -95,9 +95,9 @@ def hooks(
     # The screens' margins read the same layout: a phone's has no room (D-305).
     monkeypatch.setattr(widths, "use_layout", lambda: Layout(wide=hooks.wide))
     monkeypatch.setattr(scaffold, "use_tokens", lambda: hooks.tokens)
-    # ``Shown``'s body runs inline: no renderer here.
+    # `Shown`'s body runs inline: no renderer here.
     monkeypatch.setattr(scaffold, "Shown", inspect.unwrap(Shown))
-    # ``Rail`` renders inline, before it has measured itself (D-309); its own
+    # `Rail` renders inline, before it has measured itself (D-309); its own
     # test is in test_navigation.py.
     monkeypatch.setattr(
         scaffold,
@@ -114,7 +114,7 @@ def hooks(
 
 
 def Probe() -> ft.Control:
-    """``GutterProbe``'s stand-in: a control the tests can find."""
+    """`GutterProbe`'s stand-in: a control the tests can find."""
     return ft.Container(key="probe")
 
 
@@ -147,7 +147,7 @@ def rail_stack_of(view: ft.View) -> ft.Stack:
 
 
 def inner_rail(stack: ft.Stack) -> ft.NavigationRail:
-    """The ``NavigationRail`` under the fade of ``navigation_rail()``'s stack (D-309)."""
+    """The `NavigationRail` under the fade of `navigation_rail()`'s stack (D-309)."""
     rail, _ = stack.controls
     assert isinstance(rail, ft.NavigationRail)
     return rail
@@ -180,7 +180,7 @@ def click(button: ft.IconButton) -> None:
 
 
 def merged_button(control: ft.Control | None) -> ft.IconButton:
-    """Return the icon button that ``merged()`` made one node with its tooltip (F55)."""
+    """Return the icon button that `merged()` made one node with its tooltip (F55)."""
     assert isinstance(control, ft.MergeSemantics)
     button = control.content
     assert isinstance(button, ft.IconButton)

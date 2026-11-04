@@ -3,18 +3,18 @@
 ux.md §7.2 (LEAD-12, LEAD-13, API-10; #694). Failures must be visible, with Retry (P3
 exit criterion 2): Ionic's pull-to-refresh synced only pending scans, never failed ones.
 
-- ``read_queue()`` reads what the sheet lists from ``outbox-<year>.db``: the account's pending
+- `read_queue()` reads what the sheet lists from `outbox-<year>.db`: the account's pending
   and failed rows, newest first, its latest confirmed rows, and, where the host asks
   (Developer, D-412), other accounts' unsynced rows, which wait for their own sign-in
   (architecture §12.1).
-- ``queue_sheet()`` lays it out in a modal ``BottomSheet`` with a drag handle and a
+- `queue_sheet()` lays it out in a modal `BottomSheet` with a drag handle and a
   Close button: the
-  state in words (``sync_chip.chip_words()``, a live region); **Sync now**, which kicks
+  state in words (`sync_chip.chip_words()`, a live region); **Sync now**, which kicks
   the worker and is disabled with a ring while a pass runs; **Retry failed**, only
-  while rows have failed; the rows (``queue_rows.row_tile()``), or "Everything is
+  while rows have failed; the rows (`queue_rows.row_tile()`), or "Everything is
   synced"; the confirmed rows in a fold; other accounts' rows under their own heading.
-- ``use_queue_sheet()`` is the hook a host calls: it keeps the sheet's state, shows it
-  through ``ft.use_dialog`` and returns what opens it and whether it is open. The scan
+- `use_queue_sheet()` is the hook a host calls: it keeps the sheet's state, shows it
+  through `ft.use_dialog` and returns what opens it and whether it is open. The scan
   screen opens it from the sync chip and pauses scanning while it is open (#724),
   Developer › Data from its Staff queue row, with other accounts' rows (D-412, D-420).
 """
@@ -59,11 +59,11 @@ synced", which would be a guess."""
 
 @dataclass(frozen=True)
 class Queue:
-    """What the sheet lists, as ``read_queue()`` found it.
+    """What the sheet lists, as `read_queue()` found it.
 
     Attributes:
         mine: The account's pending and failed rows, newest first.
-        confirmed: Its latest synced rows, newest first, at most ``CONFIRMED_SHOWN``.
+        confirmed: Its latest synced rows, newest first, at most `CONFIRMED_SHOWN`.
         others: Other accounts' pending and failed rows, by owner, newest first.
         readable: Whether every read went through (D-120).
     """
@@ -75,7 +75,7 @@ class Queue:
 
 
 def _newest(rows: Sequence[Row] | None) -> tuple[Row, ...]:
-    """Return rows newest first; ``OutboxDb.rows()`` gives them oldest first."""
+    """Return rows newest first; `OutboxDb.rows()` gives them oldest first."""
     return tuple(reversed(rows or ()))
 
 
@@ -88,7 +88,7 @@ def read_queue(db: OutboxDb, owner: str | None, *, others: bool) -> Queue:
         others: Whether to list other accounts' unsynced rows too (Developer).
 
     Returns:
-        The rows; ``readable`` is False when a read failed (logged by ``OutboxDb``).
+        The rows; `readable` is False when a read failed (logged by `OutboxDb`).
     """
     unsynced = (Status.PENDING, Status.FAILED)
     mine = db.rows(owner, unsynced) if owner else []
@@ -114,7 +114,7 @@ def sync_blocked(svc: Services, account: Account) -> str | None:
 
     Args:
         svc: The session's services: the client.
-        account: The ``Account`` store.
+        account: The `Account` store.
     """
     if sync_target(svc, account) is not None:
         return None
@@ -131,7 +131,7 @@ def summary(staff: Staff, now: float) -> str:
     E.g. "Offline · 3 queued. Last synced 5 minutes ago." or "All synced."
 
     Args:
-        staff: The ``Staff`` store.
+        staff: The `Staff` store.
         now: The current time (epoch seconds).
     """
     words = f"{chip_words(staff)}."
@@ -145,9 +145,9 @@ class SheetState:
     """What the sheet shows beside its rows, from the host's state and the stores.
 
     Attributes:
-        staff: The ``Staff`` store.
+        staff: The `Staff` store.
         now: The current time (epoch seconds).
-        blocked: Why Sync now can't send (``sync_blocked()``), or None.
+        blocked: Why Sync now can't send (`sync_blocked()`), or None.
         asked: Sync now was tapped and its pass hasn't reported yet.
         confirmed_open: Whether the confirmed rows' fold is open.
     """
@@ -176,10 +176,10 @@ def queue_sheet(
     Everything scrolls together, so at the largest text the rows keep the sheet.
 
     Args:
-        queue: The rows (``read_queue()``).
+        queue: The rows (`read_queue()`).
         state: The state, the clock and Sync now's.
         tokens: The scheme's tokens; in high contrast a 1 dp edge draws the sheet.
-        style: The fold's animation (``expand_style()``).
+        style: The fold's animation (`expand_style()`).
         on_sync_now: Kicks the worker.
         on_retry_failed: Makes the failed rows pending and kicks the worker.
         on_confirmed: Opens or closes the confirmed rows' fold.
@@ -260,14 +260,14 @@ def kick_once(
 ) -> bool:
     """Kick the worker for Sync now, once until its pass has reported (LEAD-12).
 
-    ``kicked`` holds ``Staff.revision`` at the last kick; the pass's report bumps it.
+    `kicked` holds `Staff.revision` at the last kick; the pass's report bumps it.
     So a second tap before then, or a tap while a pass runs, sends no second kick,
     even from a render that hasn't disabled the button yet.
 
     Args:
         kicked: The host's ref: the revision at the last kick, or None.
-        staff: The ``Staff`` store.
-        kick: Wakes the worker (``Services.kick_sync``).
+        staff: The `Staff` store.
+        kick: Wakes the worker (`Services.kick_sync`).
 
     Returns:
         Whether it kicked.
@@ -281,7 +281,7 @@ def kick_once(
 
 @dataclass(frozen=True)
 class QueueSheet:
-    """What a host gets from ``use_queue_sheet()``.
+    """What a host gets from `use_queue_sheet()`.
 
     Attributes:
         open: Opens the sheet (a chip's or a row's tap).
@@ -296,7 +296,7 @@ def use_queue_sheet(*, others: bool = False) -> QueueSheet:
     """Keep the queue sheet's state and show it while open; return what opens it.
 
     Call it on every render (D-70). While open, its rows are read again whenever the
-    outbox changes (``Staff.revision``), and the host re-renders with ``Staff``, so
+    outbox changes (`Staff.revision`), and the host re-renders with `Staff`, so
     the sheet follows each pass.
 
     Args:

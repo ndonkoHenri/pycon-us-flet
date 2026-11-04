@@ -1,6 +1,6 @@
 """Tests for About this app's links and its Conference data section (#88; D-73, D-292).
 
-The page runs in ``tests/about_page.py``'s stand-ins.
+The page runs in `tests/about_page.py`'s stand-ins.
 """
 
 import inspect
@@ -55,7 +55,7 @@ async def test_flet_opens_in_the_in_app_browser_and_reads_as_a_link(
 
 
 def test_the_source_url_is_unset_until_the_repository_is_public() -> None:
-    """``SOURCE_URL`` ships as None until P4 makes the repository public (D-88, D-292)."""
+    """`SOURCE_URL` ships as None until P4 makes the repository public (D-88, D-292)."""
     assert pycon_us.SOURCE_URL is None
 
 
@@ -63,7 +63,7 @@ def test_no_source_code_row_while_the_repository_is_private(
     render: Callable[[], dict[str, Any]],
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """With ``SOURCE_URL`` None, Links lists Flet alone: no row links to a private repository."""
+    """With `SOURCE_URL` None, Links lists Flet alone: no row links to a private repository."""
     monkeypatch.setattr(about_app, "SOURCE_URL", None)
     assert list(link_rows(render())) == ["about_app.flet"]
 
@@ -73,7 +73,7 @@ async def test_a_source_url_adds_a_source_code_row_after_flet(
     svc: Services,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """Once ``SOURCE_URL`` is set, a Source code row opens it in the in-app browser."""
+    """Once `SOURCE_URL` is set, a Source code row opens it in the in-app browser."""
     url = "https://example.org/conf-companion"
     monkeypatch.setattr(about_app, "SOURCE_URL", url)
     found = link_rows(render())
@@ -87,7 +87,7 @@ async def test_a_source_url_adds_a_source_code_row_after_flet(
 
 
 def test_a_url_is_shown_without_its_scheme_or_a_trailing_slash() -> None:
-    """A row's address drops ``https://`` and a final slash, and keeps the path."""
+    """A row's address drops `https://` and a final slash, and keeps the path."""
     assert shown_url("https://flet.dev") == "flet.dev"
     assert shown_url("https://flet.dev/") == "flet.dev"
     assert shown_url("https://example.org/a/b/") == "example.org/a/b"
@@ -100,7 +100,7 @@ def test_a_url_is_shown_without_its_scheme_or_a_trailing_slash() -> None:
 def section(
     monkeypatch: pytest.MonkeyPatch, svc: Services, conference: Conference
 ) -> Callable[[], list[ft.Control]]:
-    """Render ``ConferenceData`` over ``svc`` and ``conference``: its controls."""
+    """Render `ConferenceData` over `svc` and `conference`: its controls."""
     monkeypatch.setattr(about_app, "use_services", lambda: svc)
     monkeypatch.setattr(about_app, "use_conference", lambda: conference)
     monkeypatch.setattr(about_app, "use_minute", lambda: 0)
@@ -174,7 +174,7 @@ async def test_after_a_refresh_the_line_says_from_the_feed_and_its_age_moves(
 def test_the_section_ticks_with_the_minute_and_reads_the_store(
     section: Callable[[], list[ft.Control]], monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """A render calls ``use_minute()`` and ``use_conference()``: the line keeps up."""
+    """A render calls `use_minute()` and `use_conference()`: the line keeps up."""
     calls: list[str] = []
     monkeypatch.setattr(about_app, "use_minute", lambda: calls.append("minute") or 0)
     use_conference = about_app.use_conference

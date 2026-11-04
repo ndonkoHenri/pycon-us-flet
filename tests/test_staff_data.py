@@ -3,8 +3,8 @@
 No path deletes an unsynced row without naming how many, an account switch never shows
 or sends the previous owner's rows as the new account's, and Clear staff data removes
 every staff key of the storage table, a key added later included. The rows are in a
-real ``outbox-<year>.db``; the accounts sign in to the in-process mock
-(``tests/sync_rig.py``).
+real `outbox-<year>.db`; the accounts sign in to the in-process mock
+(`tests/sync_rig.py`).
 """
 
 import asyncio
@@ -74,7 +74,7 @@ def rig(db: OutboxDb, storage: Storage, credentials: CredentialStorage) -> Rig:
 
 
 def seed(db: OutboxDb, code: str, owner: str, status: Status = Status.PENDING) -> Row:
-    """Store a lead row of ``owner``'s for ``code`` in ``status``."""
+    """Store a lead row of `owner`'s for `code` in `status`."""
     decide = outbox_enqueue.scan_lead
     enqueued = db.enqueue(
         code,
@@ -118,7 +118,7 @@ def table() -> list[Pref[object]]:
 
 
 def test_every_staff_key_of_the_table_starts_with_the_staff_prefix() -> None:
-    """A key about staff tools is named under ``STAFF_PREFIX``, so it is cleared too."""
+    """A key about staff tools is named under `STAFF_PREFIX`, so it is cleared too."""
     keys = [pref.key for pref in table()]
     assert len(keys) > 8  # the walk found the table, per-year keys included
     words = ("staff", "sponsor", "consent", "scan", "lead", "door", "swag")
@@ -146,7 +146,7 @@ async def test_clear_staff_data_removes_every_staff_key_and_no_other(
 async def test_clear_staff_data_deletes_every_account_s_rows_and_zeros_staff(
     db: OutboxDb, storage: Storage
 ) -> None:
-    """Pending, failed and synced rows of every owner go; ``Staff`` counts none."""
+    """Pending, failed and synced rows of every owner go; `Staff` counts none."""
     seed(db, "A1", A)
     seed(db, "A2", A, Status.FAILED)
     seed(db, "B1", B, Status.SYNCED)
@@ -280,7 +280,7 @@ async def test_a_switch_that_can_t_remove_the_staff_keys_is_not_saved(
 
 
 async def until(condition: Callable[[], bool]) -> None:
-    """Let the loop run until ``condition`` holds, failing after a second."""
+    """Let the loop run until `condition` holds, failing after a second."""
     async with asyncio.timeout(1):
         while not condition():
             await asyncio.sleep(0.001)

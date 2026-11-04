@@ -1,6 +1,6 @@
 """Tests for the Conference store's Developer feed URL and its reset (D-198).
 
-The feeds, transports and fixtures are ``tests/feed_store.py``'s.
+The feeds, transports and fixtures are `tests/feed_store.py`'s.
 """
 
 import asyncio
@@ -38,12 +38,12 @@ OTHER_DEV_FEED = "http://127.0.0.1:8000/conference-2025.json"
 
 
 def serving_any(body: bytes) -> httpx.MockTransport:
-    """A transport that answers any URL with ``body``."""
+    """A transport that answers any URL with `body`."""
     return httpx.MockTransport(lambda request: httpx.Response(200, content=body))
 
 
 def recording(urls: list[str]) -> httpx.MockTransport:
-    """A transport that serves ``NETWORK_FEED`` at any URL and records each one."""
+    """A transport that serves `NETWORK_FEED` at any URL and records each one."""
 
     def handle(request: httpx.Request) -> httpx.Response:
         urls.append(str(request.url))
@@ -105,7 +105,7 @@ async def test_the_start_s_restore_of_a_stored_feed_url_deletes_nothing(
 ) -> None:
     """At a start the stored URL is set before the load, which keeps both files.
 
-    ``bootstrap()`` restores it, then loads the cache, which is that URL's (D-255).
+    `bootstrap()` restores it, then loads the cache, which is that URL's (D-255).
     """
     await fill(storage)
     conference = Conference()

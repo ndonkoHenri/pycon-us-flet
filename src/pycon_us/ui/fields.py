@@ -1,14 +1,14 @@
-"""The text fields screens share: ``SearchField``, the pill that search and filters use.
+"""The text fields screens share: `SearchField`, the pill that search and filters use.
 
 One look and one behaviour for every field that narrows a list as the user types: the
 Speakers and Sprints filters (D-189, D-202) and the global search (D-193). A pill on
-``surface_container_high`` without a line, focused or not, like Material's search bar
-(ux.md §3.6); in high contrast, where that fill is the surface, a 1 dp ``outline`` ring
+`surface_container_high` without a line, focused or not, like Material's search bar
+(ux.md §3.6); in high contrast, where that fill is the surface, a 1 dp `outline` ring
 instead (D-306). Pinned above its list so it is always in reach, with a Clear button once
-there is text. ``use_field_query()`` holds the field's text, its ``Ref`` and the Clear
+there is text. `use_field_query()` holds the field's text, its `Ref` and the Clear
 that puts the focus back in it, keeps the field in step with what the screen
 filters by however fast the keys come (D-243), and keeps it from taking the focus back
-when its View comes back on top (D-330); ``found_count()`` is the live line under
+when its View comes back on top (D-330); `found_count()` is the live line under
 the field that says what the text found (D-226).
 """
 
@@ -40,36 +40,36 @@ def SearchField(
 ) -> ft.Control:
     """Return a pill-shaped search or filter field with its Clear button.
 
-    Controlled (D-157) through ``use_field_query()``: its value is what Flutter last
+    Controlled (D-157) through `use_field_query()`: its value is what Flutter last
     reported, so a re-render never wipes what the user typed (F33) nor sends an older
     keystroke's text back over it (D-243). Autocorrect and Android's suggestions are
-    off: they would "fix" names and identifiers (``asyncio``).
+    off: they would "fix" names and identifiers (`asyncio`).
 
     The hint names the field only while it is empty, so the field's semantics node is
-    merged with ``label`` once there is text. A merge takes in every descendant, so the
-    Clear button lies over the field, in a ``Stack``, rather than inside it as its
+    merged with `label` once there is text. A merge takes in every descendant, so the
+    Clear button lies over the field, in a `Stack`, rather than inside it as its
     suffix, where it would stop being a button of its own (D-189).
 
     Args:
-        value: The text, ``FieldQuery.value``.
+        value: The text, `FieldQuery.value`.
         on_change: Re-renders the screen with the typed text.
         on_clear: Empties the field and puts the focus back in it, since the Clear
-            button goes away when used (D-182): ``use_field_query()``'s ``clear``.
-        ref: Set to the field, for that ``focus()``.
+            button goes away when used (D-182): `use_field_query()`'s `clear`.
+        ref: Set to the field, for that `focus()`.
         hint: The hint while the field is empty, which is also its name then.
         label: The field's name for screen readers once it holds text.
         clear_tooltip: The Clear button's tooltip, its accessible name (D-27).
-        identifier: The field's semantics identifier, ``<screen>.<element>``.
+        identifier: The field's semantics identifier, `<screen>.<element>`.
         autofocus: Focus the field, and open the keyboard, when the View shows.
-        focusable: Whether the field can take the focus: ``FieldQuery.focusable``,
+        focusable: Whether the field can take the focus: `FieldQuery.focusable`,
             False while another View covers the field's (D-330).
         on_submit: Called when the keyboard's action key is pressed. With it, that
             key is Search, since it searches at once (U30, D-193); without it the
             field filters as the user types, and the key keeps the default Done.
             The keyboard is always the plain text one: iOS's web search keyboard
             puts its own Go key in place of Search (D-450).
-        high_contrast: HC is on screen (``Tokens.high_contrast``): the pill's fill is
-            the surface there, so a 1 dp ``outline`` ring draws its edge (D-306).
+        high_contrast: HC is on screen (`Tokens.high_contrast`): the pill's fill is
+            the surface there, so a 1 dp `outline` ring draws its edge (D-306).
     """
     edge = (
         ft.BorderSide(1, ft.Colors.OUTLINE)
@@ -128,25 +128,25 @@ def SearchField(
 
 @dataclass(frozen=True, eq=False)
 class FieldQuery:
-    """A ``SearchField``'s text and handlers for one render, from ``use_field_query()``.
+    """A `SearchField`'s text and handlers for one render, from `use_field_query()`.
 
     Attributes:
         value: The text the field shows, which the screen filters or searches by
-            and passes as the field's ``value``: one value for both, so they never
+            and passes as the field's `value`: one value for both, so they never
             part (D-243).
-        ref: The field's ``ref``; one ``Ref`` for the screen's life (D-243).
-        changed: The field's ``on_change``: re-renders with the typed text. Returns
+        ref: The field's `ref`; one `Ref` for the screen's life (D-243).
+        changed: The field's `on_change`: re-renders with the typed text. Returns
             whether it took the report, which a Clear's landing drops, so a screen
             that keeps the text elsewhere too keeps only what was taken.
-        clear: The field's ``on_clear``, and a no-match state's "Clear …": empties the
+        clear: The field's `on_clear`, and a no-match state's "Clear …": empties the
             text, then puts the focus back in the field.
         put: Replaces the text with the one given, then puts the focus back in the
-            field, after the text; ``clear`` is ``put("")`` (the scan screen's "Edit
+            field, after the text; `clear` is `put("")` (the scan screen's "Edit
             code" gives a refused entry back to be corrected, #941).
         focus: Puts the focus in the field, for another control that goes away when
             used (search's "Show all results").
         focusable: False while a View pushed on top covers the field's, the field's
-            ``can_request_focus``: so the field lets the focus go as a result opens,
+            `can_request_focus`: so the field lets the focus go as a result opens,
             and Flutter's route focus restoration cannot give it back, with the
             keyboard, on Back (D-330).
     """
@@ -161,7 +161,7 @@ class FieldQuery:
 
 
 def use_field_query(initial: str = "") -> FieldQuery:
-    """Return a ``SearchField``'s text, its ``Ref`` and its Clear (a hook).
+    """Return a `SearchField`'s text, its `Ref` and its Clear (a hook).
 
     A plain function that calls hooks, so the screen calls it once per render, before
     any early return (D-70). The field stays controlled (D-157), but by what Flutter
@@ -170,11 +170,11 @@ def use_field_query(initial: str = "") -> FieldQuery:
     the change events and re-renders that follow run later. A render built from the
     text of an earlier event would differ from that report, and the diff would send
     the older text back over what the user typed since. So each render reads the text
-    from that field, through a ``Ref`` kept for the screen's life, and the diff sends
-    nothing; only the initial text and a Clear are sent to the field. ``changed``
+    from that field, through a `Ref` kept for the screen's life, and the diff sends
+    nothing; only the initial text and a Clear are sent to the field. `changed`
     still sets state, which is what re-renders the screen at each keystroke.
 
-    A Clear (or a ``put``) does send text, so it can race too: Flutter puts that text
+    A Clear (or a `put`) does send text, so it can race too: Flutter puts that text
     over any key typed between the tap and its arrival, so those keys' reports,
     which come in after the tap, are dropped until Flutter answers the focus request
     that an effect makes once the render has sent the text (Flutter handles
@@ -182,14 +182,14 @@ def use_field_query(initial: str = "") -> FieldQuery:
     over what it left on the field, and waited for the same way. Asking for the focus
     also serves D-182: a Clear goes away once the text is empty, so the focus goes
     back in the field, ready to type again, rather than lose a screen reader's place.
-    A screen that keeps more state with the text (search's ``ViewMemory``, D-193) wraps
-    ``changed`` and ``clear`` in handlers of its own, and keeps a report only when
-    ``changed`` took it.
+    A screen that keeps more state with the text (search's `ViewMemory`, D-193) wraps
+    `changed` and `clear` in handlers of its own, and keeps a report only when
+    `changed` took it.
 
     The field can take the focus only while its View is the top one (D-330). A
     focused field whose keyboard was closed (Android's Back key) keeps the focus, and
     Flutter gives a route back the focus it had once the route above it pops, which
-    brought the keyboard back up over the results. Losing ``can_request_focus`` as
+    brought the keyboard back up over the results. Losing `can_request_focus` as
     another View is pushed takes the field out of its route's focus history, so Back
     returns with no field focused and the keyboard comes up only at a tap. Outside a
     Router (a screen rendered alone in a test) there is no View above it.
@@ -254,7 +254,7 @@ def use_field_query(initial: str = "") -> FieldQuery:
             and ref.current is not None
             and ref.current.value != typed
         ):
-            # Flutter shows ``typed``, but a report that came in after the render left
+            # Flutter shows `typed`, but a report that came in after the render left
             # its text on the field here (one before the render did not).
             send(typed)
 
@@ -278,13 +278,13 @@ def found_count(line: str, *, identifier: str) -> ft.Control:
     lets a screen reader hear what typing did without leaving the field (ux.md §9).
     On iOS too: VoiceOver queues the new count and keeps its focus in the field (D-243).
     The caller shows it only while the text finds something; a miss has its no-match
-    state, which announces itself. ``BODY_SMALL`` in ``on_surface_variant``, 16 dp from
+    state, which announces itself. `BODY_SMALL` in `on_surface_variant`, 16 dp from
     the sides, 4 dp under what is above it and 8 dp over the list, which scrolls under
     the pinned line and so never touches it (D-226).
 
     Args:
         line: What was found, "5 speakers" or "12 sessions, 3 speakers".
-        identifier: Its semantics identifier, ``<screen>.count``.
+        identifier: Its semantics identifier, `<screen>.count`.
     """
     return ft.Semantics(
         live_region=True,

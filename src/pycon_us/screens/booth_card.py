@@ -1,18 +1,18 @@
 """The booth card: who is at the selected booth, under the expo plan (EXPO-03, D-254).
 
-``ExpoHall`` (``screens/expo.py``) shows it at the bottom of its ``Stack``, under the
+`ExpoHall` (`screens/expo.py`) shows it at the bottom of its `Stack`, under the
 zoom buttons, so the plan stays in use (a modal sheet would block it, D-29). It is a
-``Card`` in one of three forms (ux.md §6.2):
+`Card` in one of three forms (ux.md §6.2):
 
-- **One exhibitor:** its logo on the white tile (initials offline, ``logo_tile()``), the
+- **One exhibitor:** its logo on the white tile (initials offline, `logo_tile()`), the
   name, "Booth 613 · Visionary", "Hiring · 15 open roles" when it has a job listing
-  (a line, not a second button to the same page), and ``FilledTonalButton("Sponsor
-  details")``, which pushes ``…/sponsor/<slug>`` (D-17), so Back returns to the booth.
+  (a line, not a second button to the same page), and `FilledTonalButton("Sponsor
+  details")`, which pushes `…/sponsor/<slug>` (D-17), so Back returns to the booth.
 - **A shared booth:** headed "Booth 726 · Community" (the level only when every
   exhibitor has it) over "4 exhibitors", then one 48 dp row per exhibitor in name order,
   each pushing its sponsor.
-- **No exhibitor:** the booth's ``map.toml`` label (or its number before the feed is
-  there) beside a ``PLACE_OUTLINED`` icon where a logo would be (no PSF logo, D-36), and
+- **No exhibitor:** the booth's `map.toml` label (or its number before the feed is
+  there) beside a `PLACE_OUTLINED` icon where a logo would be (no PSF logo, D-36), and
   no sponsor action.
 
 Its head is one node in a live region, so a screen reader hears each newly selected
@@ -23,8 +23,8 @@ and most of the plan stay in sight (D-370). In a pane too short for that under t
 buttons' column (landscape), the buttons go in a row and the box is what is left;
 so they do under a tall card that would leave the plan too thin a band, and where
 their column would reach over the fitted plan, as on a phone in portrait (the
-arithmetic is ``screens/expo_layout.py``'s, D-443). The card is a memoised component given
-values only (D-153, F150): the body's measured height lives in ``ExpoHall``, above it.
+arithmetic is `screens/expo_layout.py`'s, D-443). The card is a memoised component given
+values only (D-153, F150): the body's measured height lives in `ExpoHall`, above it.
 """
 
 from collections.abc import Callable
@@ -41,7 +41,7 @@ from pycon_us.ui.logos import logo_tile
 from pycon_us.ui.semantics import named
 
 SCREEN = "expo"
-"""The screen's name in the card's identifiers: ``expo.card``, ``expo.card.close``."""
+"""The screen's name in the card's identifiers: `expo.card`, `expo.card.close`."""
 
 DETAILS = "Sponsor details"
 """The one exhibitor's button."""
@@ -59,14 +59,14 @@ ROW_LOGO = 40
 """A shared booth's row logo, in dp: with 4 dp above and below, a 48 dp row."""
 
 type OnBodySize = Callable[[ft.LayoutSizeChangeEvent], None]
-"""``ExpoHall``'s handler for the card body's measured size."""
+"""`ExpoHall`'s handler for the card body's measured size."""
 
 
 def hiring_line(data: ConferenceData | None, sponsor: Sponsor) -> str:
     """Return "Hiring · 15 open roles", "Hiring" for a long-form listing, or "".
 
     A sponsor is hiring when sponsor detail has an Open roles section for it: a listing
-    with roles or with text. A placeholder listing has neither (``core.jobs``).
+    with roles or with text. A placeholder listing has neither (`core.jobs`).
 
     Args:
         data: The processed feed, or None before the first fetch.
@@ -120,7 +120,7 @@ def card_phrase(item: ExpoBooth, hiring: str) -> str:
 
     Args:
         item: The selected booth and its exhibitors.
-        hiring: ``hiring_line()``'s answer for a booth of one exhibitor, else "".
+        hiring: `hiring_line()`'s answer for a booth of one exhibitor, else "".
 
     Returns:
         "Booth 613, Bloomberg, Visionary sponsor, hiring, 15 open roles"; "Booth 726,
@@ -155,12 +155,12 @@ def BoothCard(
 
     Args:
         item: The selected booth and its exhibitors.
-        hiring: ``hiring_line()`` for a booth of one exhibitor, else "".
+        hiring: `hiring_line()` for a booth of one exhibitor, else "".
         view_path: The hall's View path, on top of which a sponsor is pushed.
         body_box: The height of the box the card's body scrolls in; None while it
             fits in half the pane.
-        on_close: ``ExpoHall``'s handler that clears the selection.
-        on_body_size: ``ExpoHall``'s handler for the body's measured size.
+        on_close: `ExpoHall`'s handler that clears the selection.
+        on_body_size: `ExpoHall`'s handler for the body's measured size.
     """
     parts: list[ft.Control] = [_head(item, hiring)]
     if len(item.sponsors) == 1:
@@ -271,7 +271,7 @@ def _exhibitor(sponsor: Sponsor, view_path: str, *, mixed: bool) -> ft.Control:
     """One exhibitor of a shared booth: logo, name, chevron; a tap pushes its sponsor.
 
     One node, a button read "PyBeach, Community sponsor"; its level is shown under the
-    name only when the booth's exhibitors differ (``mixed``), as the head says it
+    name only when the booth's exhibitors differ (`mixed`), as the head says it
     otherwise.
     """
     target = drill_href(view_path, "sponsor", sponsor.slug)

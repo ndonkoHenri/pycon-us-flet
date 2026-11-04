@@ -1,6 +1,6 @@
 """Tests for the page's handlers: brightness, resume and pause, failures and close.
 
-``bootstrap()`` runs against ``tests/app_start.py``'s fakes (D-69).
+`bootstrap()` runs against `tests/app_start.py`'s fakes (D-69).
 """
 
 import asyncio
@@ -51,7 +51,7 @@ year, shared, semantics, svc, fake_page, network = (
 async def test_a_brightness_change_writes_the_store(
     fake_page: FakePage, svc: Services, network: Network
 ) -> None:
-    """A platform brightness change event sets ``Prefs.os_dark`` from the page."""
+    """A platform brightness change event sets `Prefs.os_dark` from the page."""
     _, prefs = await started(fake_page, svc)
     page = cast(ft.Page, fake_page)
     fake_page.platform_brightness = ft.Brightness.DARK
@@ -160,7 +160,7 @@ async def test_a_change_of_reduced_motion_is_logged_once(
 def lifecycle(
     fake_page: FakePage, state: ft.AppLifecycleState
 ) -> ft.AppLifecycleStateChangeEvent:
-    """Build the lifecycle event Flet sends ``fake_page`` for ``state``."""
+    """Build the lifecycle event Flet sends `fake_page` for `state`."""
     return ft.AppLifecycleStateChangeEvent(
         name="app_lifecycle_state_change", control=cast(ft.Page, fake_page), state=state
     )
@@ -168,7 +168,7 @@ def lifecycle(
 
 @pytest.fixture
 def frozen_clock() -> Iterator[datetime]:
-    """Freeze the app's clock at ``STARTED_AT``, and unfreeze it after."""
+    """Freeze the app's clock at `STARTED_AT`, and unfreeze it after."""
     clock.set_test_now(STARTED_AT)
     yield STARTED_AT
     clock.set_test_now(None)
@@ -180,7 +180,7 @@ STARTED_AT = datetime(2026, 10, 12, 9, 30, tzinfo=UTC)
 async def test_a_pause_stops_the_ticks_and_a_resume_starts_them_again(
     fake_page: FakePage, svc: Services, network: Network
 ) -> None:
-    """Going to the background clears ``svc.foreground`` and sets ``background``.
+    """Going to the background clears `svc.foreground` and sets `background`.
 
     Only a resume turns them back, so the ticks run and the scan screen's wake lock is
     held again (#724).
@@ -202,7 +202,7 @@ async def test_a_pause_stops_the_ticks_and_a_resume_starts_them_again(
 async def test_inactive_and_resume_mark_a_trip_away_from_the_app(
     fake_page: FakePage, svc: Services, network: Network
 ) -> None:
-    """``inactive`` alone (the share sheet's) leaves, and ``resume`` comes back (D-372)."""
+    """`inactive` alone (the share sheet's) leaves, and `resume` comes back (D-372)."""
     await started(fake_page, svc)
     handler = fake_page.on_app_lifecycle_state_change
     returns = svc.presence.returns
@@ -284,7 +284,7 @@ async def test_a_page_handler_that_fails_unexpectedly_reports_instead_of_raising
 async def test_closing_the_page_stops_the_session_s_refresh(
     fake_page: FakePage, svc: Services, network: Network
 ) -> None:
-    """Closing the page sets ``svc.closed``, so its refresh writes nothing (F30)."""
+    """Closing the page sets `svc.closed`, so its refresh writes nothing (F30)."""
     conference, _ = await started(fake_page, svc)
     assert fake_page.on_close == svc.close
     fake_page.on_close()  # a new session replaced this one (D-147)
@@ -357,7 +357,7 @@ async def signed_in_start(
     shared: MemoryPrefs,
     transport: httpx.AsyncBaseTransport,
 ) -> tuple[Account, Services]:
-    """Start with the seeded ``all`` account saved and a mock URL on ``transport``."""
+    """Start with the seeded `all` account saved and a mock URL on `transport`."""
     shared.values["pycon.account"] = json.dumps(
         {"email": "all@example.com", "nickname": "Robin", "features": {}}
     )
@@ -393,7 +393,7 @@ async def test_the_start_refreshes_the_flags_without_waiting_for_them(
 async def test_a_resume_refreshes_the_flags_and_a_revoked_key_asks_for_a_sign_in(
     fake_page: FakePage, svc: Services, shared: MemoryPrefs, network: Network
 ) -> None:
-    """Each resume asks ``check_features``; a refused key expires the account (D-57)."""
+    """Each resume asks `check_features`; a refused key expires the account (D-57)."""
     state = state_at(clock=Clock(time.time()))
     recorder = Recorder(mock_transport(state))
     account, svc = await signed_in_start(fake_page, svc, shared, recorder)

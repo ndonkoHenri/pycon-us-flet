@@ -1,10 +1,10 @@
 """Which build of the app runs: its version and, in a packaged build, its number (D-386).
 
-``flet build --build-number N`` reaches only the native side (Android's ``versionCode``,
-iOS's ``CFBundleVersion``), so Python asks Flutter for it: ``page.get_package_info()``
-(U4, landed at the pin ``08b89cce5``). Outside a packaged build that call describes the
+`flet build --build-number N` reaches only the native side (Android's `versionCode`,
+iOS's `CFBundleVersion`), so Python asks Flutter for it: `page.get_package_info()`
+(U4, landed at the pin `08b89cce5`). Outside a packaged build that call describes the
 Flet client running the app (the companion app's own version), so the app asks it only
-when ``is_embedded()`` and otherwise says ``pycon_us.__version__`` alone (D-83). About
+when `is_embedded()` and otherwise says `pycon_us.__version__` alone (D-83). About
 this app's Version row and the diagnostics text both say it.
 """
 
@@ -26,8 +26,8 @@ class Build:
     """The running build: its version and its build number.
 
     Attributes:
-        version: The version users see, e.g. ``0.4.0``.
-        number: The build number, e.g. ``812``; None outside a packaged build, or
+        version: The version users see, e.g. `0.4.0`.
+        number: The build number, e.g. `812`; None outside a packaged build, or
             when the platform did not say.
     """
 
@@ -36,12 +36,12 @@ class Build:
 
     @property
     def label(self) -> str:
-        """The version as the Version row says it: ``0.4.0 (812)``, or ``0.4.0``."""
+        """The version as the Version row says it: `0.4.0 (812)`, or `0.4.0`."""
         return f"{self.version} ({self.number})" if self.number else self.version
 
 
 UNPACKAGED = Build(__version__)
-"""What the app says before, or without, the platform's answer: ``__version__`` alone."""
+"""What the app says before, or without, the platform's answer: `__version__` alone."""
 
 _packaged: Build | None = None
 """A packaged build's answer, read once: it cannot change while the process runs."""
@@ -55,13 +55,13 @@ def known_build() -> Build:
 async def read_build(page: ft.Page) -> Build:
     """Return the running build, asking the platform once in a packaged build.
 
-    Call it from an ``async`` handler or effect (D-70).
+    Call it from an `async` handler or effect (D-70).
 
     Args:
         page: The session's page.
 
     Returns:
-        ``UNPACKAGED`` outside a packaged build, and when the call fails (logged by
+        `UNPACKAGED` outside a packaged build, and when the call fails (logged by
         class, D-72); else the packaged app's version and build number.
     """
     global _packaged
@@ -81,7 +81,7 @@ def use_build() -> Build:
     """Return the running build, as a hook: what is known now, then the platform's answer.
 
     The first About this app of a packaged run says the version alone until the answer
-    arrives; every later one starts with the answer (``known_build()``).
+    arrives; every later one starts with the answer (`known_build()`).
     """
     build, set_build = ft.use_state(known_build)
 

@@ -1,11 +1,11 @@
 """Tests for Settings: Appearance, High contrast, Reminders, Start screen, Data (#421, #689).
 
-``Settings`` runs outside a renderer, as ``More`` does in ``test_more.py``: its hooks and
-``AppScaffold`` are replaced, and a fake page is bound as Flet binds a session's page.
-That the theme follows ``Prefs`` is ``test_app_theme.py``'s; how the page looks and
+`Settings` runs outside a renderer, as `More` does in `test_more.py`: its hooks and
+`AppScaffold` are replaced, and a fake page is bound as Flet binds a session's page.
+That the theme follows `Prefs` is `test_app_theme.py`'s; how the page looks and
 reads is checked on devices (the PR). The Data section is a component of its own, whose tests
-are ``test_settings_data.py``'s; here it is a stand-in. Reminders' rows are
-``test_settings_reminders.py``'s; here, only where the section sits.
+are `test_settings_data.py`'s; here it is a stand-in. Reminders' rows are
+`test_settings_reminders.py`'s; here, only where the section sits.
 """
 
 import dataclasses
@@ -39,12 +39,12 @@ from tests.fakes import (
 )
 
 DATA_SECTION = ft.Text("Data section")
-"""What ``DataSection`` renders as in the page's tests: its own tests are elsewhere."""
+"""What `DataSection` renders as in the page's tests: its own tests are elsewhere."""
 
 
 @pytest.fixture
 def page() -> Iterator[FakePage]:
-    """A ``FakePage`` bound as Flet binds a session's page."""
+    """A `FakePage` bound as Flet binds a session's page."""
     fake = FakePage()
     with bound(fake):
         yield fake
@@ -52,7 +52,7 @@ def page() -> Iterator[FakePage]:
 
 @pytest.fixture
 def svc(tmp_path: Path) -> Services:
-    """The session's services over in-memory fakes and a 2026 ``Storage``."""
+    """The session's services over in-memory fakes and a 2026 `Storage`."""
     storage = Storage(prefs=MemoryPrefs(), directory=tmp_path, year=2026)
     return Services(
         year=load_year(2026),
@@ -85,7 +85,7 @@ def render(
     account: Account,
     page: FakePage,
 ) -> Callable[[], dict[str, Any]]:
-    """Render ``Settings`` once and return what it passed to ``AppScaffold``.
+    """Render `Settings` once and return what it passed to `AppScaffold`.
 
     The services come first: a service built while a page is bound registers with it.
     """
@@ -103,14 +103,14 @@ def render(
 
 
 def rows_of(scaffold: dict[str, Any]) -> list[ft.Control]:
-    """Return the rows of the scaffold's ``ListView`` body."""
+    """Return the rows of the scaffold's `ListView` body."""
     body = scaffold["body"]
     assert isinstance(body, ft.ListView)
     return list(body.controls)
 
 
 def appearance_of(scaffold: dict[str, Any]) -> ft.RadioGroup:
-    """Return Appearance's ``RadioGroup``, the row under its heading."""
+    """Return Appearance's `RadioGroup`, the row under its heading."""
     choice = rows_of(scaffold)[1]
     assert isinstance(choice, ft.RadioGroup)
     return choice
@@ -148,13 +148,13 @@ def switch_of(scaffold: dict[str, Any]) -> ft.Switch:
 
 
 async def choose(choice: ft.RadioGroup, value: str) -> None:
-    """Pick an option as Flutter reports it: the value first, then ``on_change``."""
+    """Pick an option as Flutter reports it: the value first, then `on_change`."""
     choice.value = value
     await cast(Any, choice.on_change)(SimpleNamespace(control=choice))
 
 
 async def flip(switch: ft.Switch) -> None:
-    """Toggle the switch as Flutter reports it: the new value first, then ``on_change``."""
+    """Toggle the switch as Flutter reports it: the new value first, then `on_change`."""
     switch.value = not switch.value
     await cast(Any, switch.on_change)(SimpleNamespace(control=switch))
 
@@ -178,13 +178,13 @@ def snack_texts(page: FakePage) -> list[str | None]:
 
 
 def test_settings_is_a_page_under_more_so_back_returns_there() -> None:
-    """``/more/settings`` is a page whose parent is More: one pushed View (D-17)."""
+    """`/more/settings` is a page whose parent is More: one pushed View (D-17)."""
     assert "/more/settings" in PAGES
     assert parent_of("/more/settings") == "/more"
 
 
 def test_my_schedule_s_reminder_settings_is_settings_under_my_schedule() -> None:
-    """``/my-schedule/settings`` is Settings again, whose Back returns to My schedule (D-401)."""
+    """`/my-schedule/settings` is Settings again, whose Back returns to My schedule (D-401)."""
     assert "/my-schedule/settings" in PAGES
     assert parent_of("/my-schedule/settings") == "/my-schedule"
 
@@ -224,7 +224,7 @@ def test_a_build_with_reminders_shows_the_live_section(
     monkeypatch: pytest.MonkeyPatch,
     svc: Services,
 ) -> None:
-    """With E3 (a ``Scheduler``) the live section takes the interim's place (D-401)."""
+    """With E3 (a `Scheduler`) the live section takes the interim's place (D-401)."""
     live = ft.Text("Live section")
     monkeypatch.setattr(settings, "RemindersSection", lambda slot: live)
     with_e3 = dataclasses.replace(svc, reminders=cast(Scheduler, object()))
@@ -280,7 +280,7 @@ async def test_an_appearance_that_cannot_be_saved_stays_and_says_so(
 def test_the_high_contrast_row_is_one_switch_row_named_for_flows(
     render: Callable[[], dict[str, Any]],
 ) -> None:
-    """The row is one merged node, ``settings.high_contrast``, that the whole row toggles."""
+    """The row is one merged node, `settings.high_contrast`, that the whole row toggles."""
     node, tile = contrast_row_of(render())
     assert node.identifier == "settings.high_contrast"
     assert tile.title == "High contrast"
@@ -309,7 +309,7 @@ def test_under_system_the_switch_shows_the_os_flag_and_says_it_follows_it(
 def test_under_system_the_switch_follows_a_change_read_on_resume(
     render: Callable[[], dict[str, Any]], prefs: Prefs
 ) -> None:
-    """A flag read on resume (``read_accessibility``) moves the switch under "system"."""
+    """A flag read on resume (`read_accessibility`) moves the switch under "system"."""
     assert switch_of(render()).value is False
     prefs.os_high_contrast = True  # what the resume's read writes (D-23)
     assert switch_of(render()).value is True
@@ -357,13 +357,13 @@ async def test_a_switch_that_cannot_be_saved_stays_and_says_so(
 
 
 def as_sponsor(prefs: Prefs, account: Account) -> None:
-    """Set a mock URL and sign ``account`` in with ``lead_retrieval``, as the sponsor."""
+    """Set a mock URL and sign `account` in with `lead_retrieval`, as the sponsor."""
     prefs.dev = {DEV_MOCK_API_URL: "http://127.0.0.1:8080"}
     account.signed_in = account.lead_retrieval = True
 
 
 def start_section_of(scaffold: dict[str, Any]) -> tuple[str, ft.RadioGroup]:
-    """Return the Start screen section's heading text and its ``RadioGroup``."""
+    """Return the Start screen section's heading text and its `RadioGroup`."""
     section = rows_of(scaffold)[4]
     assert isinstance(section, ft.Column)
     heading, choice = section.controls
@@ -389,7 +389,7 @@ def test_the_start_screen_shows_only_for_a_lead_retrieval_account(
     mock_url: bool,
     flags: dict[str, bool],
 ) -> None:
-    """Without ``lead_retrieval`` and a mock URL, Reminders is followed by Data."""
+    """Without `lead_retrieval` and a mock URL, Reminders is followed by Data."""
     if mock_url:
         prefs.dev = {DEV_MOCK_API_URL: "http://127.0.0.1:8080"}
     account.signed_in = True
@@ -404,7 +404,7 @@ def test_a_sponsor_sees_open_the_app_on_between_reminders_and_data(
 ) -> None:
     """A level-2 "Open the app on" over Now and Lead scanner, before Data (ux.md §6.9).
 
-    The stored ``auto`` shows as Lead scanner, where it opens the app (D-16).
+    The stored `auto` shows as Lead scanner, where it opens the app (D-16).
     """
     as_sponsor(prefs, account)
     scaffold = render()
@@ -427,7 +427,7 @@ async def test_choosing_now_is_saved_and_survives_a_relaunch(
     page: FakePage,
     svc: Services,
 ) -> None:
-    """Now stores ``now``, shown at once; Lead scanner stores ``lead`` (D-120)."""
+    """Now stores `now`, shown at once; Lead scanner stores `lead` (D-120)."""
     as_sponsor(prefs, account)
     await choose(start_section_of(render())[1], "now")
     assert prefs.start_screen == "now"

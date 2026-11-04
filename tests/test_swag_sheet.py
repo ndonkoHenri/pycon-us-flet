@@ -1,7 +1,7 @@
 """Tests for the hand-out sheet on Swag pickup (#769; SHIRT-03, SHIRT-04).
 
 The screen runs in a real Flet session over the mock's own transport, as in
-``tests/test_staff_swag.py``, whose fixtures these share, with both categories chosen
+`tests/test_staff_swag.py`, whose fixtures these share, with both categories chosen
 and the mock's state at hand. A scan with items left opens the sheet and waits for it,
 so the submit runs as a task (as Flet runs every event) while the test taps the sheet;
 taps are what Flutter reports: a checkbox's new value, then the event.
@@ -46,13 +46,13 @@ def state() -> MockState:
 
 @pytest.fixture
 def recorder(state: MockState) -> Recorder:
-    """The mock's transport over ``state``, keeping every request the screen sends."""
+    """The mock's transport over `state`, keeping every request the screen sends."""
     return Recorder(mock_transport(state))
 
 
 @pytest.fixture
 def switch(recorder: Recorder) -> Switch:
-    """The transport ``show`` renders over: the recorder, online."""
+    """The transport `show` renders over: the recorder, online."""
     return Switch(recorder)
 
 
@@ -83,7 +83,7 @@ def sheet(shown: Shown) -> ft.BottomSheet | None:
 
 
 def in_sheet(shown: Shown, identifier: str) -> Any:
-    """The control under the open sheet's semantics node ``identifier``."""
+    """The control under the open sheet's semantics node `identifier`."""
     current = sheet(shown)
     assert current is not None
     return next(
@@ -127,7 +127,7 @@ def field(shown: Shown) -> ft.TextField:
 
 
 async def until(shown: Shown, done: Callable[[], bool]) -> None:
-    """Let the session run until ``done``, as the mock's answers take a few turns."""
+    """Let the session run until `done`, as the mock's answers take a few turns."""
     for _ in range(50):
         if done():
             return
@@ -136,7 +136,7 @@ async def until(shown: Shown, done: Callable[[], bool]) -> None:
 
 
 async def scan(shown: Shown, text: str) -> asyncio.Task[None]:
-    """Enter ``text`` and press Enter; return the submit, running until the sheet closes."""
+    """Enter `text` and press Enter; return the submit, running until the sheet closes."""
     entry = field(shown)
     shown.session.apply_patch(entry._i, {"value": text})
     await shown.event(entry, "change", text)
@@ -158,7 +158,7 @@ def row_tile(shown: Shown, product_id: int) -> ft.ListTile:
 
 
 def redeems(recorder: Recorder) -> int:
-    """How many ``redeem`` POSTs the screen sent."""
+    """How many `redeem` POSTs the screen sent."""
     return sum(r.url.path.endswith(REDEEM.path) for r in recorder.sent)
 
 
@@ -246,7 +246,7 @@ async def test_picked_up_items_are_disabled_and_say_why(
 async def test_a_lost_answer_says_not_confirmed_and_a_rescan_shows_the_truth(
     show: Show, state: MockState, recorder: Recorder, now: list[float]
 ) -> None:
-    """``lost_response`` with the sheet open: "Not confirmed", rescan; sent once."""
+    """`lost_response` with the sheet open: "Not confirmed", rescan; sent once."""
     shown = await show()
     submit = await scan(shown, GRACE)
     state.faults.inject("lost_response")
@@ -268,10 +268,10 @@ async def test_a_double_tap_sends_once_with_the_ring_meanwhile(
     held = asyncio.Event()
 
     class Slow(httpx.AsyncBaseTransport):
-        """The recorder, answering a redeem once ``held`` is set."""
+        """The recorder, answering a redeem once `held` is set."""
 
         async def handle_async_request(self, request: httpx.Request) -> httpx.Response:
-            """Wait for ``held`` on a redeem, then let the recorder answer."""
+            """Wait for `held` on a redeem, then let the recorder answer."""
             if request.url.path.endswith(REDEEM.path):
                 await held.wait()
             return await recorder.handle_async_request(request)

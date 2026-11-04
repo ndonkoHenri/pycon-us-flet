@@ -184,7 +184,7 @@ def test_now_may_be_in_any_zone(data: ConferenceData) -> None:
 
 
 def test_a_naive_now_is_refused(data: ConferenceData) -> None:
-    """A naive ``now`` is refused with ``ValueError``."""
+    """A naive `now` is refused with `ValueError`."""
     with pytest.raises(ValueError, match="aware"):
         room_list(data, datetime(2026, 5, 15, 11), OTHERS)  # noqa: DTZ001
 
@@ -244,7 +244,7 @@ def test_a_room_the_feed_lacks_has_nothing_on(data: ConferenceData) -> None:
 
 
 def test_one_room_s_now_refuses_a_naive_now(data: ConferenceData) -> None:
-    """One room's now refuses a naive ``now`` with ``ValueError``."""
+    """One room's now refuses a naive `now` with `ValueError`."""
     with pytest.raises(ValueError, match="aware"):
         room_now(data, "room-103abc", datetime(2026, 5, 15, 11))  # noqa: DTZ001
 
@@ -310,7 +310,7 @@ def test_rooms_keep_their_now_lines_under_their_floor(data: ConferenceData) -> N
 
 
 def room(name: str, *ids: str) -> Room:
-    """A room of that name, under its slug, listing ``ids``."""
+    """A room of that name, under its slug, listing `ids`."""
     return Room(slug=name.lower().replace(" ", "-"), name=name, session_ids=ids)
 
 

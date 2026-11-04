@@ -1,7 +1,7 @@
 """Tests for the year-data loader (D-45, DATA-34, DATA-14, DATA-28).
 
-The tracks' registry is ``test_config_tracks.py``'s; a malformed or missing file,
-``test_config_errors.py``'s.
+The tracks' registry is `test_config_tracks.py`'s; a malformed or missing file,
+`test_config_errors.py`'s.
 """
 
 import subprocess
@@ -43,7 +43,7 @@ def test_the_year_loader_loads_no_flet_module() -> None:
 
 
 def test_the_active_year_has_a_folder_of_its_own() -> None:
-    """``load_year()`` reads ``YEAR``'s folder, whose dates fall in that year (D-05)."""
+    """`load_year()` reads `YEAR`'s folder, whose dates fall in that year (D-05)."""
     conference = load_year().conference
     assert conference.year == config.YEAR
     assert conference.first_day.year == config.YEAR
@@ -126,7 +126,7 @@ def test_job_fair_override_matches_only_the_whole_name() -> None:
 def test_a_year_bundles_a_snapshot_exactly_when_it_records_its_capture_time(
     year: int,
 ) -> None:
-    """A year has a snapshot file exactly when it records ``snapshot_captured_at``."""
+    """A year has a snapshot file exactly when it records `snapshot_captured_at`."""
     data = load_year(year)
     has_file = (data.folder / config.SNAPSHOT_FILE).is_file()
     assert has_file == (data.conference.snapshot_captured_at is not None)
@@ -144,7 +144,7 @@ def test_the_active_year_bundles_its_snapshot() -> None:
 
 
 def test_a_year_without_a_snapshot_says_so() -> None:
-    """Reading 2025's snapshot raises a ``YearDataError`` that names the missing key."""
+    """Reading 2025's snapshot raises a `YearDataError` that names the missing key."""
     with pytest.raises(
         YearDataError,
         match=r"^2025/conference\.toml: snapshot_captured_at: missing key; "

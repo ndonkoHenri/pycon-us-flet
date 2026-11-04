@@ -1,6 +1,6 @@
-"""Tests for the Wi-Fi page (``screens/wifi.py``; #410, INFO-08, D-280).
+"""Tests for the Wi-Fi page (`screens/wifi.py`; #410, INFO-08, D-280).
 
-The page runs in a real Flet session (``tests/sessions.py``) over the bundled year data,
+The page runs in a real Flet session (`tests/sessions.py`) over the bundled year data,
 with and without a feed. How it looks, wraps at 200 % and reads to screen readers is
 checked on devices (the PR).
 """
@@ -35,7 +35,7 @@ async def show(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> AsyncIterator
     async with AsyncExitStack() as stack:
 
         async def render(*, year: int = 2026, feed: int | None = None) -> Shown:
-            """Render the page with ``year``'s data and ``feed``'s feed (None: none yet)."""
+            """Render the page with `year`'s data and `feed`'s feed (None: none yet)."""
             conference = (
                 Conference()
                 if feed is None
@@ -62,7 +62,7 @@ def clipboard(page: Shown) -> MemoryClipboard:
 
 
 def control_of[T: ft.Control](node: ft.Semantics, kind: type[T]) -> T:
-    """The control a ``named()`` identifier holds: its ``Semantics``' content."""
+    """The control a `named()` identifier holds: its `Semantics`' content."""
     assert isinstance(node.content, kind)
     return node.content
 
@@ -174,7 +174,7 @@ async def test_a_failed_copy_says_so_and_logs_no_value(
 
 
 async def test_a_year_without_wifi_data_shows_the_feed_s_block(show: Show) -> None:
-    """2025 has no ``[wifi]``: over a feed with a ``wifi`` block, the page shows it."""
+    """2025 has no `[wifi]`: over a feed with a `wifi` block, the page shows it."""
     page = await show(year=2025, feed=2026)
     block = page.node("wifi.feed")
     (text,) = page.find(ft.Markdown)
@@ -186,7 +186,7 @@ async def test_a_year_without_wifi_data_shows_the_feed_s_block(show: Show) -> No
 async def test_without_wifi_data_or_a_feed_block_the_page_sends_to_the_desk(
     show: Show,
 ) -> None:
-    """2025's own feed has no ``wifi`` block: the empty state names the way out."""
+    """2025's own feed has no `wifi` block: the empty state names the way out."""
     page = await show(year=2025, feed=2025)
     texts = page.texts()
     assert screen.NO_WIFI in texts

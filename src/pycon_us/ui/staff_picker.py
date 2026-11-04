@@ -1,18 +1,18 @@
 """What the staff tools' "scan for X" pickers share, and the page a tool shows while it reads.
 
-The Lead scanner's sponsor picker (``screens/lead_sponsor.py``, D-425) and Door check's
-session picker (``screens/door_session.py``, D-433) are one pattern: a pushed page that
-fetches its list each time it opens (``use_fetch()``: a spinner, then the list, or
+The Lead scanner's sponsor picker (`screens/lead_sponsor.py`, D-425) and Door check's
+session picker (`screens/door_session.py`, D-433) are one pattern: a pushed page that
+fetches its list each time it opens (`use_fetch()`: a spinner, then the list, or
 "Couldn't load …" with Retry, D-120), a close icon named "Cancel" that goes back as
-Back does, rows that read as one phrase with the chosen one ticked (``choice_row()``),
-and a tap that saves the choice and goes back (``use_pick()``), staying with "Couldn't
+Back does, rows that read as one phrase with the chosen one ticked (`choice_row()`),
+and a tap that saves the choice and goes back (`use_pick()`), staying with "Couldn't
 save your change" when the save fails, since the tool reads the choice from storage.
-Swag pickup's category chips, on its scan screen, fetch through ``use_fetch()`` too.
+Swag pickup's category chips, on its scan screen, fetch through `use_fetch()` too.
 
 On the tool's scan screen, the choice heads the screen as an outlined chip that reopens
 the picker, and with none the screen is paused with a tonal button (both
-``ui/tool_controls.py``'s); ``Reading`` is the empty page while the tool reads its keys,
-and ``use_arrival()`` tells whether the choice was read for this return from the picker.
+`ui/tool_controls.py`'s); `Reading` is the empty page while the tool reads its keys,
+and `use_arrival()` tells whether the choice was read for this return from the picker.
 """
 
 import logging
@@ -48,7 +48,7 @@ type Status = Literal["loading", "failed", "loaded"]
 
 @dataclass(frozen=True)
 class Loaded[T]:
-    """Where a ``use_fetch()`` is.
+    """Where a `use_fetch()` is.
 
     Attributes:
         status: Loading, failed (offline or an error) or loaded.
@@ -63,12 +63,12 @@ def use_arrival(owner: str) -> object:
     """Return a token for this arrival at the location, new at each change of it.
 
     A tool stamps its read of the choice with the token and waits while the last read's
-    isn't this one (``is not``). The location itself can't tell: out and back with the
+    isn't this one (`is not`). The location itself can't tell: out and back with the
     reads held, Flet cancels them, and the last to land was made at this same location
     (#873, #887).
 
     Args:
-        owner: The signed-in account (``Account.owner``); another's is a new arrival.
+        owner: The signed-in account (`Account.owner`); another's is a new arrival.
     """
     return ft.use_memo(object, [owner, ft.use_route_location()])
 
@@ -122,7 +122,7 @@ class Picking[T]:
     """A picker's two ways back to its tool.
 
     Attributes:
-        pick: Saves a choice and goes back; stable across renders (``use_callback``),
+        pick: Saves a choice and goes back; stable across renders (`use_callback`),
             so memoised rows can take it.
         cancel: Goes back and saves nothing, as Back does.
     """
@@ -174,15 +174,15 @@ def picker_page(
 ) -> ft.Control:
     """Return a picker's page: the title, Cancel, a fixed head, then the list.
 
-    Called at the end of the page's component, on every render (``AppScaffold`` calls
+    Called at the end of the page's component, on every render (`AppScaffold` calls
     hooks, D-70).
 
     Args:
         title: The app bar's title, "Choose sponsor".
-        source: The picker's ``__name__``, for View source (D-461).
-        prefix: The page's identifiers' start, ``lead.sponsor``.
-        cancel: ``Picking.cancel``.
-        margin: The list's side margin (``use_margin(LIST)``, D-305).
+        source: The picker's `__name__`, for View source (D-461).
+        prefix: The page's identifiers' start, `lead.sponsor`.
+        cancel: `Picking.cancel`.
+        margin: The list's side margin (`use_margin(LIST)`, D-305).
         head: What stays above the list: the search field, the category chips.
         items: The list's items, or its state.
     """
@@ -219,7 +219,7 @@ def picker_page(
 
 
 def spinner(label: str) -> ft.Control:
-    """Return the loading state: a ring, read as ``label`` ("Loading sponsors")."""
+    """Return the loading state: a ring, read as `label` ("Loading sponsors")."""
     return ft.Container(
         ft.Semantics(
             label=label,
@@ -239,7 +239,7 @@ def not_loaded(
 
     Args:
         title: Its title.
-        prefix: The page's identifiers' start; the state is ``<prefix>.failed``.
+        prefix: The page's identifiers' start; the state is `<prefix>.failed`.
         retry: Fetches again.
     """
     return EmptyState(
@@ -260,7 +260,7 @@ def no_match(
     Args:
         noun: What the list holds, plural: "sponsors".
         query: What was typed.
-        prefix: The page's identifiers' start; the state is ``<prefix>.no_match``.
+        prefix: The page's identifiers' start; the state is `<prefix>.no_match`.
         clear: Clears the field, whose focus goes back to it.
     """
     return EmptyState(
@@ -289,10 +289,10 @@ def choice_row(
     on_click: Callable[[], Awaitable[None]],
     leading: ft.Control | None = None,
 ) -> ft.Control:
-    """Return a picker's row: one node read as ``phrase``, ticked when chosen.
+    """Return a picker's row: one node read as `phrase`, ticked when chosen.
 
     Args:
-        identifier: For UI flows, ``lead.sponsor.1``.
+        identifier: For UI flows, `lead.sponsor.1`.
         phrase: What a screen reader says: "Example Corp, Booth 101, selected".
         lines: The row's texts, top to bottom.
         selected: It is the saved choice.
@@ -335,12 +335,12 @@ def choice_row(
 def Reading(*, title: str, source: str) -> ft.Control:
     """The empty page under a tool's title while it reads its keys from storage.
 
-    A component of its own: ``AppScaffold`` calls hooks, which in a tool's loading
+    A component of its own: `AppScaffold` calls hooks, which in a tool's loading
     branch only would change its hook order once the read ends (D-70).
 
     Args:
         title: The tool's name, the app bar's title.
-        source: The tool's ``__name__``, for View source (D-461).
+        source: The tool's `__name__`, for View source (D-461).
     """
     margin = use_margin(LIST)  # its width class (D-305)
     return AppScaffold(

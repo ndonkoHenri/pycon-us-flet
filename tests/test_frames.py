@@ -1,4 +1,4 @@
-"""Tests for ``tools/frames.py``'s reading of a pixel's colours, with no video reader."""
+"""Tests for `tools/frames.py`'s reading of a pixel's colours, with no video reader."""
 
 from tools.frames import colour_changes, hex_colour, pair
 
@@ -27,10 +27,10 @@ def test_slow_fade_still_shows() -> None:
 
 
 def test_hex_colour_reads_as_the_docs_do() -> None:
-    """Colours print as in the issues: lower-case ``#rrggbb``."""
+    """Colours print as in the issues: lower-case `#rrggbb`."""
     assert hex_colour(PURPLE) == "#680579"
 
 
 def test_pair_splits_a_position() -> None:
-    """An option such as ``540,1200`` becomes its integers."""
+    """An option such as `540,1200` becomes its integers."""
     assert pair("540,1200") == (540, 1200)

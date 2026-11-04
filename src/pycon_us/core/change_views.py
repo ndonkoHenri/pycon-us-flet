@@ -1,14 +1,14 @@
 """The change log's words: each change as an old-to-new line and a sentence (NEW-04).
 
-Pure functions of the log's batches, like ``row_views`` for the rows (D-184): Schedule
+Pure functions of the log's batches, like `row_views` for the rows (D-184): Schedule
 changes, the Changed badge, the Review SnackBar and Now's card all say a change the same
-way. ``change_view()`` formats one change once: its old and new values for the line
-"old → new" and the sentence a screen reader says; ``item_phrase()`` adds "New: " for
-an unseen item and "In My schedule." for a saved session. ``sections()`` puts the batches under "Affects My
+way. `change_view()` formats one change once: its old and new values for the line
+"old → new" and the sentence a screen reader says; `item_phrase()` adds "New: " for
+an unseen item and "In My schedule." for a saved session. `sections()` puts the batches under "Affects My
 schedule" and "All changes", grouped by detection time ("Today, 10:42 AM").
-``changed_phrase()`` is the badge's spoken part, ``detail_badge()`` session detail's badge
-of one kind with its old value, ``snackbar_text()``, ``now_card_text()`` and
-``unseen_saved()`` the counts.
+`changed_phrase()` is the badge's spoken part, `detail_badge()` session detail's badge
+of one kind with its old value, `snackbar_text()`, `now_card_text()` and
+`unseen_saved()` the counts.
 
 Times are conference time, whatever the device's zone (D-35, D-43), in 24-hour form when
 the device asks for it (F23). A session gone from the feed is "Removed from the latest
@@ -51,10 +51,10 @@ RECENT = timedelta(hours=24)
 """How long a change counts on Now's card and keeps its Changed badge (D-255)."""
 
 _REMOVED_SAID = "removed from the latest schedule"
-"""``REMOVED_NOTE`` inside a sentence, after the session's title."""
+"""`REMOVED_NOTE` inside a sentence, after the session's title."""
 
 _DASH = "–"
-"""The en dash of ``timefmt`` ranges, said "to" (as ``row_views`` says it)."""
+"""The en dash of `timefmt` ranges, said "to" (as `row_views` says it)."""
 
 _SEPARATOR = " · "
 """Between a listing's time and its room on screen."""
@@ -81,7 +81,7 @@ class ChangeView:
             Room 104A". Empty for an addition.
         new: The new value: "Room 103ABC", "11:30 AM–12:00 PM", the new title, or an
             added session's time and room. Empty for a removal, whose item says
-            ``REMOVED_NOTE`` instead.
+            `REMOVED_NOTE` instead.
         sentence: The change as one sentence for a screen reader, starting with the
             session's newest title: "Building X: room changed from Room 102A to Room
             103ABC." It never relies on the strikethrough.
@@ -111,7 +111,7 @@ def change_view(change: Change, zone: tzinfo, *, use_24h: bool) -> ChangeView:
         change: The change.
         zone: The conference's zone; every time shows in it (D-35, D-43).
         use_24h: Whether the device uses the 24-hour clock
-            (``page.media.always_use_24_hour_format``).
+            (`page.media.always_use_24_hour_format`).
     """
     title = change.title
     if change.kind is ChangeKind.ADDED:
@@ -165,7 +165,7 @@ def changed_phrase(kinds: Iterable[ChangeKind]) -> str:
     """Return the Changed badge's spoken part for a session's recent changes (ux.md §3.4).
 
     "Room changed", "Time and room changed", "Time, room and title changed", in
-    ``ChangeKind``'s order, each kind once. Additions and removals have no badge, so
+    `ChangeKind`'s order, each kind once. Additions and removals have no badge, so
     they are left out, and with nothing else the phrase is empty.
 
     Args:
@@ -183,7 +183,7 @@ def detail_badge(change: Change, zone: tzinfo, *, use_24h: bool) -> tuple[str, s
 
     "Moved from Room 102A"; "Was Fri, May 15, 10:30 AM", said "Was Friday, May 15,
     10:30 AM"; "Renamed from “Old title”" (ux.md §5.5). The old value is the one before
-    the last 24 h's changes (``ChangeLog.recent_of()``). Times are conference time.
+    the last 24 h's changes (`ChangeLog.recent_of()`). Times are conference time.
 
     Args:
         change: A time, room or title change with both sides.
@@ -211,7 +211,7 @@ class ChangeGroup:
     """The items of one batch: the changes one refresh brought.
 
     Attributes:
-        batch: The batch, whose ``seen`` mark the list reads and sets (ux.md §6.4).
+        batch: The batch, whose `seen` mark the list reads and sets (ux.md §6.4).
         heading: When it was detected, in conference time: "Today, 10:42 AM",
             "Yesterday, 4:15 PM" or "Fri, May 15, 10:42 AM".
         views: Its changes in the section, in the diff's order.
@@ -227,7 +227,7 @@ class ChangeSection:
     """One of the list's two sections, its groups newest first.
 
     Attributes:
-        title: ``AFFECTS_MY_SCHEDULE`` or ``ALL_CHANGES``.
+        title: `AFFECTS_MY_SCHEDULE` or `ALL_CHANGES`.
         groups: The batches with a change in the section, newest first.
     """
 
@@ -252,10 +252,10 @@ def sections(
     log's order), each under its detection time.
 
     Args:
-        batches: The log's batches (``changes-<year>.json``), in the log's order.
+        batches: The log's batches (`changes-<year>.json`), in the log's order.
         saved: The ids of the saved sessions.
         zone: The conference's zone (D-35, D-43).
-        now: ``clock.now()``, for "Today" and "Yesterday".
+        now: `clock.now()`, for "Today" and "Yesterday".
         use_24h: Whether the device uses the 24-hour clock.
     """
     newest_first = sorted(batches, key=lambda batch: batch.detected_at, reverse=True)
@@ -280,11 +280,11 @@ def detected_label(
 ) -> str:
     """Return a batch's group heading: "Today, 10:42 AM", "Yesterday, 4:15 PM", "Fri, May 15, 10:42 AM".
 
-    Days are conference-local (D-43): "Today" is ``timefmt.today()``'s day.
+    Days are conference-local (D-43): "Today" is `timefmt.today()`'s day.
 
     Args:
         detected_at: When the batch was detected (aware).
-        now: ``clock.now()``.
+        now: `clock.now()`.
         zone: The conference's zone.
         use_24h: Whether the device uses the 24-hour clock.
     """
@@ -330,14 +330,14 @@ def now_card_text(
     """Return Now's card text, "2 saved sessions changed", or None when it has no card.
 
     It counts the saved sessions changed in the unseen batches detected in the last
-    24 hours (``RECENT``; exactly 24 hours ago still counts), each session once;
+    24 hours (`RECENT`; exactly 24 hours ago still counts), each session once;
     additions are not counted, and changes to unsaved sessions never show here
     (ux.md §5.1, D-255).
 
     Args:
         batches: The log's batches.
         saved: The ids of the saved sessions.
-        now: ``clock.now()``.
+        now: `clock.now()`.
     """
     mine = unseen_saved(batches, saved, now)
     return _saved_changed(mine) if mine else None
@@ -349,13 +349,13 @@ def unseen_saved(
     """Return how many saved sessions the unseen batches of the last 24 hours changed.
 
     Each session once; additions are not counted, and a batch detected exactly 24
-    hours ago still counts (``RECENT``). Now's card says it (``now_card_text()``), and
+    hours ago still counts (`RECENT`). Now's card says it (`now_card_text()`), and
     Settings › Data shows it too (ux.md §5.1, §6.9).
 
     Args:
         batches: The log's batches.
         saved: The ids of the saved sessions.
-        now: ``clock.now()``.
+        now: `clock.now()`.
     """
     recent = (
         change
@@ -399,7 +399,7 @@ def _spoken_listing(listing: Listing, zone: tzinfo, *, use_24h: bool) -> str:
 
 
 def _saved_sessions(changes: Iterable[Change], saved: Collection[str]) -> int:
-    """Return how many saved sessions ``changes`` touch, each once."""
+    """Return how many saved sessions `changes` touch, each once."""
     return len({change.id for change in changes if change.id in saved})
 
 

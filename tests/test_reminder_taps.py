@@ -1,9 +1,9 @@
 """A reminder tap lands where its route says, with the root below (#450, D-21, D-396).
 
-A reminder's payload is its route (``services/reminders.py``), and a tap opens it as a
-link does: cold, ``Start`` opens it (``test_routes_locations.py``); warm, it is a route
+A reminder's payload is its route (`services/reminders.py`), and a tap opens it as a
+link does: cold, `Start` opens it (`test_routes_locations.py`); warm, it is a route
 change. Here, every route the 2026 plan can produce names a page the app has, and the
-routes render in the app's own Views (``tests/links.py``): a session over My schedule,
+routes render in the app's own Views (`tests/links.py`): a session over My schedule,
 whose Back goes to My schedule, then Now; a session removed from the feed shows its
 not-found state over My schedule; a conference moment opens its own page.
 """
@@ -45,7 +45,7 @@ def page_of(route: str) -> str:
 def every_route() -> set[str]:
     """Every route the 2026 plan can hold: each session saved, every moment on.
 
-    ``plan()`` keeps the ``MAX_PENDING`` soonest, so the sessions are saved a batch
+    `plan()` keeps the `MAX_PENDING` soonest, so the sessions are saved a batch
     at a time; each batch's plan must hold a reminder for each of them.
     """
     zone = YEAR.conference.zone

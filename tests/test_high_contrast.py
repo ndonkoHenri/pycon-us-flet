@@ -2,8 +2,8 @@
 
 D-23, D-151, D-265, D-285; THEME-04..06, THEME-08; ux.md §3.2..§3.4;
 testing-and-quality.md §7.1. The tokens, badges, cards and the page's slots are
-``test_high_contrast_badges.py``'s, which imports this module's helpers (#623). The
-line above the bottom bar is tested with the bar, in ``test_navigation_views.py``.
+`test_high_contrast_badges.py`'s, which imports this module's helpers (#623). The
+line above the bottom bar is tested with the bar, in `test_navigation_views.py`.
 """
 
 import dataclasses
@@ -33,7 +33,7 @@ ROLES = [field.name for field in dataclasses.fields(ft.ColorScheme)]
 SURFACES = [
     role for role in ROLES if role.startswith("surface") and role != "surface_tint"
 ]
-"""Every role something sits on: ``surface``, its bright and dim, the five containers."""
+"""Every role something sits on: `surface`, its bright and dim, the five containers."""
 
 # Background roles and the text drawn on them: each "on" partner, the inverse roles a
 # SnackBar draws (its action in inverse_primary), and each fixed role under both of its
@@ -85,7 +85,7 @@ SCHEME_FIELDS = {
 """The theme fields that come from the scheme; the rest is the same in every scheme.
 
 HC's component themes are among them: its cards are flat and bordered (THEME-06), its
-chips outlined and its selected pill ringed (D-306, ``test_hc_boundaries.py``).
+chips outlined and its selected pill ringed (D-306, `test_hc_boundaries.py`).
 """
 
 
@@ -100,7 +100,7 @@ def hc_scheme(dark: bool) -> ft.ColorScheme:
 def test_every_role_is_set_by_hand(dark: bool) -> None:
     """No role of a high-contrast scheme is left to the seed: each is a #RRGGBB colour.
 
-    A role Flet adds to ``ColorScheme`` fails here until it is given a value.
+    A role Flet adds to `ColorScheme` fails here until it is given a value.
     """
     color_scheme = hc_scheme(dark)
     unset = [role for role in ROLES if getattr(color_scheme, role) is None]
@@ -113,9 +113,9 @@ def test_every_role_is_set_by_hand(dark: bool) -> None:
     not FLET_THEME_DART.exists(), reason="needs the pinned Flet checkout (.flet-src)"
 )
 def test_flet_applies_every_role_it_declares() -> None:
-    """Flet's Dart side reads every ``ColorScheme`` role, so none set here is lost (F9).
+    """Flet's Dart side reads every `ColorScheme` role, so none set here is lost (F9).
 
-    ``parseColorScheme`` in ``utils/theme.dart`` at the ``.flet-ref`` pin.
+    `parseColorScheme` in `utils/theme.dart` at the `.flet-ref` pin.
     """
     source = FLET_THEME_DART.read_text()
     body = source[source.index("ColorScheme? parseColorScheme(") :]
@@ -161,7 +161,7 @@ def test_outlines_read_at_3_to_1_on_every_surface(dark: bool, outline: str) -> N
 
 @pytest.mark.parametrize("dark", [False, True], ids=["light", "dark"])
 def test_there_is_one_surface(dark: bool) -> None:
-    """Every surface role and the elevation tint equal ``surface``: no grey tiers."""
+    """Every surface role and the elevation tint equal `surface`: no grey tiers."""
     color_scheme = hc_scheme(dark)
     for role in [*SURFACES, "surface_tint"]:
         assert getattr(color_scheme, role) == color_scheme.surface, role
@@ -260,7 +260,7 @@ def test_the_page_canvas_card_and_divider_follow_the_scheme(
 
     Flet derives them from the seeded scheme, before the overrides apply (U64): in HC
     the page stayed white under cream bars on the Android emulator. HC names its
-    divider from ``outline``; the standard schemes set no ``outline``, so their
+    divider from `outline`; the standard schemes set no `outline`, so their
     divider stays Flet's derived one, and naming one there would fail here.
     """
     built = theme.build_theme(dark=dark, high_contrast=high_contrast)
@@ -282,8 +282,8 @@ def test_the_page_canvas_card_and_divider_follow_the_scheme(
 def test_the_seeded_text_colour_still_reads_at_7_to_1(dark: bool) -> None:
     """The text theme's colour, which Flet takes from the seeded scheme, reads at 7:1.
 
-    Flutter's ``Typography.material2021`` colours the text theme with the seeded,
-    neutralised ``onSurface`` (U64), not HC's; it must still read on HC's surface.
+    Flutter's `Typography.material2021` colours the text theme with the seeded,
+    neutralised `onSurface` (U64), not HC's; it must still read on HC's surface.
     """
     seeded_text = NEUTRAL_RAMP[dark]["onSurface"]
     ratio = contrast_ratio(seeded_text, hex_role(hc_scheme(dark), "surface"))
@@ -292,9 +292,9 @@ def test_the_seeded_text_colour_still_reads_at_7_to_1(dark: bool) -> None:
 
 @pytest.mark.parametrize("dark", [False, True], ids=["light", "dark"])
 def test_the_navigation_bar_takes_the_hc_navigation_bar_fill(dark: bool) -> None:
-    """Android's navigation bar gets the scheme's own ``surface_container`` (D-151).
+    """Android's navigation bar gets the scheme's own `surface_container` (D-151).
 
-    The ``NavigationBar`` fills with that role. In the style a role would resolve
+    The `NavigationBar` fills with that role. In the style a role would resolve
     against the seeded scheme's grey ramp, not these overrides, so the colour is named.
     """
     built = theme.build_theme(dark=dark, high_contrast=True)

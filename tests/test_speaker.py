@@ -1,9 +1,9 @@
-"""Tests for speaker detail (``screens/speaker.py``; #99, SPKR-03, SESS-12).
+"""Tests for speaker detail (`screens/speaker.py`; #99, SPKR-03, SESS-12).
 
 The screen runs in a real Flet session under the store providers
-(``tests/harness.py``'s ``showing()``). The rows' co-speaker line is
-``session_view(of_speaker=...)``'s, tested in ``tests/test_row_views.py``; the
-query, ``speaker_sessions()``, in ``tests/test_speakers.py``. How the page looks, wraps
+(`tests/harness.py`'s `showing()`). The rows' co-speaker line is
+`session_view(of_speaker=...)`'s, tested in `tests/test_row_views.py`; the
+query, `speaker_sessions()`, in `tests/test_speakers.py`. How the page looks, wraps
 at 200 % and reads to screen readers, and the Back chain on both platforms, are checked
 on devices (the PR).
 """
@@ -48,9 +48,9 @@ type Show = Callable[..., Awaitable[Shown]]
 
 @pytest.fixture
 async def show(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> AsyncIterator[Show]:
-    """Return a function that shows a speaker's page at ``VIEW_PATH``, given its id.
+    """Return a function that shows a speaker's page at `VIEW_PATH`, given its id.
 
-    It takes an optional ``Conference`` too; the default holds the recorded 2026 feed.
+    It takes an optional `Conference` too; the default holds the recorded 2026 feed.
     """
     async with AsyncExitStack() as stack:
 

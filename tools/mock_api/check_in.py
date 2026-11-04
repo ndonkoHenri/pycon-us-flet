@@ -1,8 +1,8 @@
 """The mock's check-in endpoints: door check and swag pickup (API-05..API-07, D-57).
 
-Every endpoint here needs the ``door_check_in`` flag. Replies are bare, as Ionic reads
-them (``tools/mock_api/README.md``, Replies); what a redemption applies is recorded in
-``MockState.redemptions``.
+Every endpoint here needs the `door_check_in` flag. Replies are bare, as Ionic reads
+them (`tools/mock_api/README.md`, Replies); what a redemption applies is recorded in
+`MockState.redemptions`.
 """
 
 import re
@@ -14,17 +14,17 @@ DOOR = "door_check_in"
 """The flag every check-in endpoint needs."""
 
 REDEEM_KEY = re.compile(r"product-redeem-(\d{1,9})")
-"""A redeem payload's ``product-redeem-<id>`` key."""
+"""A redeem payload's `product-redeem-<id>` key."""
 
 
 def redeemable(call: Call) -> tuple[int, object]:
-    """List every category and product (``pycon-api.ts`` 103-117).
+    """List every category and product (`pycon-api.ts` 103-117).
 
-    The door page keeps the categories whose names don't match ``/shirt|swag/i``, the
+    The door page keeps the categories whose names don't match `/shirt|swag/i`, the
     swag page the others; the mock sends them all.
 
     Returns:
-        200 ``{"redeemable_categories", "redeemable_products"}``, bare.
+        200 `{"redeemable_categories", "redeemable_products"}`, bare.
     """
     call.require(DOOR)
     state = call.state
@@ -42,12 +42,12 @@ def redeemable(call: Call) -> tuple[int, object]:
 def inventory(call: Call) -> tuple[int, object]:
     """List who bought a product, for the door's offline admission (135-149).
 
-    ``quantity`` is the quantity bought, not what is left: the door admits on it and
+    `quantity` is the quantity bought, not what is left: the door admits on it and
     keeps its own "already checked in" record (a mock choice).
 
     Returns:
-        200 with a bare list ``[{id (the access code), quantity, name, dietary,
-        has_allergy, allergy}]``.
+        200 with a bare list `[{id (the access code), quantity, name, dietary,
+        has_allergy, allergy}]`.
 
     Raises:
         Refused: 404 for an unknown product.
@@ -74,12 +74,12 @@ def inventory(call: Call) -> tuple[int, object]:
 def fetch_products(call: Call) -> tuple[int, object]:
     """What an attendee can still redeem, for swag or the door (151-181).
 
-    The query is parsed as Ionic sends it, not encoded: ``attendee_access_code``,
-    ``mode`` and either ``category_pk_list`` (swag) or ``product_pk_list`` (door).
+    The query is parsed as Ionic sends it, not encoded: `attendee_access_code`,
+    `mode` and either `category_pk_list` (swag) or `product_pk_list` (door).
 
     Returns:
-        200 with the attendee and ``redeemable_products_by_category``, bare; the door
-        mode adds ``dietary``, ``has_allergy`` and ``allergy``.
+        200 with the attendee and `redeemable_products_by_category`, bare; the door
+        mode adds `dietary`, `has_allergy` and `allergy`.
 
     Raises:
         Refused: 400 for a missing parameter or an unknown mode; 404 for an unknown
@@ -132,7 +132,7 @@ def grouped(
         products: The products to list; those not bought are left out.
 
     Returns:
-        ``{"<category name>": [{product_id, product_name, redeemable, purchased}]}``.
+        `{"<category name>": [{product_id, product_name, redeemable, purchased}]}`.
     """
     by_category: dict[str, list[dict[str, object]]] = {}
     for product in products:
@@ -154,16 +154,16 @@ def grouped(
 def redeem(call: Call) -> tuple[int, object]:
     """Redeem products for an attendee, from the door or the swag page (183-199).
 
-    The payload's ``product-redeem-<id>`` keys name the products (the id as a number
-    from the door, as a string from swag) and ``product-<id>-quantity`` how many. A
-    non-empty ``badge_validator`` is checked; the door omits a missing one and swag
-    sends ``""``. Under ``idempotent`` capture, a repeated request (same attendee,
-    ``scanned_at``, products and quantities) gets its first reply and records nothing,
-    and a product already redeemed with the same ``scanned_at`` is answered as
+    The payload's `product-redeem-<id>` keys name the products (the id as a number
+    from the door, as a string from swag) and `product-<id>-quantity` how many. A
+    non-empty `badge_validator` is checked; the door omits a missing one and swag
+    sends `""`. Under `idempotent` capture, a repeated request (same attendee,
+    `scanned_at`, products and quantities) gets its first reply and records nothing,
+    and a product already redeemed with the same `scanned_at` is answered as
     redeemed again and recorded once (D-57).
 
     Returns:
-        200 ``{"errors": [{message}], "redeemable_products_by_category"}``, bare: the
+        200 `{"errors": [{message}], "redeemable_products_by_category"}`, bare: the
         products this call redeemed, with what is left of each.
 
     Raises:
@@ -222,7 +222,7 @@ def requested(call: Call, payload: dict[str, object]) -> list[tuple[Product, int
         Each product with the quantity asked for.
 
     Raises:
-        Refused: 400 when a ``product-redeem-<id>`` value isn't its id (a number or
+        Refused: 400 when a `product-redeem-<id>` value isn't its id (a number or
             its string) or its quantity isn't a positive integer; 404 for an unknown
             product.
     """

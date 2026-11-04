@@ -1,7 +1,7 @@
-"""A stand-in for ``ft.InteractiveViewer``'s methods, for the zoom layer's tests (#388).
+"""A stand-in for `ft.InteractiveViewer`'s methods, for the zoom layer's tests (#388).
 
-No Flutter answers a viewer in a test session: ``FakeViewer`` keeps the transform as
-Flutter does at the pin (F76: ``zoom()`` keeps the translation, ``pan()`` moves in the
+No Flutter answers a viewer in a test session: `FakeViewer` keeps the transform as
+Flutter does at the pin (F76: `zoom()` keeps the translation, `pan()` moves in the
 plan's units) and records each call, for the floor viewer's and the expo's tests.
 """
 
@@ -16,7 +16,7 @@ import pytest
 
 @dataclass
 class FakeViewer:
-    """The ``InteractiveViewer``'s methods as the pin has them, and what was asked."""
+    """The `InteractiveViewer`'s methods as the pin has them, and what was asked."""
 
     scale: float = 1.0
     x: float = 0.0
@@ -26,10 +26,10 @@ class FakeViewer:
     after_zoom: Callable[[], Awaitable[None]] | None = None
     """What Flutter does once a zoom lands, e.g. report the transform (a render)."""
     hold: asyncio.Event | None = None
-    """When set, ``reset()`` waits for it: Flutter's answer held while the app goes on."""
+    """When set, `reset()` waits for it: Flutter's answer held while the app goes on."""
 
     def install(self, monkeypatch: pytest.MonkeyPatch) -> None:
-        """Put this fake's methods on ``ft.InteractiveViewer`` for the test."""
+        """Put this fake's methods on `ft.InteractiveViewer` for the test."""
         fake = self
 
         async def zoom_(viewer: ft.InteractiveViewer, factor: float) -> None:

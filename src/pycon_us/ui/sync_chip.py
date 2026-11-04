@@ -1,14 +1,14 @@
 """The staff sync chip: the outbox's state in a few words, which opens the queue sheet.
 
-ux.md §7.2 (LEAD-13, API-10; #694). ``chip_words()`` says the signed-in account's rows
-as ``Staff`` holds them: "All synced", "3 pending", "Offline · 3 queued" once the last
+ux.md §7.2 (LEAD-13, API-10; #694). `chip_words()` says the signed-in account's rows
+as `Staff` holds them: "All synced", "3 pending", "Offline · 3 queued" once the last
 pass ended without an answer, "Syncing · 3 pending" while a pass runs, and "1 failed"
-beside them while rows wait for "Retry failed". ``SyncChip()`` draws them on a chip
+beside them while rows wait for "Retry failed". `SyncChip()` draws them on a chip
 with an icon that matches, never colour alone (ux.md §9): the scan screen (#37) puts it
 in its app bar, where a tap opens the queue sheet; Developer › Data's Staff queue row
 shows it as its second line, the row being the button there (D-412). At large text the
 scan screen puts it at the top of its body instead, drawn as the context chip, whose
-words wrap (#752): Flutter's ``Chip`` keeps one line at a fixed height and clipped them.
+words wrap (#752): Flutter's `Chip` keeps one line at a fixed height and clipped them.
 """
 
 from collections.abc import Callable
@@ -38,7 +38,7 @@ def chip_words(staff: Staff) -> str:
     under way is the retry, so it says "Syncing" even after an offline last pass.
 
     Args:
-        staff: The ``Staff`` store.
+        staff: The `Staff` store.
 
     Returns:
         E.g. "All synced", "3 pending", "Offline · 3 queued", "Syncing · 3 pending"
@@ -46,7 +46,7 @@ def chip_words(staff: Staff) -> str:
     """
     if not staff.pending and not staff.failed:
         return "Syncing…" if staff.syncing else "All synced"
-    # ``offline`` stays set until the retry's pass reports, so a running pass wins.
+    # `offline` stays set until the retry's pass reports, so a running pass wins.
     offline = staff.offline and not staff.syncing
     parts = []
     if staff.pending:
@@ -62,11 +62,11 @@ def chip_icon(staff: Staff, tokens: Tokens) -> ft.Control:
 
     A small ring while a pass runs (something moves while it runs, ux.md §4); else a
     failed row's error, offline's crossed cloud, a pending row's upload, or a done
-    cloud in ``success``. The icons are 18 dp and grow with the text, as the context
-    chip's, which draws them at large text; a ``Chip`` sizes them so anyway.
+    cloud in `success`. The icons are 18 dp and grow with the text, as the context
+    chip's, which draws them at large text; a `Chip` sizes them so anyway.
 
     Args:
-        staff: The ``Staff`` store.
+        staff: The `Staff` store.
         tokens: The scheme's tokens.
     """
     if staff.syncing:
@@ -90,11 +90,11 @@ def SyncChip(
     in_row: bool = False,
     large_text: bool = False,
 ) -> ft.Control:
-    """Return the sync chip: the icon and ``chip_words()``; a tap opens the sheet.
+    """Return the sync chip: the icon and `chip_words()`; a tap opens the sheet.
 
     On its own (the scan screen's app bar) it is a button, one node named by its
-    words and carrying ``staff.sync_chip`` (``named()``). At large text it is the same
-    node drawn as the context chip (``context_chip()``), whose words wrap: a ``Chip``
+    words and carrying `staff.sync_chip` (`named()`). At large text it is the same
+    node drawn as the context chip (`context_chip()`), whose words wrap: a `Chip`
     keeps one line at a fixed height, which clipped "All synced" at iOS's largest
     size (#752). Inside a row that opens the
     sheet too (Developer's Staff queue row) it is the row's words alone for a screen
@@ -103,11 +103,11 @@ def SyncChip(
     iOS simulator, #694).
 
     Args:
-        staff: The ``Staff`` store; the caller re-renders with it (``use_staff()``).
+        staff: The `Staff` store; the caller re-renders with it (`use_staff()`).
         tokens: The scheme's tokens.
-        on_click: Opens the queue sheet, wrapped in ``report_errors`` by the caller.
+        on_click: Opens the queue sheet, wrapped in `report_errors` by the caller.
         in_row: Whether a row around it is the button.
-        large_text: The text is large for the width (``Prefs.time_above``): the
+        large_text: The text is large for the width (`Prefs.time_above`): the
             scan screen then puts the chip in its body, where it can wrap.
     """
     words = chip_words(staff)

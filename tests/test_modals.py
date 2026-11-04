@@ -1,10 +1,10 @@
-"""A route change first closes the open dialogs and sheets (``ui/modals.py``, D-291).
+"""A route change first closes the open dialogs and sheets (`ui/modals.py`, D-291).
 
-In a real Flet session of the app's own Views (``tests/links.py``): a warm link that
+In a real Flet session of the app's own Views (`tests/links.py`): a warm link that
 arrives with a modal open closes it, waits for Flutter's dismissal, then shows the
 new location; SnackBars, Banners and pickers stay as they are, each its own test. Flutter's dismissal
-is the ``dismiss`` event the dialog sends once its exit animation ends, which Flet's
-wrapper turns into the dialog leaving ``page._dialogs`` (``base_page.py``).
+is the `dismiss` event the dialog sends once its exit animation ends, which Flet's
+wrapper turns into the dialog leaving `page._dialogs` (`base_page.py`).
 """
 
 import asyncio
@@ -28,9 +28,9 @@ def dialogs(shown: Shown) -> list[ft.DialogControl]:
 
 
 async def dismissed(shown: Shown, dialog: ft.DialogControl) -> None:
-    """Report ``dialog`` dismissed as Flutter does after its exit animation.
+    """Report `dialog` dismissed as Flutter does after its exit animation.
 
-    Then wait out one look of the route change's wait (``POLL``), so it goes on.
+    Then wait out one look of the route change's wait (`POLL`), so it goes on.
     """
     await shown.event(dialog, "dismiss")
     await asyncio.sleep(modals.POLL * 2)
@@ -67,7 +67,7 @@ async def test_a_link_closes_an_open_modal_then_lands(open_at: Open, make: Any) 
 async def test_the_filter_sheet_closes_before_a_link_lands_on_now(
     open_at: Open,
 ) -> None:
-    """The Schedule's filter sheet (``ft.use_dialog``) closes, and Now shows.
+    """The Schedule's filter sheet (`ft.use_dialog`) closes, and Now shows.
 
     The case seen on the emulator: the sheet stayed over Now (F109).
     """
@@ -122,8 +122,8 @@ async def test_a_link_does_not_wait_for_a_picker_flet_cannot_close(
 ) -> None:
     """A picker is left as it is, and the link lands at once (U89).
 
-    Flet's pickers have no close path, so ``open = False`` would close nothing and
-    only make the link wait ``CLOSE_WAIT``; the picker goes with its View (F109).
+    Flet's pickers have no close path, so `open = False` would close nothing and
+    only make the link wait `CLOSE_WAIT`; the picker goes with its View (F109).
     """
     shown = await open_at("/more/developer")
     picker = make()
@@ -155,7 +155,7 @@ async def test_a_message_over_a_dialog_stays_while_the_dialog_closes(
 async def test_a_dismissal_that_never_comes_delays_the_link_by_close_wait_only(
     open_at: Open, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """Without Flutter's answer the link still lands, ``CLOSE_WAIT`` later."""
+    """Without Flutter's answer the link still lands, `CLOSE_WAIT` later."""
     monkeypatch.setattr(modals, "CLOSE_WAIT", 0.2)
     shown = await open_at("/more/developer")
     shown.page.show_dialog(ft.AlertDialog(title=ft.Text("Reset the app?")))

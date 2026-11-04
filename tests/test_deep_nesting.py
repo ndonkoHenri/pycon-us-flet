@@ -1,7 +1,7 @@
 """A feed or API reply nested too deep is one more unusable answer, on any stack (#891).
 
-``RecursionError`` is not a ``ValueError``, so it would go past every guard made for a
-corrupt payload. These tests pin that it never does, on ``tests/small_stack.py``'s small
+`RecursionError` is not a `ValueError`, so it would go past every guard made for a
+corrupt payload. These tests pin that it never does, on `tests/small_stack.py`'s small
 stack: the feed's and the private API's readers, and the tools that read what the network
 or the app sends. The other places that parse JSON read what the app itself wrote.
 """
@@ -74,7 +74,7 @@ PLACES: dict[str, dict[str, Any]] = {
 
 @pytest.mark.parametrize("raw", TOO_DEEP, ids=TOO_DEEP_IDS)
 def test_a_feed_too_deep_to_parse_raises_feed_error(raw: bytes) -> None:
-    """Bytes that overflow the stack in the parser raise ``FeedError``, like any bad feed."""
+    """Bytes that overflow the stack in the parser raise `FeedError`, like any bad feed."""
     feed_settings = settings(2026)
     with pytest.raises(FeedError, match="nested too deep"):
         on_a_small_stack(partial(process, raw, feed_settings))
@@ -84,7 +84,7 @@ def test_a_feed_too_deep_to_parse_raises_feed_error(raw: bytes) -> None:
 def test_no_depth_of_nesting_in_a_feed_gets_past_feed_error(
     place: dict[str, Any],
 ) -> None:
-    """At every depth, the feed is read with that record skipped or raises ``FeedError``.
+    """At every depth, the feed is read with that record skipped or raises `FeedError`.
 
     Printing a value takes more stack than parsing it, so between the depth that printing
     overflows at and the one parsing does, a skipped record's reason used to raise.
@@ -94,7 +94,7 @@ def test_no_depth_of_nesting_in_a_feed_gets_past_feed_error(
     feed_settings = settings(2026)
 
     def sweep() -> None:
-        """Process the feed at each depth; any error but ``FeedError`` fails the test."""
+        """Process the feed at each depth; any error but `FeedError` fails the test."""
         for depth in DEPTHS:
             with contextlib.suppress(FeedError):
                 process(template.replace(hole, nested_objects(depth)), feed_settings)
@@ -103,7 +103,7 @@ def test_no_depth_of_nesting_in_a_feed_gets_past_feed_error(
 
 
 def test_html_nested_past_the_recursion_limit_raises_feed_error() -> None:
-    """A description whose HTML nests too deep to walk raises ``FeedError``, on any stack."""
+    """A description whose HTML nests too deep to walk raises `FeedError`, on any stack."""
     with pytest.raises(FeedError, match="nested too deep"):
         process(TOO_DEEP_FEED, settings(2026))
 
@@ -168,7 +168,7 @@ def test_an_error_status_too_deep_to_parse_stays_a_refusal() -> None:
     ids=["the whole reply", "its data", "behind shallow siblings"],
 )  # fmt: skip
 def test_no_depth_of_nesting_past_the_limit_reaches_the_caller(shape: Any) -> None:
-    """At every depth past the limit, ``unwrap()`` raises ``ApiError`` and nothing else.
+    """At every depth past the limit, `unwrap()` raises `ApiError` and nothing else.
 
     A reply the parser took could still overflow when something printed it, or when the
     outbox dumped it into a row after a send that had worked, so none gets that far.

@@ -1,8 +1,8 @@
 """The one source of "now" (D-43, DATA-12).
 
-``now()`` answers, in order: a test override, then the Developer screen's fake clock, then
-real time. ``real_now()`` skips the fake clock, for what the OS times, such as reminders
-(D-389). Only screens and stores call them; ``core`` functions take ``now`` as an argument,
+`now()` answers, in order: a test override, then the Developer screen's fake clock, then
+real time. `real_now()` skips the fake clock, for what the OS times, such as reminders
+(D-389). Only screens and stores call them; `core` functions take `now` as an argument,
 so they stay pure and testable with fixed instants. The fake clock's text form, as the
 Developer screen writes and reads it, is here too (D-187).
 """
@@ -35,13 +35,13 @@ def real_now() -> datetime:
 
 
 def start_fake_clock(at: datetime | None) -> None:
-    """Make ``now()`` run forward from ``at`` (the Developer fake clock, D-73).
+    """Make `now()` run forward from `at` (the Developer fake clock, D-73).
 
     Args:
         at: An aware instant to start from, or None to return to real time.
 
     Raises:
-        ValueError: ``at`` is naive.
+        ValueError: `at` is naive.
     """
     global _fake_offset
     _fake_offset = None if at is None else _aware(at) - datetime.now(UTC)
@@ -61,7 +61,7 @@ def parse_fake_clock(text: str, zone: tzinfo) -> datetime | None:
     """Return the instant the Developer field names, or None when it is empty.
 
     Args:
-        text: ISO 8601, e.g. ``2026-05-15 09:00`` or ``2026-05-15T09:00:00-07:00``;
+        text: ISO 8601, e.g. `2026-05-15 09:00` or `2026-05-15T09:00:00-07:00`;
             without an offset it is conference time.
         zone: The conference's zone.
 
@@ -79,13 +79,13 @@ def parse_fake_clock(text: str, zone: tzinfo) -> datetime | None:
 
 
 def set_test_now(at: datetime | None) -> None:
-    """Freeze ``now()`` at ``at`` for a test; None lifts the override.
+    """Freeze `now()` at `at` for a test; None lifts the override.
 
     Args:
         at: An aware instant, or None.
 
     Raises:
-        ValueError: ``at`` is naive.
+        ValueError: `at` is naive.
     """
     global _test_now
     _test_now = None if at is None else _aware(at).astimezone(UTC)

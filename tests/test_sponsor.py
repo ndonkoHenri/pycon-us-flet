@@ -1,8 +1,8 @@
-"""Tests for sponsor detail (``screens/sponsor.py``; SPON-03, SPON-05, #396).
+"""Tests for sponsor detail (`screens/sponsor.py`; SPON-03, SPON-05, #396).
 
-The screen runs in a real Flet session (``tests/harness.py``'s ``showing()``) on the
-recorded 2026 feed. The roles come from ``core/jobs.py``, tested in
-``tests/test_jobs.py``; these tests read what the page makes of them. How it looks,
+The screen runs in a real Flet session (`tests/harness.py`'s `showing()`) on the
+recorded 2026 feed. The roles come from `core/jobs.py`, tested in
+`tests/test_jobs.py`; these tests read what the page makes of them. How it looks,
 wraps at 200 % and reads to TalkBack and VoiceOver is checked on devices (the PR).
 """
 
@@ -39,7 +39,7 @@ type Show = Callable[..., Awaitable[Shown]]
 
 
 def sponsor(slug: str) -> Sponsor:
-    """Return the 2026 sponsor whose slug is ``slug``."""
+    """Return the 2026 sponsor whose slug is `slug`."""
     found = sponsor_by_slug(DATA, slug)
     assert found is not None
     return found
@@ -49,7 +49,7 @@ def sponsor(slug: str) -> Sponsor:
 async def show(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> AsyncIterator[Show]:
     """Return a function that shows a sponsor's page, given its slug.
 
-    It takes an optional ``Conference`` too; the default holds the recorded 2026 feed.
+    It takes an optional `Conference` too; the default holds the recorded 2026 feed.
     """
     async with AsyncExitStack() as stack:
 
@@ -335,7 +335,7 @@ async def test_without_data_the_page_loads_then_offers_to_try_again(
 
 
 def _ancestors(control: ft.BaseControl) -> list[ft.BaseControl]:
-    """Return the controls ``control`` is mounted under, nearest first."""
+    """Return the controls `control` is mounted under, nearest first."""
     found: list[ft.BaseControl] = []
     node = control.parent
     while node is not None:

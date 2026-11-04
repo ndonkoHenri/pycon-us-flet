@@ -1,6 +1,6 @@
 """Read a screen recording: when a pixel changes colour, when the screen changes.
 
-Usage, from the repo's root (uv fetches the readers, which nothing else needs)::
+Usage, from the repo's root (uv fetches the readers, which nothing else needs):
 
     uv run --no-project --with av --with numpy --with pillow python -m tools.frames VIDEO
         --point X,Y [--tolerance 2]         # each colour change at a pixel
@@ -8,7 +8,7 @@ Usage, from the repo's root (uv fetches the readers, which nothing else needs)::
         [--dump DIR]                        # saves the frame at each change
 
 Times are seconds from the recording's start, and positions are the video's pixels, which it
-prints first. Recording lines are in ``docs/testing-and-quality.md`` §8. Recording slows a
+prints first. Recording lines are in `docs/testing-and-quality.md` §8. Recording slows a
 start, so only compare recordings with each other.
 """
 
@@ -22,7 +22,7 @@ Colour = tuple[int, int, int]
 
 
 def hex_colour(colour: Colour) -> str:
-    """Return a colour as ``#rrggbb``."""
+    """Return a colour as `#rrggbb`."""
     return "#{:02x}{:02x}{:02x}".format(*colour)
 
 
@@ -47,7 +47,7 @@ def colour_changes(
 
 
 def pair(text: str) -> tuple[int, ...]:
-    """Return the integers of a comma-separated option such as ``540,1200``."""
+    """Return the integers of a comma-separated option such as `540,1200`."""
     return tuple(int(part) for part in text.split(","))
 
 
@@ -61,7 +61,7 @@ def _frames(path: str) -> Iterator[tuple[float, Any]]:
 
 
 def _save(pixels: Any, folder: Path, time: float) -> None:
-    """Save a frame as ``<time>.png`` in ``folder``."""
+    """Save a frame as `<time>.png` in `folder`."""
     from PIL import Image
 
     folder.mkdir(parents=True, exist_ok=True)

@@ -1,9 +1,9 @@
-"""Tests for "Add all to My schedule" on a track page (``screens/track.py``; #103).
+"""Tests for "Add all to My schedule" on a track page (`screens/track.py`; #103).
 
 SCHED-24, D-209, ux.md §5.10: the overflow item saves every session the page lists,
-on every day, with ``Favorites.add_many()`` (D-172), then one SnackBar with Undo, and
+on every day, with `Favorites.add_many()` (D-172), then one SnackBar with Undo, and
 no dialog (D-29). The page runs in a real Flet session over the recorded 2026 feed
-(``tests/sessions.py``); the store's own rules are in ``tests/test_favorites.py``.
+(`tests/sessions.py`); the store's own rules are in `tests/test_favorites.py`.
 On devices the SnackBar showed on the pushed track page itself (#255; #197).
 """
 
@@ -44,8 +44,8 @@ type Show = Callable[..., Awaitable[Shown]]
 async def show(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> AsyncIterator[Show]:
     """Return a function that shows a track page over the feed.
 
-    It takes the track's slug, the sessions ``saved`` before the page opened, and a
-    ``conference`` (the recorded feed by default).
+    It takes the track's slug, the sessions `saved` before the page opened, and a
+    `conference` (the recorded feed by default).
     """
     async with AsyncExitStack() as stack:
 
@@ -76,7 +76,7 @@ async def show(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> AsyncIterator
 
 
 def prefs(page: Shown) -> MemoryPrefs:
-    """Return the page's ``MemoryPrefs``, where the favourites are written."""
+    """Return the page's `MemoryPrefs`, where the favourites are written."""
     return cast(MemoryPrefs, page.services.storage.prefs)
 
 
@@ -238,7 +238,7 @@ async def test_a_track_page_offers_it_in_the_app_bars_overflow(
 
 
 async def test_the_items_label_wraps_beside_its_icon_at_large_text(show: Show) -> None:
-    """F47: the item is ``menu_item()``'s, whose label is a tile's title (D-233)."""
+    """F47: the item is `menu_item()`'s, whose label is a tile's title (D-233)."""
     page = await show("charlas")
     (item,) = page.find(ft.PopupMenuItem)
     assert item.icon is None

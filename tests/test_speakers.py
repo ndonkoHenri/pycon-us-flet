@@ -1,10 +1,10 @@
-"""Tests for the Speakers list's query (``core/speakers.py``, #98).
+"""Tests for the Speakers list's query (`core/speakers.py`, #98).
 
 The query is pure and runs on both recorded feeds and on small built cases
-(``tests/speakers_view.py``): the letter headings (accents, letters without a Latin
+(`tests/speakers_view.py`): the letter headings (accents, letters without a Latin
 base), the first session and its "+1 more", pseudo-speakers left out, and the filter's
-matching (SPKR-01, SPKR-02, DATA-21; D-46). The screen is ``test_speakers_screen.py``'s
-and ``test_speakers_rows.py``'s. How the list looks, wraps at 200 % and reads to
+matching (SPKR-01, SPKR-02, DATA-21; D-46). The screen is `test_speakers_screen.py`'s
+and `test_speakers_rows.py`'s. How the list looks, wraps at 200 % and reads to
 TalkBack and VoiceOver is checked on devices (the PR).
 """
 
@@ -56,7 +56,7 @@ def test_a_speaker_is_listed_under_the_folded_first_character(
     """A speaker's letter is the first character of the name, folded.
 
     Case and accents fold away, Ł folds to L, a letter without a Latin base is its own,
-    and an empty name has ``NO_LETTER``.
+    and an empty name has `NO_LETTER`.
     """
     assert letter_of(name) == letter
 
@@ -111,7 +111,7 @@ def test_pseudo_speakers_are_not_listed(year: int) -> None:
 
 
 def test_the_first_session_is_the_earliest_and_the_rest_are_counted() -> None:
-    """A speaker's first session is the earliest, and ``more`` counts the others."""
+    """A speaker's first session is the earliest, and `more` counts the others."""
     data = processed(2026)
     template = next(iter(data.sessions.values()))
     day = timedelta(days=1)
@@ -157,7 +157,7 @@ def test_a_speaker_without_a_session_has_no_first_session() -> None:
 
 @pytest.mark.parametrize("year", YEARS)
 def test_more_counts_every_other_session_of_the_speaker(year: int) -> None:
-    """In each recorded feed, ``more`` counts a speaker's sessions after the first.
+    """In each recorded feed, `more` counts a speaker's sessions after the first.
 
     The first is the earliest by day, then by schedule order.
     """
@@ -249,7 +249,7 @@ def test_the_panel_s_dashes_are_no_bio() -> None:
 
 
 def filtered(data: ConferenceData, query: str) -> list[str]:
-    """The names the filter keeps from the feed's directory for ``query``."""
+    """The names the filter keeps from the feed's directory for `query`."""
     return names(filter_directory(directory(data), search_index(data), query))
 
 
@@ -324,7 +324,7 @@ def test_initials_are_the_first_and_last_words_first_letters(
 
 
 def entry_of(more: int, *, session: bool = True) -> SpeakerEntry:
-    """An entry for Ana Lima with ``more`` other sessions, and a first one or none."""
+    """An entry for Ana Lima with `more` other sessions, and a first one or none."""
     talk = next(iter(processed(2026).sessions.values()))
     return SpeakerEntry(
         speaker=Speaker("1", "Ana Lima", "", ""),

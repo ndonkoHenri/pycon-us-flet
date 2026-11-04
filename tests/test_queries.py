@@ -1,7 +1,7 @@
 """Tests for the days query, the fold and the Speakers order (architecture §7.5).
 
 DATA-17's days, and the fold and Speakers order of D-46 and D-180. The schedule queries
-are tested in ``test_timeline.py``, Now's and My schedule's in ``test_agenda.py`` and
+are tested in `test_timeline.py`, Now's and My schedule's in `test_agenda.py` and
 its parts.
 """
 
@@ -117,7 +117,7 @@ def test_speakers_sort_by_folded_name_then_id() -> None:
 
 @pytest.mark.parametrize("query", ["", "   ", "’", " ' "])
 def test_a_query_with_no_word_returns_the_items_themselves(query: str) -> None:
-    """Screens tell "a filter applies" by identity, as sprints.py's ``found is not listed``."""
+    """Screens tell "a filter applies" by identity, as sprints.py's `found is not listed`."""
     items = ("async in depth", "typing")
     assert matching(items, query, str) is items
 

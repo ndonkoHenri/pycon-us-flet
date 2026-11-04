@@ -1,10 +1,10 @@
-"""Tests for the link rule (INFO-14, ux.md §4.7): ``ui.links`` and ``core.links``.
+"""Tests for the link rule (INFO-14, ux.md §4.7): `ui.links` and `core.links`.
 
 What a target is and how it opens, Copy for phone numbers, addresses and any other
-text (``copy_text()``, D-263), and how a failure is said and logged. The helpers run
+text (`copy_text()`, D-263), and how a failure is said and logged. The helpers run
 with a fake page bound as Flet binds a session's page and the in-memory launcher and
-clipboard (``tests/link_rule.py``); feed texts' links are tested in
-``test_links_feed.py``, the rows that use them in ``test_rows.py``.
+clipboard (`tests/link_rule.py`); feed texts' links are tested in
+`test_links_feed.py`, the rows that use them in `test_rows.py`.
 """
 
 import logging
@@ -254,7 +254,7 @@ FAILED = "Couldn't copy the password"
 async def test_a_text_copy_puts_the_text_on_the_clipboard_and_says_so(
     page: FakePage, svc: Services
 ) -> None:
-    """``copy_text()`` copies the text as given and confirms it once, in its words."""
+    """`copy_text()` copies the text as given and confirms it once, in its words."""
     await copy_text(svc, PASSWORD, COPIED, FAILED)
     assert clipboard(svc).value == PASSWORD
     assert said(page) == [COPIED]
@@ -307,7 +307,7 @@ async def test_only_phone_and_email_links_copy(page: FakePage, svc: Services) ->
 
 
 def test_an_external_button_s_node_says_whether_it_is_disabled() -> None:
-    """F42: the merged node takes the button's state, as ``named()``'s does (D-214)."""
+    """F42: the merged node takes the button's state, as `named()`'s does (D-214)."""
     for disabled in (True, False):
         button = ft.FilledTonalButton("Propose one", disabled=disabled)
         merged = external("open_spaces.propose", button)

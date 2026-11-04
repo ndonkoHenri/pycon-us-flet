@@ -1,7 +1,7 @@
 """What an install that ran 2026 finds when an update makes 2027 the year (D-48, D-466).
 
 Rehearsed for #842: a 2026 install's preferences, files and staff data, then a real
-``bootstrap()`` as 2027 over them. The 2027 is 2026's data a year on, with the same
+`bootstrap()` as 2027 over them. The 2027 is 2026's data a year on, with the same
 session ids, so a mix-up would show: a 2026 id names a real 2027 session.
 """
 
@@ -108,7 +108,7 @@ def this_year(shared: MemoryPrefs, directory: Path) -> Storage:
 
 @dataclass
 class Session:
-    """The stores of a 2027 session, empty until ``bootstrap()`` loads them."""
+    """The stores of a 2027 session, empty until `bootstrap()` loads them."""
 
     conference: Conference = field(default_factory=Conference)
     prefs: Prefs = field(default_factory=Prefs)
@@ -168,7 +168,7 @@ def test_the_rehearsal_s_2027_is_another_year(year_2027: YearData) -> None:
 async def test_the_new_year_opens_on_its_own_snapshot_not_last_year_s_cache(
     started: Session, year_2027: YearData, network: Network
 ) -> None:
-    """The first start shows the bundled 2027 feed: ``feed-2026.json`` isn't read."""
+    """The first start shows the bundled 2027 feed: `feed-2026.json` isn't read."""
     data = started.conference.data
     assert started.conference.source == "bundled"
     assert data is not None and data.days[0].date.year == 2027
@@ -231,7 +231,7 @@ async def test_a_staff_choice_of_2026_is_not_2027_s(
 async def test_a_sign_out_removes_every_year_s_staff_choices(
     last_year: Storage, this_year: Storage, shared: MemoryPrefs
 ) -> None:
-    """``STAFF_PREFIX`` still covers them, so no old sponsor outlives a sign-out (D-414)."""
+    """`STAFF_PREFIX` still covers them, so no old sponsor outlives a sign-out (D-414)."""
     await save_sponsor(last_year, LeadSponsor("7", "Old Sponsor", None, None))
     await save_sponsor(this_year, LeadSponsor("8", "New Sponsor", None, None))
     assert await this_year.clear_prefs(STAFF_PREFIX)
@@ -250,7 +250,7 @@ def outboxes(directory: Path) -> Iterator[tuple[OutboxDb, OutboxDb]]:
 def scan(
     db: OutboxDb, code: str, sponsor: tuple[str, str] = ("7", "Old Sponsor")
 ) -> outbox_enqueue.Enqueued:
-    """Enqueue a lead scan of ``code`` for ``OWNER`` and ``sponsor``, not sent yet."""
+    """Enqueue a lead scan of `code` for `OWNER` and `sponsor`, not sent yet."""
     enqueued = db.enqueue(
         code,
         lambda rows: outbox_enqueue.scan_lead(
@@ -274,7 +274,7 @@ def synced(db: OutboxDb, enqueued: outbox_enqueue.Enqueued) -> None:
 
 
 def stored(db: OutboxDb, code: str) -> outbox.Row:
-    """Return ``code``'s only row in ``db``, with its id."""
+    """Return `code`'s only row in `db`, with its id."""
     rows = [row for row in db.rows(OWNER, tuple(Status)) or [] if row.key == code]
     assert len(rows) == 1
     return rows[0]
@@ -283,7 +283,7 @@ def stored(db: OutboxDb, code: str) -> outbox.Row:
 def test_a_scan_of_2026_is_neither_sent_nor_listed_in_2027(
     outboxes: tuple[OutboxDb, OutboxDb],
 ) -> None:
-    """2026's sponsor would be credited at ``/2027/`` (D-56): the row stays in its file."""
+    """2026's sponsor would be credited at `/2027/` (D-56): the row stays in its file."""
     old, new = outboxes
     scan(old, "MOCK0001")
 
@@ -311,7 +311,7 @@ def test_the_same_badge_scanned_in_each_year_is_two_rows(
 def test_a_lead_synced_in_2026_is_no_repeat_and_no_other_sponsor_in_2027(
     outboxes: tuple[OutboxDb, OutboxDb], sponsor: tuple[str, str]
 ) -> None:
-    """D-459's key stays in the year: not ``ALREADY``, and no "Also in your leads for"."""
+    """D-459's key stays in the year: not `ALREADY`, and no "Also in your leads for"."""
     old, new = outboxes
     synced(old, scan(old, "MOCK0001"))
     enqueued = scan(new, "MOCK0001", sponsor)
@@ -357,7 +357,7 @@ def test_a_lost_answer_in_2026_says_nothing_of_the_same_lead_in_2027(
 async def test_only_other_years_files_go_at_a_reset(
     last_year: Storage, this_year: Storage, directory: Path
 ) -> None:
-    """``delete_other_years()`` leaves this year's cache and log, and any other file."""
+    """`delete_other_years()` leaves this year's cache and log, and any other file."""
     await last_year.write_feed(b"{}")
     await changes_file.write_batches(last_year, [Batch(clock.now(), ())])
     await this_year.write_feed(b"{}")

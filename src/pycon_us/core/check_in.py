@@ -1,13 +1,13 @@
 """The check-in API's payloads, read and written for Door check and Swag pickup (#763).
 
-Both tools read the same calls (``tools/mock_api/README.md``): ``redeemable``'s catalog
-(API-05), which each splits by category name, Ionic's ``/shirt|swag/i`` (DOOR-01,
-SHIRT-01); ``fetch_products``' attendee lookup (API-06); and the ``redeem`` body and its
-reply (API-07). Everything here is pure: ``check_in_api.py`` sends the calls, and the
+Both tools read the same calls (`tools/mock_api/README.md`): `redeemable`'s catalog
+(API-05), which each splits by category name, Ionic's `/shirt|swag/i` (DOOR-01,
+SHIRT-01); `fetch_products`' attendee lookup (API-06); and the `redeem` body and its
+reply (API-07). Everything here is pure: `check_in_api.py` sends the calls, and the
 door's redeem bodies go through the outbox as built here (D-56, D-407).
 
-A reply that isn't the documented object is a ``TypeError``, which the fetches turn
-into an ``ApiError`` (D-120); a malformed entry inside a good reply is left out, so one
+A reply that isn't the documented object is a `TypeError`, which the fetches turn
+into an `ApiError` (D-120); a malformed entry inside a good reply is left out, so one
 bad row never hides the others. Ids are integers; a decimal string is read as one.
 """
 
@@ -25,8 +25,8 @@ class Category:
     """A redeemable category: a kind of session for the door, or a kind of swag.
 
     Attributes:
-        id: Its id, what ``fetch_products`` takes in swag mode.
-        name: Its name, which says whose it is (``is_swag()``).
+        id: Its id, what `fetch_products` takes in swag mode.
+        name: Its name, which says whose it is (`is_swag()`).
     """
 
     id: int
@@ -38,9 +38,9 @@ class Product:
     """A redeemable product: a session at the door, a shirt size or a bag at swag.
 
     Attributes:
-        id: Its id, what the door's ``fetch_products`` and ``redeem`` take.
+        id: Its id, what the door's `fetch_products` and `redeem` take.
         name: Its name; a session's starts with its date
-            (``door_sessions.product_sort_key()``).
+            (`door_sessions.product_sort_key()`).
         category: Its category's id.
     """
 
@@ -51,11 +51,11 @@ class Product:
 
 @dataclass(frozen=True)
 class Catalog:
-    """The ``redeemable`` reply, read: the categories and their products, as sent.
+    """The `redeemable` reply, read: the categories and their products, as sent.
 
     Attributes:
         categories: The categories.
-        products: The products, each in one of ``categories``.
+        products: The products, each in one of `categories`.
     """
 
     categories: tuple[Category, ...]
@@ -63,7 +63,7 @@ class Catalog:
 
 
 def parse_catalog(reply: object) -> Catalog:
-    """Read the ``redeemable`` reply (API-05).
+    """Read the `redeemable` reply (API-05).
 
     An entry without a usable id or name, a second entry with an id already read and
     a product whose category isn't listed are left out.
@@ -75,8 +75,8 @@ def parse_catalog(reply: object) -> Catalog:
         The catalog, in the reply's order.
 
     Raises:
-        TypeError: The reply is not ``{"redeemable_categories": [...],
-            "redeemable_products": [...]}``.
+        TypeError: The reply is not `{"redeemable_categories": [...],
+            "redeemable_products": [...]}`.
     """
     raw_categories = _member(reply, "redeemable_categories", list)
     raw_products = _member(reply, "redeemable_products", list)
@@ -96,7 +96,7 @@ def parse_catalog(reply: object) -> Catalog:
 
 
 def is_swag(name: str) -> bool:
-    """Return whether the category ``name`` is Swag pickup's (``/shirt|swag/i``)."""
+    """Return whether the category `name` is Swag pickup's (`/shirt|swag/i`)."""
     return _SWAG.search(name) is not None
 
 
@@ -111,7 +111,7 @@ def swag_catalog(catalog: Catalog) -> Catalog:
 
 
 def _part(catalog: Catalog, *, swag: bool) -> Catalog:
-    """Return the categories whose ``is_swag()`` is ``swag``, with their products."""
+    """Return the categories whose `is_swag()` is `swag`, with their products."""
     categories = tuple(c for c in catalog.categories if is_swag(c.name) == swag)
     kept = {c.id for c in categories}
     return Catalog(categories, tuple(p for p in catalog.products if p.category in kept))
@@ -119,7 +119,7 @@ def _part(catalog: Catalog, *, swag: bool) -> Catalog:
 
 @dataclass(frozen=True)
 class Item:
-    """A product an attendee bought, from ``fetch_products``.
+    """A product an attendee bought, from `fetch_products`.
 
     Attributes:
         product_id: The product's id.
@@ -136,13 +136,13 @@ class Item:
 
 @dataclass(frozen=True)
 class AttendeeProducts:
-    """The ``fetch_products`` reply, read: an attendee and what they bought.
+    """The `fetch_products` reply, read: an attendee and what they bought.
 
     Attributes:
         code: The attendee's access code.
         name: The attendee's name ("" without one).
         items_by_category: Each category's name and its items, by name in alphabetical
-            order, as Ionic's ``keyvalue`` pipe showed them.
+            order, as Ionic's `keyvalue` pipe showed them.
         dietary: The door's dietary note, or None (swag mode sends none).
         has_allergy: The door's allergy flag, or None.
         allergy: The door's allergy note, or None.
@@ -157,7 +157,7 @@ class AttendeeProducts:
 
 
 def parse_attendee_products(reply: object) -> AttendeeProducts:
-    """Read the ``fetch_products`` reply, in door or swag mode (API-06).
+    """Read the `fetch_products` reply, in door or swag mode (API-06).
 
     An item without a usable id, name or counts is left out, and so is a category
     left without items; the door's fields are None when absent or of the wrong type.
@@ -169,8 +169,8 @@ def parse_attendee_products(reply: object) -> AttendeeProducts:
         The attendee and their items.
 
     Raises:
-        TypeError: The reply has no ``attendee_access_code`` string or no
-            ``redeemable_products_by_category`` object.
+        TypeError: The reply has no `attendee_access_code` string or no
+            `redeemable_products_by_category` object.
     """
     code = _member(reply, "attendee_access_code", str)
     by_category = _member(reply, "redeemable_products_by_category", dict)
@@ -211,24 +211,24 @@ def redeem_payload(
     *,
     swag: bool,
 ) -> dict[str, object]:
-    """Build the ``redeem`` body as Ionic's page sends it; its key order is signed (API-07).
+    """Build the `redeem` body as Ionic's page sends it; its key order is signed (API-07).
 
-    ``attendee_access_code``, ``badge_validator`` and ``scanned_at``, then a
-    ``product-redeem-<id>`` and ``product-<id>-quantity`` pair per product. The door
-    (``door-check.page.ts`` 177-188) sends each id as a number and leaves out a
-    validator a badge without ``:`` lacks (None); swag (``t-shirt-redemption.page.ts``
-    153-165) sends each id as a string and ``""`` for a missing validator.
+    `attendee_access_code`, `badge_validator` and `scanned_at`, then a
+    `product-redeem-<id>` and `product-<id>-quantity` pair per product. The door
+    (`door-check.page.ts` 177-188) sends each id as a number and leaves out a
+    validator a badge without `:` lacks (None); swag (`t-shirt-redemption.page.ts`
+    153-165) sends each id as a string and `""` for a missing validator.
 
     Args:
         code: The attendee's access code.
-        validator: The badge's validator (``Badge.door_validator``), or None.
+        validator: The badge's validator (`Badge.door_validator`), or None.
         scanned_at: When the badge was scanned, in epoch seconds; sent as
-            ``Date.toISOString()`` writes it, UTC to the millisecond.
+            `Date.toISOString()` writes it, UTC to the millisecond.
         quantities: How many of each product, by id, in the order to send.
         swag: True for Swag pickup, False for the door.
 
     Returns:
-        The body, for ``canonical_body()`` or an outbox row.
+        The body, for `canonical_body()` or an outbox row.
 
     Raises:
         ValueError: A quantity is not a positive integer, which the server refuses.
@@ -250,7 +250,7 @@ def redeem_payload(
 
 @dataclass(frozen=True)
 class RedeemReply:
-    """The ``redeem`` reply, read.
+    """The `redeem` reply, read.
 
     Attributes:
         errors: The server's messages, each a product it didn't redeem (Ionic showed
@@ -264,9 +264,9 @@ class RedeemReply:
 
 
 def parse_redeem_reply(reply: object) -> RedeemReply:
-    """Read the ``redeem`` reply (API-07).
+    """Read the `redeem` reply (API-07).
 
-    An error without a non-empty ``message`` and an item without a usable product id
+    An error without a non-empty `message` and an item without a usable product id
     are left out.
 
     Args:
@@ -276,8 +276,8 @@ def parse_redeem_reply(reply: object) -> RedeemReply:
         The errors and the products redeemed, in the reply's order.
 
     Raises:
-        TypeError: The reply is not ``{"errors": [...],
-            "redeemable_products_by_category": {...}}``.
+        TypeError: The reply is not `{"errors": [...],
+            "redeemable_products_by_category": {...}}`.
     """
     errors = _member(reply, "errors", list)
     by_category = _member(reply, "redeemable_products_by_category", dict)
@@ -296,14 +296,14 @@ def parse_redeem_reply(reply: object) -> RedeemReply:
 
 
 def _object(reply: object) -> dict[str, object]:
-    """Return the reply as an object, or raise ``TypeError`` when it isn't one."""
+    """Return the reply as an object, or raise `TypeError` when it isn't one."""
     if not isinstance(reply, dict):
         raise TypeError("check-in reply: not an object")
     return reply
 
 
 def _member[T](reply: object, key: str, kind: type[T]) -> T:
-    """Return the object ``reply``'s ``key``, or raise ``TypeError`` unless a ``kind``."""
+    """Return the object `reply`'s `key`, or raise `TypeError` unless a `kind`."""
     value = _object(reply).get(key)
     if not isinstance(value, kind):
         raise TypeError(f"check-in reply: no {key} {kind.__name__}")

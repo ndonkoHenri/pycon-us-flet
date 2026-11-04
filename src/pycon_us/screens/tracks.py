@@ -1,23 +1,23 @@
-"""Tracks & session types (``/more/tracks``): one hub for the tracks and their legend.
+"""Tracks & session types (`/more/tracks`): one hub for the tracks and their legend.
 
 It answers "what is a charla?" and "show me the charlas" in one place (SCHED-21, EVT-04,
 SHELL-10): Ionic's nine Presentations links and its static Session Types page become one
-list. Each row is a track of the year's registry (``conference.toml``, D-45): a circle in
+list. Each row is a track of the year's registry (`conference.toml`, D-45): a circle in
 the track's badge colours holding its icon, so the hub is also the key to the badges'
 colours; its plural name; its legend line; its badge as the schedule shows it, "New
 track" when it is new this year; and how many sessions it has, counted as its page lists
 them (posters one by one, SCHED-22; the Keynotes page's panels too, D-217). A tap pushes
-``/more/tracks/<slug>``: the track's page (``screens/track.py``), or, for the keynotes,
+`/more/tracks/<slug>`: the track's page (`screens/track.py`), or, for the keynotes,
 the lightning talks and the open spaces, the page of their own that More opens too,
-which the route table puts at that slug under the hub (``year_tracks.HUB_PAGES``,
+which the route table puts at that slug under the hub (`year_tracks.HUB_PAGES`,
 D-207), so Back returns here.
 
 The rows sit under the registry's groups: Presentations, Hands-on and Community. Breaks
-and notices (the ``logistics`` group) are not a kind of session to choose, so they are
+and notices (the `logistics` group) are not a kind of session to choose, so they are
 left out, and so is a track without sessions in the current feed, which would open an
 empty page. The sprints are not a track of the feed, which has no sessions for them
 (D-126), but they are a way to take part, so Community ends with a Sprints row, built
-like the others, that pushes the Sprints page under the hub (``/more/tracks/sprints``,
+like the others, that pushes the Sprints page under the hub (`/more/tracks/sprints`,
 EVT-05). Without data the page loads and fails as the Speakers list does (ux.md §4.1).
 """
 
@@ -69,7 +69,7 @@ class HubEntry:
 
     Attributes:
         track: The registry's entry.
-        count: Its sessions, as ``track_sessions()`` lists them: every poster, not
+        count: Its sessions, as `track_sessions()` lists them: every poster, not
             the Posters row.
     """
 
@@ -80,14 +80,14 @@ class HubEntry:
 def track_count(
     data: ConferenceData, key: str, keynote_ids: Collection[str] = ()
 ) -> int:
-    """Return how many sessions track ``key``'s page lists (SCHED-22).
+    """Return how many sessions track `key`'s page lists (SCHED-22).
 
     The keynotes' page lists the panels the year data names too (D-217).
 
     Args:
         data: The processed feed.
         key: A track key.
-        keynote_ids: The sessions of the year's keynote data (``Content.keynotes``).
+        keynote_ids: The sessions of the year's keynote data (`Content.keynotes`).
     """
     if key == HUB_PAGES["keynotes"]:
         return len(keynote_sessions(data, key, keynote_ids))
@@ -148,7 +148,7 @@ def sprints_marks(info: ConferenceInfo, projects: int) -> tuple[str, str]:
     missing; empty for neither.
 
     Args:
-        info: The year's facts: the sprint days (``first_sprint_day`` to ``last_day``).
+        info: The year's facts: the sprint days (`first_sprint_day` to `last_day`).
         projects: How many sprint projects the feed lists.
     """
     shown: list[str] = []
@@ -227,7 +227,7 @@ def hub_row(entry: HubEntry, tokens: Tokens) -> ft.Control:
     """Return one track of the hub, pushing its page.
 
     Its circle in the track's badge colours, its plural name and legend, then its
-    badge, "New track" when it is new, and its count (``hub_tile()``).
+    badge, "New track" when it is new, and its count (`hub_tile()`).
 
     Args:
         entry: The track and its count.
@@ -261,7 +261,7 @@ def sprints_row(info: ConferenceInfo, projects: int, tokens: Tokens) -> ft.Contr
     Args:
         info: The year's facts: the sprint days.
         projects: How many sprint projects the feed lists.
-        tokens: The scheme's tokens: ``high_contrast`` outlines the circle.
+        tokens: The scheme's tokens: `high_contrast` outlines the circle.
     """
     shown, spoken = sprints_marks(info, projects)
     neutral = BadgeColors(
@@ -293,17 +293,17 @@ def hub_tile(
 ) -> ft.Control:
     """Return a row of the hub: a circle, a name, a legend and marks, pushing a page.
 
-    Built like a speaker row (D-189) rather than a ``ListTile``, so that it reads as
+    Built like a speaker row (D-189) rather than a `ListTile`, so that it reads as
     one phrase, a button. Nothing has a fixed height but the circle, so it grows with
     the text; the circle and the chevron stay beside the name at any text size.
 
     Args:
-        circle: The row's 40 dp circle (``track_circle()``).
-        title: The name, ``TITLE_MEDIUM``.
+        circle: The row's 40 dp circle (`track_circle()`).
+        title: The name, `TITLE_MEDIUM`.
         legend: One line on what it is, in the variant colour.
         marks: The last line's pills and words, in one wrapping row; none for no line.
         phrase: What a screen reader says for the whole row.
-        identifier: The row's semantics identifier, ``tracks.<element>[.<key>]``.
+        identifier: The row's semantics identifier, `tracks.<element>[.<key>]`.
         target: The page a tap pushes.
     """
     page = ft.context.page
@@ -374,7 +374,7 @@ def track_circle(track: Track, colors: BadgeColors) -> ft.Control:
     outlined badge (every one in high contrast) gives an outlined circle (D-306).
 
     Args:
-        track: The track, whose ``icon`` names an ``ft.Icons`` member.
+        track: The track, whose `icon` names an `ft.Icons` member.
         colors: Its badge colours in the current scheme.
     """
     return _circle(cast(ft.IconData, getattr(ft.Icons, track.icon)), colors)

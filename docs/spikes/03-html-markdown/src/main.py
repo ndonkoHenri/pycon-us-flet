@@ -1,8 +1,8 @@
-"""S3 render check: the converted feed samples in ``ft.Markdown`` on a phone.
+"""S3 render check: the converted feed samples in `ft.Markdown` on a phone.
 
-Spike S3 (docs/spikes/03-html-markdown.md). ``census.py`` writes ``samples.json``
+Spike S3 (docs/spikes/03-html-markdown.md). `census.py` writes `samples.json`
 next to this file; the stub shows one sample at a time with the options the app
-would use (``selectable=True``, ``GITHUB_WEB``, ``on_tap_link``). The AppBar steps
+would use (`selectable=True`, `GITHUB_WEB`, `on_tap_link`). The AppBar steps
 through the samples, toggles a proposed style sheet against Flet's default, and
 shows the Markdown source. A tapped link is shown in a SnackBar, never opened.
 """

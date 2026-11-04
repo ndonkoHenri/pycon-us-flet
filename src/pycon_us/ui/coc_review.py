@@ -1,9 +1,9 @@
 """The CoC review's flow: open it for a scan, record once, say how it ended (#760).
 
-``use_review()`` is the CoC tool's hook. Its ``open(code, attendee)`` shows the review
-dialog (``ui/coc_review_dialog.py``) and returns the scan's result once it closes, so
+`use_review()` is the CoC tool's hook. Its `open(code, attendee)` shows the review
+dialog (`ui/coc_review_dialog.py`) and returns the scan's result once it closes, so
 the scan screen awaits one review at a time and drops submits meanwhile: "Incident
-recorded" with the reply's name and count (``ScanOutcome.RECORDED``, neutral, D-430),
+recorded" with the reply's name and count (`ScanOutcome.RECORDED`, neutral, D-430),
 or "Not recorded" on Cancel or Back. An error keeps the dialog and its notes: the
 server's refusal, "No connection. Nothing was recorded.", or, when the call may have
 reached the server (D-410), "The incident may have been recorded…" with Record anyway;
@@ -119,7 +119,7 @@ type OnRecorded = Callable[[str, int | None], None]
 
 @dataclass(frozen=True)
 class ReviewDialog:
-    """What the CoC tool gets from ``use_review()``.
+    """What the CoC tool gets from `use_review()`.
 
     Attributes:
         open: Shows the dialog for a code and its directory row (or None), and
@@ -135,7 +135,7 @@ def use_review(*, on_recorded: OnRecorded) -> ReviewDialog:
     """Keep the review being shown and its outcome; show the dialog while it is open.
 
     Call it on every render (D-70). The notes field is built from what Flutter last
-    reported (D-243), through a ``Ref`` made for each opening, so typing is never sent
+    reported (D-243), through a `Ref` made for each opening, so typing is never sent
     back over and the next opening starts empty.
 
     Args:
@@ -154,7 +154,7 @@ def use_review(*, on_recorded: OnRecorded) -> ReviewDialog:
 
     @report_errors
     def finish(result: ScanResult) -> None:
-        """Close the dialog and hand ``result`` to the scan that opened it."""
+        """Close the dialog and hand `result` to the scan that opened it."""
         set_review(None)
         answer(waiting, result)
 
@@ -169,7 +169,7 @@ def use_review(*, on_recorded: OnRecorded) -> ReviewDialog:
 
     @report_errors
     def cancel(opened: asyncio.Future[ScanResult] | None) -> None:
-        """Close the review ``opened`` answers, unless another opening replaced it.
+        """Close the review `opened` answers, unless another opening replaced it.
 
         Flutter reports a dialog's dismissal once its route has closed, so an earlier
         dialog's may arrive after the next review opened: that one must stay.
@@ -242,7 +242,7 @@ async def wait_for_review(
     code: str,
     attendee: Attendee | None,
 ) -> ScanResult:
-    """Show the review of ``code`` and return the result its closing answers with.
+    """Show the review of `code` and return the result its closing answers with.
 
     Args:
         waiting: Where the hook keeps the future the dialog answers.
@@ -259,7 +259,7 @@ async def wait_for_review(
 def answer(
     waiting: MutableRef[asyncio.Future[ScanResult] | None], result: ScanResult
 ) -> None:
-    """Hand ``result`` to the scan waiting on the review, once; then nothing waits."""
+    """Hand `result` to the scan waiting on the review, once; then nothing waits."""
     future, waiting.current = waiting.current, None
     if future is not None and not future.done():
         future.set_result(result)

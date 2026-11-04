@@ -1,6 +1,6 @@
-"""What reaches phones is declared and pinned in ``pyproject.toml`` (D-75, D-470).
+"""What reaches phones is declared and pinned in `pyproject.toml` (D-75, D-470).
 
-``flet build`` never reads ``uv.lock``: pip resolves ``[project].dependencies`` when the build
+`flet build` never reads `uv.lock`: pip resolves `[project].dependencies` when the build
 runs. So a package the app imports but gets through another package's range ships in whatever
 version pip finds that day, unlike the one the tests ran.
 """
@@ -20,17 +20,17 @@ NOTHING_TO_BUNDLE = {"pycon_us", "_typeshed"}
 
 
 def read_pyproject() -> dict:
-    """The repository's ``pyproject.toml``, parsed."""
+    """The repository's `pyproject.toml`, parsed."""
     return tomllib.loads((ROOT / "pyproject.toml").read_text(encoding="utf-8"))
 
 
 def bundled_requirements() -> list[Requirement]:
-    """The requirements ``flet build`` hands pip."""
+    """The requirements `flet build` hands pip."""
     return [Requirement(line) for line in read_pyproject()["project"]["dependencies"]]
 
 
 def imported_top_level(source: str) -> set[str]:
-    """Return the top-level names that ``source``'s absolute imports name."""
+    """Return the top-level names that `source`'s absolute imports name."""
     names: set[str] = set()
     for node in ast.walk(ast.parse(source)):
         if isinstance(node, ast.Import):
@@ -41,14 +41,14 @@ def imported_top_level(source: str) -> set[str]:
 
 
 def undeclared_imports(sources: list[str], declared: Container[str]) -> set[str]:
-    """Return what ``sources`` import that is not the standard library's, ours or declared."""
+    """Return what `sources` import that is not the standard library's, ours or declared."""
     imported = set().union(*map(imported_top_level, sources))
     third_party = imported - set(sys.stdlib_module_names) - NOTHING_TO_BUNDLE
     return {name for name in third_party if canonicalize_name(name) not in declared}
 
 
 def test_every_package_the_app_imports_is_declared() -> None:
-    """Each third-party package imported under ``src/`` is in ``[project].dependencies``."""
+    """Each third-party package imported under `src/` is in `[project].dependencies`."""
     sources = [
         path.read_text(encoding="utf-8") for path in (ROOT / "src").rglob("*.py")
     ]
@@ -64,7 +64,7 @@ def test_an_undeclared_import_is_reported_by_name() -> None:
 
 
 def test_every_bundled_package_is_pinned_exactly() -> None:
-    """A requirement says ``==``, unless ``.flet-ref`` pins it through ``dev_packages`` (D-81)."""
+    """A requirement says `==`, unless `.flet-ref` pins it through `dev_packages` (D-81)."""
     from_flet_ref = set(read_pyproject()["tool"]["flet"]["dev_packages"])
     for requirement in bundled_requirements():
         if requirement.name in from_flet_ref:

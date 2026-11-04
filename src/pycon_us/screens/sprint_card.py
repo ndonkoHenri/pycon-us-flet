@@ -1,9 +1,9 @@
-"""A project's card on the Sprints page (EVT-05): ``ProjectCard``.
+"""A project's card on the Sprints page (EVT-05): `ProjectCard`.
 
 A card holds one project of the development sprints: its logo on a white tile, or its
-initials (``ui/logos.py``'s ``logo_tile()``, D-262); its name, a heading for screen
+initials (`ui/logos.py`'s `logo_tile()`, D-262); its name, a heading for screen
 readers, and "by <submitter>"; its description, cut at four lines with "More" when it
-is long (``core.sprints.cut_short()``), which shows the whole text as Markdown, its
+is long (`core.sprints.cut_short()`), which shows the whole text as Markdown, its
 links opening by the feed-link rule (D-197); and "Project page", the project's site in
 the in-app browser. A module of its own, as Now's next-session card is (D-190), so the
 page stays under D-66's 400 lines.
@@ -43,7 +43,7 @@ def ProjectCard(sprint: Sprint) -> ft.Control:
 @ft.memo
 @ft.component
 def _ProjectCard(sprint: Sprint) -> ft.Control:
-    """The body of ``ProjectCard``; it runs only when its project or "More" changes."""
+    """The body of `ProjectCard`; it runs only when its project or "More" changes."""
     svc = use_services()
     expanded, set_expanded = ft.use_state(False)
     key = semantics_key(sprint.id)

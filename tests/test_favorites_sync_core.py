@@ -1,8 +1,8 @@
 """Tests for the favourites' reconcile, pure (API-04; D-55, D-406).
 
-``core.favorites_sync.reconcile()`` decides what a pull keeps and whether it pushes;
-``server_ids()`` reads a ``mobile_state`` reply. The sync that calls them is
-``test_favorites_sync.py``'s.
+`core.favorites_sync.reconcile()` decides what a pull keeps and whether it pushes;
+`server_ids()` reads a `mobile_state` reply. The sync that calls them is
+`test_favorites_sync.py`'s.
 """
 
 import pytest
@@ -85,7 +85,7 @@ def test_after_a_pull_the_server_gets_what_the_device_keeps(
     ],
 )
 def test_server_ids_reads_a_reply(reply: object, expected: set[str]) -> None:
-    """A ``mobile_state`` reply gives its ids as strings."""
+    """A `mobile_state` reply gives its ids as strings."""
     assert server_ids(reply) == expected
 
 

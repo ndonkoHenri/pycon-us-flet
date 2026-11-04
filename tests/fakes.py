@@ -1,8 +1,8 @@
 """Fakes shared by the tests: stand-ins for the Flutter side of Flet services.
 
-And ``QueuedWrite``, a feed cache write held in its worker thread; and stand-ins for
-E3's ``Notifications`` and the permission handler, which take no page. The page, its
-device and the hooks are ``tests/fake_page.py``'s (#623).
+And `QueuedWrite`, a feed cache write held in its worker thread; and stand-ins for
+E3's `Notifications` and the permission handler, which take no page. The page, its
+device and the hooks are `tests/fake_page.py`'s (#623).
 """
 
 import asyncio
@@ -27,7 +27,7 @@ from pycon_us.services import data_files
 class MemoryPrefs(ft.SharedPreferences):
     """SharedPreferences backed by a dict instead of the Flutter side.
 
-    Only the transport is replaced, so Flet's own type check in ``set`` still runs.
+    Only the transport is replaced, so Flet's own type check in `set` still runs.
     """
 
     def init(self) -> None:
@@ -43,10 +43,10 @@ class MemoryPrefs(ft.SharedPreferences):
         arguments: dict[str, Any] | None = None,
         timeout: float | None = None,
     ) -> Any:
-        """Answer ``get``, ``set``, ``get_keys``, ``contains_key`` and ``remove``.
+        """Answer `get`, `set`, `get_keys`, `contains_key` and `remove`.
 
-        Every answer comes from ``values``. A set answers False while ``fail_writes`` is set, a remove while
-        ``fail_removes`` is; ``error``, when given, is raised by every call.
+        Every answer comes from `values`. A set answers False while `fail_writes` is set, a remove while
+        `fail_removes` is; `error`, when given, is raised by every call.
         """
         assert arguments is not None
         if self.error is not None:
@@ -73,7 +73,7 @@ class MemoryPrefs(ft.SharedPreferences):
 class MemorySemantics(ft.SemanticsService):
     """SemanticsService whose accessibility features come from a dict, not the platform.
 
-    Announcements are recorded in ``announced`` instead of reaching a screen reader.
+    Announcements are recorded in `announced` instead of reaching a screen reader.
     """
 
     def init(self) -> None:
@@ -106,7 +106,7 @@ class MemorySemantics(ft.SemanticsService):
     ) -> Any:
         """Record an announcement, or answer the features and count the read.
 
-        ``error``, when given, is raised by a read, after it is counted.
+        `error`, when given, is raised by a read, after it is counted.
         """
         if method_name == "announce_message":
             self.announced.append((arguments or {})["message"])
@@ -139,7 +139,7 @@ class MemoryHaptics(ft.HapticFeedback):
         arguments: dict[str, Any] | None = None,
         timeout: float | None = None,
     ) -> Any:
-        """Record the effect's method name, then wait for ``gate``; or raise ``error``."""
+        """Record the effect's method name, then wait for `gate`; or raise `error`."""
         if self.error is not None:
             raise self.error
         self.effects.append(method_name)
@@ -162,9 +162,9 @@ class MemoryWakelock(ft.Wakelock):
         arguments: dict[str, Any] | None = None,
         timeout: float | None = None,
     ) -> Any:
-        """Record ``enable`` or ``disable`` and follow it; answer ``is_enabled``.
+        """Record `enable` or `disable` and follow it; answer `is_enabled`.
 
-        ``error``, when given, is raised by every call, after it is recorded.
+        `error`, when given, is raised by every call, after it is recorded.
         """
         self.calls.append(method_name)
         if self.error is not None:
@@ -186,7 +186,7 @@ class MemoryLauncher(ft.UrlLauncher):
     async def launch_url(  # pyright: ignore[reportIncompatibleMethodOverride]
         self, url: str, *, mode: ft.LaunchMode = ft.LaunchMode.PLATFORM_DEFAULT
     ) -> None:
-        """Record the URL and its mode, or raise ``error`` when given."""
+        """Record the URL and its mode, or raise `error` when given."""
         if self.error is not None:
             raise self.error
         self.launched.append((url, mode))
@@ -201,7 +201,7 @@ class MemoryClipboard(ft.Clipboard):
         self.error: Exception | None = None
 
     async def set(self, value: str) -> None:
-        """Keep ``value`` as what was copied, or raise ``error`` when given."""
+        """Keep `value` as what was copied, or raise `error` when given."""
         if self.error is not None:
             raise self.error
         self.value = value
@@ -223,9 +223,9 @@ class MemoryShare(ft.Share):
     async def share_text(  # pyright: ignore[reportIncompatibleMethodOverride]
         self, text: str, **options: Any
     ) -> ft.ShareResult:
-        """Record the text and its options, then answer ``status`` once any gate is set.
+        """Record the text and its options, then answer `status` once any gate is set.
 
-        ``error``, when given, is raised before anything is recorded.
+        `error`, when given, is raised before anything is recorded.
         """
         if self.error is not None:
             raise self.error
@@ -237,7 +237,7 @@ class MemoryShare(ft.Share):
     async def share_files(  # pyright: ignore[reportIncompatibleMethodOverride]
         self, files: list[ft.ShareFile], **options: Any
     ) -> ft.ShareResult:
-        """Record the files and their options and answer ``status``, or raise ``error``."""
+        """Record the files and their options and answer `status`, or raise `error`."""
         if self.error is not None:
             raise self.error
         self.shared.append(files)
@@ -260,9 +260,9 @@ class MemoryFilePicker(ft.FilePicker):
     async def save_file(  # pyright: ignore[reportIncompatibleMethodOverride]
         self, **options: Any
     ) -> str | None:
-        """Record the file's name and bytes, then answer ``answer`` once any gate is set.
+        """Record the file's name and bytes, then answer `answer` once any gate is set.
 
-        ``error``, when given, is raised before anything is recorded.
+        `error`, when given, is raised before anything is recorded.
         """
         if self.error is not None:
             raise self.error
@@ -281,7 +281,7 @@ class MemoryPaths(ft.StoragePaths):
         self.error: Exception | None = None
 
     async def get_console_log_filename(self) -> str:
-        """Return ``console_log``, or raise ``error`` when given."""
+        """Return `console_log`, or raise `error` when given."""
         if self.error is not None:
             raise self.error
         return self.console_log
@@ -291,11 +291,11 @@ class QueuedWrite:
     """Holds the feed cache's write in its worker thread, before the writers' lock.
 
     That lock gives the threads turns, not order: a deletion asked for after the write
-    takes the lock first unless ``Storage.delete_feed`` waits for the write (D-244).
+    takes the lock first unless `Storage.delete_feed` waits for the write (D-244).
     """
 
     def __init__(self, monkeypatch: pytest.MonkeyPatch) -> None:
-        """Patch ``data_files.write_atomic`` to hold each write until ``release()``.
+        """Patch `data_files.write_atomic` to hold each write until `release()`.
 
         Each wait gives up after 5 s, so a test that never releases cannot hang.
         """
@@ -321,7 +321,7 @@ class QueuedWrite:
 
 @dataclass(frozen=True)
 class Scheduled:
-    """One reminder ``MemoryNotifications`` holds pending, as ``schedule()`` got it."""
+    """One reminder `MemoryNotifications` holds pending, as `schedule()` got it."""
 
     when: datetime
     title: str | None
@@ -331,11 +331,11 @@ class Scheduled:
 
 
 class MemoryNotifications:
-    """E3's ``Notifications`` without a page or a platform: pending reminders in a dict.
+    """E3's `Notifications` without a page or a platform: pending reminders in a dict.
 
     Not a subclass: the service's methods check the page's platform before the
-    bridge. It answers the calls ``services.reminders.Scheduler`` makes, records them
-    in ``calls``, and fails as a test sets it.
+    bridge. It answers the calls `services.reminders.Scheduler` makes, records them
+    in `calls`, and fails as a test sets it.
     """
 
     def __init__(self) -> None:
@@ -355,7 +355,7 @@ class MemoryNotifications:
         self.initialized: asyncio.Event | None = None
 
     def _call(self, method: str) -> None:
-        """Record the call to ``method``, and raise its error when a test set one."""
+        """Record the call to `method`, and raise its error when a test set one."""
         self.calls.append(method)
         if method in self.errors:
             raise self.errors[method]
@@ -369,7 +369,7 @@ class MemoryNotifications:
         critical: bool = False,
         provisional: bool = False,
     ) -> bool:
-        """Record the request; the user answers ``grant``, which ``enabled`` becomes."""
+        """Record the request; the user answers `grant`, which `enabled` becomes."""
         self._call("request_permissions")
         self.requests.append(
             {
@@ -384,18 +384,18 @@ class MemoryNotifications:
         return self.grant
 
     async def request_exact_alarm_permission(self) -> bool:
-        """Record the visit to Alarms & reminders; ``exact`` becomes ``grant_exact``."""
+        """Record the visit to Alarms & reminders; `exact` becomes `grant_exact`."""
         self._call("request_exact_alarm_permission")
         self.exact = self.grant_exact
         return self.exact
 
     async def can_schedule_exact_alarms(self) -> bool:
-        """Answer ``exact``."""
+        """Answer `exact`."""
         self._call("can_schedule_exact_alarms")
         return self.exact
 
     async def are_notifications_enabled(self) -> bool:
-        """Answer ``enabled``, once ``initialized`` is set when a test gives one."""
+        """Answer `enabled`, once `initialized` is set when a test gives one."""
         self._call("are_notifications_enabled")
         if self.initialized is not None:
             await self.initialized.wait()
@@ -416,7 +416,7 @@ class MemoryNotifications:
         payload: str | None = None,
         schedule_mode: AndroidScheduleMode,
     ) -> None:
-        """Hold the reminder as pending under ``id``, replacing one with the same id."""
+        """Hold the reminder as pending under `id`, replacing one with the same id."""
         self._call("schedule")
         if self.gate is not None:
             await self.gate.wait()
@@ -429,20 +429,20 @@ class MemoryNotifications:
 
 
 class MemoryPermissions:
-    """``flet-permission-handler``'s service, answering one status for every permission."""
+    """`flet-permission-handler`'s service, answering one status for every permission."""
 
     def __init__(self, status: PermissionStatus | None) -> None:
-        """Answer ``status``, and count the reads in ``reads``."""
+        """Answer `status`, and count the reads in `reads`."""
         self.status = status
         self.reads = 0
         self.settings_opened = 0
 
     async def open_app_settings(self) -> bool:
-        """Count a visit to the app's settings page in ``settings_opened``."""
+        """Count a visit to the app's settings page in `settings_opened`."""
         self.settings_opened += 1
         return True
 
     async def get_status(self, permission: Permission) -> PermissionStatus | None:
-        """Return ``status`` for any ``permission``."""
+        """Return `status` for any `permission`."""
         self.reads += 1
         return self.status

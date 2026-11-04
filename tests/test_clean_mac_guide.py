@@ -1,4 +1,4 @@
-"""The clean-Mac setup in ``docs/development.md`` gives commands that work on Xcode 27."""
+"""The clean-Mac setup in `docs/development.md` gives commands that work on Xcode 27."""
 
 from pathlib import Path
 

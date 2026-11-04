@@ -1,12 +1,12 @@
-"""The app bar's overflow menus: ``overflow_menu()``, ``menu_item()``, View source.
+"""The app bar's overflow menus: `overflow_menu()`, `menu_item()`, View source.
 
 Session detail, the Sprints page and a track's page each have one (D-186, D-202,
-D-209), built here the same way (D-233). An item is never ``PopupMenuItem.icon``
-with a text: Flet lays that icon and the text out in a ``Row`` without ``Expanded``,
+D-209), built here the same way (D-233). An item is never `PopupMenuItem.icon`
+with a text: Flet lays that icon and the text out in a `Row` without `Expanded`,
 so at 200 % text the label ran off the menu's edge instead of wrapping (F47, #260).
 
-Once ``SOURCE_URL`` is set, every screen's overflow ends in View source, which opens
-the screen's own module on GitHub (``view_source_items()``, NEW-09, D-461).
+Once `SOURCE_URL` is set, every screen's overflow ends in View source, which opens
+the screen's own module on GitHub (`view_source_items()`, NEW-09, D-461).
 """
 
 import flet as ft
@@ -21,7 +21,7 @@ MORE_OPTIONS = "More options"
 """The overflow button's tooltip, which is also its name for screen readers."""
 
 ITEM_HEIGHT = 48
-"""The menu's own row height (Flutter's ``PopupMenuItem.height``), which a tile would
+"""The menu's own row height (Flutter's `PopupMenuItem.height`), which a tile would
 make 56."""
 
 ICON_GAP = 12
@@ -32,14 +32,14 @@ VIEW_SOURCE = "View source"
 
 
 def overflow_menu(identifier: str, items: list[ft.PopupMenuItem]) -> ft.Control:
-    """Return the app bar's overflow button ("More options") with ``items``.
+    """Return the app bar's overflow button ("More options") with `items`.
 
-    Merged with its identifier, as ``named()`` makes it: bare, the tooltip sat on
+    Merged with its identifier, as `named()` makes it: bare, the tooltip sat on
     the identifier's node and the button under it was unnamed (F50, D-214).
 
     Args:
-        identifier: For UI flows, e.g. ``session.overflow``.
-        items: The menu's items, each from ``menu_item()``.
+        identifier: For UI flows, e.g. `session.overflow`.
+        items: The menu's items, each from `menu_item()`.
     """
     menu = ft.PopupMenuButton(
         icon=ft.Icons.MORE_VERT, tooltip=MORE_OPTIONS, items=items
@@ -56,24 +56,24 @@ def menu_item(
     link: bool = False,
     disabled: bool = False,
 ) -> ft.PopupMenuItem:
-    """Return one item of an overflow menu: ``icon`` beside ``label``, which wraps.
+    """Return one item of an overflow menu: `icon` beside `label`, which wraps.
 
-    The content is a ``ListTile``, which Flutter documents as a ``PopupMenuItem``'s
+    The content is a `ListTile`, which Flutter documents as a `PopupMenuItem`'s
     child (the item takes its padding away): its title wraps inside the menu, at
-    most 280 dp wide, and the theme's ``TITLE_HEIGHT`` keeps the icon beside the
-    title's first line (D-188), where a ``Row`` would centre it on the block (F47).
-    ``min_height`` keeps the menu's 48 dp row and ``horizontal_spacing`` its 12 dp
-    gap. The tile has no ``on_click``: the item takes the tap and closes the menu.
+    most 280 dp wide, and the theme's `TITLE_HEIGHT` keeps the icon beside the
+    title's first line (D-188), where a `Row` would centre it on the block (F47).
+    `min_height` keeps the menu's 48 dp row and `horizontal_spacing` its 12 dp
+    gap. The tile has no `on_click`: the item takes the tap and closes the menu.
 
-    The identifier's ``Semantics`` needs no merge of its own: Flutter's item wraps
-    its content in a ``MergeSemantics``, which takes the identifier, the tile and
+    The identifier's `Semantics` needs no merge of its own: Flutter's item wraps
+    its content in a `MergeSemantics`, which takes the identifier, the tile and
     the label into the item's one node (D-230).
 
     Args:
         icon: The item's icon, read by nobody: the label says it all.
         label: What the item does, e.g. "Open on us.pycon.org".
         on_click: Called on a tap, after the menu has closed.
-        identifier: For UI flows, e.g. ``session.open_site``.
+        identifier: For UI flows, e.g. `session.open_site`.
         link: Whether the item leaves the app for a web page: then it is a link,
             read "<label>, Opens in browser" (ux.md §4.7, D-186). Said after the
             label's words, not by the icon, which would be read first.
@@ -105,29 +105,29 @@ def menu_item(
 
 
 def source_link(source_url: str, module: str) -> str:
-    """Return the page that shows ``module`` in the source of this build (D-461).
+    """Return the page that shows `module` in the source of this build (D-461).
 
-    The version's tag, not ``main``: the link shows the code of the build in the
+    The version's tag, not `main`: the link shows the code of the build in the
     attendee's hand, and a later rename can't break it.
 
     Args:
-        source_url: ``SOURCE_URL``, once the repository is public.
-        module: The module's ``__name__``, e.g. ``pycon_us.screens.now``.
+        source_url: `SOURCE_URL`, once the repository is public.
+        module: The module's `__name__`, e.g. `pycon_us.screens.now`.
     """
     path = module.replace(".", "/")
     return f"{source_url.rstrip('/')}/blob/v{__version__}/src/{path}.py"
 
 
 def view_source_items(svc: Services, module: str | None) -> list[ft.PopupMenuItem]:
-    """Return View source for ``module``, or nothing while the repository is private.
+    """Return View source for `module`, or nothing while the repository is private.
 
-    A list, so that a menu takes it with ``*`` and stays as it was while
-    ``SOURCE_URL`` is None (D-88, D-461). A web link like any other (ux.md §4.7), also
+    A list, so that a menu takes it with `*` and stays as it was while
+    `SOURCE_URL` is None (D-88, D-461). A web link like any other (ux.md §4.7), also
     offline: the in-app browser's own page says there is no connection.
 
     Args:
         svc: The session's services, for the launcher.
-        module: The screen's ``__name__``; None gives no item.
+        module: The screen's `__name__`; None gives no item.
     """
     if SOURCE_URL is None or module is None:
         return []
@@ -151,12 +151,12 @@ def view_source_items(svc: Services, module: str | None) -> list[ft.PopupMenuIte
 def source_menu(svc: Services, module: str | None) -> list[ft.Control]:
     """Return the overflow of a screen with no menu of its own, or nothing while hidden.
 
-    ``AppScaffold``'s, so a screen with no overflow doesn't gain an empty one.
+    `AppScaffold`'s, so a screen with no overflow doesn't gain an empty one.
 
     Args:
         svc: The session's services, for the launcher.
-        module: The screen's ``__name__``, or None for no menu (``AppScaffold``'s
-            ``source``).
+        module: The screen's `__name__`, or None for no menu (`AppScaffold`'s
+            `source`).
     """
     items = view_source_items(svc, module)
     return [overflow_menu("app.overflow", items)] if items else []

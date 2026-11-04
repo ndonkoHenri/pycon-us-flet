@@ -1,13 +1,13 @@
 """The queue sheet's parts: its rows, headings, lines and buttons (#694).
 
-``ui/queue_sheet.py`` reads the outbox and lays the sheet out; here is what it is made
-of, so each module stays under about 400 lines (D-66): ``row_tile()``, one outbox row
-with its icon and word (``core.outbox.status_text()``: Queued, Failed, Confirmed, and
+`ui/queue_sheet.py` reads the outbox and lays the sheet out; here is what it is made
+of, so each module stays under about 400 lines (D-66): `row_tile()`, one outbox row
+with its icon and word (`core.outbox.status_text()`: Queued, Failed, Confirmed, and
 "may be recorded twice" with a warning icon beside it, D-410), its kind and access
 code, when it was scanned, the sponsor of a staff account's lead or note (D-459) and a
-failed row's last error (``status_icon()``, the leads list's too, #743); a check-in the server answered with ``errors`` reads "Confirmed ·
-Already redeemed", flagged too, with the server's messages (D-441); ``sync_button()`` and ``retry_button()``; ``title_row()`` with
-Close, ``heading()``, ``note()`` and ``empty_line()``.
+failed row's last error (`status_icon()`, the leads list's too, #743); a check-in the server answered with `errors` reads "Confirmed ·
+Already redeemed", flagged too, with the server's messages (D-441); `sync_button()` and `retry_button()`; `title_row()` with
+Close, `heading()`, `note()` and `empty_line()`.
 """
 
 from collections.abc import Callable
@@ -38,7 +38,7 @@ EMPTY = "Everything is synced"
 
 
 def ago(at: float, now: float) -> str:
-    """Return how long before ``now`` an epoch time was: "just now", "5 minutes ago"."""
+    """Return how long before `now` an epoch time was: "just now", "5 minutes ago"."""
     return ago_label(datetime.fromtimestamp(at, UTC), datetime.fromtimestamp(now, UTC))
 
 
@@ -47,7 +47,7 @@ def status_icon(status: Status, tokens: Tokens) -> ft.Icon:
 
     Args:
         status: The row's status.
-        tokens: The scheme's tokens: a confirmed row's cloud is in ``success``.
+        tokens: The scheme's tokens: a confirmed row's cloud is in `success`.
     """
     match status:
         case Status.PENDING:
@@ -105,7 +105,7 @@ def title_row(
 
     The sheet is as tall as the screen, so no scrim is left to tap, and iOS has no
     Back key: Close is the way out besides dragging the handle (seen on the iOS
-    simulator, #694). Its tooltip names it, merged into its node (``named()``). The
+    simulator, #694). Its tooltip names it, merged into its node (`named()`). The
     CoC name search's sheet has the same head (#761).
 
     Args:
@@ -151,11 +151,11 @@ def heading(text: str, level: int) -> ft.Control:
 
 
 def note(text: str, *, identifier: str | None = None) -> ft.Control:
-    """Return a line of the sheet in ``BODY_MEDIUM`` and ``on_surface_variant``.
+    """Return a line of the sheet in `BODY_MEDIUM` and `on_surface_variant`.
 
     Args:
         text: The words.
-        identifier: For UI flows, e.g. ``staff.queue.blocked``.
+        identifier: For UI flows, e.g. `staff.queue.blocked`.
     """
     line = ft.Text(
         text,
@@ -180,7 +180,7 @@ def sync_button(
     in's button does; disabled, it takes no second tap.
 
     Args:
-        busy: A pass runs (``Staff.syncing``).
+        busy: A pass runs (`Staff.syncing`).
         disabled: It can't send now, or was tapped and its pass hasn't reported.
         on_click: Kicks the worker.
         identifier: Its identifier: the sheet's, or sign-out's dialog's (D-414).
@@ -218,7 +218,7 @@ def empty_line(tokens: Tokens) -> ft.Control:
     """Return "Everything is synced" beside a done cloud: none of the rows waits.
 
     Args:
-        tokens: The scheme's tokens: the cloud is in ``success``.
+        tokens: The scheme's tokens: the cloud is in `success`.
     """
     return ft.Semantics(
         identifier="staff.queue.empty",

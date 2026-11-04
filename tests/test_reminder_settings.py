@@ -136,7 +136,7 @@ def test_the_stored_form_names_every_field() -> None:
 
 
 def test_wants_reads_each_moment_category_and_refuses_others() -> None:
-    """``wants()`` answers for the three moment categories; anything else is an error."""
+    """`wants()` answers for the three moment categories; anything else is an error."""
     settings = ReminderSettings(lightning=True, open_space=False, keynote=True)
     assert [settings.wants(c) for c in ("lightning", "open_space", "keynote")] == [
         True,

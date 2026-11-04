@@ -1,9 +1,9 @@
 """The Sprints page tests' support: the 2026 projects, the harness, lookups (#106).
 
-``test_sprints.py`` (the query and the Tracks hub's row) and ``test_sprints_page.py``
-(the screen) share it. The screen runs in a real Flet session (``tests/sessions.py``'s
-``showing()``); ``show`` counts the card bodies that ran (D-153). A module takes the
-fixtures by assigning them to its own names, as ``docs/testing-and-quality.md`` §3.1
+`test_sprints.py` (the query and the Tracks hub's row) and `test_sprints_page.py`
+(the screen) share it. The screen runs in a real Flet session (`tests/sessions.py`'s
+`showing()`); `show` counts the card bodies that ran (D-153). A module takes the
+fixtures by assigning them to its own names, as `docs/testing-and-quality.md` §3.1
 says.
 """
 
@@ -36,19 +36,19 @@ CARD = "sprints.project."
 
 
 def named(name: str) -> Sprint:
-    """Return the 2026 project named ``name``."""
+    """Return the 2026 project named `name`."""
     (found,) = [sprint for sprint in ALL if sprint.name == name]
     return found
 
 
 def names(listed: tuple[Sprint, ...]) -> list[str]:
-    """Return the names of ``listed``, in order."""
+    """Return the names of `listed`, in order."""
     return [sprint.name for sprint in listed]
 
 
 @dataclass
 class Shown(harness.Shown):
-    """The harness's ``Shown`` (``tests/harness.py``), and which cards ran."""
+    """The harness's `Shown` (`tests/harness.py`), and which cards ran."""
 
     cards: list[str] = field(default_factory=list)
     """The project ids whose card bodies ran, in order."""
@@ -74,8 +74,8 @@ class Shown(harness.Shown):
 async def show(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> AsyncIterator[Any]:
     """Return a function that renders a screen, Sprints by default, over the feed.
 
-    It takes the screen, then a ``conference`` (the recorded 2026 one by default), a
-    ``year`` (2026's) and the ``prefs``.
+    It takes the screen, then a `conference` (the recorded 2026 one by default), a
+    `year` (2026's) and the `prefs`.
     """
     counted = sprint_card.cut_short
 
@@ -127,24 +127,24 @@ def focused(monkeypatch: pytest.MonkeyPatch) -> list[ft.TextField]:
 
 
 def year_with(**changes: Any) -> YearData:
-    """Return 2026's year data with ``changes`` to its conference facts."""
+    """Return 2026's year data with `changes` to its conference facts."""
     return replace(YEAR, conference=replace(INFO, **changes))
 
 
 def with_sprints(*sprints: Sprint) -> Conference:
-    """Return the 2026 feed's ``Conference`` with ``sprints`` alone."""
+    """Return the 2026 feed's `Conference` with `sprints` alone."""
     return Conference(data=replace(DATA, sprints=sprints), source="bundled", version=1)
 
 
 def text_of(control: object) -> str:
-    """The first ``Text`` value under ``control``, following ``content``."""
+    """The first `Text` value under `control`, following `content`."""
     while control is not None and not isinstance(control, ft.Text):
         control = getattr(control, "content", None)
     return str(control.value) if control is not None else ""
 
 
 def card_of(shown: Shown, sprint: Sprint) -> ft.Card:
-    """Return the ``Card`` that holds ``sprint``'s name heading."""
+    """Return the `Card` that holds `sprint`'s name heading."""
     heading: ft.BaseControl | None = shown.node(f"{CARD}{sprint.id}")
     while heading is not None and not isinstance(heading, ft.Card):
         heading = heading.parent
@@ -153,7 +153,7 @@ def card_of(shown: Shown, sprint: Sprint) -> ft.Card:
 
 
 def under(control: ft.BaseControl, root: ft.BaseControl) -> bool:
-    """Whether ``control`` is ``root`` or mounted under it."""
+    """Whether `control` is `root` or mounted under it."""
     node: ft.BaseControl | None = control
     while node is not None:
         if node is root:

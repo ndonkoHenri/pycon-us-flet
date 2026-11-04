@@ -1,33 +1,33 @@
 """The high-contrast light and dark colour schemes (D-23; THEME-04, THEME-05).
 
-Hand-authored from ``docs/ux.md`` §3.2: every ``ft.ColorScheme`` role is set here, so
-none falls back to the seed that ``theme.build_theme()`` still passes (F9), and every
+Hand-authored from `docs/ux.md` §3.2: every `ft.ColorScheme` role is set here, so
+none falls back to the seed that `theme.build_theme()` still passes (F9), and every
 text colour reads at 7:1 or better on what it sits on (tests/test_high_contrast.py).
 Light is dark purple and ink on cream; dark is yellow and paper white on near-black.
 
 The rules the values follow, beyond §3.2's table:
 
-- One surface: ``surface_bright``, ``surface_dim`` and the five ``surface_container*``
-  roles equal ``surface``, so a card or a bar is told apart by its outline, not by a
-  tint of grey (THEME-06 adds those outlines, P2-60). ``surface_tint`` is ``surface``
+- One surface: `surface_bright`, `surface_dim` and the five `surface_container*`
+  roles equal `surface`, so a card or a bar is told apart by its outline, not by a
+  tint of grey (THEME-06 adds those outlines, P2-60). `surface_tint` is `surface`
   too, so elevation tints nothing.
-- Strong roles are their own containers: ``primary_container`` and
-  ``error_container`` equal their role. ``secondary_container`` is a quiet fill under
-  ink, and ``tertiary_container`` repeats it (§3.2).
-- Lines are ink: ``outline`` and ``outline_variant`` are the text colour, 7:1 or more
+- Strong roles are their own containers: `primary_container` and
+  `error_container` equal their role. `secondary_container` is a quiet fill under
+  ink, and `tertiary_container` repeats it (§3.2).
+- Lines are ink: `outline` and `outline_variant` are the text colour, 7:1 or more
   on every surface where WCAG asks only 3:1 of a boundary.
-- The inverse roles (SnackBars) swap the schemes: ``inverse_surface`` is the text
-  colour, ``on_inverse_surface`` the surface, and ``inverse_primary`` the other
-  scheme's ``primary``.
+- The inverse roles (SnackBars) swap the schemes: `inverse_surface` is the text
+  colour, `on_inverse_surface` the surface, and `inverse_primary` the other
+  scheme's `primary`.
 - The fixed roles, which Material keeps the same in light and dark, are one neutral
   pair under ink in both schemes; no screen uses them.
 
 With one surface, high contrast draws structure with lines (THEME-06, D-285): the token
-colours below (``theme.py`` builds HC's ``Tokens`` from them and outlines every badge)
-and ``with_hc_components()``, whose component themes trade the cards' shadows and fills
+colours below (`theme.py` builds HC's `Tokens` from them and outlines every badge)
+and `with_hc_components()`, whose component themes trade the cards' shadows and fills
 for a border, outline every chip and ring the bar's and the rail's selected pill (D-306).
 
-Module of its own because ``theme.py`` is near D-66's 400 lines.
+Module of its own because `theme.py` is near D-66's 400 lines.
 """
 
 import dataclasses
@@ -53,22 +53,22 @@ _HC_YELLOW = "#FFD60A"
 """HC dark's primary and tertiary: 13.6:1 on the night."""
 
 _FIXED = "#E9E7E1"
-"""Every ``*_fixed`` role in both schemes (13.6:1 under ink)."""
+"""Every `*_fixed` role in both schemes (13.6:1 under ink)."""
 
 _FIXED_DIM = "#D6D3CB"
-"""Every ``*_fixed_dim`` role in both schemes (11.3:1 under ink)."""
+"""Every `*_fixed_dim` role in both schemes (11.3:1 under ink)."""
 
 HC_LIGHT_LIVE = "#0F5A26"
-"""HC light's ``live`` and ``success`` token: 8.0:1 on the cream (ux.md §3.3)."""
+"""HC light's `live` and `success` token: 8.0:1 on the cream (ux.md §3.3)."""
 
 HC_LIGHT_WARNING = "#7A4A00"
-"""HC light's ``warning`` token: 7.2:1 on the cream."""
+"""HC light's `warning` token: 7.2:1 on the cream."""
 
 HC_DARK_LIVE = "#30D158"
-"""HC dark's ``live`` and ``success`` token: 9.5:1 on the night."""
+"""HC dark's `live` and `success` token: 9.5:1 on the night."""
 
 HC_DARK_WARNING = _HC_YELLOW
-"""HC dark's ``warning`` token, its primary yellow: 13.6:1 on the night."""
+"""HC dark's `warning` token, its primary yellow: 13.6:1 on the night."""
 
 HC_INDICATOR_BORDER = 2
 """The ring round the bar's and the rail's selected pill in high contrast, in dp (D-306).
@@ -182,7 +182,7 @@ def hc_card_theme(*, dark: bool) -> ft.CardTheme:
 
     Every card variant lies flat on the one surface and is told apart by its outline;
     the 12 dp corners are Material 3's for every variant. The border names the scheme's
-    ``outline`` as a hex: Flet resolves a role in a component theme against the seeded
+    `outline` as a hex: Flet resolves a role in a component theme against the seeded
     scheme, before the overrides apply, where it is a mid grey (U64, #483).
 
     Args:
@@ -198,25 +198,25 @@ def hc_card_theme(*, dark: bool) -> ft.CardTheme:
 
 
 def hc_border(high_contrast: bool) -> ft.Border | None:
-    """Return the 1 dp ``outline`` border a fill's edge becomes in high contrast (D-306).
+    """Return the 1 dp `outline` border a fill's edge becomes in high contrast (D-306).
 
     For a container whose fill sets it apart from the page (a band, a note, a frame):
     the fill is the surface in HC, so the border draws the edge; elsewhere, None.
 
     Args:
-        high_contrast: HC is on screen (``Tokens.high_contrast``).
+        high_contrast: HC is on screen (`Tokens.high_contrast`).
     """
     return ft.Border.all(1, ft.Colors.OUTLINE) if high_contrast else None
 
 
 def hc_sheet_shape(high_contrast: bool) -> ft.OutlinedBorder | None:
-    """Return a bottom sheet's shape in high contrast, with a 1 dp ``outline`` edge.
+    """Return a bottom sheet's shape in high contrast, with a 1 dp `outline` edge.
 
     M3's 28 dp top corners. The sheet is the surface in HC, as the page under its
     scrim nearly is, so the edge draws it (D-306); elsewhere None, Material's own.
 
     Args:
-        high_contrast: HC is on screen (``Tokens.high_contrast``).
+        high_contrast: HC is on screen (`Tokens.high_contrast`).
     """
     if not high_contrast:
         return None
@@ -227,18 +227,18 @@ def hc_sheet_shape(high_contrast: bool) -> ft.OutlinedBorder | None:
 
 
 def with_hc_components(theme: ft.Theme, *, dark: bool) -> ft.Theme:
-    """Return ``theme`` with the high-contrast component themes (THEME-06, D-306).
+    """Return `theme` with the high-contrast component themes (THEME-06, D-306).
 
     Where Material tells a part from the page by a fill, which HC's one surface hides,
-    a line in the scheme's ``outline`` does it: cards are ``hc_card_theme()``'s;
+    a line in the scheme's `outline` does it: cards are `hc_card_theme()`'s;
     every chip has a 1 dp border, selected or not (Material's selected filter chip has
-    none, and its ``secondary_container`` fill is 1.2:1 on the surface); and the
-    ``NavigationBar``'s and the ``NavigationRail``'s selected pill is ringed in
-    ``HC_INDICATOR_BORDER``, a non-text cue at 7:1 or more on every tab, More included,
-    whose icon has no filled form. The colours are hexes, as in ``hc_card_theme()``.
+    none, and its `secondary_container` fill is 1.2:1 on the surface); and the
+    `NavigationBar`'s and the `NavigationRail`'s selected pill is ringed in
+    `HC_INDICATOR_BORDER`, a non-text cue at 7:1 or more on every tab, More included,
+    whose icon has no filled form. The colours are hexes, as in `hc_card_theme()`.
 
     Args:
-        theme: The theme ``theme.build_theme()`` built for a high-contrast scheme.
+        theme: The theme `theme.build_theme()` built for a high-contrast scheme.
         dark: The scheme is high contrast's dark one.
     """
     outline = _HC_PAPER if dark else _HC_INK  # each scheme's outline

@@ -4,7 +4,7 @@ The selection click the star and search's chips share (ux.md §4.5, D-193), the 
 own tap, which sends no "clicked" event (D-355, #342), the "Added to My schedule" a
 screen reader hears, and the star's last SnackBar, which an edit that says nothing
 closes (D-251, #334): those tests star rows in a real Flet session
-(``tests/row_sessions.py``). The badges' tests are in ``tests/test_badges.py`` (D-267).
+(`tests/row_sessions.py`). The badges' tests are in `tests/test_badges.py` (D-267).
 """
 
 import asyncio
@@ -35,7 +35,7 @@ from tests.sessions import text_of
 
 
 async def test_selection_click_gives_the_click() -> None:
-    """The selection click plays one ``selection_click`` haptic effect."""
+    """The selection click plays one `selection_click` haptic effect."""
     haptics = MemoryHaptics()
     await selection_click(haptics)
     assert haptics.effects == ["selection_click"]
@@ -57,7 +57,7 @@ async def test_a_failed_click_is_logged_not_raised(
 
 
 def star_button(selected: bool) -> ft.IconButton:
-    """Return the ``IconButton`` inside ``FavoriteButton``'s merged semantics."""
+    """Return the `IconButton` inside `FavoriteButton`'s merged semantics."""
     merge = FavoriteButton(selected, lambda _: None, color="#000000")
     assert isinstance(merge, ft.MergeSemantics)
     semantics = merge.content
@@ -139,7 +139,7 @@ async def removed(rendered: Rendered, session_id: str) -> ft.SnackBar:
 
 
 def last_says(rendered: Rendered, message: str) -> ft.SnackBar:
-    """Assert the last SnackBar shown says ``message``, open, without Undo; return it."""
+    """Assert the last SnackBar shown says `message`, open, without Undo; return it."""
     snack = rendered.snack_bars[-1]
     assert text_of(snack.content) == message
     assert snack.open and snack.action is None and not snack.persist

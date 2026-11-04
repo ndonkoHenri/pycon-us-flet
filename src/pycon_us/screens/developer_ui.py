@@ -1,12 +1,12 @@
 """The Developer screen's drawing: its fields and its confirmations.
 
-``option_field()`` is one option's text field, the fake clock's or the feed URL's; and
-``confirmation()`` and ``staff_confirmation()`` return the ``AlertDialog`` the Data
+`option_field()` is one option's text field, the fake clock's or the feed URL's; and
+`confirmation()` and `staff_confirmation()` return the `AlertDialog` the Data
 section shows before an action that deletes something, naming what is lost (D-29), with
 how many staff records have not synced (D-414). What the actions do is
-``developer_data.py``'s and ``developer_staff.py``'s; apart so that each module stays
+`developer_data.py`'s and `developer_staff.py`'s; apart so that each module stays
 under about 400 lines (D-66).
-The action rows and the outcome line are ``ui/actions.py``'s, which Settings' Data
+The action rows and the outcome line are `ui/actions.py`'s, which Settings' Data
 section (#422) and About this app (#443) share.
 """
 
@@ -33,7 +33,7 @@ NBSP = "\u00a0"
 def snapshot_day(info: ConferenceInfo) -> str:
     """Return the day the bundled snapshot was fetched, e.g. "Mon, Oct 12", or "" if none.
 
-    Its spaces are ``NBSP``, so the dialog never wraps it as "(Sun, Oct" / "11)".
+    Its spaces are `NBSP`, so the dialog never wraps it as "(Sun, Oct" / "11)".
     """
     captured = info.snapshot_captured_at
     if captured is None:
@@ -68,7 +68,7 @@ LOSS_ICONS = (
     ft.Icons.HISTORY,
     ft.Icons.DEVELOPER_MODE_OUTLINED,
 )
-"""A decorative icon for each of ``reset_losses()``' lines, in order."""
+"""A decorative icon for each of `reset_losses()`' lines, in order."""
 
 
 def records(counts: Counts) -> str:
@@ -94,7 +94,7 @@ def staff_confirmation(
     """Return Clear staff data's confirmation, naming what is lost (DEV-03, D-414).
 
     With unsynced records, the button says "Delete 3 unsynced records too", in
-    ``error`` as every destructive action's; when they can't be counted, it is
+    `error` as every destructive action's; when they can't be counted, it is
     disabled: no path deletes a row without naming how many.
 
     Args:
@@ -135,14 +135,14 @@ def confirmation(
     on_confirm: Callable[[], Any],
     on_cancel: Callable[[], Any],
 ) -> ft.AlertDialog | None:
-    """Return the confirmation that ``asking`` names, or None while none is open.
+    """Return the confirmation that `asking` names, or None while none is open.
 
-    An ``AlertDialog`` before something destructive, naming what is lost (D-29): modal,
+    An `AlertDialog` before something destructive, naming what is lost (D-29): modal,
     so only its buttons or Back close it (Back cancels), and scrollable, so its words
     and buttons stay reachable at 200 % text.
 
     Args:
-        asking: Which confirmation: ``"clear"``, ``"reset"`` or None.
+        asking: Which confirmation: `"clear"`, `"reset"` or None.
         saved: How many sessions are saved in My schedule, for Reset app's list.
         packaged: A packaged build, where Reset app locks Developer again.
         snapshot_day: The day the bundled snapshot was fetched; "" if unknown.
@@ -209,10 +209,10 @@ def _dialog(
     on_cancel: Callable[[], Any],
     disabled: bool = False,
 ) -> ft.AlertDialog:
-    """A destructive action's confirmation: Cancel, then the action, in ``error``.
+    """A destructive action's confirmation: Cancel, then the action, in `error`.
 
-    The icon is the row's, in the row's colour when it has one (``error`` for Reset
-    app), else the dialog's default (``secondary``). ``disabled`` greys the action
+    The icon is the row's, in the row's colour when it has one (`error` for Reset
+    app), else the dialog's default (`secondary`). `disabled` greys the action
     out: what it would delete couldn't be named.
     """
     return ft.AlertDialog(
@@ -281,24 +281,24 @@ def option_field(
     suffix: ft.Control | None = None,
     reveal_below: int = 20,
 ) -> ft.Control:
-    """Return one option's text field, found by flows through ``identifier``.
+    """Return one option's text field, found by flows through `identifier`.
 
-    Controlled (D-157): ``value`` comes from the state ``on_change`` sets. The value
-    and the error (``""`` when the text parses) wrap to three lines at large text, and
-    the helper as far as it needs (``helper_text()``). The text is taken as typed, with
-    no autocorrect or suggestions (a date, a URL). ``max_lines`` without ``multiline``,
-    which would swap ``keyboard`` for the multiline keyboard, whose Return types a line
+    Controlled (D-157): `value` comes from the state `on_change` sets. The value
+    and the error (`""` when the text parses) wrap to three lines at large text, and
+    the helper as far as it needs (`helper_text()`). The text is taken as typed, with
+    no autocorrect or suggestions (a date, a URL). `max_lines` without `multiline`,
+    which would swap `keyboard` for the multiline keyboard, whose Return types a line
     break.
 
     The identifier is merged into the field's node (D-190), except around a field
-    with a ``suffix``: a merge takes in every descendant, and the clock's picker would
+    with a `suffix`: a merge takes in every descendant, and the clock's picker would
     stop being a button of its own (D-189). That field keeps a bare identifier, an
-    empty node of its own, until Flet's ``Semantics`` stops forcing ``enabled`` (U34,
+    empty node of its own, until Flet's `Semantics` stops forcing `enabled` (U34,
     D-214).
 
-    ``reveal_below`` is how much of the list under the field's text stays in sight when
+    `reveal_below` is how much of the list under the field's text stays in sight when
     the field takes the focus and the keyboard shrinks the screen (Flutter's
-    ``scrollPadding``; 20 dp by default, as Flutter's).
+    `scrollPadding`; 20 dp by default, as Flutter's).
     """
     text_field = ft.TextField(
         value=value,
@@ -322,13 +322,13 @@ def option_field(
 
 
 def helper_text(text: str) -> ft.Text:
-    """Return a field's helper as a ``Text``, so it wraps to every line it needs (#280).
+    """Return a field's helper as a `Text`, so it wraps to every line it needs (#280).
 
-    A string helper is cut at ``helper_max_lines`` with an ellipsis, and Flutter has no
+    A string helper is cut at `helper_max_lines` with an ellipsis, and Flutter has no
     "no limit": null means one line. Three lines cut the fake clock's at the largest
-    text, losing "Empty for real time.", the way back. A ``Text`` helper is drawn as
-    given, without the field's helper style, so it takes Material's own: ``BODY_SMALL``
-    in ``on_surface_variant``.
+    text, losing "Empty for real time.", the way back. A `Text` helper is drawn as
+    given, without the field's helper style, so it takes Material's own: `BODY_SMALL`
+    in `on_surface_variant`.
     """
     return ft.Text(
         text,
@@ -342,7 +342,7 @@ def said(done: str, saved: bool) -> tuple[str, bool]:
 
     Args:
         done: What was done, e.g. "Back to real time and the year's feed."
-        saved: Whether ``Prefs.save`` saved it; if not, it ends with the app (D-120),
+        saved: Whether `Prefs.save` saved it; if not, it ends with the app (D-120),
             which the line says, beside a warning icon.
     """
     if not saved:

@@ -1,9 +1,9 @@
-"""Tests for the Schedule changes list (``screens/schedule_changes.py``; NEW-04, D-255, #435).
+"""Tests for the Schedule changes list (`screens/schedule_changes.py`; NEW-04, D-255, #435).
 
-The screen runs in ``tests/changes_view.py``'s harness, a real Flet session under a
-``ChangeLog`` seeded with batches built by hand, so each line and sentence is pinned
-exactly; the words themselves are ``tests/test_change_views.py``'s. The seen marks are
-``tests/test_schedule_changes_seen.py``'s.
+The screen runs in `tests/changes_view.py`'s harness, a real Flet session under a
+`ChangeLog` seeded with batches built by hand, so each line and sentence is pinned
+exactly; the words themselves are `tests/test_change_views.py`'s. The seen marks are
+`tests/test_schedule_changes_seen.py`'s.
 """
 
 from typing import cast
@@ -87,7 +87,7 @@ async def test_an_item_shows_old_struck_through_then_new_in_bold(show: Show) -> 
 
 
 def _view(change: Change) -> ChangeView:
-    """The view of ``change`` in Long Beach's zone, 12-hour clock."""
+    """The view of `change` in Long Beach's zone, 12-hour clock."""
     return change_view(change, LA, use_24h=False)
 
 
@@ -105,11 +105,11 @@ def test_a_removal_says_removed_inline_and_an_addition_shows_its_new_value() -> 
 async def test_a_tap_pushes_the_session_on_the_list_and_back_returns_to_it(
     show: Show,
 ) -> None:
-    """A tap pushes ``…/changes/2026/session/<id>``; Back pops that one level.
+    """A tap pushes `…/changes/2026/session/<id>`; Back pops that one level.
 
     The tap sits on a Container outside the excluded subtree, under the
     MergeSemantics, so the item's one node keeps the action a screen reader activates
-    (a handler inside ``exclude_semantics`` is dropped from the tree).
+    (a handler inside `exclude_semantics` is dropped from the tree).
     """
     page = await show()
     tappable = page.node("changes.change.7.title").parent
@@ -153,7 +153,7 @@ async def test_a_star_tap_re_renders_only_the_items_of_that_session(
 ) -> None:
     """A star tap re-renders the session's two items and skips the others (D-153).
 
-    The test fails with ``ft.memo`` taken off ``ChangeItem``.
+    The test fails with `ft.memo` taken off `ChangeItem`.
     """
     rendered: list[str] = []
     line = screen.change_line
@@ -171,7 +171,7 @@ async def test_a_star_tap_re_renders_only_the_items_of_that_session(
 
 
 async def test_an_empty_log_says_no_changes_yet_with_a_way_out(show: Show) -> None:
-    """No batch: ``HISTORY``, "No changes yet", and "Open schedule" (ux.md §4.6)."""
+    """No batch: `HISTORY`, "No changes yet", and "Open schedule" (ux.md §4.6)."""
     page = await show(batches=())
     assert page.node("changes.empty")
     assert screen.EMPTY in page.texts()
@@ -183,7 +183,7 @@ async def test_an_empty_log_says_no_changes_yet_with_a_way_out(show: Show) -> No
 async def test_an_id_that_is_not_the_year_shows_the_not_found_state(
     show: Show,
 ) -> None:
-    """``changes/2025`` shows the not-found state on its own level (D-186, D-255)."""
+    """`changes/2025` shows the not-found state on its own level (D-186, D-255)."""
     page = await show(year="2025")
     assert page.node("changes.not_found")
     assert screen.NOT_FOUND in page.texts()

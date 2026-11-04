@@ -1,42 +1,42 @@
-"""The CoC incident tool (``/more/staff/coc``): the scan screen and its attendee directory.
+"""The CoC incident tool (`/more/staff/coc`): the scan screen and its attendee directory.
 
-The shared scan screen (``ui/scan_screen.py``, D-416) headed by the state of the
+The shared scan screen (`ui/scan_screen.py`, D-416) headed by the state of the
 attendee directory (MASK-01, #759). The route re-checks its rule on every render
-(architecture §12.4): an account without ``mask_violation``, a signed-out session or
+(architecture §12.4): an account without `mask_violation`, a signed-out session or
 no mock URL (D-51) sees "Not available for this account". It is mounted at
-``/now/staff/coc`` too and records itself as the last tool opened (D-421), and More
-and Now list it (``BUILT_TOOLS``, #760).
+`/now/staff/coc` too and records itself as the last tool opened (D-421), and More
+and Now list it (`BUILT_TOOLS`, #760).
 
-**The directory** is fetched as the screen mounts (``conduct.fetch_directory()``) and
-kept in ``CocTool``'s state only: never in a store, never in storage, never in a log
+**The directory** is fetched as the screen mounts (`conduct.fetch_directory()`) and
+kept in `CocTool`'s state only: never in a store, never in storage, never in a log
 (D-56, D-72). It goes when the screen unmounts (leaving the tool, a sign-out, losing
 the flag), and Reload fetches it again (D-432). A status line above the camera area
 says where it is: "Loading attendee list…" with a ring, "2,431 attendees" with
-Reload (``coc.directory.reload``), "Couldn't load the attendee list" with Retry
-(``coc.directory.retry``), or "Not available for this account" on a 403. The line is
+Reload (`coc.directory.reload`), "Couldn't load the attendee list" with Retry
+(`coc.directory.retry`), or "Not available for this account" on a 403. The line is
 a live region (on iOS, an announcement), so the count and the error are said once.
 
-**Online only** (D-56): while ``use_online()`` says the device is offline, scanning is
+**Online only** (D-56): while `use_online()` says the device is offline, scanning is
 paused with "CoC capture needs a connection", and Retry and Reload are disabled with
 that reason.
 
-**A scan** opens the review dialog (``ui/coc_review.py``, #760; MASK-04) for the
+**A scan** opens the review dialog (`ui/coc_review.py`, #760; MASK-04) for the
 badge's code with its directory row, or without one: a code the loaded directory
 lacks is reviewed all the same (D-434). The handler awaits the dialog, so scanning is
 paused while it is open ("Paused while the review is open") and resumes in the field
 after it closes; the panel then says "Incident recorded" with the reply's count, or
 "Not recorded". Each record's count updates the directory's row.
 
-**Find by name** (``ui/coc_search.py``, #761; MASK-02, D-439) opens the name search
+**Find by name** (`ui/coc_search.py`, #761; MASK-02, D-439) opens the name search
 over the loaded directory, disabled with its reason before it has loaded or offline;
 scanning is paused while it is open ("Paused while the search is open"). A row's tap
-opens the same review, and its result reaches the panel as ``ScanScreen``'s
-``posted``, since no badge was scanned.
+opens the same review, and its result reaches the panel as `ScanScreen`'s
+`posted`, since no badge was scanned.
 
 **Clearing** (#762, MASK-05, O-7): a result clears 15 s after it shows and when the
 app goes to the background, which also closes the search with its query; an open
 review stays, with its notes (losing a half-written report is worse, and the dialog
-shows no email). "Show email" reveals a recorded result's email (``ui/coc_email.py``).
+shows no email). "Show email" reveals a recorded result's email (`ui/coc_email.py`).
 """
 
 from collections.abc import Awaitable, Callable
@@ -89,7 +89,7 @@ CLEAR_AFTER = 15
 """Seconds a result stays on the panel once it shows (O-7, MASK-05)."""
 
 FORBIDDEN = 403
-"""The mock's answer for an account without ``mask_violation``."""
+"""The mock's answer for an account without `mask_violation`."""
 
 type Status = Literal["loading", "loaded", "failed", "refused"]
 
@@ -129,7 +129,7 @@ def CocTool(*, owner: str) -> ft.Control:
     that Flet cancels on unmount (D-70), and lives in this component's state alone.
 
     Args:
-        owner: The signed-in account (``Account.owner``).
+        owner: The signed-in account (`Account.owner`).
     """
     page = ft.context.page
     view_path = ft.use_view_path()
@@ -181,7 +181,7 @@ def CocTool(*, owner: str) -> ft.Control:
 
     @report_errors
     def counted(code: str, incidents: int | None) -> None:
-        """Set the directory's row for ``code`` to the count a record answered."""
+        """Set the directory's row for `code` to the count a record answered."""
         if incidents is not None:
             set_directory(lambda last: with_count(last, code, incidents))
 
@@ -265,10 +265,10 @@ async def review_badge(
     directory: Directory,
     badge: Badge,
 ) -> ScanResult:
-    """The tool's ``on_badge``: open the review for the badge, return how it ended.
+    """The tool's `on_badge`: open the review for the badge, return how it ended.
 
     Args:
-        open_review: ``use_review()``'s ``open``.
+        open_review: `use_review()`'s `open`.
         directory: The directory as the screen holds it: the badge's row, if any.
         badge: The badge scanned or typed.
     """
@@ -278,7 +278,7 @@ async def review_badge(
 def with_count(
     directory: Directory | None, code: str, incidents: int
 ) -> Directory | None:
-    """Return ``directory`` with ``code``'s row at the count a record answered.
+    """Return `directory` with `code`'s row at the count a record answered.
 
     A code it lacks stays out: the next Reload brings it (D-432, D-434).
 
@@ -310,7 +310,7 @@ def status_line(
 
     Args:
         status: Where the fetch is.
-        words: What the line says (``status_words()``).
+        words: What the line says (`status_words()`).
         on_again: Fetches the directory again.
         online: Whether the device has a connection.
         live: Whether the words are a live region (not where iOS announces).

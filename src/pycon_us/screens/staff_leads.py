@@ -1,24 +1,24 @@
-"""The leads list (``…/staff/lead/leads``): every lead the account captured (#743).
+"""The leads list (`…/staff/lead/leads`): every lead the account captured (#743).
 
 LEAD-06, LEAD-08; D-428. Ionic kept only the 50 most recent leads, showed a status as
 a coloured dot and compared sponsor names. Here a pushed page over the Lead scanner,
 opened by its "Leads (42)" button, so the scan screen stays as the four tools share it
 (D-416) and a HID scanner never types into this page's search: a search field
-(``lead.leads.search``) matching the name or the code; for staff who scan for a sponsor
-(``scans_for_sponsor()``) with one chosen, a filter chip "Only Example Corp"
-(``lead.leads.only_sponsor``) that compares sponsor ids; while either narrows the list
-and finds some, a live count line (``lead.leads.count``, "3 leads"); then a lazy ``ListView`` of
+(`lead.leads.search`) matching the name or the code; for staff who scan for a sponsor
+(`scans_for_sponsor()`) with one chosen, a filter chip "Only Example Corp"
+(`lead.leads.only_sponsor`) that compares sponsor ids; while either narrows the list
+and finds some, a live count line (`lead.leads.count`, "3 leads"); then a lazy `ListView` of
 every lead, newest first, with no cap: an attendee scanned for two sponsors is two rows
-(D-459). A row (``lead.leads.row.<code>``, with ``.<sponsor id>`` on a staff account's)
+(D-459). A row (`lead.leads.row.<code>`, with `.<sponsor id>` on a staff account's)
 is one stop read "Ada, Confirmed, 5 minutes ago, has a note": its status icon and words
-(``status_text()``, with ``WARNING_AMBER`` beside a flagged row's, D-410), the first
+(`status_text()`, with `WARNING_AMBER` beside a flagged row's, D-410), the first
 name or, without one, the code (a pending lead shows only its code), the time ago, the
 sponsor on a staff account's rows, and a note icon. A tap opens the note sheet for the
-lead (``ui/lead_note_sheet.py``); its Save changes the outbox, so the row follows.
+lead (`ui/lead_note_sheet.py`); its Save changes the outbox, so the row follows.
 
-The rows are read again whenever the outbox changes (``Staff.revision``, D-69), so a
+The rows are read again whenever the outbox changes (`Staff.revision`, D-69), so a
 queued lead turns Confirmed while the page shows, and the times move each minute
-(``use_minute()``, D-175). States: "No leads yet", "No leads match" and, when the
+(`use_minute()`, D-175). States: "No leads yet", "No leads match" and, when the
 outbox can't be read, "Couldn't read your leads on this device." (D-120). It re-checks
 the Lead scanner's rule on every render (architecture §12.4), so a deep link from an
 account without it sees "Not available for this account".
@@ -51,7 +51,7 @@ from pycon_us.ui.status_strip import use_minute
 from pycon_us.ui.widths import LIST, capped, sides, use_margin
 
 SEGMENT = "leads"
-"""The page's segment under the Lead scanner's route, ``…/staff/lead/leads``."""
+"""The page's segment under the Lead scanner's route, `…/staff/lead/leads`."""
 
 TITLE = "Leads"
 """The app bar's title; the scanner's button adds the count, "Leads (42)"."""
@@ -96,7 +96,7 @@ def LeadList(*, owner: str, for_sponsor: bool) -> ft.Control:
     """The search, the staff filter and the account's leads, or the list's state.
 
     Args:
-        owner: The signed-in account (``Account.owner``): only its rows show (D-414).
+        owner: The signed-in account (`Account.owner`): only its rows show (D-414).
         for_sponsor: It scans for a sponsor it chooses: the rows name their sponsor,
             and the chosen one gets the filter chip.
     """
@@ -225,10 +225,10 @@ def only_chip(
 
     One node, a button read "Only Example Corp" with whether it is selected. Drawn as
     M3's filter chip (8 dp corners, a filter icon, the check mark and a
-    ``secondary_container`` fill once selected) but built from a ``Container``, as the
-    scanner's sponsor chip (D-425): Flutter's ``Chip`` keeps its label on one line and
+    `secondary_container` fill once selected) but built from a `Container`, as the
+    scanner's sponsor chip (D-425): Flutter's `Chip` keeps its label on one line and
     cuts a long sponsor's name at 200 % text. Its text takes only the room it needs
-    (``expand_loose``) and wraps past the width; the chip is at least 48 dp tall, its
+    (`expand_loose`) and wraps past the width; the chip is at least 48 dp tall, its
     own target (ux.md §9). The edge stays when selected, so the state is never a fill
     alone (D-306).
 
@@ -285,7 +285,7 @@ def only_chip(
 def LeadRow(
     view: LeadView, tokens: Tokens, on_open: Callable[[LeadView], None]
 ) -> ft.Control:
-    """Return one lead's row, a memoised component keyed by ``LeadView.key`` (D-153).
+    """Return one lead's row, a memoised component keyed by `LeadView.key` (D-153).
 
     So a keystroke or a minute's tick re-renders only the rows it changes; a thousand
     rows stay quick.
@@ -293,7 +293,7 @@ def LeadRow(
     Args:
         view: The lead's lines.
         tokens: The scheme's tokens, for the status icon's colour.
-        on_open: Opens the note sheet for it; stable across renders (``use_callback``).
+        on_open: Opens the note sheet for it; stable across renders (`use_callback`).
     """
     # As SessionRow's: ft.component's typing leaves out the key= its wrapper takes.
     return _LeadRow(view, tokens, on_open, key=view.key)  # pyright: ignore[reportCallIssue]
@@ -304,7 +304,7 @@ def LeadRow(
 def _LeadRow(
     view: LeadView, tokens: Tokens, on_open: Callable[[LeadView], None]
 ) -> ft.Control:
-    """The body of ``LeadRow``: status icon, title and lines, note icon; one node."""
+    """The body of `LeadRow`: status icon, title and lines, note icon; one node."""
 
     @report_errors
     def opened() -> None:

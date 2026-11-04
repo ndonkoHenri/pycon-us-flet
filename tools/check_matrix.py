@@ -1,17 +1,17 @@
-"""Check ``docs/feature-matrix.md`` against the feature catalog and its own legend (D-04, #802).
+"""Check `docs/feature-matrix.md` against the feature catalog and its own legend (D-04, #802).
 
-From the repo root, after editing the matrix::
+From the repo root, after editing the matrix:
 
     uv run python -m tools.check_matrix               # check; exit 1 and list the problems
     uv run python -m tools.check_matrix --breakdown   # also print the fuller breakdowns
 
-It checks that every id of ``docs/research/feature-catalog.json`` and every ``NEW-`` id is
+It checks that every id of `docs/research/feature-catalog.json` and every `NEW-` id is
 one row, exactly once; that each row's roles, disposition tags and phase use the legend's
-vocabulary (``—`` is the phase of ``drop`` rows only, ``new`` the tag of ``NEW-`` rows
+vocabulary (`—` is the phase of `drop` rows only, `new` the tag of `NEW-` rows
 only); that each row sits in its id's section and each section's "N rows" line is right;
 and that the Counts tables are current. A stale Counts table is printed as it should be,
-ready to paste. ``tests/test_check_matrix.py`` runs the check on the real matrix, so the
-local checks (``tools/check.sh``) fail on a matrix edit that forgets the counts.
+ready to paste. `tests/test_check_matrix.py` runs the check on the real matrix, so the
+local checks (`tools/check.sh`) fail on a matrix edit that forgets the counts.
 
 The breakdowns (by exact disposition, by section and phase) are printed on demand only,
 so the matrix does not keep them by hand.
@@ -34,7 +34,7 @@ TAGS = ("keep", "improve", "redesign", "mock", "interim", "later", "drop", "new"
 """The legend's disposition tags, in the Counts table's column order."""
 
 PHASES = ("P0", "P1", "P2", "P3", "P4", "—")
-"""The legend's phases, in the Counts table's column order; ``—`` is dropped."""
+"""The legend's phases, in the Counts table's column order; `—` is dropped."""
 
 ROLES = frozenset({"all", "attendee", "sponsor", "staff", "developer"})
 
@@ -63,7 +63,7 @@ class Row:
 
     @property
     def group(self) -> str:
-        """``NEW`` for our additions, ``catalog`` for the Ionic app's features."""
+        """`NEW` for our additions, `catalog` for the Ionic app's features."""
         return "NEW" if self.id.startswith(NEW_PREFIX) else "catalog"
 
 
@@ -207,7 +207,7 @@ def counts_problems(matrix: Matrix) -> list[str]:
 
 
 def check(text: str, catalog_ids: Sequence[str]) -> list[str]:
-    """Every problem with the matrix ``text`` against the catalog's ids; empty when it is right."""
+    """Every problem with the matrix `text` against the catalog's ids; empty when it is right."""
     matrix = parse(text)
     return row_problems(matrix, catalog_ids) + counts_problems(matrix)
 

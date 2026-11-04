@@ -1,11 +1,11 @@
-"""Tests for the info pages' year data (D-263): ``year_info``.
+"""Tests for the info pages' year data (D-263): `year_info`.
 
 Every year's load runs the info pages' checks on the content and conference it built, so
 a page's rules fail the load as soon as its table lands; then Help & safety's tables
 (D-281) and Wi-Fi's (D-280). Help & safety's are checked here through the loader, from a
 copy of the 2026 data with one entry changed, so each refusal is the error a broken
-``content.toml`` would give. About the PSF's and Social's tables (``year_links``) are
-``tests/test_year_links.py``'s; the venue hours' own rules ``tests/test_year_hours.py``'s.
+`content.toml` would give. About the PSF's and Social's tables (`year_links`) are
+`tests/test_year_links.py`'s; the venue hours' own rules `tests/test_year_hours.py`'s.
 """
 
 import shutil
@@ -30,7 +30,7 @@ EMAIL_CONTACT = {
     "source": "https://policies.python.org/us.pycon.org/code-of-conduct/",
     "checked": date(2026, 10, 20),
 }
-"""A valid ``[[safety_contacts]]`` entry, which each test breaks one way."""
+"""A valid `[[safety_contacts]]` entry, which each test breaks one way."""
 
 YEARS = sorted(
     int(path.name) for path in config.DATA_DIR.iterdir() if path.name.isdigit()
@@ -41,7 +41,7 @@ YEARS = sorted(
 def test_every_year_s_load_checks_its_info_pages(
     monkeypatch: pytest.MonkeyPatch, year: int
 ) -> None:
-    """Each year's load passes its built content, conference and file to ``check_info()``."""
+    """Each year's load passes its built content, conference and file to `check_info()`."""
     calls: list[tuple[Content, ConferenceInfo, str]] = []
 
     def spy(content: Content, conference: ConferenceInfo, file: str) -> None:
@@ -55,7 +55,7 @@ def test_every_year_s_load_checks_its_info_pages(
 
 
 def test_a_broken_info_rule_fails_the_load(monkeypatch: pytest.MonkeyPatch) -> None:
-    """A ``YearDataError`` from the info pages' checks is the load's error, unchanged."""
+    """A `YearDataError` from the info pages' checks is the load's error, unchanged."""
 
     def broken(content: Content, conference: ConferenceInfo, file: str) -> None:
         """Refuse the content, as a page's rule would."""
@@ -67,7 +67,7 @@ def test_a_broken_info_rule_fails_the_load(monkeypatch: pytest.MonkeyPatch) -> N
 
 
 def toml_value(value: object) -> str:
-    """Return ``value`` written as TOML: a string, a date or a list of them."""
+    """Return `value` written as TOML: a string, a date or a list of them."""
     if isinstance(value, str):
         return '"' + value.replace("\\", "\\\\").replace('"', '\\"') + '"'
     if isinstance(value, date):
@@ -87,8 +87,8 @@ def load_with(
 
     Args:
         tmp_path: Where the copy goes.
-        contacts: The ``[[safety_contacts]]`` entries; None keeps none.
-        help_table: The ``[help]`` table; None keeps none.
+        contacts: The `[[safety_contacts]]` entries; None keeps none.
+        help_table: The `[help]` table; None keeps none.
     """
     folder = tmp_path / "2026"
     shutil.copytree(config.DATA_DIR / "2026", folder)
@@ -108,7 +108,7 @@ def load_with(
 
 
 def help_2026() -> dict[str, Any]:
-    """The 2026 ``[help]`` table as the file has it."""
+    """The 2026 `[help]` table as the file has it."""
     with (config.DATA_DIR / "2026" / "content.toml").open("rb") as stream:
         return dict(tomllib.load(stream)["help"])
 
@@ -124,7 +124,7 @@ def test_2026_lists_the_report_email_and_no_phone_line() -> None:
 
 
 def test_2026_has_the_help_lines_and_links() -> None:
-    """2026's ``[help]`` builds with every line and both https links."""
+    """2026's `[help]` builds with every line and both https links."""
     info = load_year(2026).content.help
     assert info is not None
     assert info.coc_url == "https://policies.python.org/us.pycon.org/code-of-conduct/"
@@ -146,7 +146,7 @@ def test_2026_s_staff_line_says_emergency_services_first() -> None:
 
 
 def test_help_without_a_contact_is_refused(tmp_path: Path) -> None:
-    """``[help]`` needs a contact: the page's first stop is the card (D-281)."""
+    """`[help]` needs a contact: the page's first stop is the card (D-281)."""
     with pytest.raises(YearDataError, match=r"content\.toml: help: needs at least one"):
         load_with(tmp_path, help_table=help_2026())
 
@@ -154,7 +154,7 @@ def test_help_without_a_contact_is_refused(tmp_path: Path) -> None:
 def stale_contacts(year: int, data_dir: Path, today: date) -> list[str]:
     """Return the year's contacts not re-checked for it, as D-45 asks, one line each.
 
-    A contact is stale when its check date is after ``today``, or not after both the
+    A contact is stale when its check date is after `today`, or not after both the
     year before's last day and that year's check dates: a folder copied forward
     without a fresh check keeps last year's date and fails. The rule lives in the
     tests, not the loader, since the device has no reason to read last year's data.
@@ -221,7 +221,7 @@ def test_a_year_without_the_tables_has_none(tmp_path: Path) -> None:
 
 
 def test_a_tel_contact_opens_its_number() -> None:
-    """A ``tel`` contact's target is ``tel:`` and the number; an https one the URL."""
+    """A `tel` contact's target is `tel:` and the number; an https one the URL."""
     phone = SafetyContact(**{**EMAIL_CONTACT, "kind": "tel", "value": "+15625550100"})
     assert phone.target == "tel:+15625550100"
     web = SafetyContact(**{**EMAIL_CONTACT, "kind": "https", "value": "https://a.org/"})
@@ -247,7 +247,7 @@ def test_a_contact_without_its_source_or_check_date_is_refused(
 def test_a_contact_whose_source_is_not_an_https_page_is_refused(
     tmp_path: Path, source: str
 ) -> None:
-    """The source is a public ``https://`` page with a host."""
+    """The source is a public `https://` page with a host."""
     with pytest.raises(YearDataError, match=r"safety_contacts\[0\]\.source"):
         load_with(tmp_path, contacts=[{**EMAIL_CONTACT, "source": source}])
 
@@ -256,7 +256,7 @@ def test_a_contact_whose_source_is_not_an_https_page_is_refused(
     "number", ["5626624082", "+1 562 662 4082", "+1-562-662-4082", "+0123456", "+1"]
 )
 def test_a_malformed_tel_is_refused(tmp_path: Path, number: str) -> None:
-    """A phone number is E.164: ``+``, a country code, then digits only."""
+    """A phone number is E.164: `+`, a country code, then digits only."""
     contact = {**EMAIL_CONTACT, "kind": "tel", "value": number}
     with pytest.raises(YearDataError, match=r"\.value: expected an E\.164 number"):
         load_with(tmp_path, contacts=[contact])
@@ -281,7 +281,7 @@ def test_an_e164_tel_loads(tmp_path: Path) -> None:
 def test_a_value_its_kind_cannot_open_is_refused(
     tmp_path: Path, kind: str, value: str
 ) -> None:
-    """An address is an address and a web page an ``https://`` URL."""
+    """An address is an address and a web page an `https://` URL."""
     contact = {**EMAIL_CONTACT, "kind": kind, "value": value}
     with pytest.raises(YearDataError, match=r"safety_contacts\[0\]\.value"):
         load_with(tmp_path, contacts=[contact])
@@ -294,7 +294,7 @@ def test_an_unknown_kind_is_refused(tmp_path: Path) -> None:
 
 
 def test_two_contacts_of_one_kind_are_refused(tmp_path: Path) -> None:
-    """One contact per kind: the row's identifier is ``help.report.<kind>``."""
+    """One contact per kind: the row's identifier is `help.report.<kind>`."""
     with pytest.raises(YearDataError, match=r"\[1\]\.kind: duplicate kind 'mailto'"):
         load_with(tmp_path, contacts=[EMAIL_CONTACT, EMAIL_CONTACT])
 
@@ -307,7 +307,7 @@ def test_a_blank_label_is_refused(tmp_path: Path) -> None:
 
 @pytest.mark.parametrize("key", ["in_person", "info_desk", "coc_summary"])
 def test_a_blank_help_line_is_refused(tmp_path: Path, key: str) -> None:
-    """Every line of ``[help]`` says something."""
+    """Every line of `[help]` says something."""
     with pytest.raises(YearDataError, match=rf"help\.{key}: is empty"):
         load_with(
             tmp_path, contacts=[EMAIL_CONTACT], help_table={**help_2026(), key: ""}
@@ -316,7 +316,7 @@ def test_a_blank_help_line_is_refused(tmp_path: Path, key: str) -> None:
 
 @pytest.mark.parametrize("key", ["coc_url", "procedures_url"])
 def test_a_help_link_that_is_not_https_is_refused(tmp_path: Path, key: str) -> None:
-    """The Code of Conduct's links are ``https://`` pages."""
+    """The Code of Conduct's links are `https://` pages."""
     with pytest.raises(YearDataError, match=rf"help\.{key}: expected an https"):
         load_with(
             tmp_path,
@@ -326,14 +326,14 @@ def test_a_help_link_that_is_not_https_is_refused(tmp_path: Path, key: str) -> N
 
 
 def test_2026_bundles_the_wifi_its_feed_block_names() -> None:
-    """2026's ``[wifi]`` holds the network and password of the feed's own block."""
+    """2026's `[wifi]` holds the network and password of the feed's own block."""
     assert load_year(2026).content.wifi == WifiInfo("PyConUS26", "pyconLB2026")
     block = processed(2026).content_md["wifi"]
     assert "`PyConUS26`" in block and "`pyconLB2026`" in block
 
 
 def test_2025_has_no_wifi_table() -> None:
-    """2025 bundles no Wi-Fi: its page falls back to the feed (``ui.info_page``)."""
+    """2025 bundles no Wi-Fi: its page falls back to the feed (`ui.info_page`)."""
     assert load_year(2025).content.wifi is None
 
 
@@ -352,7 +352,7 @@ def test_a_blank_wifi_value_is_refused_naming_the_file_and_key(
 
 
 def test_a_blank_wifi_value_in_the_file_fails_the_load(tmp_path: Path) -> None:
-    """The rule runs on load: a ``[wifi]`` with an empty password fails ``load_year()``."""
+    """The rule runs on load: a `[wifi]` with an empty password fails `load_year()`."""
     shutil.copytree(config.DATA_DIR / "2026", tmp_path / "2026")
     content = tmp_path / "2026" / "content.toml"
     text = content.read_text()
@@ -363,6 +363,6 @@ def test_a_blank_wifi_value_in_the_file_fails_the_load(tmp_path: Path) -> None:
 
 
 def test_a_wifi_table_needs_both_values() -> None:
-    """The schema refuses a ``[wifi]`` without its password, naming the key."""
+    """The schema refuses a `[wifi]` without its password, naming the key."""
     with pytest.raises(YearDataError, match=r"^2026/content.toml: wifi.password: "):
         build(Content, {"wifi": {"network": "PyConUS26"}}, "2026/content.toml")

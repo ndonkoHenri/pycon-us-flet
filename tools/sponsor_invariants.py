@@ -1,6 +1,6 @@
 """The sponsor and job-listing invariants of a processed feed (D-77, D-261).
 
-They are part of ``tools/feed_invariants.py``'s ``INVARIANTS``, which lists them in the
+They are part of `tools/feed_invariants.py`'s `INVARIANTS`, which lists them in the
 order of testing-and-quality.md §3.3; they live here so that module stays under D-66's
 ~400 lines as P2 adds sponsor and expo checks (#492).
 """
@@ -60,7 +60,7 @@ def sponsor_levels_are_sorted_and_not_empty(feed: ProcessedFeed) -> list[str]:
 
 
 def job_listings_name_a_sponsor(feed: ProcessedFeed) -> list[str]:
-    """SPON-05: every job listing names a sponsor exactly, as ``jobs.listings_of`` finds it.
+    """SPON-05: every job listing names a sponsor exactly, as `jobs.listings_of` finds it.
 
     A listing carries its sponsor's name, not a slug (D-278), so a name the sponsors do
     not have would leave its roles on no sponsor's page.

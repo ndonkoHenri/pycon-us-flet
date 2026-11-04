@@ -2,23 +2,23 @@
 
 One scrolling list (D-254, ux.md §6.3; MAP-04, SPON-10), never a split pane: at the
 largest text a viewer over a list leaves the list no room (#331), and a zoom layer in a
-page that scrolls fights its pans (MAP-01). So the plan is a card, ``job_fair_card()``,
-that pushes the floor viewer at ``…/plan/job-fair`` (no pins), and under it:
+page that scrolls fights its pans (MAP-01). So the plan is a card, `job_fair_card()`,
+that pushes the floor viewer at `…/plan/job-fair` (no pins), and under it:
 
-- **The note** (``map.toml``'s ``note`` on the ``job-fair`` plan): why the rows and the
+- **The note** (`map.toml`'s `note` on the `job-fair` plan): why the rows and the
   print disagree, a paragraph that wraps with no line limit, only when the year has one.
 - **Tables** (a level-2 heading), then a row per sponsor with a table
-  (``core.expo.job_fair_tables()``), in natural table order, a shared table's sponsors
+  (`core.expo.job_fair_tables()`), in natural table order, a shared table's sponsors
   together by name: "T2 · Bloomberg · 15 open roles" (the count only when its listings
   have roles), one node read "Table T2, Bloomberg, 15 open roles", a button that pushes
-  the sponsor (``…/sponsor/<slug>``), so Back returns to the pane; beside it a 48 dp
-  ``MAP_OUTLINED`` button of its own, "Show table T2 on the plan", that pushes
-  ``…/plan/job-fair?table=T2`` with the table selected (#464).
+  the sponsor (`…/sponsor/<slug>`), so Back returns to the pane; beside it a 48 dp
+  `MAP_OUTLINED` button of its own, "Show table T2 on the plan", that pushes
+  `…/plan/job-fair?table=T2` with the table selected (#464).
 
 The rows follow the feed, which a refresh can correct during the conference; the image
 changes only with a build. Without data the pane loads and fails as Rooms does (ux.md
 §4.1), the card kept, since the plan is bundled; a feed without tables says "No job fair
-tables yet". The Map (``screens/map.py``) shows it under its tab bar.
+tables yet". The Map (`screens/map.py`) shows it under its tab bar.
 """
 
 import flet as ft
@@ -42,7 +42,7 @@ SCREEN = "map"
 """The screen's name in its semantics identifiers (decisions §M)."""
 
 JOB_FAIR = JOB_FAIR_PLAN
-"""The pane's slug: its ``?tab=`` value, its list's key and its tab's identifier."""
+"""The pane's slug: its `?tab=` value, its list's key and its tab's identifier."""
 
 TABLES = "Tables"
 """The heading over the rows."""
@@ -52,7 +52,7 @@ def roles_phrase(count: int) -> str:
     """Return "15 open roles" ("1 open role"), or "" for none.
 
     Args:
-        count: The sponsor's open roles (``JobFairTable.roles``).
+        count: The sponsor's open roles (`JobFairTable.roles`).
     """
     if not count:
         return ""
@@ -137,11 +137,11 @@ def JobFairPane(
 def plan_rows(data: MapData) -> list[ft.Control]:
     """Return the pane's head: the job fair plan's card, then the year's note under it.
 
-    The note is a paragraph in ``BODY_MEDIUM`` and ``on_surface_variant`` that wraps
+    The note is a paragraph in `BODY_MEDIUM` and `on_surface_variant` that wraps
     with no line limit (D-254); a year without one, or without the plan, leaves it out.
 
     Args:
-        data: The year's ``map.toml``.
+        data: The year's `map.toml`.
     """
     card = job_fair_card(data, identifier=f"{SCREEN}.job_fair.location")
     plan = data.plan(JOB_FAIR_PLAN)
@@ -167,10 +167,10 @@ def plan_rows(data: MapData) -> list[ft.Control]:
 def table_row(entry: JobFairTable, view_path: str) -> ft.Control:
     """Return one sponsor's row: its table, its name and its open roles, then a chevron.
 
-    Built as a Sponsors row is, not as a ``ListTile``, so it reads as one phrase that
+    Built as a Sponsors row is, not as a `ListTile`, so it reads as one phrase that
     says "Table" where the line says "T2" (D-33); 56 dp for one line, it grows with the
-    text. Identifier ``map.table.<sponsor slug>``: a shared table has two rows. The
-    table's map button follows, a stop of its own (``map.show_table.<sponsor slug>``).
+    text. Identifier `map.table.<sponsor slug>`: a shared table has two rows. The
+    table's map button follows, a stop of its own (`map.show_table.<sponsor slug>`).
 
     Args:
         entry: The sponsor at its table.
