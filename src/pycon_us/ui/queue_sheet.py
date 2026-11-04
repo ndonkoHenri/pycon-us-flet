@@ -19,6 +19,7 @@ exit criterion 2): Ionic's pull-to-refresh synced only pending scans, never fail
   Developer › Data from its Staff queue row, with other accounts' rows (D-412, D-420).
 """
 
+import asyncio
 import time
 from collections.abc import Callable, Sequence
 from dataclasses import dataclass
@@ -48,6 +49,10 @@ from pycon_us.ui.queue_rows import (
     title_row,
 )
 from pycon_us.ui.sync_chip import chip_words
+
+SETTLE_SECONDS = 2.0
+"""How long after the sheet opens its live regions wait: TalkBack speaks one as it
+appears, over the sheet's title, which it was about to read (#1074)."""
 
 CONFIRMED_SHOWN = 20
 """How many of the latest confirmed rows the fold lists."""
@@ -150,6 +155,8 @@ class SheetState:
         blocked: Why Sync now can't send (`sync_blocked()`), or None.
         asked: Sync now was tapped and its pass hasn't reported yet.
         confirmed_open: Whether the confirmed rows' fold is open.
+        live: The summary and the fold's header are live regions: not until the sheet
+            has settled (`SETTLE_SECONDS`).
     """
 
     staff: Staff
@@ -157,6 +164,7 @@ class SheetState:
     blocked: str | None = None
     asked: bool = False
     confirmed_open: bool = False
+    live: bool = True
 
 
 def queue_sheet(
@@ -202,7 +210,7 @@ def queue_sheet(
         title_row(on_close),
         ft.Semantics(
             identifier="staff.queue.summary",
-            live_region=True,  # each pass's outcome is said
+            live_region=state.live,  # each pass's outcome is said
             content=ft.Text(
                 summary(staff, now), theme_style=ft.TextThemeStyle.BODY_MEDIUM
             ),
@@ -229,6 +237,7 @@ def queue_sheet(
                 on_change=on_confirmed,
                 style=style,
                 identifier="staff.queue.confirmed",
+                live=state.live,
             )
         )
     if queue.others:
@@ -317,6 +326,7 @@ def use_queue_sheet(*, others: bool = False) -> QueueSheet:
     confirmed_open, set_confirmed_open = ft.use_state(False)
     kicked: MutableRef[int | None] = ft.use_ref(None)
     _, set_kicked_at = ft.use_state(-1)  # a re-render, so Sync now disables at once
+    live, set_live = ft.use_state(False)
     owner = account.owner if account.signed_in else None
     queue = ft.use_memo(
         lambda: (
@@ -348,6 +358,16 @@ def use_queue_sheet(*, others: bool = False) -> QueueSheet:
             staff.retry_failed(svc.outbox, owner, time.time())
             svc.kick_sync()
 
+    @report_errors
+    async def settle() -> None:
+        """Make the sheet's live regions live once it has settled (#1074)."""
+        set_live(False)
+        if is_open:
+            await asyncio.sleep(SETTLE_SECONDS)
+            set_live(True)
+
+    ft.use_effect(settle, [is_open])
+
     ft.use_dialog(
         queue_sheet(
             queue,
@@ -357,6 +377,7 @@ def use_queue_sheet(*, others: bool = False) -> QueueSheet:
                 blocked=sync_blocked(svc, account),
                 asked=kicked.current == staff.revision,
                 confirmed_open=confirmed_open,
+                live=live,
             ),
             tokens=tokens,
             style=expand_style(prefs),
