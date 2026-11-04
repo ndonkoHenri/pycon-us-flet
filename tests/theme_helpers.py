@@ -51,6 +51,9 @@ FLET_THEME_DART = "lib/src/utils/theme.dart"
 
 AA_TEXT = 4.5
 
+AAA_TEXT = 7.0
+"""High contrast's text minimum (D-23, D-33)."""
+
 TEXT_TOKENS = ("live", "warning", "success", "favorite")
 """The tokens that are a text colour on the surfaces; the others are badges."""
 
