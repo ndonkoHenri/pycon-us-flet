@@ -4,8 +4,8 @@ The tool runs in a real Flet session over the mock's transport, as in
 `tests/test_staff_coc.py`, whose fixtures these share, with the clear's timer held
 (`tests/scan_rig.py`). A result clears 15 s after the reply shows it, never counted
 from the request; the background clears it and closes the name search, and a reply
-that lands there shows nothing, while an open review keeps its notes; "Show email" reveals the reply's email outside the live region
-until "Hide email", the next result or the clear; and no log line holds it (D-72).
+that lands there shows nothing, while an open review keeps its notes; "Show email" reveals the reply's email outside
+the live region until "Hide email", the next result or the clear; and no log line holds it (D-72).
 """
 
 import asyncio

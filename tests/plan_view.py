@@ -103,8 +103,8 @@ async def render(
     """Yield a function that opens `PlanViewer` at a route and returns its `Plan`.
 
     The plan is the Concourse level unless `plan_id` names another; reduced motion,
-    the view memory and the `Conference` (no feed by default) can be set too. The pulse's waits are held and the viewer's
-    methods are `FakeViewer`'s.
+    the view memory and the `Conference` (no feed by default) can be set too. The pulse's waits are held and the
+    viewer's methods are `FakeViewer`'s.
     """
     sleeps = HeldSleeps()
     monkeypatch.setattr(screen, "asyncio", sleeps)  # the plan module's name only

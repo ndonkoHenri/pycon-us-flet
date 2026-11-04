@@ -2,8 +2,8 @@
 
 Pure: `screens/schedule_layout.py` measures and `screens/schedule_place.py`
 scrolls. A list keeps its pixel offset, not the rows at that offset, so when the text
-grows every row above the top grows with it and earlier rows show (#337, F70). The place is therefore the item at the top and how
-far into it, which a keyed jump puts back once the list has its new heights:
+grows every row above the top grows with it and earlier rows show (#337, F70). The place is therefore the item at
+the top and how far into it, which a keyed jump puts back once the list has its new heights:
 
 - `Place`: that item's key, how far into it the top was, its height then, the offset
   where it was found, and whether the slots had their time above their rows;

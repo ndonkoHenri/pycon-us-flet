@@ -123,6 +123,7 @@ extend-select = [
     "SIM",    # simplify
     "D",      # docstrings (D-74)
     "DTZ",    # no naive datetimes (D-43)
+    "E",      # pycodestyle errors; E501 at 120 columns, the length the prose already keeps
     "W",      # pycodestyle warnings
     "PIE",    # misc. clutter: unneeded pass, range start, dict spread
     "RET",    # return statements: no else after return, no unneeded variable
@@ -135,6 +136,16 @@ extend-select = [
     "FURB",   # refurb: modern idioms of the standard library
     "FLY",    # flynt: no `"".join` of constants where an f-string reads better
 ]
+
+ignore = [
+    "SIM108",   # at 120 columns it asks for ternaries that do not read better (nested conditions in theme.py)
+]
+
+[tool.ruff.lint.pycodestyle]
+max-line-length = 120             # code is formatted at ruff's 88; docstrings and comments run to 120
+
+[tool.ruff.lint.per-file-ignores]
+"docs/spikes/**" = ["E402", "E501"]   # frozen spike scripts: sys.path set up before their imports; one long line
 
 [tool.ruff.lint.pydocstyle]
 convention = "google"

@@ -7,8 +7,8 @@ started its 5 s when the request left, so a slow reply could vanish unseen), and
 the app goes to the background (`Services.background`, set on `pause`, D-420). The
 panel then says "Ready to scan" again and the result leaves the screen's state, not
 just the view; a reply that lands while the app is in the background is not shown at
-all (the tool's own work, such as recording, still completes). A clear is no result: no haptics, no announcement, and the panel is no
-live region while it is empty, so TalkBack says nothing either.
+all (the tool's own work, such as recording, still completes). A clear is no result: no haptics, no announcement,
+and the panel is no live region while it is empty, so TalkBack says nothing either.
 
 Flet has no secure-screen flag (`FLAG_SECURE`, the iOS app-switcher blur; U270), and
 the OS may take its app-switcher snapshot before the clear lands: this is the interim.
