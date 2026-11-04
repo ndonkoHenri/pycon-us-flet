@@ -41,6 +41,12 @@ EXPIRED = "Your sign-in has expired. Sign in again to keep using staff tools and
 MOCK_LINE = "Connected to the local mock server"
 """Where the email and password go: never the PSF's server (D-51)."""
 
+REVEAL = "Show password"
+"""The reveal button's name while the password is hidden."""
+
+CONCEAL = "Hide password"
+"""The reveal button's name while the password shows."""
+
 ERRORS = {
     SignIn.WRONG_CREDENTIALS: "Email or password is incorrect.",
     SignIn.OFFLINE: "You're offline. Connect and try again.",
@@ -87,6 +93,7 @@ def SignInPage() -> ft.View:
     # and only then does the page go, from the effect, so leaving after a failed try
     # never offers to save a wrong password (CANCEL until then).
     signed_in, set_signed_in = ft.use_state("")
+    revealed, set_revealed = ft.use_state(False)
 
     @report_errors
     async def leave() -> None:
@@ -201,8 +208,22 @@ def SignInPage() -> ft.View:
                                         on_change=password.changed,
                                         on_submit=sign_in,
                                         label="Password",
-                                        password=True,
-                                        can_reveal_password=True,
+                                        password=not revealed,
+                                        # Not `can_reveal_password`: Flet's icon has
+                                        # no name or role, and TalkBack says
+                                        # "Unlabelled" (#1087).
+                                        suffix_icon=named(
+                                            "sign_in.reveal",
+                                            ft.IconButton(
+                                                ft.Icons.VISIBILITY_OFF
+                                                if revealed
+                                                else ft.Icons.VISIBILITY,
+                                                tooltip=CONCEAL if revealed else REVEAL,
+                                                on_click=lambda: set_revealed(
+                                                    not revealed
+                                                ),
+                                            ),
+                                        ),
                                         autofill_hints=[ft.AutofillHint.PASSWORD],
                                         autocorrect=False,
                                         enable_suggestions=False,
