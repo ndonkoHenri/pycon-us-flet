@@ -1,0 +1,60 @@
+# Spike S9 (#363): can the flows in tests/ui run with `flet test linux` under xvfb? On the spike branch only, never merged.
+name: Spike flet test linux
+
+on:
+  push:
+    branches: [test/363-flet-test-linux]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: spike-flet-test-linux
+  cancel-in-progress: true
+
+env:
+  UV_LOCKED: "1"
+
+jobs:
+  flows:
+    name: flet test linux
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    steps:
+      - name: Check out the app
+        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
+        with:
+          persist-credentials: false
+      - name: Set up uv
+        uses: astral-sh/setup-uv@11f9893b081a58869d3b5fccaea48c9e9e46f990 # v8.3.2
+        with:
+          version: "0.12.x"
+          enable-cache: true
+      - name: Install
+        run: uv sync --locked
+      - name: Flutter's Linux dependencies
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq clang cmake ninja-build pkg-config libgtk-3-dev liblzma-dev libstdc++-12-dev \
+            libsecret-1-dev libjsoncpp-dev libgstreamer1.0-dev libgstreamer-plugins-base1.0-dev libunwind-dev \
+            xvfb gnome-keyring dbus-x11 libmpv-dev mpv
+      - name: Run the flows
+        env:
+          FLET_CLI_NO_RICH_OUTPUT: "1"
+        run: |
+          xvfb-run -a -s "-screen 0 1280x1024x24" dbus-run-session -- bash -c '
+            echo -n "" | gnome-keyring-daemon --unlock --components=secrets
+            uv run flet test linux --tests-dir tests/ui --yes -v
+          ' 2>&1 | tee build-flows.log
+          exit "${PIPESTATUS[0]}"
+      - name: Upload the flows' screenshots
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: flows-${{ github.run_attempt }}
+          path: |
+            build/ui
+            build-flows.log
+          retention-days: 7
+          if-no-files-found: ignore
