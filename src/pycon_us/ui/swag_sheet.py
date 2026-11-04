@@ -1,28 +1,28 @@
 """The hand-out sheet: what a Swag pickup scan can take, pre-ticked, one tap away (#769).
 
 ux.md §7.3 (SHIRT-03, SHIRT-04; O-7). Ionic's Redeem Products modal made staff tick
-each item and reported in a toast; here a modal ``BottomSheet`` with a drag handle,
+each item and reported in a toast; here a modal `BottomSheet` with a drag handle,
 everything scrolling together so Hand out stays in reach at 200 % text, as the lead
-note sheet (``ui/lead_note_sheet.py``):
+note sheet (`ui/lead_note_sheet.py`):
 
 - a level-1 heading "Hand out to Ada Example";
-- per category, alphabetically, a level-2 heading and a ``Checkbox`` row per item,
-  "2× T-Shirt (M)" (``swag.item.<product_id>``; the whole row toggles it, one stop
+- per category, alphabetically, a level-2 heading and a `Checkbox` row per item,
+  "2× T-Shirt (M)" (`swag.item.<product_id>`; the whole row toggles it, one stop
   read with its state). A product is all or nothing, as the API redeems it. Items
   left are ticked as the sheet opens; one picked up is disabled with "Picked up"
   under it, and one partly picked up says "1 already picked up";
-- Cancel (``swag.cancel``) and ``FilledButton("Hand out 3 items")`` (``swag.hand_out``),
+- Cancel (`swag.cancel`) and `FilledButton("Hand out 3 items")` (`swag.hand_out`),
   whose words follow the ticks, disabled at none.
 
-``use_swag_sheet()`` is Swag pickup's hook. Its ``offer`` opens the sheet for a
-lookup's ``Offer`` and waits until it closes: Hand out sends ``swag.hand_out()`` once
+`use_swag_sheet()` is Swag pickup's hook. Its `offer` opens the sheet for a
+lookup's `Offer` and waits until it closes: Hand out sends `swag.hand_out()` once
 (a ring and "Handing out…" meanwhile; a second tap sends nothing) and returns its
 result for the panel; Cancel, Back or a swipe returns None and sends nothing.
 
 Two client events need care. Flutter reports a sheet's dismissal after its exit
 animation, which may be after the next attendee's sheet opened: each opening carries a
 token, and a dismissal for another one is ignored. And the pinned Flet reads
-``dismissible`` only as the sheet opens, so ``False`` while sending can't lock a sheet
+`dismissible` only as the sheet opens, so `False` while sending can't lock a sheet
 already open: a scrim tap or Back while sending closes it on the client, but the
 hand-out stays in progress (and scanning paused) until its answer settles it (#782).
 """
@@ -106,12 +106,12 @@ def swag_sheet(
     high_contrast: bool = False,
     reduce_motion: bool = False,
 ) -> ft.BottomSheet:
-    """Return the hand-out sheet for ``handing`` (ux.md §7.3).
+    """Return the hand-out sheet for `handing` (ux.md §7.3).
 
     Args:
         handing: The offer and the ticks.
         actions: The handlers.
-        high_contrast: HC is on screen: a 1 dp ``outline`` edge draws the sheet.
+        high_contrast: HC is on screen: a 1 dp `outline` edge draws the sheet.
         reduce_motion: The sheet appears without its slide (D-34, D-173).
     """
     body: list[ft.Control] = [heading(f"Hand out to {handing.offer.name}", 1)]
@@ -167,7 +167,7 @@ def item_row(
 ) -> ft.Control:
     """Return an item's checkbox row: one stop read with its words and state.
 
-    A ``ListTile`` with a leading ``Checkbox``, as the consent's row: its title
+    A `ListTile` with a leading `Checkbox`, as the consent's row: its title
     wraps at 200 % text and a tap anywhere toggles it. An item picked up is disabled
     and says so, so a screen reader says why.
 
@@ -232,11 +232,11 @@ def hand_out_button(
 
 @dataclass(frozen=True)
 class SwagSheet:
-    """What Swag pickup gets from ``use_swag_sheet()``.
+    """What Swag pickup gets from `use_swag_sheet()`.
 
     Attributes:
         offer: Opens the sheet for an offer; returns the hand-out's result, or None
-            when it was cancelled (``swag.OfferHandler``).
+            when it was cancelled (`swag.OfferHandler`).
         is_open: The sheet is open: the scan screen pauses scanning meanwhile.
     """
 
@@ -248,7 +248,7 @@ def use_swag_sheet() -> SwagSheet:
     """Keep the sheet's offer and ticks, show it while open; return what opens it.
 
     Call it on every render (D-70). The handlers read the ticks from a ref, since a
-    render may not run between two events (#756). The ``offer`` call waits on a
+    render may not run between two events (#756). The `offer` call waits on a
     future the sheet's closing resolves; an unmount resolves it with None, and an
     offer after it (a lookup that answered late) returns None at once, so the scan
     screen's handler never hangs.
@@ -269,7 +269,7 @@ def use_swag_sheet() -> SwagSheet:
 
     @report_errors
     def settle(result: ScanResult | None) -> None:
-        """Hand ``result`` to the waiting ``offer`` call, if one waits."""
+        """Hand `result` to the waiting `offer` call, if one waits."""
         waiting, pending.current = pending.current, None
         if waiting is not None and not waiting.done():
             waiting.set_result(result)

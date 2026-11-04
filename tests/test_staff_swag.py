@@ -1,9 +1,9 @@
-"""Tests for Swag pickup's screen, ``screens/staff_swag.py`` (SHIRT-01, SHIRT-02, SHIRT-04).
+"""Tests for Swag pickup's screen, `screens/staff_swag.py` (SHIRT-01, SHIRT-02, SHIRT-04).
 
-The screen runs in a real Flet session (``tests/harness.py``) over the mock's own
+The screen runs in a real Flet session (`tests/harness.py`) over the mock's own
 transport, signed with the seeded staff account's key, so the categories and lookups
-are what the mock's ``handle()`` answers. The connection the screen sees is a stand-in
-for ``use_online()`` the test flips. Pinned: the chips' states, the stored choice and
+are what the mock's `handle()` answers. The connection the screen sees is a stand-in
+for `use_online()` the test flips. Pinned: the chips' states, the stored choice and
 its relaunch, the pauses (no category, offline), a scan's result, the fetch tried again
 when the connection returns, and the rule.
 """
@@ -59,32 +59,32 @@ type Show = Callable[..., Awaitable[Shown]]
 
 
 class Switch(httpx.AsyncBaseTransport):
-    """The mock's transport, or no connection while ``offline`` is set."""
+    """The mock's transport, or no connection while `offline` is set."""
 
     def __init__(self, inner: httpx.AsyncBaseTransport) -> None:
-        """Answer through ``inner``, online."""
+        """Answer through `inner`, online."""
         self.inner = inner
         self.offline = False
 
     async def handle_async_request(self, request: httpx.Request) -> httpx.Response:
-        """Raise ``ConnectError`` offline, else let ``inner`` answer."""
+        """Raise `ConnectError` offline, else let `inner` answer."""
         if self.offline:
             raise httpx.ConnectError("offline", request=request)
         return await self.inner.handle_async_request(request)
 
 
 class HungOnce(httpx.AsyncBaseTransport):
-    """The mock, but its first request hangs until ``release``, then times out."""
+    """The mock, but its first request hangs until `release`, then times out."""
 
     def __init__(self, inner: httpx.AsyncBaseTransport) -> None:
-        """Answer through ``inner``, the first request excepted."""
+        """Answer through `inner`, the first request excepted."""
         self.inner = inner
         self.release = asyncio.Event()
         self.hung = False
         self.cancelled = False
 
     async def handle_async_request(self, request: httpx.Request) -> httpx.Response:
-        """Hang the first request and record its cancelling; let ``inner`` answer the rest."""
+        """Hang the first request and record its cancelling; let `inner` answer the rest."""
         if self.hung:
             return await self.inner.handle_async_request(request)
         self.hung = True
@@ -97,7 +97,7 @@ class HungOnce(httpx.AsyncBaseTransport):
 
 
 class Online:
-    """The connection the screen sees: a hook in place of ``use_online()``."""
+    """The connection the screen sees: a hook in place of `use_online()`."""
 
     def __init__(self) -> None:
         """Start online, with no screen rendered yet."""
@@ -120,7 +120,7 @@ class Online:
 
 
 def staff(*, door_check: bool = True, signed_in: bool = True) -> Account:
-    """An ``Account``: door staff, signed in, by default."""
+    """An `Account`: door staff, signed in, by default."""
     return Account(
         signed_in=signed_in,
         email="staff@example.com",
@@ -147,7 +147,7 @@ def fetches(monkeypatch: pytest.MonkeyPatch) -> list[ApiClient]:
     """The catalog fetches the screen started, one client each.
 
     Counted here, not at the transport: the mock's fixed clock makes a fetch send two
-    requests, the first refused for its skew (``ApiClient.request``).
+    requests, the first refused for its skew (`ApiClient.request`).
     """
     started: list[ApiClient] = []
     fetch = staff_swag.fetch_catalog
@@ -175,9 +175,9 @@ async def show(
     online: Online,
     stored: dict[str, Any],
 ) -> AsyncIterator[Show]:
-    """Return a function that renders Swag pickup for an account over ``switch``.
+    """Return a function that renders Swag pickup for an account over `switch`.
 
-    Its sessions share ``stored``, so a second render is a relaunch; ``mock_url``
+    Its sessions share `stored`, so a second render is a relaunch; `mock_url`
     False leaves the mock URL unset (D-51).
     """
 
@@ -190,7 +190,7 @@ async def show(
     def sharing(
         year: YearData, directory: Path, memory: ViewMemory | None = None
     ) -> Services:
-        """Return the memory services over the test's one ``stored``."""
+        """Return the memory services over the test's one `stored`."""
         svc = memory_services(year, directory, memory)
         cast(MemoryPrefs, svc.storage.prefs).values = stored
         return svc
@@ -202,7 +202,7 @@ async def show(
         async def render(
             account: Account | None = None, *, mock_url: bool = True
         ) -> Shown:
-            """Render the route signed in as ``account``, door staff by default."""
+            """Render the route signed in as `account`, door staff by default."""
             private_api = PrivateApi(switch, credentials=Login(who.key, who.secret))
             await private_api.connect(BASE_URL, 2026)
             prefs = Prefs(loaded=True)
@@ -230,7 +230,7 @@ async def show(
 
 
 def chip(shown: Shown, ident: int) -> ft.Chip:
-    """The chip of the category ``ident``, as its identifier names it."""
+    """The chip of the category `ident`, as its identifier names it."""
     return cast(ft.Chip, shown.node(f"swag.category.{ident}").content)
 
 
@@ -268,7 +268,7 @@ async def test_a_choice_is_stored_scans_and_survives_a_relaunch(
 ) -> None:
     """Both chips chosen: stored as ids, Margaret nothing; kept next time.
 
-    Items left open the hand-out sheet: ``tests/test_swag_sheet.py``.
+    Items left open the hand-out sheet: `tests/test_swag_sheet.py`.
     """
     shown = await show()
     await tap(shown, 3)
@@ -421,10 +421,10 @@ async def test_the_catalog_shows_a_progress_line_while_it_loads(
     inner = switch.inner
 
     class Slow(httpx.AsyncBaseTransport):
-        """The mock, answering once ``held`` is set."""
+        """The mock, answering once `held` is set."""
 
         async def handle_async_request(self, request: httpx.Request) -> httpx.Response:
-            """Wait for ``held``, then let the mock answer."""
+            """Wait for `held`, then let the mock answer."""
             await held.wait()
             return await inner.handle_async_request(request)
 
@@ -448,7 +448,7 @@ async def test_the_chips_wait_for_the_stored_choice(
     async def slow(
         self: MemoryPrefs, method_name: str, *args: Any, **kwargs: Any
     ) -> Any:
-        """Hold the choice's read until ``held`` is set, as a slow first read would."""
+        """Hold the choice's read until `held` is set, as a slow first read would."""
         arguments = args[0] if args else kwargs.get("arguments")
         if method_name == "get" and arguments == {
             "key": staff_swag_categories(2026).key
@@ -489,7 +489,7 @@ async def test_a_failed_save_says_so_and_keeps_the_choice_for_the_visit(
 async def test_a_refused_account_sees_not_available(
     show: Show, account: Account, mock_url: bool
 ) -> None:
-    """No ``door_check``, signed out or no mock URL: no chips, no scan field (D-51)."""
+    """No `door_check`, signed out or no mock URL: no chips, no scan field (D-51)."""
     shown = await show(account, mock_url=mock_url)
     assert NOT_AVAILABLE in shown.texts()
     assert not shown.find(ft.TextField)

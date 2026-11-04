@@ -1,7 +1,7 @@
 """A SnackBar shown from a pushed View is seen on that View, and its Undo works (#197).
 
 Session detail is a pushed View (D-141, D-144). Unstarring there shows "Removed from
-My schedule" with Undo (D-30, D-184), through ``page.show_dialog`` like every SnackBar
+My schedule" with Undo (D-30, D-184), through `page.show_dialog` like every SnackBar
 in the app. Finders skip offstage widgets (testing-and-quality.md §5.1), and the tab
 root under a finished push is offstage, so finding the SnackBar's text and its Undo
 proves they are drawn on the View the user is looking at (D-210, F48).
@@ -39,7 +39,7 @@ the SnackBar's 250 ms entrance: a tap on Undo while the bar slides in misses it 
 the iOS simulator the first try tapped a bar 5 dp tall)."""
 
 REMOVED = "Removed from My schedule"
-"""The removal's SnackBar (``ui.favorite.REMOVED``), written out as a person reads it."""
+"""The removal's SnackBar (`ui.favorite.REMOVED`), written out as a person reads it."""
 
 
 @cache
@@ -105,10 +105,10 @@ async def test_snackbar_from_session_detail_shows_on_session_detail(
 
 
 async def settle(t: RemoteTester) -> None:
-    """Wait ``SETTLE_SECONDS`` of real time, then let the app draw a frame.
+    """Wait `SETTLE_SECONDS` of real time, then let the app draw a frame.
 
-    ``RemoteTester.pump(duration)`` does not wait that long on a device: the tap that
-    followed ``pump(1 s)`` landed while the SnackBar was still sliding in.
+    `RemoteTester.pump(duration)` does not wait that long on a device: the tap that
+    followed `pump(1 s)` landed while the SnackBar was still sliding in.
     """
     await asyncio.sleep(SETTLE_SECONDS)
     await t.pump(STEP)

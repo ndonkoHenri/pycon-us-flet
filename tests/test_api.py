@@ -1,6 +1,6 @@
 """Tests for the public feed fetch and its two errors (DATA-01; D-53).
 
-Every response comes from an ``httpx.MockTransport``, never the network.
+Every response comes from an `httpx.MockTransport`, never the network.
 """
 
 import httpx
@@ -60,7 +60,7 @@ async def test_a_redirect_is_followed() -> None:
     ids=lambda error: type(error).__name__,
 )
 async def test_no_answer_is_a_network_error(error: httpx.TransportError) -> None:
-    """A transport error raises ``NetworkError`` naming the error's type."""
+    """A transport error raises `NetworkError` naming the error's type."""
 
     def handle(request: httpx.Request) -> httpx.Response:
         raise error
@@ -71,7 +71,7 @@ async def test_no_answer_is_a_network_error(error: httpx.TransportError) -> None
 
 @pytest.mark.parametrize("status", [404, 500, 503])
 async def test_an_error_status_is_an_api_error_with_its_status(status: int) -> None:
-    """A 404, 500 or 503 raises ``ApiError`` with that status, first in its message."""
+    """A 404, 500 or 503 raises `ApiError` with that status, first in its message."""
 
     def handle(request: httpx.Request) -> httpx.Response:
         return httpx.Response(status, content=b"<html>down</html>")
@@ -83,7 +83,7 @@ async def test_an_error_status_is_an_api_error_with_its_status(status: int) -> N
 
 
 async def test_a_redirect_loop_is_an_api_error_without_a_status() -> None:
-    """A redirect loop raises ``ApiError`` for ``TooManyRedirects``, with no status."""
+    """A redirect loop raises `ApiError` for `TooManyRedirects`, with no status."""
 
     def handle(request: httpx.Request) -> httpx.Response:
         return httpx.Response(302, headers={"Location": URL})
@@ -98,7 +98,7 @@ async def test_without_a_transport_the_tests_guard_refuses_the_connection(
 ) -> None:
     """In tests, a fetch with httpx's own transport connects nowhere (#539).
 
-    ``conftest.py``'s guard raises ``ConnectError``, which the fetch reports as no
+    `conftest.py`'s guard raises `ConnectError`, which the fetch reports as no
     answer, and records the URL, for which the guard fails the test at teardown.
     """
     with pytest.raises(NetworkError, match="ConnectError"):

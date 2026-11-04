@@ -1,7 +1,7 @@
-"""Tests for ``ui/menus.py``: the overflow menu and its items (F47, D-233).
+"""Tests for `ui/menus.py`: the overflow menu and its items (F47, D-233).
 
-The screens' own tests click the items (``test_session_actions.py``, ``test_sprints.py``,
-``test_track_add_all.py``); these hold the item's shape, which is what makes its
+The screens' own tests click the items (`test_session_actions.py`, `test_sprints.py`,
+`test_track_add_all.py`); these hold the item's shape, which is what makes its
 label wrap at 200 % text, and a scan keeps every menu item on it.
 """
 
@@ -30,16 +30,16 @@ async def go() -> None:
 
 
 def tile_of(item: ft.PopupMenuItem) -> ft.ListTile:
-    """The item's tile, under its identifier's ``Semantics``."""
+    """The item's tile, under its identifier's `Semantics`."""
     return cast(ft.ListTile, cast(ft.Semantics, item.content).content)
 
 
 def test_an_items_label_is_a_tile_title_that_wraps_beside_its_icon() -> None:
-    """An item's label is a tile's title that wraps, with its icon as ``leading``.
+    """An item's label is a tile's title that wraps, with its icon as `leading`.
 
-    F47: ``PopupMenuItem.icon`` sits in a ``Row`` whose text cannot wrap, so the item
-    has no ``icon``; the icon sits beside the title's first line by the theme's
-    ``TITLE_HEIGHT`` (D-188).
+    F47: `PopupMenuItem.icon` sits in a `Row` whose text cannot wrap, so the item
+    has no `icon`; the icon sits beside the title's first line by the theme's
+    `TITLE_HEIGHT` (D-188).
     """
     item = menu_item(ft.Icons.PLAYLIST_ADD, LABEL, go, identifier="track.add_all")
     assert item.icon is None
@@ -84,7 +84,7 @@ def test_a_link_item_is_a_link_read_opens_in_browser_after_its_words() -> None:
 
 
 def test_an_item_that_stays_in_the_app_is_no_link() -> None:
-    """Without ``link``, the title is a plain ``Text`` with no "Opens in browser"."""
+    """Without `link`, the title is a plain `Text` with no "Opens in browser"."""
     item = menu_item(ft.Icons.PLAYLIST_ADD, LABEL, go, identifier="track.add_all")
     title = tile_of(item).title
     assert isinstance(title, ft.Text)  # no link Semantics around it
@@ -110,7 +110,7 @@ SOURCES = sorted(Path(pycon_us.__file__).parent.rglob("*.py"))
 
 
 def menu_item_calls(path: Path) -> list[ast.Call]:
-    """Return each ``PopupMenuItem(...)`` call in ``path``, spelled with ``ft.`` or not."""
+    """Return each `PopupMenuItem(...)` call in `path`, spelled with `ft.` or not."""
     tree = ast.parse(path.read_text(encoding="utf-8"))
     return [
         node
@@ -124,13 +124,13 @@ def menu_item_calls(path: Path) -> list[ast.Call]:
 
 
 def test_every_menu_item_is_built_by_menu_item() -> None:
-    """#260: an item built elsewhere could set ``icon=`` and clip its label (F47)."""
+    """#260: an item built elsewhere could set `icon=` and clip its label (F47)."""
     building = {path.name for path in SOURCES if menu_item_calls(path)}
     assert building == {"menus.py"}
 
 
 def test_no_menu_item_sets_an_icon_beside_its_content() -> None:
-    """F47: Flet's ``Row([icon, SizedBox, content])`` has no ``Expanded``."""
+    """F47: Flet's `Row([icon, SizedBox, content])` has no `Expanded`."""
     found = [
         f"{path.name}:{call.lineno}"
         for path in SOURCES

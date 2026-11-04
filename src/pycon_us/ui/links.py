@@ -1,31 +1,31 @@
 """The link rule (INFO-14, ux.md §4.7): what a link's target is and how it opens.
 
-One place for it, used by ``ui.rows.LinkTile`` and by the feed's texts
-(``feed_markdown()``): ``link_kind()`` says what a target is, and ``open_link()`` opens it
+One place for it, used by `ui.rows.LinkTile` and by the feed's texts
+(`feed_markdown()`): `link_kind()` says what a target is, and `open_link()` opens it
 the way that kind opens.
 
-- An in-app page (a location such as ``/more/speakers``) is pushed; its row ends in
-  ``CHEVRON_RIGHT``.
-- A web page opens in the in-app browser view (``LaunchMode.IN_APP_BROWSER_VIEW``), so
-  the attendee stays in context; its row ends in ``OPEN_IN_NEW``.
+- An in-app page (a location such as `/more/speakers`) is pushed; its row ends in
+  `CHEVRON_RIGHT`.
+- A web page opens in the in-app browser view (`LaunchMode.IN_APP_BROWSER_VIEW`), so
+  the attendee stays in context; its row ends in `OPEN_IN_NEW`.
 - A social profile or a map opens in the app that handles it
-  (``LaunchMode.EXTERNAL_APPLICATION``): the caller says so for a web address
-  (``app=True``), and a ``geo:`` link always does; its row ends in ``OPEN_IN_NEW`` too.
-- ``tel:`` and ``mailto:`` hand off to the phone or mail app, and their row has a Copy
-  button beside it (``copy_contact()``): a simulator, an iPad or a phone without a mail
+  (`LaunchMode.EXTERNAL_APPLICATION`): the caller says so for a web address
+  (`app=True`), and a `geo:` link always does; its row ends in `OPEN_IN_NEW` too.
+- `tel:` and `mailto:` hand off to the phone or mail app, and their row has a Copy
+  button beside it (`copy_contact()`): a simulator, an iPad or a phone without a mail
   account has nothing to hand off to, and without U6 the app cannot ask first.
 
-Every copy goes through ``copy_text()``, which confirms it once and says when it fails.
+Every copy goes through `copy_text()`, which confirms it once and says when it fails.
 
 A failure says so in a SnackBar and is logged with the link's kind (for a copy, what
-was not copied) and the error's class only: a ``mailto:`` target holds an address, and
+was not copied) and the error's class only: a `mailto:` target holds an address, and
 the platform's error text repeats the target (D-72).
 
 A link in a feed text (a description, a bio) is what its author wrote, so
-``open_feed_link()`` first asks ``core/links.py``'s ``feed_link()`` which web address it
-stands for, if any (D-197, D-278): only ``http``, ``https`` and ``mailto`` links open, a
+`open_feed_link()` first asks `core/links.py`'s `feed_link()` which web address it
+stands for, if any (D-197, D-278): only `http`, `https` and `mailto` links open, a
 site-relative path joins the year's site, and a web address written without its scheme
-(2026's ``[pytest](pytest.org)``) gets ``https://``.
+(2026's `[pytest](pytest.org)`) gets `https://`.
 """
 
 import logging
@@ -54,9 +54,9 @@ class LinkKind(Enum):
     APP = "app"
     """A social profile or a map: the app that handles it."""
     PHONE = "phone"
-    """A ``tel:`` link: the phone app, with Copy."""
+    """A `tel:` link: the phone app, with Copy."""
     EMAIL = "email"
-    """A ``mailto:`` link: the mail app, with Copy."""
+    """A `mailto:` link: the mail app, with Copy."""
 
 
 LAUNCH_MODES: dict[LinkKind, ft.LaunchMode] = {
@@ -65,13 +65,13 @@ LAUNCH_MODES: dict[LinkKind, ft.LaunchMode] = {
     LinkKind.PHONE: ft.LaunchMode.EXTERNAL_APPLICATION,
     LinkKind.EMAIL: ft.LaunchMode.EXTERNAL_APPLICATION,
 }
-"""How ``UrlLauncher.launch_url`` opens each kind of external link."""
+"""How `UrlLauncher.launch_url` opens each kind of external link."""
 
 OPENS_IN: dict[LinkKind, str] = {
     LinkKind.WEB: "Opens in browser",
     LinkKind.APP: "Opens in another app",
 }
-"""What a screen reader hears after a row that leaves the app: the ``OPEN_IN_NEW``
+"""What a screen reader hears after a row that leaves the app: the `OPEN_IN_NEW`
 icon's label, which visually says the same (D-33). Phone and email rows say it in
 their title ("Call the Code of Conduct hotline")."""
 
@@ -97,21 +97,21 @@ _APP_SCHEMES = (*_WEB_SCHEMES, "geo")
 
 
 def link_kind(target: str, *, app: bool = False) -> LinkKind:
-    """Return what ``target`` is, by the link rule (INFO-14).
+    """Return what `target` is, by the link rule (INFO-14).
 
     Args:
-        target: An app location (``/more/speakers``) or a URL: ``http(s)``, ``geo``,
-            ``tel`` or ``mailto``.
+        target: An app location (`/more/speakers`) or a URL: `http(s)`, `geo`,
+            `tel` or `mailto`.
         app: The web address is a social profile or a map, which opens in the app
             that handles it rather than in the in-app browser. Only a web address (or a
-            ``geo:`` link, which always opens its app) can be marked.
+            `geo:` link, which always opens its app) can be marked.
 
     Returns:
-        The kind; ``LAUNCH_MODES`` says how an external one opens.
+        The kind; `LAUNCH_MODES` says how an external one opens.
 
     Raises:
-        ValueError: ``target`` is none of those, or something other than a web address
-            or a ``geo:`` link is marked ``app``.
+        ValueError: `target` is none of those, or something other than a web address
+            or a `geo:` link is marked `app`.
     """
     scheme = "" if target.startswith("/") else urlsplit(target).scheme.lower()
     if app and scheme not in _APP_SCHEMES:
@@ -130,14 +130,14 @@ def link_kind(target: str, *, app: bool = False) -> LinkKind:
 
 
 def contact_of(target: str) -> str:
-    """Return what Copy copies for a ``tel:`` or ``mailto:`` link.
+    """Return what Copy copies for a `tel:` or `mailto:` link.
 
     Args:
-        target: The link, e.g. ``tel:+1-562-662-4082`` or ``mailto:a@b.org?subject=x``.
+        target: The link, e.g. `tel:+1-562-662-4082` or `mailto:a@b.org?subject=x`.
 
     Returns:
         The number or the address, without the scheme or a query:
-        ``+1-562-662-4082``, ``a@b.org``.
+        `+1-562-662-4082`, `a@b.org`.
     """
     return unquote(urlsplit(target).path)
 
@@ -149,21 +149,21 @@ async def open_link(
     app: bool = False,
     opener: ft.BaseControl | None = None,
 ) -> None:
-    """Open ``target`` by the link rule; call it from an event handler.
+    """Open `target` by the link rule; call it from an event handler.
 
-    A page is pushed. Anything else goes to ``UrlLauncher.launch_url`` with its kind's
+    A page is pushed. Anything else goes to `UrlLauncher.launch_url` with its kind's
     mode; when the platform reports that it could not open it, a SnackBar says
     "Couldn't open the link" (an expected failure, D-71). A phone or a simulator with
-    no app for a ``tel:`` link may also do nothing without saying so, which is why
-    those rows offer Copy. Back from the browser or the other app, ``opener`` gets
-    the focus again (``focus_back()``, D-372): the call returns only then.
+    no app for a `tel:` link may also do nothing without saying so, which is why
+    those rows offer Copy. Back from the browser or the other app, `opener` gets
+    the focus again (`focus_back()`, D-372): the call returns only then.
 
     Args:
         svc: The session's services, for the launcher.
-        target: An app location or a URL (``link_kind()``).
-        app: The web address opens in the app that handles it (``link_kind()``).
-        opener: The button that was tapped, the event's ``control``; None for a row
-            or a menu item, which have no ``focus()`` at the pin (U182).
+        target: An app location or a URL (`link_kind()`).
+        app: The web address opens in the app that handles it (`link_kind()`).
+        opener: The button that was tapped, the event's `control`; None for a row
+            or a menu item, which have no `focus()` at the pin (U182).
     """
     page = ft.context.page
     kind = link_kind(target, app=app)
@@ -184,16 +184,16 @@ async def open_link(
 def external(identifier: str, button: ft.Control) -> ft.Control:
     """Return a button that opens a web page, marked as a link and named for UI flows.
 
-    One merged node, as ``semantics.named()`` makes it (D-190), with the link flag an
+    One merged node, as `semantics.named()` makes it (D-190), with the link flag an
     external row carries (ux.md §4.7): the lightning talks' sign-up and the open
     spaces' "Propose an open space". The button's own words end with "Opens in
-    browser" (``OPENS_IN``), since it leaves the app. As ``named()``, it reads
-    ``button``'s own ``disabled``: a ``Semantics`` passed in its place (for a label)
-    needs the button's ``disabled`` too (F42).
+    browser" (`OPENS_IN`), since it leaves the app. As `named()`, it reads
+    `button`'s own `disabled`: a `Semantics` passed in its place (for a label)
+    needs the button's `disabled` too (F42).
 
     Args:
-        identifier: For UI flows, e.g. ``open_spaces.propose``.
-        button: The button, whose ``on_click`` calls ``open_link()``.
+        identifier: For UI flows, e.g. `open_spaces.propose`.
+        button: The button, whose `on_click` calls `open_link()`.
     """
     return ft.MergeSemantics(
         content=ft.Semantics(
@@ -206,7 +206,7 @@ def external(identifier: str, button: ft.Control) -> ft.Control:
 
 
 async def open_feed_link(svc: Services, href: str | None) -> None:
-    """Open a link tapped in a feed text, by ``feed_link()`` and the link rule.
+    """Open a link tapped in a feed text, by `feed_link()` and the link rule.
 
     A link that opens nothing says so in the SnackBar a failed launch shows, rather
     than leave the tap without an answer; the log never names the link (D-72).
@@ -229,14 +229,14 @@ def feed_markdown(
     """Return a feed text (a description, a bio) as the app renders every one (D-116).
 
     Selectable Markdown with GitHub's extensions and the app's style sheet
-    (``theme_markdown.MARKDOWN_STYLE``), 16 dp from the screen's edges. A tapped link opens by
-    ``open_feed_link()``. Each link is a node of its own for screen readers, named by
+    (`theme_markdown.MARKDOWN_STYLE`), 16 dp from the screen's edges. A tapped link opens by
+    `open_feed_link()`. Each link is a node of its own for screen readers, named by
     its text.
 
     Args:
         value: The Markdown, converted once per feed version (D-130).
         svc: The session's services, for the links.
-        identifier: The text's semantics identifier, e.g. ``session.description``.
+        identifier: The text's semantics identifier, e.g. `session.description`.
         inset: Its distance from the sides, in dp: 16 on a page, 0 inside a card,
             whose own padding already sets it in (the Sprints page's projects).
     """
@@ -260,16 +260,16 @@ def feed_markdown(
 
 
 async def copy_contact(svc: Services, target: str) -> None:
-    """Copy a ``tel:`` or ``mailto:`` link's number or address, and say so.
+    """Copy a `tel:` or `mailto:` link's number or address, and say so.
 
-    ``copy_text()`` with the words for a phone number or an email address.
+    `copy_text()` with the words for a phone number or an email address.
 
     Args:
         svc: The session's services, for the clipboard.
-        target: The link (``contact_of()``).
+        target: The link (`contact_of()`).
 
     Raises:
-        ValueError: ``target`` is not a ``tel:`` or ``mailto:`` link.
+        ValueError: `target` is not a `tel:` or `mailto:` link.
     """
     kind = link_kind(target)
     if kind not in COPIED:
@@ -278,9 +278,9 @@ async def copy_contact(svc: Services, target: str) -> None:
 
 
 async def copy_text(svc: Services, text: str, copied: str, failed: str) -> None:
-    """Put ``text`` on the clipboard, and say once whether it worked (D-263).
+    """Put `text` on the clipboard, and say once whether it worked (D-263).
 
-    The one way the app copies: a contact (``copy_contact()``), and the info pages'
+    The one way the app copies: a contact (`copy_contact()`), and the info pages'
     values, such as the Wi-Fi password. A copy is confirmed by the app's SnackBar,
     except on Android 13 and later, whose own overlay already confirms every copy
     (ux.md §4.7), so the user hears it once. A failure is said on every platform, since

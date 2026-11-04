@@ -1,7 +1,7 @@
-"""The style sheet of every feed text, ``MARKDOWN_STYLE`` (D-116, D-152, D-197).
+"""The style sheet of every feed text, `MARKDOWN_STYLE` (D-116, D-152, D-197).
 
-``theme.py`` holds the themes and the colour tokens; this sheet is theirs too, but no
-theme carries it: a feed text passes it as ``ft.Markdown(md_style_sheet=...)``.
+`theme.py` holds the themes and the colour tokens; this sheet is theirs too, but no
+theme carries it: a feed text passes it as `ft.Markdown(md_style_sheet=...)`.
 """
 
 import flet as ft
@@ -14,7 +14,7 @@ _BODY = ft.TextStyle(size=16, height=1.5, color=_TEXT, font_family=FONT_FAMILY)
 
 
 def _heading(size: int) -> ft.TextStyle:
-    """Return a feed heading's style: ``size`` sp, medium weight, the app's font."""
+    """Return a feed heading's style: `size` sp, medium weight, the app's font."""
     return ft.TextStyle(
         size=size, weight=_HEADING, color=_TEXT, font_family=FONT_FAMILY
     )
@@ -59,7 +59,7 @@ MARKDOWN_STYLE = ft.MarkdownStyleSheet(
     ),
     block_spacing=12,
 )
-"""The style sheet of every feed text (D-116): pass it as ``ft.Markdown(md_style_sheet=...)``.
+"""The style sheet of every feed text (D-116): pass it as `ft.Markdown(md_style_sheet=...)`.
 
 A style given here replaces the theme's instead of merging with it (F28), so every text
 style names its colour and font family, and every decoration its colour (D-152):

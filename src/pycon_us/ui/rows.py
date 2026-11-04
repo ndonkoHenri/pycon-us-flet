@@ -1,13 +1,13 @@
-"""The rows lists are made of: ``LinkTile``, ``SpeakerRow``, ``SpeakerTile``.
+"""The rows lists are made of: `LinkTile`, `SpeakerRow`, `SpeakerTile`.
 
-``LinkTile`` is a row that opens a link, ``SpeakerRow`` a speaker with their first
-session (SPKR-01), ``SpeakerTile`` a speaker in a session's Speakers section (SESS-07).
-``LocationCard`` is ``ui.location_card``'s (#389); the session and notice rows are in
-``ui.session_rows`` (D-184), the time gutter in ``ui.time_gutter`` (D-200).
+`LinkTile` is a row that opens a link, `SpeakerRow` a speaker with their first
+session (SPKR-01), `SpeakerTile` a speaker in a session's Speakers section (SESS-07).
+`LocationCard` is `ui.location_card`'s (#389); the session and notice rows are in
+`ui.session_rows` (D-184), the time gutter in `ui.time_gutter` (D-200).
 
-``LinkTile`` opens its target by the link rule (INFO-14, ``ui.links``): an in-app page
-is pushed and its row ends in ``CHEVRON_RIGHT``; a web page, a profile or a map leaves
-the app and its row ends in ``OPEN_IN_NEW``; a phone or email row has a Copy button
+`LinkTile` opens its target by the link rule (INFO-14, `ui.links`): an in-app page
+is pushed and its row ends in `CHEVRON_RIGHT`; a web page, a profile or a map leaves
+the app and its row ends in `OPEN_IN_NEW`; a phone or email row has a Copy button
 beside it.
 """
 
@@ -33,10 +33,10 @@ from pycon_us.ui.semantics import merged, named, semantics_key
 from pycon_us.year_keynotes import KeynoteSpeaker
 
 PLAIN_TOP = 16
-"""A row without a subtitle: its leading icon's distance from the top (``TITLE_HEIGHT``)."""
+"""A row without a subtitle: its leading icon's distance from the top (`TITLE_HEIGHT`)."""
 
 SUBTITLED_TOP = 14
-"""A row with a subtitle: its title's and its icons' distance from the top (``_tile``)."""
+"""A row with a subtitle: its title's and its icons' distance from the top (`_tile`)."""
 
 
 def LinkTile(
@@ -49,39 +49,39 @@ def LinkTile(
     app: bool = False,
     copy_identifier: str | None = None,
 ) -> ft.Control:
-    """Return a row that opens ``target`` by the link rule: a page or a link.
+    """Return a row that opens `target` by the link rule: a page or a link.
 
-    A Material ``ListTile``, so it is at least 56 dp tall (72 with a subtitle), more
+    A Material `ListTile`, so it is at least 56 dp tall (72 with a subtitle), more
     than the 48 dp target (D-33), and grows with the text. It is one node for screen
     readers, read as its title and subtitle: a button for a page; a link for anything
-    else, whose ``OPEN_IN_NEW`` icon is read as "Opens in browser" (or "Opens in
+    else, whose `OPEN_IN_NEW` icon is read as "Opens in browser" (or "Opens in
     another app"). A phone or email row has a Copy button beside it, a stop of its
     own, as a session row's star is (ux.md §3.9).
 
     An in-app row is built here. An external one needs the session's services when it
-    is tapped, so it is a component, which reads them (``use_services()``).
+    is tapped, so it is a component, which reads them (`use_services()`).
 
     Args:
         title: The row's text, in sentence case; a phone or email row says what a tap
-            does ("Call the Code of Conduct hotline"). A ``Text`` for a title cut at
+            does ("Call the Code of Conduct hotline"). A `Text` for a title cut at
             some lines, as a session's name is (room detail's "Now in this room").
-        target: Where a tap goes: a page (``/more/speakers``), for a detail
-            ``drill_href(view_path, ...)`` so Back returns to this row's View, or a URL
-            (``link_kind()``).
+        target: Where a tap goes: a page (`/more/speakers`), for a detail
+            `drill_href(view_path, ...)` so Back returns to this row's View, or a URL
+            (`link_kind()`).
         icon: A leading icon, outlined (D-27); none for rows of names. A control
-            stands as it is: a brand's mark beside a link to it (``brand_icon()``,
+            stands as it is: a brand's mark beside a link to it (`brand_icon()`,
             D-264).
         subtitle: A second line, if any: for a phone or email row, the number or the
             address. A control for lines of their own (the Map's "Now:" line), read
             with the title as one phrase.
         identifier: The row's semantics identifier for UI tests, e.g.
-            ``more.speakers`` (decisions §M); a Copy button gets ``<identifier>.copy``.
+            `more.speakers` (decisions §M); a Copy button gets `<identifier>.copy`.
         app: A web address opens in the app that handles it: a social profile, a map.
         copy_identifier: The Copy button's identifier, where the screen names it
-            otherwise than ``<identifier>.copy`` (Help & safety's ``help.copy.<kind>``).
+            otherwise than `<identifier>.copy` (Help & safety's `help.copy.<kind>`).
 
     Raises:
-        ValueError: ``target`` is not a link the app opens (``link_kind()``).
+        ValueError: `target` is not a link the app opens (`link_kind()`).
     """
     kind = link_kind(target, app=app)
     if kind is not LinkKind.PAGE:
@@ -118,7 +118,7 @@ def _ExternalLinkTile(
     identifier: str | None,
     copy_identifier: str | None = None,
 ) -> ft.Control:
-    """The external form of ``LinkTile``: a link that leaves the app, maybe with Copy."""
+    """The external form of `LinkTile`: a link that leaves the app, maybe with Copy."""
     svc = use_services()
 
     @report_errors
@@ -178,16 +178,16 @@ def _tile(
     trailing: ft.Control | None,
     on_click: Callable[[], Any],
 ) -> ft.ListTile:
-    """A link row's ``ListTile``, its icons beside the title's first line at any height.
+    """A link row's `ListTile`, its icons beside the title's first line at any height.
 
     M3's default centres the icons against the whole block, which at 200 % puts them
     beside the middle of a four-line title, far from the line they belong to. Without a
-    subtitle, ``TITLE_HEIGHT`` centres a 56 dp row's icons and keeps them 16 dp from
+    subtitle, `TITLE_HEIGHT` centres a 56 dp row's icons and keeps them 16 dp from
     the top of a taller one. With a subtitle it would not do: it centres the trailing
     icon of a 72 dp row and moves both icons when the row grows (the Map's "Now:" line
     comes and goes with the minute), while the title moves the other way. So a row with
-    a subtitle puts its icons and its title ``SUBTITLED_TOP`` from the top (``TOP``
-    and ``min_vertical_padding``): the 24 dp title line and the 24 dp icons share one
+    a subtitle puts its icons and its title `SUBTITLED_TOP` from the top (`TOP`
+    and `min_vertical_padding`): the 24 dp title line and the 24 dp icons share one
     centre, 26 dp down, at every height, and a two-line row stays 72 dp (14 + 24 + 20
     + 14).
     """
@@ -207,7 +207,7 @@ def _tile(
 
 
 def icon_top(subtitle: str | ft.Control | None) -> int:
-    """Return how far ``_tile`` puts its leading icon from the row's top, in dp."""
+    """Return how far `_tile` puts its leading icon from the row's top, in dp."""
     return PLAIN_TOP if subtitle is None else SUBTITLED_TOP
 
 
@@ -215,7 +215,7 @@ AVATAR_RADIUS = 24
 """A speaker row's avatar, in dp: a 48 dp circle (ux.md §3.9)."""
 
 SPEAKER_TILE_HEIGHT = 2 * AVATAR_RADIUS + 16
-"""A ``SpeakerTile``'s least height, in dp: the avatar with 8 dp above and below."""
+"""A `SpeakerTile`'s least height, in dp: the avatar with 8 dp above and below."""
 
 
 def speaker_avatar(
@@ -227,7 +227,7 @@ def speaker_avatar(
     """Return a speaker's avatar, 48 dp unless told otherwise: the photo over the initials.
 
     The initials show while the photo loads, offline and when the feed has none, in
-    ``primary_container`` with its ``on_`` pair, a contrast the theme's test checks.
+    `primary_container` with its `on_` pair, a contrast the theme's test checks.
     Flutter draws them without the text scale, so they always fit the circle.
     Decorative for screen readers: the row or the heading beside it says the name.
 
@@ -235,7 +235,7 @@ def speaker_avatar(
         speaker: The directory speaker, or a keynote's person (D-217).
         radius: The circle's radius in dp: a row's 24, or the speaker page's 48.
         initials_style: The initials' type, for a larger circle; None keeps the
-            avatar's own (``TITLE_MEDIUM``), which suits 48 dp.
+            avatar's own (`TITLE_MEDIUM`), which suits 48 dp.
     """
     letters = initials(speaker.name)
     # A theme style brings the text theme's colour, so the pair is named again.
@@ -258,8 +258,8 @@ def speaker_avatar(
 def SpeakerTile(speaker: Speaker, target: str, *, identifier: str) -> ft.Control:
     """Return a speaker in a session's Speakers section (SESS-07): avatar, name, chevron.
 
-    Built as an in-app ``LinkTile`` is, so it sits with the page's other rows that push
-    (the room tile): a Material ``ListTile``, its chevron saying that a tap opens the
+    Built as an in-app `LinkTile` is, so it sits with the page's other rows that push
+    (the room tile): a Material `ListTile`, its chevron saying that a tap opens the
     speaker's page, and one node for screen readers, the name as a button; the
     avatar's initials stay out of it. At least 64 dp tall, Material's 8 dp above and
     below the 48 dp avatar: the default 56 dp left stacked avatars 8 dp apart, which
@@ -268,9 +268,9 @@ def SpeakerTile(speaker: Speaker, target: str, *, identifier: str) -> ft.Control
 
     Args:
         speaker: The directory speaker.
-        target: Their page, ``drill_href(view_path, "speaker", speaker.id)``, so Back
+        target: Their page, `drill_href(view_path, "speaker", speaker.id)`, so Back
             returns to the session (D-17).
-        identifier: The row's semantics identifier, e.g. ``session.speaker.<key>``.
+        identifier: The row's semantics identifier, e.g. `session.speaker.<key>`.
     """
     page = ft.context.page
 
@@ -306,7 +306,7 @@ def speaker_phrase(entry: SpeakerEntry) -> str:
     when there are more, and the name alone for a speaker without a session.
 
     Args:
-        entry: The speaker's entry (``core.speakers.directory()``).
+        entry: The speaker's entry (`core.speakers.directory()`).
     """
     name = entry.speaker.name
     if entry.first_session is None:
@@ -326,14 +326,14 @@ def SpeakerRow(entry: SpeakerEntry, *, screen: str) -> ft.Control:
     stays. A tap pushes the speaker's detail on top of the current View (D-17).
 
     The avatar is the feed's photo over the speaker's initials, which show while the
-    photo loads, offline and when there is none, in ``primary_container``. The row
-    reads as one phrase for screen readers (``speaker_phrase()``), a button; nothing
+    photo loads, offline and when there is none, in `primary_container`. The row
+    reads as one phrase for screen readers (`speaker_phrase()`), a button; nothing
     has a fixed height but the avatar, so it grows with the text.
 
     Args:
         entry: The speaker's entry, equal on every render while it is unchanged.
         screen: The screen's name in the row's semantics identifier,
-            ``<screen>.speaker.<key>`` (decisions §M, ``semantics_key()``).
+            `<screen>.speaker.<key>` (decisions §M, `semantics_key()`).
     """
     # As SessionRow's: ft.component's typing leaves out the key= its wrapper takes.
     return _SpeakerRow(entry, screen=screen, key=entry.speaker.id)  # pyright: ignore[reportCallIssue]
@@ -342,7 +342,7 @@ def SpeakerRow(entry: SpeakerEntry, *, screen: str) -> ft.Control:
 @ft.memo
 @ft.component
 def _SpeakerRow(entry: SpeakerEntry, *, screen: str) -> ft.Control:
-    """The body of ``SpeakerRow``; it runs only when its entry changes (F34)."""
+    """The body of `SpeakerRow`; it runs only when its entry changes (F34)."""
     view_path = ft.use_view_path()
     page = ft.context.page
     speaker = entry.speaker
@@ -396,7 +396,7 @@ def _supporting(text: str, **cut: Any) -> ft.Text:
 
     Args:
         text: The line.
-        **cut: ``max_lines`` and ``overflow``, for a line that may be cut short.
+        **cut: `max_lines` and `overflow`, for a line that may be cut short.
     """
     return ft.Text(
         text,

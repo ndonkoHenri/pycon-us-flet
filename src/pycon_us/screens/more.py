@@ -1,4 +1,4 @@
-"""More (``/more``): one flat, sectioned list instead of Ionic's drawer (D-15, ux.md §2.2).
+"""More (`/more`): one flat, sectioned list instead of Ionic's drawer (D-15, ux.md §2.2).
 
 The sections are **Programme**; **Expo & sponsors**, whose Expo hall needs a year with
 booths (#405); **At the venue** (D-280, D-281, D-313); **About** (#414, D-283, D-284);
@@ -9,11 +9,11 @@ app (D-73, D-187).
 The profile row comes first while a mock API URL is set (D-51, SHELL-12): "Sign in"
 signed out, else the account's avatar, nickname and email, which opens the Account page
 (#688), and "Sign in again" once the server refused the key (#686); it appears,
-disappears and changes live with ``Prefs`` and the ``Account`` store. The Staff tools
-section follows it (``screens/staff_entry.py``, D-16, #725): a row per tool the account may open whose screen is built, the Lead
-scanner's with the outbox's "3 pending", live with the ``Account`` and ``Staff`` stores.
+disappears and changes live with `Prefs` and the `Account` store. The Staff tools
+section follows it (`screens/staff_entry.py`, D-16, #725): a row per tool the account may open whose screen is built, the Lead
+scanner's with the outbox's "3 pending", live with the `Account` and `Staff` stores.
 Every row pushes its page, so Back returns here (D-17): Expo hall is the drill's
-``/more/plan/expo``, a pushed View like any page.
+`/more/plan/expo`, a pushed View like any page.
 """
 
 from typing import NamedTuple
@@ -35,7 +35,7 @@ from pycon_us.year_map import EXPO_PLAN
 
 
 class MoreEntry(NamedTuple):
-    """A row of the More list: a page under ``/more`` (ux.md §2.2)."""
+    """A row of the More list: a page under `/more` (ux.md §2.2)."""
 
     title: str
     location: str
@@ -45,7 +45,7 @@ class MoreEntry(NamedTuple):
 
     @property
     def identifier(self) -> str:
-        """The semantics identifier UI tests find it by: ``more.<page>`` (section M)."""
+        """The semantics identifier UI tests find it by: `more.<page>` (section M)."""
         page = self.name or self.location.removeprefix("/more/")
         return "more." + page.replace("-", "_")
 
@@ -63,7 +63,7 @@ PROGRAMME = (
 EXPO_HALL = MoreEntry(
     "Expo hall", drill_href("/more", "plan", EXPO_PLAN), ft.Icons.MAP_OUTLINED, "expo"
 )
-"""The expo hall pushed on More (``ExpoPlan``), only in a year with booths."""
+"""The expo hall pushed on More (`ExpoPlan`), only in a year with booths."""
 
 EXPO_AND_SPONSORS = (
     MoreEntry("Sponsors", "/more/sponsors", ft.Icons.STOREFRONT_OUTLINED),
@@ -158,14 +158,14 @@ def profile_row(account: Account) -> ft.Control:
     """Return More's first row: "Sign in", or who is signed in (ux.md §2.2, SHELL-12).
 
     "Sign in again", above the account's email, once the server refused its key
-    (``Account.expired``): it opens Sign in with the email filled in.
+    (`Account.expired`): it opens Sign in with the email filled in.
 
     Signed in, a row to the Account page (#688), one node read as the nickname and
-    the email, with the identifier ``more.account``. The avatar's letters stay out of
+    the email, with the identifier `more.account`. The avatar's letters stay out of
     it, as a speaker row's do.
 
     Args:
-        account: The session's ``Account`` store.
+        account: The session's `Account` store.
     """
     if not account.signed_in:
         return link(SIGN_IN)
@@ -193,7 +193,7 @@ def profile_row(account: Account) -> ft.Control:
 def account_avatar(
     nickname: str, email: str, *, radius: int = AVATAR_RADIUS
 ) -> ft.CircleAvatar:
-    """Return an account's initials avatar in ``primary_container``, as a speaker's.
+    """Return an account's initials avatar in `primary_container`, as a speaker's.
 
     Args:
         nickname: The account's nickname, maybe empty.

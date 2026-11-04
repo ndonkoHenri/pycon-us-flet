@@ -1,10 +1,10 @@
 """The services, page and lookups the link rule's two test modules share (#623).
 
-``test_links.py`` (the rule, opening and Copy) and ``test_links_feed.py`` (feed texts,
+`test_links.py` (the rule, opening and Copy) and `test_links_feed.py` (feed texts,
 D-197) take the fixtures by assigning them to their own names
-(``svc, page = link_rule.svc, link_rule.page``), as ``tests/chrome.py``'s are; the
+(`svc, page = link_rule.svc, link_rule.page`), as `tests/chrome.py`'s are; the
 helpers run with a fake page bound as Flet binds a session's page and the in-memory
-launcher and clipboard (``tests/fakes.py``).
+launcher and clipboard (`tests/fakes.py`).
 """
 
 from collections.abc import Iterator

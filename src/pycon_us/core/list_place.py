@@ -1,17 +1,17 @@
 """Where the reader is in a Schedule day list, as a key, so a text-size or filter change keeps it.
 
-Pure: ``screens/schedule_layout.py`` measures and ``screens/schedule_place.py``
+Pure: `screens/schedule_layout.py` measures and `screens/schedule_place.py`
 scrolls. A list keeps its pixel offset, not the rows at that offset, so when the text
 grows every row above the top grows with it and earlier rows show (#337, F70). The place is therefore the item at the top and how
 far into it, which a keyed jump puts back once the list has its new heights:
 
-- ``Place``: that item's key, how far into it the top was, its height then, the offset
+- `Place`: that item's key, how far into it the top was, its height then, the offset
   where it was found, and whether the slots had their time above their rows;
-- ``place_at()``: the place at an offset, from the heights the items reported, counted
+- `place_at()`: the place at an offset, from the heights the items reported, counted
   from the list's top or from a place found at another offset;
-- ``rescaled()``: how far into the item to put the top once it has its new height
+- `rescaled()`: how far into the item to put the top once it has its new height
   (D-331);
-- ``carried()``: the place in the list a filter change lays out, its item or the next one
+- `carried()`: the place in the list a filter change lays out, its item or the next one
   still shown (D-371).
 """
 
@@ -25,15 +25,15 @@ class Place:
     """The item at the top of a day list, and how far the list's top is into it.
 
     Attributes:
-        key: The item's key: a slot's ``Slot.key``, or the now line's ``NOW_KEY``.
+        key: The item's key: a slot's `Slot.key`, or the now line's `NOW_KEY`.
         into: How far the list's top was below the item's top, in dp.
         height: The item's height then, in dp, so the distance can grow with it.
         pixels: The list's offset at that place.
         layout: What the list was laid out from (the feed version and the filter): a
             place from another layout says nothing about this one.
-        stale: A text-size change has moved the rows since: ``pixels`` and ``height``
+        stale: A text-size change has moved the rows since: `pixels` and `height`
             are from before it, until the place is put back.
-        above: Whether the slots had their time above their rows (D-216): ``into``
+        above: Whether the slots had their time above their rows (D-216): `into`
             measured rows laid out that way, so it says nothing of the other (#600).
     """
 
@@ -53,9 +53,9 @@ def place_at(
     *,
     near: Place | None = None,
 ) -> Place | None:
-    """Return the item at the top of a list scrolled to ``pixels``.
+    """Return the item at the top of a list scrolled to `pixels`.
 
-    Counted from the list's top, or from ``near``, a place found at another offset of
+    Counted from the list's top, or from `near`, a place found at another offset of
     the same layout: then only the items between the two offsets need their heights,
     which a lazy list has reported as the user scrolled through them.
 
@@ -67,8 +67,8 @@ def place_at(
             from the top.
 
     Returns:
-        The place, its ``layout`` that of ``near``; None when an item on the way has
-        not reported its height, ``near``'s item is gone, or the offset is past the
+        The place, its `layout` that of `near`; None when an item on the way has
+        not reported its height, `near`'s item is gone, or the offset is past the
         last item.
     """
     if near is None:
@@ -99,7 +99,7 @@ def place_at(
 
 
 def rescaled(place: Place, height: float) -> float:
-    """Return how far into the place's item to put the top now that it is ``height``.
+    """Return how far into the place's item to put the top now that it is `height`.
 
     As far in proportionally, so the same rows of a slot stay at the top when its
     text grows (D-331); always inside the item.
@@ -125,7 +125,7 @@ def carried(
     The same item when it is still shown, as far in when its rows are unchanged, else
     at its top; when it is hidden, the top of the first item after it that is shown
     now, a slot the change reveals included (#333, D-371). Stale, so the Schedule puts
-    it back by key (``PlaceKeeper.pending()``).
+    it back by key (`PlaceKeeper.pending()`).
 
     Args:
         place: The place in the list before the change.
@@ -136,8 +136,8 @@ def carried(
             without one (the now line) is after the hidden slot when it was before.
 
     Returns:
-        The place, its ``layout`` still ``place``'s; None when no item at or after
-        ``place``'s is still shown.
+        The place, its `layout` still `place`'s; None when no item at or after
+        `place`'s is still shown.
     """
     if place.key in after:
         into = place.into if place.key in unchanged else 0.0

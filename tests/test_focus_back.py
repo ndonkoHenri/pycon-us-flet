@@ -1,9 +1,9 @@
 """Tests for the focus given back after another app's window (D-372, #302).
 
-``services.presence.Presence`` says when the app has left and come back, as the
-lifecycle handler reports it; ``ui.focus_back.focus_back()`` focuses the opener then,
-and ``open_link()`` passes its opener through it. The lifecycle handler's calls are
-tested in ``test_app.py``; what TalkBack does with the focus is checked on an emulator
+`services.presence.Presence` says when the app has left and come back, as the
+lifecycle handler reports it; `ui.focus_back.focus_back()` focuses the opener then,
+and `open_link()` passes its opener through it. The lifecycle handler's calls are
+tested in `test_app.py`; what TalkBack does with the focus is checked on an emulator
 (F192).
 """
 
@@ -37,7 +37,7 @@ WEB = "https://us.pycon.org/2026/"
 
 @pytest.fixture
 def focused(monkeypatch: pytest.MonkeyPatch) -> list[ft.IconButton]:
-    """Record each ``IconButton.focus()`` call's button instead of reaching Flutter."""
+    """Record each `IconButton.focus()` call's button instead of reaching Flutter."""
     calls: list[ft.IconButton] = []
 
     async def focus(self: ft.IconButton) -> None:
@@ -48,7 +48,7 @@ def focused(monkeypatch: pytest.MonkeyPatch) -> list[ft.IconButton]:
 
 
 def mounted(page: FakePage, control: ft.BaseControl) -> ft.BaseControl:
-    """Put ``control`` in the page's index, as Flet mounts it; return it."""
+    """Put `control` in the page's index, as Flet mounts it; return it."""
     page.controls[control._i] = control
     return control
 
@@ -103,7 +103,7 @@ async def test_a_return_after_the_read_ends_the_wait() -> None:
 
 
 async def test_an_app_that_never_leaves_ends_the_wait_with_false() -> None:
-    """No departure within ``leave_within``: nothing opened, so no return is due."""
+    """No departure within `leave_within`: nothing opened, so no return is due."""
     presence = Presence()
     assert not await presence.back_since(presence.returns, leave_within=0.01)
 
@@ -118,7 +118,7 @@ async def test_a_return_before_the_wait_counts() -> None:
 
 
 async def test_while_away_the_wait_lasts_until_the_return() -> None:
-    """Away when the wait begins: it lasts past ``leave_within``, until the resume."""
+    """Away when the wait begins: it lasts past `leave_within`, until the resume."""
     presence = Presence()
     returns = presence.returns
     presence.leave()
@@ -157,11 +157,11 @@ async def test_the_control_mounted_on_the_return_is_the_one_focused(
 ) -> None:
     """A render meanwhile mounts a new button under the opener's id: it gets the focus.
 
-    The event's own button is then detached, and its ``focus()`` refused (F192).
+    The event's own button is then detached, and its `focus()` refused (F192).
     """
     opener = ft.IconButton(ft.Icons.SHARE)
     rebuilt = ft.IconButton(ft.Icons.SHARE)
-    rebuilt._i = opener._i  # what Flet's reconciler does (``_migrate_state``)
+    rebuilt._i = opener._i  # what Flet's reconciler does (`_migrate_state`)
     mounted(page, rebuilt)
     async with focus_back(svc, opener):
         asyncio.create_task(away_and_back(svc.presence))
@@ -199,7 +199,7 @@ async def test_a_session_closed_while_settling_moves_no_focus(
 ) -> None:
     """A close during the settling delay ends the wait at once, and focuses nothing.
 
-    A replaced session stops its work (D-147): a ``focus()`` sent after the close
+    A replaced session stops its work (D-147): a `focus()` sent after the close
     would wait for an answer Flet never cancels.
     """
     monkeypatch.setattr(module, "SETTLE_SECONDS", 60)
@@ -226,7 +226,7 @@ async def test_a_session_closed_while_settling_moves_no_focus(
 async def test_an_opener_that_cannot_take_the_focus_is_left_alone(
     page: FakePage, svc: Services, control: ft.BaseControl | None
 ) -> None:
-    """An opener no longer mounted, or a row without ``focus()``, ends it quietly."""
+    """An opener no longer mounted, or a row without `focus()`, ends it quietly."""
     opener = ft.ListTile(title=ft.Text("Website"))
     if control is not None:
         control._i = opener._i

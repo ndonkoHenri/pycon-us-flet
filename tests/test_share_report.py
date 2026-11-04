@@ -1,4 +1,4 @@
-"""Tests for ``share_console_log()``: the log and the diagnostics on the share sheet (#443).
+"""Tests for `share_console_log()`: the log and the diagnostics on the share sheet (#443).
 
 The one way the app shares a bug report (INFO-04, D-297): About this app's Report a
 problem and Developer's Share log call it. The share sheet and the log's path are
@@ -98,7 +98,7 @@ async def conference(svc: Services) -> Conference:
 
 @pytest.fixture
 def log(svc: Services, tmp_path: Path) -> Path:
-    """A ``console.log`` with one line, where the storage paths say the log is."""
+    """A `console.log` with one line, where the storage paths say the log is."""
     path = tmp_path / "console.log"
     path.write_text("12:00:00.000 INFO pycon_us.app: started\n")
     cast(MemoryPaths, svc.paths).console_log = str(path)
@@ -233,9 +233,9 @@ async def test_a_sheet_that_fails_says_so_and_logs_only_the_error_s_class(
 async def test_a_logged_email_is_shared_as_a_placeholder(
     page: FakePage, svc: Services, conference: Conference, log: Path
 ) -> None:
-    """An address a log line quotes reaches the shared console.log as ``<email>``.
+    """An address a log line quotes reaches the shared console.log as `<email>`.
 
-    The app's handler writes the file through ``RedactingFormatter`` (D-196); the
+    The app's handler writes the file through `RedactingFormatter` (D-196); the
     report shares that file as it is, so no address leaves the device in it.
     """
     handler = logging.FileHandler(log, mode="w", encoding="utf-8")
@@ -261,7 +261,7 @@ def test_flet_still_sends_the_sheet_s_origin_without_a_size() -> None:
     An iPad opens the sheet anyway, pointing from the view's centre: share_plus 13.3.1
     makes a small rectangle there out of an empty one (F263, which supersedes F115). A
     tripwire for the Flet bump that lets the origin carry a size: when this fails, the
-    popover can point from the origin we send, and ``centre()`` needs another look.
+    popover can point from the origin we send, and `centre()` needs another look.
     """
     args = flet_share._share_args(share_position_origin=ft.Offset(200, 400))
     assert args["share_position_origin"] == {"x": 200, "y": 400}

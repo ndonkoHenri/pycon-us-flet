@@ -1,7 +1,7 @@
 """Tests for high contrast's tokens, badges and cards, and how the page asks for it.
 
 D-23, D-174, D-285; THEME-04..06; ux.md §3.2..§3.4. The schemes themselves, and the
-helpers both modules use, are ``tests/test_high_contrast.py``'s (#623).
+helpers both modules use, are `tests/test_high_contrast.py`'s (#623).
 """
 
 import re
@@ -61,8 +61,8 @@ def test_the_hc_text_tokens_read_at_7_to_1_on_every_surface(dark: bool) -> None:
 def test_every_hc_badge_is_outlined_1_5_dp(dark: bool) -> None:
     """Every HC badge has no fill and a 1.5 dp outline (ux.md §3.4, THEME-06).
 
-    Tracks, the unknown track's grey, En Español and Changed in ``on_surface``;
-    Registration required keeps ``error`` and New track ``primary`` (D-315).
+    Tracks, the unknown track's grey, En Español and Changed in `on_surface`;
+    Registration required keeps `error` and New track `primary` (D-315).
     """
     tokens = theme.build_tokens(dark=dark, high_contrast=True)
     s = hc_scheme(dark)
@@ -104,7 +104,7 @@ def test_outside_hc_every_badge_keeps_its_1_dp_border(dark: bool) -> None:
 
 
 def test_an_hc_badge_is_drawn_with_a_1_5_dp_border_and_no_fill() -> None:
-    """``TrackBadge`` draws an HC badge as its label in a 1.5 dp outline, unfilled."""
+    """`TrackBadge` draws an HC badge as its label in a 1.5 dp outline, unfilled."""
     colors = theme.HC_LIGHT_TOKENS.track_badge("Talk")
     badge = TrackBadge("Talk", colors)
     assert isinstance(badge, ft.Container) and isinstance(badge.content, ft.Text)
@@ -115,10 +115,10 @@ def test_an_hc_badge_is_drawn_with_a_1_5_dp_border_and_no_fill() -> None:
 
 @pytest.mark.parametrize("dark", [False, True], ids=["light", "dark"])
 def test_hc_cards_are_flat_with_a_1_dp_outline(dark: bool) -> None:
-    """HC cards have no shadow and a 1 dp border in ``outline``, named as a hex.
+    """HC cards have no shadow and a 1 dp border in `outline`, named as a hex.
 
     In a component theme a role resolves against the seeded scheme (U64), where
-    ``outline`` is a mid grey, so the colour is the HC scheme's own value.
+    `outline` is a mid grey, so the colour is the HC scheme's own value.
     """
     cards = theme.build_theme(dark=dark, high_contrast=True).card_theme
     assert cards is not None and cards.elevation == 0

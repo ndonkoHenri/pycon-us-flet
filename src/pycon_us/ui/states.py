@@ -1,12 +1,12 @@
-"""What a screen shows instead of its content: ``EmptyState`` and ``SkeletonList``.
+"""What a screen shows instead of its content: `EmptyState` and `SkeletonList`.
 
-``EmptyState`` is for a screen with nothing to show (ux.md §4.1): no match, an unknown
+`EmptyState` is for a screen with nothing to show (ux.md §4.1): no match, an unknown
 id, no data after a failed first fetch. It says why in one sentence and names a way
-out, as its button or, where no button can help, in its sentence (§4.6). ``not_found()``
+out, as its button or, where no button can help, in its sentence (§4.6). `not_found()`
 is the one of a detail whose id is not in the feed.
-``SkeletonList`` is shown only while there is no data at all and the first fetch runs
+`SkeletonList` is shown only while there is no data at all and the first fetch runs
 (NEW-03): with data, the screen shows it and the status strip says how old it is
-(D-32). ``NoDataState`` picks between the skeleton and the failed first fetch, with its
+(D-32). `NoDataState` picks between the skeleton and the failed first fetch, with its
 retry, for every screen that shows the feed.
 """
 
@@ -26,7 +26,7 @@ ICON_SIZE = 48
 """The empty state's icon, in dp (ux.md §3.9)."""
 
 SKELETON_ROWS = 5
-"""Placeholder rows in a ``SkeletonList`` (ux.md §3.9): enough to fill a phone."""
+"""Placeholder rows in a `SkeletonList` (ux.md §3.9): enough to fill a phone."""
 
 SHIMMER_MS = 1500
 """One sweep of the skeleton's shimmer (Flet's default period), 0 under reduced motion."""
@@ -52,12 +52,12 @@ def EmptyState(
     """Return a screen's empty state: an icon, why it is empty, and the way out.
 
     Centred, padded and without a fixed height, so it reflows at 200 % text inside the
-    screen's ``ListView``. For screen readers the title is a level-2 heading node of
+    screen's `ListView`. For screen readers the title is a level-2 heading node of
     its own, under the page's title (D-211), and, with the body, inside a live region,
     so the state is announced when it replaces a list (D-33); the icon is decorative;
     the button is a stop of its own.
 
-    Every empty state names a way out (ux.md §4.6): ``action`` is a button that takes
+    Every empty state names a way out (ux.md §4.6): `action` is a button that takes
     the user somewhere useful ("Open schedule", "Try again"). Only a state where no
     button can help names it in its sentence instead ("Search covers all days and
     ignores your filters.").
@@ -65,22 +65,22 @@ def EmptyState(
     Args:
         title: Why the screen is empty, as one sentence in sentence case: "This
             session isn't in the current schedule".
-        icon: An outlined icon for the case (D-27), e.g. ``CLOUD_OFF_OUTLINED``.
+        icon: An outlined icon for the case (D-27), e.g. `CLOUD_OFF_OUTLINED`.
         body: A second, smaller line, if the title needs one.
         action: The button's label, a verb ("Open schedule"); given with
-            ``on_action``.
-        on_action: What the button does, wrapped in ``report_errors`` by the caller.
+            `on_action`.
+        on_action: What the button does, wrapped in `report_errors` by the caller.
         disabled: The button is shown but cannot be tapped, while its action runs: it
             stays in place, so a screen reader's focus stays on it.
-        link_id: For a button that opens a web page (``on_action`` calls
-            ``open_link()``), its identifier: the button then looks and reads as any
-            link that leaves the app, ``OPEN_IN_NEW`` and "Opens in browser", and is
-            marked as one (``links.external()``, ux.md §4.7).
+        link_id: For a button that opens a web page (`on_action` calls
+            `open_link()`), its identifier: the button then looks and reads as any
+            link that leaves the app, `OPEN_IN_NEW` and "Opens in browser", and is
+            marked as one (`links.external()`, ux.md §4.7).
         identifier: The text's semantics identifier for UI tests, e.g.
-            ``session.not_found`` (decisions §M).
+            `session.not_found` (decisions §M).
 
     Raises:
-        ValueError: Only one of ``action`` and ``on_action`` is given.
+        ValueError: Only one of `action` and `on_action` is given.
     """
     if (action is None) != (on_action is None):
         raise ValueError("an empty state's action needs both a label and a handler")
@@ -170,7 +170,7 @@ def not_found(
         icon: An outlined icon for the thing (D-27).
         action: The button's label: "Open schedule".
         location: Where the button goes: the thing's list.
-        identifier: The state's semantics identifier, ``<screen>.not_found``.
+        identifier: The state's semantics identifier, `<screen>.not_found`.
     """
     page = ft.context.page
 
@@ -193,7 +193,7 @@ def NoDataState(
 ) -> ft.Control:
     """Return what a screen that shows the feed shows without any data (NEW-03).
 
-    The skeleton while the first fetch runs, before it has failed; then ``title`` with
+    The skeleton while the first fetch runs, before it has failed; then `title` with
     "Try again", its body by why the fetch failed (ux.md §4.1, §4.6). The state stays
     during a retry, its button disabled: swapping it for the skeleton would remove the
     focused button and lose a screen reader's place. The button is disabled only while
@@ -204,9 +204,9 @@ def NoDataState(
     a boundary here would add a second subscription for nothing.
 
     Args:
-        conference: The feed's store, whose ``problem`` picks the state.
+        conference: The feed's store, whose `problem` picks the state.
         svc: The session's services, which "Try again" refreshes with.
-        identifier: The failed state's semantics identifier, ``<screen>.no_data``.
+        identifier: The failed state's semantics identifier, `<screen>.no_data`.
         title: The failed state's title, naming what could not load.
         loading: What the skeleton says to screen readers.
     """
@@ -234,12 +234,12 @@ def SkeletonList(label: str = "Loading schedule") -> ft.Control:
     """Placeholder rows shown while the first fetch runs and there is no data at all.
 
     Five rows shaped like session rows (a time, a badge, two lines of title, a line of
-    meta), in ``surface_container_highest``. ``ft.Shimmer`` sweeps a lighter band across
-    them; under reduced motion (``prefs.motion_ms()``, D-173) the rows stay still. The
+    meta), in `surface_container_highest`. `ft.Shimmer` sweeps a lighter band across
+    them; under reduced motion (`prefs.motion_ms()`, D-173) the rows stay still. The
     shimmer is not ambient motion (D-34): like a progress indicator, it shows work
-    running and goes when the data arrives. Screen readers hear one node, ``label``.
+    running and goes when the data arrives. Screen readers hear one node, `label`.
     In high contrast, where that fill is the surface, each placeholder is an unfilled
-    1 dp ``outline`` shape instead, and the shimmer paints those lines (D-306).
+    1 dp `outline` shape instead, and the shimmer paints those lines (D-306).
 
     Args:
         label: What is loading, read by screen readers.
@@ -271,7 +271,7 @@ def SkeletonList(label: str = "Loading schedule") -> ft.Control:
 def _placeholder_row(hc: bool) -> ft.Control:
     """One row in a session row's shape: a time on the left, three lines beside it.
 
-    ``hc``: high contrast, whose placeholders are outlined (``hc_border()``).
+    `hc`: high contrast, whose placeholders are outlined (`hc_border()`).
     """
     return ft.Container(
         ft.Row(
@@ -312,9 +312,9 @@ def _fill(hc: bool) -> ft.ColorValue | None:
 
 
 def _line(height: int, filled: int, empty: int, hc: bool) -> ft.Row:
-    """A placeholder line over ``filled`` parts of the width, then ``empty`` parts.
+    """A placeholder line over `filled` parts of the width, then `empty` parts.
 
-    Outlined in HC, as ``_block()`` is.
+    Outlined in HC, as `_block()` is.
     """
     bar = ft.Container(
         height=height,

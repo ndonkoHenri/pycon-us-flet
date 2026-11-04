@@ -1,6 +1,6 @@
-"""Tests for the Social media page (``screens/social.py``; #416, INFO-10, D-284).
+"""Tests for the Social media page (`screens/social.py`; #416, INFO-10, D-284).
 
-The page runs in a real Flet session (``tests/sessions.py``) over the bundled year data,
+The page runs in a real Flet session (`tests/sessions.py`) over the bundled year data,
 with and without a feed. How it looks, wraps at 200 % and reads to screen readers is
 checked on devices (the PR).
 """
@@ -35,7 +35,7 @@ async def show(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> AsyncIterator
     async with AsyncExitStack() as stack:
 
         async def render(*, year: int = 2026, feed: int | None = None) -> Shown:
-            """Render the page with ``year``'s data and ``feed``'s feed (None: none yet)."""
+            """Render the page with `year`'s data and `feed`'s feed (None: none yet)."""
             conference = (
                 Conference()
                 if feed is None
@@ -67,7 +67,7 @@ def snack_texts(page: Shown) -> list[str]:
 
 
 def chip(page: Shown, index: int) -> ft.Chip:
-    """The hashtag chip ``social.hashtag.<index>`` names, under its ``named()`` node."""
+    """The hashtag chip `social.hashtag.<index>` names, under its `named()` node."""
     content = page.node(f"social.hashtag.{index}").content
     assert isinstance(content, ft.Chip)
     return content
@@ -83,7 +83,7 @@ def label_of(found: ft.Chip) -> tuple[ft.Icon, ft.Text]:
 
 
 def tile(page: Shown, key: str) -> ft.ListTile:
-    """The ``ListTile`` of the link row ``social.link.<key>``."""
+    """The `ListTile` of the link row `social.link.<key>`."""
     content = page.node(f"social.link.{key}").content
     assert isinstance(content, ft.ListTile)
     return content
@@ -153,7 +153,7 @@ async def test_a_long_hashtag_wraps_instead_of_fading(show: Show) -> None:
 
 
 async def test_a_hashtag_tap_copies_it_and_says_so_once(show: Show) -> None:
-    """A tap puts the hashtag, with its ``#``, on the clipboard: one SnackBar."""
+    """A tap puts the hashtag, with its `#`, on the clipboard: one SnackBar."""
     assert SOCIAL is not None
     page = await show()
     await page.click(chip(page, 1))
@@ -195,7 +195,7 @@ async def test_each_link_is_a_row_with_its_mark_and_its_handle(show: Show) -> No
 async def test_a_profile_opens_in_its_app_and_a_blog_in_the_browser(
     show: Show,
 ) -> None:
-    """Profiles open with ``EXTERNAL_APPLICATION``, blogs in the in-app browser."""
+    """Profiles open with `EXTERNAL_APPLICATION`, blogs in the in-app browser."""
     assert SOCIAL is not None
     page = await show()
     for link in SOCIAL.links:
@@ -223,7 +223,7 @@ async def test_each_row_is_a_link_that_says_where_it_opens(show: Show) -> None:
 
 
 async def test_a_year_without_social_data_shows_the_feed_s_block(show: Show) -> None:
-    """2025 has no ``[social]``: over its feed, the page shows the feed's own block."""
+    """2025 has no `[social]`: over its feed, the page shows the feed's own block."""
     page = await show(year=2025, feed=2025)
     assert page.nodes("social.feed")
     (text,) = page.find(ft.Markdown)

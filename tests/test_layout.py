@@ -1,6 +1,6 @@
-"""Tests for the ``Layout`` store: the window's width class, bar or rail (#387; D-277).
+"""Tests for the `Layout` store: the window's width class, bar or rail (#387; D-277).
 
-The store notifies its readers only when the window crosses ``WIDE_DP``, so a resize
+The store notifies its readers only when the window crosses `WIDE_DP`, so a resize
 within a class re-renders no screen. What a rotation and a resize do on a device is
 checked on the emulator and the simulators (the PR).
 """
@@ -36,7 +36,7 @@ from tests.fake_page import FakePage, bound
     ],
 )
 def test_the_rail_shows_from_600_dp(width: float | None, wide: bool) -> None:
-    """``is_wide`` is True from ``WIDE_DP`` on, and a missing width is a phone's."""
+    """`is_wide` is True from `WIDE_DP` on, and a missing width is a phone's."""
     assert WIDE_DP == 600
     assert is_wide(width) is wide
 
@@ -84,7 +84,7 @@ def test_the_store_notifies_on_a_crossing_and_on_room_over_the_reading_width() -
 def test_the_room_is_the_width_less_the_insets_once_over_720_dp(
     width: float | None, insets: float, room: float
 ) -> None:
-    """``room`` is what the SafeArea leaves the body, and 0 where no cap applies."""
+    """`room` is what the SafeArea leaves the body, and 0 where no cap applies."""
     layout = Layout()
     layout.set_width(width, insets)
     assert layout.room == room
@@ -101,7 +101,7 @@ def test_side_insets_add_the_left_and_right_padding() -> None:
 
 
 def test_follow_width_reads_the_page_and_follows_its_resizes() -> None:
-    """``follow_width`` takes ``page.width`` at once, then each resize's width."""
+    """`follow_width` takes `page.width` at once, then each resize's width."""
     page = FakePage()
     page.width = 1180  # an iPad's width came before the handler was set
     layout = Layout()
@@ -139,7 +139,7 @@ def test_layout_for_seeds_the_class_and_the_room_from_the_page() -> None:
 
 
 def test_use_layout_needs_a_provider(monkeypatch: pytest.MonkeyPatch) -> None:
-    """Without a ``LayoutCtx`` provider, ``use_layout`` says so instead of guessing."""
+    """Without a `LayoutCtx` provider, `use_layout` says so instead of guessing."""
     monkeypatch.setattr(ft, "use_context", lambda ctx: None)
     with pytest.raises(RuntimeError, match="LayoutCtx"):
         use_layout()

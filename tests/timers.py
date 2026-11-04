@@ -1,10 +1,10 @@
 """A screen's timers held by the test: its sleeps end when the test says so (#270).
 
 A screen that waits a set time (search's debounce, the room's highlight) sleeps through
-its module's ``asyncio``. A test that set that time short and then looked at the state
-the wait keeps raced it: on a loaded host the timer fired first. ``HeldSleeps`` takes
-the place of that one module's ``asyncio`` (never the global module, which the event
-loop and Flet use too), so the state lasts until the test ``release()``s the wait,
+its module's `asyncio`. A test that set that time short and then looked at the state
+the wait keeps raced it: on a loaded host the timer fired first. `HeldSleeps` takes
+the place of that one module's `asyncio` (never the global module, which the event
+loop and Flet use too), so the state lasts until the test `release()`s the wait,
 however slow the host.
 """
 
@@ -13,11 +13,11 @@ from typing import Any
 
 
 class HeldSleeps:
-    """A module's ``asyncio`` whose ``sleep()`` waits for the test instead of a time.
+    """A module's `asyncio` whose `sleep()` waits for the test instead of a time.
 
-    Install it with ``monkeypatch.setattr(module, "asyncio", HeldSleeps())``. Anything
-    else the module takes from ``asyncio`` (``Event``, ``get_running_loop()``) is
-    ``asyncio``'s own.
+    Install it with `monkeypatch.setattr(module, "asyncio", HeldSleeps())`. Anything
+    else the module takes from `asyncio` (`Event`, `get_running_loop()`) is
+    `asyncio`'s own.
     """
 
     def __init__(self) -> None:
@@ -27,11 +27,11 @@ class HeldSleeps:
         self._held: list[asyncio.Event] = []
 
     def __getattr__(self, name: str) -> Any:
-        """Return ``asyncio``'s own attribute for anything but ``sleep``."""
+        """Return `asyncio`'s own attribute for anything but `sleep`."""
         return getattr(asyncio, name)
 
     async def sleep(self, delay: float) -> None:
-        """Record ``delay``, then wait for ``release()``; a cancel ends it as usual."""
+        """Record `delay`, then wait for `release()`; a cancel ends it as usual."""
         self.asked.append(delay)
         released = asyncio.Event()
         self._held.append(released)

@@ -1,8 +1,8 @@
 """The staff outbox's enqueue decisions: what a lead scan, a note or an admission does.
 
-The pure half of the outbox's rules that a capture runs (``core/outbox.py`` has the rows
+The pure half of the outbox's rules that a capture runs (`core/outbox.py` has the rows
 and what a send does to them; D-56, D-77). Each function takes rows and returns an
-``Enqueued``; ``services/outbox_db.py`` stores what it decides. A lead belongs to a
+`Enqueued`; `services/outbox_db.py` stores what it decides. A lead belongs to a
 sponsor, so an account keeps one lead row and one note row per (owner, code, sponsor
 id); a sponsor's own account has one sponsor id, None (D-459).
 """
@@ -34,8 +34,8 @@ class Enqueued:
 
     Attributes:
         outcome: What happened.
-        row: The row to insert (``QUEUED``) or save (``UPDATED``), or the existing row
-            that made the scan a no-op (``ALREADY``); None for an ignored note.
+        row: The row to insert (`QUEUED`) or save (`UPDATED`), or the existing row
+            that made the scan a no-op (`ALREADY`); None for an ignored note.
         others: A lead scan's: the names of the other sponsors this account has the
             attendee in its leads for, so the result can say so (D-459).
     """
@@ -71,10 +71,10 @@ def scan_lead(
     means the lead is already in your leads; a pending row is made due now; a failed
     one is pending again, as "Retry failed" would make it. Either keeps its first
     payload. Otherwise a new row snapshots the sponsor, even if the attendee is a lead
-    for another sponsor: that lead's row stays as it is, and ``others`` names it.
+    for another sponsor: that lead's row stays as it is, and `others` names it.
 
     Args:
-        rows: The outbox rows (any owner's; only ``owner``'s count).
+        rows: The outbox rows (any owner's; only `owner`'s count).
         owner: The signed-in account's lower-cased email.
         code: The attendee's access code.
         payload: The capture request.
@@ -83,8 +83,8 @@ def scan_lead(
         now: The current time (epoch seconds).
 
     Returns:
-        ``ALREADY`` with the synced row, ``UPDATED`` with the existing row requeued, or
-        ``QUEUED`` with a new row; each with ``others``.
+        `ALREADY` with the synced row, `UPDATED` with the existing row requeued, or
+        `QUEUED` with a new row; each with `others`.
     """
     rows = tuple(rows)  # Searched twice: a one-pass iterator would miss the row.
     others = tuple(
@@ -128,7 +128,7 @@ def save_note(
     switch between the scan and the note cannot send the note elsewhere (D-459).
 
     Args:
-        rows: The outbox rows (any owner's; only ``owner``'s count).
+        rows: The outbox rows (any owner's; only `owner`'s count).
         owner: The signed-in account's lower-cased email.
         code: The lead's access code.
         note: The note's text.
@@ -137,7 +137,7 @@ def save_note(
         now: The current time (epoch seconds).
 
     Returns:
-        ``IGNORED``, ``UPDATED`` with the existing row, or ``QUEUED`` with a new row.
+        `IGNORED`, `UPDATED` with the existing row, or `QUEUED` with a new row.
     """
     if not note.strip():
         return Enqueued(Outcome.IGNORED)
@@ -152,7 +152,7 @@ def save_note(
 
 
 def door_key(code: str, product_ids: Iterable[int | str], session: str) -> str:
-    """Return a check-in's idempotency key: ``code|sorted product ids|scan session``.
+    """Return a check-in's idempotency key: `code|sorted product ids|scan session`.
 
     Args:
         code: The attendee's access code.
@@ -180,7 +180,7 @@ def admit(
 ) -> Enqueued:
     """Decide what a door admission does: one row per check-in.
 
-    A check-in is its idempotency key (``door_key()``), unique across the outbox: the
+    A check-in is its idempotency key (`door_key()`), unique across the outbox: the
     same attendee, products and scan session admitted again is the row already queued.
     Any other check-in, for another session say, gets a row of its own (STORE-12).
 
@@ -196,7 +196,7 @@ def admit(
         now: The current time (epoch seconds).
 
     Returns:
-        ``ALREADY`` with the existing row, or ``QUEUED`` with a new row.
+        `ALREADY` with the existing row, or `QUEUED` with a new row.
     """
     idem_key = door_key(code, product_ids, session)
     existing = next((r for r in rows if r.idem_key == idem_key), None)

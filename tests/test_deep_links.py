@@ -1,9 +1,9 @@
 """Deep links land on their target with the root below, cold and warm (P2-79, #439).
 
-A link ``confcompanion://app/<path>`` reaches the app as the path (D-21, D-269, F31): cold,
+A link `confcompanion://app/<path>` reaches the app as the path (D-21, D-269, F31): cold,
 the start route; warm, a route change. These tests start the app's own route table
 and screens at a location, or move a running session there, in a real Flet session
-(``tests/links.py``), then press Back until the app exits: one View per press, a root
+(`tests/links.py`), then press Back until the app exits: one View per press, a root
 to Now, Now out of the app (D-17, D-142). Unknown ids show their detail's not-found
 state over the root (D-186), quoted ids reach their screen whole (D-141), and a query
 stays a view option of the top View (architecture §5.6). What the emulator and the
@@ -30,7 +30,7 @@ QUOTED = "break-Expo Hall AB-2026-05-15T08:00:00-07:00"
 def walk_down(location: str, search_base: str = "/now") -> list[str]:
     """Where Back after Back goes from a location, by D-17's rules, to the exit.
 
-    One step up per press (``parent_of()``) to a root, then Now, then out.
+    One step up per press (`parent_of()`) to a root, then Now, then out.
     """
     steps = []
     while location.split("?")[0] not in TAB_ROOTS:
@@ -102,7 +102,7 @@ DRILL_BASES = [*TAB_ROOTS, "/more/speakers", "/more/tracks/ai", "/search"]
 async def test_a_session_link_opens_the_session_over_its_page(
     open_at: Open, base: str
 ) -> None:
-    """``<page>/session/<id>``, its id quoted, shows that session over the page.
+    """`<page>/session/<id>`, its id quoted, shows that session over the page.
 
     The id reaches its screen whole, and Back walks the stack down one View at a time.
     """
@@ -116,7 +116,7 @@ async def test_a_session_link_opens_the_session_over_its_page(
 async def test_the_issue_s_link_shows_the_session_over_the_schedule(
     open_at: Open,
 ) -> None:
-    """``/schedule/session/31``: the session over Schedule; Back to it, then Now."""
+    """`/schedule/session/31`: the session over Schedule; Back to it, then Now."""
     shown = await open_at("/schedule/session/31")
     assert shown.routes() == ["/", "/schedule/session/31"]
     assert title_of(shown, "session.title") == DATA.sessions["31"].name
@@ -149,7 +149,7 @@ async def test_an_unknown_id_shows_its_not_found_state_over_its_root(
 async def test_an_unknown_path_is_one_view_whose_back_goes_to_now(
     open_at: Open,
 ) -> None:
-    """A path the app lacks is ``NotFound`` alone, and Back goes to Now (D-270)."""
+    """A path the app lacks is `NotFound` alone, and Back goes to Now (D-270)."""
     shown = await open_at("/schedule/nope/31")
     assert shown.routes() == ["/"]
     assert shown.has("app.not_found")
@@ -190,8 +190,8 @@ async def test_a_link_after_back_on_now_lands_in_the_same_process(
 ) -> None:
     """After Back on Now (F29), a link starts a new session at its own route.
 
-    The process's ``ViewMemory`` says Now, the last location, but a link never goes
-    through ``Start`` (D-143): it opens the target with its root below.
+    The process's `ViewMemory` says Now, the last location, but a link never goes
+    through `Start` (D-143): it opens the target with its root below.
     """
     memory = ViewMemory()
     first = await open_at("/now", memory=memory)
@@ -236,7 +236,7 @@ async def test_a_link_to_search_returns_to_the_page_it_opened_over(
 async def test_a_link_to_a_result_under_search_returns_through_search(
     open_at: Open,
 ) -> None:
-    """A link to ``/search/session/<id>`` walks back through search to its page.
+    """A link to `/search/session/<id>` walks back through search to its page.
 
     Search, built below the result, keeps the remembered query (D-193).
     """

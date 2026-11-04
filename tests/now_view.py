@@ -1,12 +1,12 @@
 """The Now tab's fixed times, sessions and harness, for its three test modules (#312).
 
-``test_now.py`` (the header's words), ``test_now_screen.py`` (the sections each season
-shows) and ``test_now_card.py`` (the next-session card, time passing and the states
+`test_now.py` (the header's words), `test_now_screen.py` (the sections each season
+shows) and `test_now_card.py` (the next-session card, time passing and the states
 without data) share the 2026 feed's times and sessions named here. The screen runs in a
-real Flet session, as the session rows' tests do (``tests/sessions.py`` names the Flet
+real Flet session, as the session rows' tests do (`tests/sessions.py` names the Flet
 internals the harness uses), with the clock held by the test: Flet's scheduler
 re-renders what changed, so a test sees which row bodies ran (D-153). A module takes the
-fixtures by assigning them to its own names, as ``docs/testing-and-quality.md`` §3.1
+fixtures by assigning them to its own names, as `docs/testing-and-quality.md` §3.1
 says.
 """
 
@@ -82,26 +82,26 @@ def data() -> ConferenceData:
 
 @dataclass
 class Ticks:
-    """Stands in for ``Services.run_every``: keeps each loop's action to call by hand."""
+    """Stands in for `Services.run_every`: keeps each loop's action to call by hand."""
 
     actions: list[Callable[[], object]] = field(default_factory=list)
 
     async def run_every(self, seconds: float, action: Callable[[], object]) -> None:
-        """Keep ``action`` for the test to run, instead of looping."""
+        """Keep `action` for the test to run, instead of looping."""
         self.actions.append(action)
 
 
 @dataclass
 class Shown(harness.Shown):
-    """The harness's ``Shown`` (``tests/harness.py``) on Now, with the test's clock."""
+    """The harness's `Shown` (`tests/harness.py`) on Now, with the test's clock."""
 
     clock: list[datetime] = field(default_factory=list)
-    """The time ``clock.now()`` answers: ``clock[0]``."""
+    """The time `clock.now()` answers: `clock[0]`."""
     ticks: Ticks = field(default_factory=Ticks)
 
     @property
     def body(self) -> ft.ListView:
-        """The screen's one ``ListView``."""
+        """The screen's one `ListView`."""
         (body,) = self.find(ft.ListView)
         return body
 
@@ -110,7 +110,7 @@ class Shown(harness.Shown):
         return list(_walk(self.body))
 
     def has(self, identifier: str) -> bool:
-        """Whether a ``Semantics`` with ``identifier`` is on screen."""
+        """Whether a `Semantics` with `identifier` is on screen."""
         return any(
             isinstance(c, ft.Semantics) and c.identifier == identifier
             for c in self.all()
@@ -128,7 +128,7 @@ class Shown(harness.Shown):
         ]
 
     def listed(self, prefix: str = "now.session.") -> list[str]:
-        """The session rows' keys, in order: ``now.session.<key>``."""
+        """The session rows' keys, in order: `now.session.<key>`."""
         return [
             str(c.identifier).removeprefix(prefix)
             for c in self.all()
@@ -136,11 +136,11 @@ class Shown(harness.Shown):
         ]
 
     def texts(self) -> list[str]:
-        """The texts on screen in reading order, plain strings too (``_texts``)."""
+        """The texts on screen in reading order, plain strings too (`_texts`)."""
         return _texts(self.body)
 
     def fold_button(self, section: str) -> ft.TextButton:
-        """The "Show all" button of ``section`` (``happening``, ``up_next``)."""
+        """The "Show all" button of `section` (`happening`, `up_next`)."""
         expanded = self.node(f"now.show_all.{section}").content
         assert isinstance(expanded, ft.Semantics)
         assert isinstance(expanded.content, ft.TextButton)
@@ -151,7 +151,7 @@ class Shown(harness.Shown):
         await self.click(self.fold_button(section))
 
     async def at(self, now: datetime) -> None:
-        """Move the clock to ``now`` and run every minute tick, as a minute passing."""
+        """Move the clock to `now` and run every minute tick, as a minute passing."""
         self.clock[0] = now
         for action in self.ticks.actions:
             action()
@@ -159,7 +159,7 @@ class Shown(harness.Shown):
 
 
 def _children(control: Any) -> list[Any]:
-    """The children of ``control``, a component's rendered body included."""
+    """The children of `control`, a component's rendered body included."""
     if isinstance(control, Component):
         body = control._b
         return body if isinstance(body, list) else [body]
@@ -173,7 +173,7 @@ def _children(control: Any) -> list[Any]:
 
 
 def _walk(control: Any) -> Iterator[Any]:
-    """Yield ``control`` and every control under it, in reading order."""
+    """Yield `control` and every control under it, in reading order."""
     yield control
     for child in _children(control):
         if child is not None:
@@ -181,9 +181,9 @@ def _walk(control: Any) -> Iterator[Any]:
 
 
 def _texts(control: Any) -> list[str]:
-    """The texts under ``control`` in reading order, plain strings too.
+    """The texts under `control` in reading order, plain strings too.
 
-    Plain strings are, for example, a ``ListTile``'s title or a button's label.
+    Plain strings are, for example, a `ListTile`'s title or a button's label.
     """
     found: list[str] = []
     for c in _walk(control):
@@ -214,13 +214,13 @@ async def render(
             account: Account | None = None,
             staff: Staff | None = None,
         ) -> Shown:
-            """Render Now at ``now``, with ``saved`` in My schedule.
+            """Render Now at `now`, with `saved` in My schedule.
 
-            With ``ticks`` the minute loops are real; else ``Shown.at`` runs them.
-            ``memory`` is the process's view memory, when a test keeps one;
-            ``change_log`` the session's, when a test records batches; ``prefs``
-            the settings, large text say, when a test sets them; ``account`` and
-            ``staff`` the stores, for the Scan badges card.
+            With `ticks` the minute loops are real; else `Shown.at` runs them.
+            `memory` is the process's view memory, when a test keeps one;
+            `change_log` the session's, when a test records batches; `prefs`
+            the settings, large text say, when a test sets them; `account` and
+            `staff` the stores, for the Scan badges card.
             """
             held = [now]
             ticker = ticks or Ticks()

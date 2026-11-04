@@ -1,11 +1,11 @@
 """Tests for the Schedule's track filter sheet: its chips, buttons and re-renders (#87).
 
-The words and the summary are ``test_schedule_filter.py``'s.
+The words and the summary are `test_schedule_filter.py`'s.
 
 STORE-09, SCHED-09, SCHED-10; D-20, D-178. The screen renders in a real Flet session
-through ``tests/schedule_view.py``'s ``shown`` fixture, whose ``AppScaffold`` stand-in
-places the app bar's actions, so the ``TUNE`` action, the sheet (``ft.use_dialog``),
-the chips and the summary run as Flet runs them; ``tests/filter_sheet.py`` finds and
+through `tests/schedule_view.py`'s `shown` fixture, whose `AppScaffold` stand-in
+places the app bar's actions, so the `TUNE` action, the sheet (`ft.use_dialog`),
+the chips and the summary run as Flet runs them; `tests/filter_sheet.py` finds and
 taps them. How the sheet looks and scrolls at 200 % text is a device check (#87).
 """
 
@@ -155,7 +155,7 @@ async def test_reset_is_disabled_while_the_filter_is_the_default(
 async def test_the_filter_survives_a_relaunch(
     shown: Show,
 ) -> None:
-    """A chip change is read back by fresh ``Prefs``, as after a relaunch."""
+    """A chip change is read back by fresh `Prefs`, as after a relaunch."""
     schedule = await shown()
     await open_sheet(schedule)
     await tap_chip(schedule, "tutorial")
@@ -266,7 +266,7 @@ async def test_a_filter_change_re_renders_only_the_slots_it_changes(
 ) -> None:
     """D-153, D-178: untouched slots are the same objects, so their bodies skip.
 
-    Fails if ``timeline()`` rebuilt every slot, or if the slot item were not memoised.
+    Fails if `timeline()` rebuilt every slot, or if the slot item were not memoised.
     """
     schedule = await shown()
     await open_sheet(schedule)

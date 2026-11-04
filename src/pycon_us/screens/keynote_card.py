@@ -1,11 +1,11 @@
-"""A keynote's or panel's card on the Keynotes page (SPKR-04): ``KeynoteCard``.
+"""A keynote's or panel's card on the Keynotes page (SPKR-04): `KeynoteCard`.
 
 One elevated card per session (ux.md §5.11). A keynote's shows each speaker's photo,
 name and role, the talk's own title, and the bios cut at four lines with "Read more";
 a panel's shows the feed's name of it over its own title, the abstract cut the same way,
 and its people as a wrapping row of 64 dp photos with their names. Under a divider, a
 time-and-room tile opens the session, beside its star. A keynote the year data has
-nothing for yet (``content.toml``, D-217) still gets a card: its name and the tile.
+nothing for yet (`content.toml`, D-217) still gets a card: its name and the tile.
 A module of its own, as the Sprints page's card is (D-202), so the page stays short.
 """
 
@@ -35,9 +35,9 @@ leave words hidden with no way to read them at large text."""
 
 TALK_TITLE = ft.TextThemeStyle.TITLE_MEDIUM
 """A talk's title on a card, a keynote's or a panel's (D-229). People's names stay in
-``TITLE_LARGE``: their words are short. At iOS's largest text a ``TITLE_LARGE`` word of
+`TITLE_LARGE`: their words are short. At iOS's largest text a `TITLE_LARGE` word of
 nine letters ("Community") is wider than the card's 338 dp text column on a 402 dp
-phone, and Flutter breaks it inside itself; ``TITLE_MEDIUM`` holds about twelve."""
+phone, and Flutter breaks it inside itself; `TITLE_MEDIUM` holds about twelve."""
 
 PANEL_PHOTO = 32
 """A panelist's photo radius in dp: the 64 dp photos of ux.md §5.11."""
@@ -48,7 +48,7 @@ take their own widths, so less would run two names together."""
 
 
 def clamps(text: str) -> bool:
-    """Return whether a card cuts ``text`` at ``CLAMP_LINES`` with "Read more".
+    """Return whether a card cuts `text` at `CLAMP_LINES` with "Read more".
 
     Args:
         text: A bio or an abstract as the card shows it.
@@ -90,10 +90,10 @@ def KeynoteCard(
     Args:
         session: The session, the same object for one feed version.
         keynote: Its year data; None for a keynote the year data lacks.
-        view: Its row view (``use_session_views()``): the time range, the place.
+        view: Its row view (`use_session_views()`): the time range, the place.
         saved: Whether it is in My schedule.
-        on_toggle: The page's star handler (``use_favorite_toggle()``).
-        star_color: The filled star's colour, ``Tokens.favorite``.
+        on_toggle: The page's star handler (`use_favorite_toggle()`).
+        star_color: The filled star's colour, `Tokens.favorite`.
     """
     expanded, set_expanded = ft.use_state(False)
     key = semantics_key(session.id)

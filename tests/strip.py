@@ -1,14 +1,14 @@
 """The status strip's fixtures and lookups, for its two test modules (#285, #264).
 
-``test_status_strip.py`` (the line, the layout, the live region and the refreshes) and
-``test_status_strip_ticks.py`` (the minute tick, ``use_minute()`` and the automatic
+`test_status_strip.py` (the line, the layout, the live region and the refreshes) and
+`test_status_strip_ticks.py` (the minute tick, `use_minute()` and the automatic
 refreshes) render the strip's body outside a renderer: the hooks it calls
-(``ft.use_effect``, ``ft.use_state``, ``ft.use_callback`` and the store hooks) are answered by ``Hooks``.
-The services, the page and the store are ``tests/chrome.py``'s; a module takes both
+(`ft.use_effect`, `ft.use_state`, `ft.use_callback` and the store hooks) are answered by `Hooks`.
+The services, the page and the store are `tests/chrome.py`'s; a module takes both
 modules' fixtures by assigning them to its own names, as that module's docstring says:
-``chrome.year``, ``chrome.svc`` and ``chrome.conference`` too, which this ``hooks``
-takes by name. ``finished`` and ``pull()`` serve the lists under pull-to-refresh
-(``ui/scrolling.py``'s ``pullable()``, D-449), whose screens' tests use ``network`` too.
+`chrome.year`, `chrome.svc` and `chrome.conference` too, which this `hooks`
+takes by name. `finished` and `pull()` serve the lists under pull-to-refresh
+(`ui/scrolling.py`'s `pullable()`, D-449), whose screens' tests use `network` too.
 """
 
 import asyncio
@@ -82,10 +82,10 @@ def strip_parts(strip: ft.Semantics) -> tuple[ft.Text, ft.TextButton, ft.Progres
 
 
 class Network:
-    """Stands in for ``api.fetch_feed``: counts requests, each held until released.
+    """Stands in for `api.fetch_feed`: counts requests, each held until released.
 
-    Released, it answers with an empty body, which ``feed.process`` rejects: a failed
-    refresh, which is enough to end it; or it raises ``error`` when one is set.
+    Released, it answers with an empty body, which `feed.process` rejects: a failed
+    refresh, which is enough to end it; or it raises `error` when one is set.
     """
 
     def __init__(self) -> None:
@@ -96,9 +96,9 @@ class Network:
         self.error: Exception | None = None
 
     async def fetch_feed(self, url: str, **_: object) -> bytes:
-        """Count the request, then hold it until ``released`` is set.
+        """Count the request, then hold it until `released` is set.
 
-        Then raise ``error`` when one is set, or answer with an empty body.
+        Then raise `error` when one is set, or answer with an empty body.
         """
         self.requests += 1
         self.arrived.set()
@@ -110,7 +110,7 @@ class Network:
 
 @pytest.fixture
 def network(monkeypatch: pytest.MonkeyPatch) -> Iterator[Network]:
-    """Replace ``api.fetch_feed`` with a ``Network`` until the test ends."""
+    """Replace `api.fetch_feed` with a `Network` until the test ends."""
     fake = Network()
     monkeypatch.setattr(api, "fetch_feed", fake.fetch_feed)
     yield fake
@@ -121,7 +121,7 @@ def network(monkeypatch: pytest.MonkeyPatch) -> Iterator[Network]:
 def finished(monkeypatch: pytest.MonkeyPatch) -> list[ft.RefreshIndicator]:
     """The indicators told that their refresh ended: the harness has no Flutter to tell.
 
-    ``RefreshIndicator`` tells its client ``finish_refresh`` once ``on_refresh``
+    `RefreshIndicator` tells its client `finish_refresh` once `on_refresh`
     returns or raises, which stops the spinner; this records each one instead.
     """
     told: list[ft.RefreshIndicator] = []
@@ -135,8 +135,8 @@ def finished(monkeypatch: pytest.MonkeyPatch) -> list[ft.RefreshIndicator]:
 
 
 def pull(shown: Shown, indicator: ft.RefreshIndicator) -> asyncio.Task[None]:
-    """Pull ``indicator`` down far enough, as Flutter reports it: its ``refresh`` event.
+    """Pull `indicator` down far enough, as Flutter reports it: its `refresh` event.
 
-    Returns the event's run, which ends once ``on_refresh`` has returned.
+    Returns the event's run, which ends once `on_refresh` has returned.
     """
     return asyncio.ensure_future(shown.event(indicator, "refresh"))

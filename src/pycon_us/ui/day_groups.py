@@ -1,7 +1,7 @@
 """A day of session rows under its heading: one memoised list item (D-153).
 
 A row says no day (D-184), so a list of sessions that spans days puts a heading per day
-above its rows. ``DayGroup`` is that item for the lists made of ``DaySessions`` (D-185):
+above its rows. `DayGroup` is that item for the lists made of `DaySessions` (D-185):
 search's results (D-193) and the track pages (SCHED-22). It is memoised and keyed by
 its day, as S2's slots are, so a star tap re-renders one day and in it one row, and a
 list whose days stay the same re-renders none.
@@ -44,25 +44,25 @@ def DayGroup(
 
     A memoised component keyed by the day (D-153): a render that leaves a day's
     sessions as they were skips it, and a star tap re-renders only its day, whose
-    ``saved`` changed, and in it only the one row. Breaks and notices are
-    ``NoticeRow``s, the others ``SessionRow``s with their star (D-184).
+    `saved` changed, and in it only the one row. Breaks and notices are
+    `NoticeRow`s, the others `SessionRow`s with their star (D-184).
 
     Args:
         group: The day and its sessions, in the Schedule's order.
         views: The row view of every session the list shows, by id; built once per
             feed version, so the same objects on every render.
-        saved: The day's saved sessions (``Favorites.ids`` ∩ the day's ids).
-        changes: The recent changes of the day's sessions only (``changes_of()``),
+        saved: The day's saved sessions (`Favorites.ids` ∩ the day's ids).
+        changes: The recent changes of the day's sessions only (`changes_of()`),
             so a recorded batch re-renders only the days it touches (D-315).
         on_toggle: The list's one star handler.
         tokens: The scheme's tokens (D-150).
-        screen: The screen's name in the rows' semantics identifiers, e.g. ``search``
+        screen: The screen's name in the rows' semantics identifiers, e.g. `search`
             (decisions §M).
         level: The day heading's level in the page's outline (F40): 2 under the page's
             title, 3 under a heading of its own (search's "Sessions").
         top: The space above the day heading: 0 right under another heading.
         omit: Badge labels the page already shows, left out of every row: a track
-            page's own badge (``badge_specs()``, D-199).
+            page's own badge (`badge_specs()`, D-199).
     """
     # As SessionRow's: ft.component's typing leaves out the key= its wrapper takes.
     return _DayGroup(
@@ -95,7 +95,7 @@ def _DayGroup(
     top: int,
     omit: frozenset[str],
 ) -> ft.Control:
-    """The body of ``DayGroup``; it runs only when its props change (F34)."""
+    """The body of `DayGroup`; it runs only when its props change (F34)."""
     info = use_services().year.conference
     rows = [
         NoticeRow(

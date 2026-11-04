@@ -1,10 +1,10 @@
-"""Tests for the expo hall: the Map's Expo pane and ``…/plan/expo`` (#402; EXPO-01, MAP-01).
+"""Tests for the expo hall: the Map's Expo pane and `…/plan/expo` (#402; EXPO-01, MAP-01).
 
-The Map runs in a real Flet session (``tests/sessions.py``) over the 2026 feed and
-``map.toml``, on its Expo pane. No Flutter lays it out or answers its viewer here, so
-the tests report the viewer's size as ``on_size_change`` would and ``FakeViewer``
+The Map runs in a real Flet session (`tests/sessions.py`) over the 2026 feed and
+`map.toml`, on its Expo pane. No Flutter lays it out or answers its viewer here, so
+the tests report the viewer's size as `on_size_change` would and `FakeViewer`
 stands in for the viewer's methods. The pulse's waits are held until a test releases
-them (``tests/timers.py``), and each booth body's run is counted through its phrase.
+them (`tests/timers.py`), and each booth body's run is counted through its phrase.
 How the booths look, that a tap lands on them at 1x and at the maximum zoom, and what
 TalkBack and VoiceOver say are checked on devices (the PR).
 """
@@ -37,12 +37,12 @@ BOX = (382.0, 560.0)
 """The Expo pane's size under the tab bar on an iPhone 17 in portrait, in dp."""
 
 type Box = tuple[float, float, float, float]
-"""A booth's ``left``, ``top``, ``width`` and ``height`` on the fitted plan."""
+"""A booth's `left`, `top`, `width` and `height` on the fitted plan."""
 
 
 @dataclass
 class ExpoShown(harness.Shown):
-    """The harness's ``Shown`` on the Map's Expo pane, with what its booths did."""
+    """The harness's `Shown` on the Map's Expo pane, with what its booths did."""
 
     viewer: FakeViewer = field(default_factory=FakeViewer)
     sleeps: HeldSleeps = field(default_factory=HeldSleeps)
@@ -51,19 +51,19 @@ class ExpoShown(harness.Shown):
 
     @property
     def zoom_layer(self) -> ft.InteractiveViewer:
-        """The plan's one ``InteractiveViewer``."""
+        """The plan's one `InteractiveViewer`."""
         (found,) = self.find(ft.InteractiveViewer)
         return found
 
     def booth(self, number: str) -> ft.Semantics:
-        """A booth's node, ``expo.booth.<number>``."""
+        """A booth's node, `expo.booth.<number>`."""
         return self.node(f"{expo.SCREEN}.booth.{number}")
 
     def boxes(self) -> dict[str, Box]:
-        """Each booth's positioned ``Container`` box, by number, in the layer's order.
+        """Each booth's positioned `Container` box, by number, in the layer's order.
 
-        Each booth is a component in the layer's ``Stack``, rendering the ``Container``
-        that holds its node, so the order is its component's place in the ``Stack``.
+        Each booth is a component in the layer's `Stack`, rendering the `Container`
+        that holds its node, so the order is its component's place in the `Stack`.
         """
         placed: list[tuple[int, str, Box]] = []
         for node in self.nodes(f"{expo.SCREEN}.booth."):
@@ -84,11 +84,11 @@ class ExpoShown(harness.Shown):
         await self.event(sized, "size_change", {"w": box[0], "h": box[1]})
 
     async def tap(self, number: str) -> None:
-        """Tap a booth, as Flutter's hit test sends it to the booth's ``Container``."""
+        """Tap a booth, as Flutter's hit test sends it to the booth's `Container`."""
         await self.click(cast(ft.Container, self.booth(number).content))
 
     async def transformed(self) -> None:
-        """Report the fake viewer's transform, as ``on_transform_changed`` does."""
+        """Report the fake viewer's transform, as `on_transform_changed` does."""
         v = self.viewer
         data = {"s": v.scale, "tx": v.x, "ty": v.y, "tz": 0.0, "m": []}
         await self.event(self.zoom_layer, "transform_changed", data)
@@ -111,10 +111,10 @@ open_at = links.open_at  # the fixture, under this module's name (tests/chrome.p
 async def render(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> AsyncIterator[Render]:
-    """Yield a function that opens the Map's Expo pane and returns its ``ExpoShown``.
+    """Yield a function that opens the Map's Expo pane and returns its `ExpoShown`.
 
     Reduced motion and the view memory can be set. The pulse's waits are held, the
-    viewer's methods are ``FakeViewer``'s, and each booth body's phrase is counted.
+    viewer's methods are `FakeViewer`'s, and each booth body's phrase is counted.
     """
     sleeps = HeldSleeps()
     monkeypatch.setattr(expo, "asyncio", sleeps)  # the expo module's name only
@@ -177,7 +177,7 @@ def hit(point: tuple[float, float], boxes: dict[str, Box]) -> str | None:
 
 
 async def test_the_expo_tab_shows_the_plan_with_every_booth(render: Render) -> None:
-    """``?tab=expo`` opens the pane: the plan, named, under 61 booths in number order."""
+    """`?tab=expo` opens the pane: the plan, named, under 61 booths in number order."""
     shown = await render()
     assert shown.memory.map_tab == "expo"
     assert shown.find(ft.ListView) == []  # no list: the plan fills the pane
@@ -278,7 +278,7 @@ async def test_a_selection_re_renders_two_booths_and_a_zoom_none(
 
 
 async def test_a_selected_booth_pulses_twice_then_stays(render: Render) -> None:
-    """Up and back twice, through ``prefs.motion_ms()``, then the plain fill (D-34)."""
+    """Up and back twice, through `prefs.motion_ms()`, then the plain fill (D-34)."""
     shown = await render()
     await shown.lay_out()
     await shown.tap("613")
@@ -338,7 +338,7 @@ async def test_a_pane_at_fit_is_not_put_back(render: Render) -> None:
 
 
 async def test_the_zoom_buttons_are_the_expo_s_own(render: Render) -> None:
-    """Zoom in, out and reset, merged with ``expo.zoom_in`` and the others (D-214)."""
+    """Zoom in, out and reset, merged with `expo.zoom_in` and the others (D-214)."""
     shown = await render()
     await shown.lay_out()
     for name in ("zoom_in", "zoom_out", "reset"):
@@ -352,7 +352,7 @@ async def test_a_retap_on_the_expo_pane_does_nothing(render: Render) -> None:
 
 
 def test_a_year_without_booths_has_no_expo_tab() -> None:
-    """The Expo pane is there only when ``map.toml`` has booths."""
+    """The Expo pane is there only when `map.toml` has booths."""
     no_booths = replace(YEAR.map, booths=())
     slugs = [pane.slug for pane in screen.panes_of(no_booths)]
     assert slugs == ["rooms", map_plans.FLOOR_PLANS, "job-fair"]
@@ -363,7 +363,7 @@ def test_a_year_without_booths_has_no_expo_tab() -> None:
 async def test_plan_expo_is_the_hall_in_a_year_with_booths(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch, booths: bool
 ) -> None:
-    """``…/plan/expo`` pushes the hall with its booths; without booths, the plan alone."""
+    """`…/plan/expo` pushes the hall with its booths; without booths, the plan alone."""
     year = YEAR if booths else replace(YEAR, map=replace(YEAR.map, booths=()))
     async with harness.showing(
         plan.ExpoPlan,
@@ -384,9 +384,9 @@ async def test_plan_expo_is_the_hall_in_a_year_with_booths(
 async def test_back_from_a_pushed_hall_shows_the_booth_selected_there(
     open_at: links.Open, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """The Expo pane stays mounted under ``/map/plan/expo``; Back shows the new booth.
+    """The Expo pane stays mounted under `/map/plan/expo`; Back shows the new booth.
 
-    Both halls share ``ViewMemory.expo_booth`` (D-312): the pane below rereads it when
+    Both halls share `ViewMemory.expo_booth` (D-312): the pane below rereads it when
     the route comes back to it, not only when it mounts.
     """
     FakeViewer().install(monkeypatch)

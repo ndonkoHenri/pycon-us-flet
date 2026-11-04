@@ -1,20 +1,20 @@
 """The active conference year and the loader for its bundled data (D-05, D-45).
 
-``YEAR`` selects ``data/<year>/``. ``load_year()`` reads that folder's TOML files into the
-frozen dataclasses below, through ``year_schema``, then checks their rules. Six
+`YEAR` selects `data/<year>/`. `load_year()` reads that folder's TOML files into the
+frozen dataclasses below, through `year_schema`, then checks their rules. Six
 concerns have modules of their own, each with its tables and their checks: the track
-registry and the Tracks hub's pages in ``year_tracks`` (D-228), the Open spaces and
-Lightning talks pages in ``year_pages`` (D-205), the keynotes in ``year_keynotes``
-(D-217), the info pages in ``year_info`` (D-263; About the PSF's and Social's in
-``year_links``), the conference moments in ``year_moments`` (D-274), and ``map.toml``'s
-floor plans and pins in ``year_map`` (DATA-32). The dataclasses
+registry and the Tracks hub's pages in `year_tracks` (D-228), the Open spaces and
+Lightning talks pages in `year_pages` (D-205), the keynotes in `year_keynotes`
+(D-217), the info pages in `year_info` (D-263; About the PSF's and Social's in
+`year_links`), the conference moments in `year_moments` (D-274), and `map.toml`'s
+floor plans and pins in `year_map` (DATA-32). The dataclasses
 are the schema: an unknown or missing key, a wrong type or a broken rule fails at load
-time with a ``YearDataError`` that names the file, the key and the problem. Years,
+time with a `YearDataError` that names the file, the key and the problem. Years,
 dates, names and URLs live in the data files, never in code; rolling over is a new
-``data/<year>/`` folder and a new ``YEAR``.
+`data/<year>/` folder and a new `YEAR`.
 
-The year's feed snapshot, ``conference.json``, is read only when the app needs it, through
-``YearData.read_snapshot()`` (D-38, NEW-03).
+The year's feed snapshot, `conference.json`, is read only when the app needs it, through
+`YearData.read_snapshot()` (D-38, NEW-03).
 """
 
 import re
@@ -55,9 +55,9 @@ YEAR = 2026
 """The conference year the app shows (D-05)."""
 
 DATA_DIR = Path(__file__).parent / "data"
-"""Where the per-year folders live; ``flet build`` bundles it with the package.
+"""Where the per-year folders live; `flet build` bundles it with the package.
 
-A path relative to this module, because ``flet build`` copies ``src/`` into the app rather
+A path relative to this module, because `flet build` copies `src/` into the app rather
 than installing it (F15): the files sit next to the code on the phone too.
 """
 
@@ -67,7 +67,7 @@ SNAPSHOT_FILE = "conference.json"
 
 @dataclass(frozen=True)
 class ConferenceInfo:
-    """The facts about one conference year, from ``conference.toml``."""
+    """The facts about one conference year, from `conference.toml`."""
 
     year: int
     name: str
@@ -82,7 +82,7 @@ class ConferenceInfo:
     feed_url: str
     tracks: tuple[Track, ...]
     snapshot_captured_at: datetime | None = None
-    """When ``tools/update_snapshot.py`` fetched the bundled snapshot; aware. None when the
+    """When `tools/update_snapshot.py` fetched the bundled snapshot; aware. None when the
     year bundles no snapshot (only the active year needs one)."""
     registration_url: str = ""
     """Where an attendee checks their registration and adds tutorials or summits to it,
@@ -108,7 +108,7 @@ class ConferenceInfo:
     def first_sprint_day(self) -> date | None:
         """The first sprint day, the day after the last talk day; None without sprints.
 
-        The sprints run from it to ``last_day``: the feed has no sessions for them
+        The sprints run from it to `last_day`: the feed has no sessions for them
         (D-126), so the year's dates are where they come from (EVT-05).
         """
         if self.last_day == self.last_talk_day:
@@ -121,7 +121,7 @@ class ConferenceInfo:
         return ZoneInfo(self.time_zone)
 
     def track(self, key: str) -> Track:
-        """Return the registry entry for ``key``, or a humanised stand-in for an unknown key.
+        """Return the registry entry for `key`, or a humanised stand-in for an unknown key.
 
         A new kind in next year's feed then still shows a readable name, instead of failing.
         """
@@ -142,7 +142,7 @@ class ConferenceInfo:
         )
 
     def track_for_slug(self, slug: str) -> Track | None:
-        """Return the registry entry whose page is ``/more/tracks/<slug>``, or None.
+        """Return the registry entry whose page is `/more/tracks/<slug>`, or None.
 
         Args:
             slug: A route segment, unquoted; an unknown one has no track (DATA-29).
@@ -153,13 +153,13 @@ class ConferenceInfo:
         return None
 
     def track_name(self, key: str) -> str:
-        """Return the name on track ``key``'s badges and rows, its short one (DATA-28)."""
+        """Return the name on track `key`'s badges and rows, its short one (DATA-28)."""
         return self.track(key).short
 
 
 @dataclass(frozen=True)
 class Content:
-    """The year's content from ``content.toml`` (D-45).
+    """The year's content from `content.toml` (D-45).
 
     What feed processing and the Map need, the copy and links of the Open spaces and
     Lightning talks pages (D-205), the keynotes' people and abstracts (D-217), the info
@@ -168,8 +168,8 @@ class Content:
 
     Attributes:
         display_time_overrides: Displayed starts to shift (DATA-11).
-        hall_prefix: What the year's feed puts before a ``Hall …`` room elsewhere: a
-            ``Lunch (Hall AB)`` is served in ``Expo Hall AB`` in 2026 (D-122). Empty
+        hall_prefix: What the year's feed puts before a `Hall …` room elsewhere: a
+            `Lunch (Hall AB)` is served in `Expo Hall AB` in 2026 (D-122). Empty
             when the feed names its halls the same way everywhere.
         lightning_talks_location: Where lightning talks are shown to happen, whatever
             rooms they are streamed to (D-124); empty to show their first room.
@@ -184,7 +184,7 @@ class Content:
         wifi: The Wi-Fi page's network and password (INFO-08, D-280); None for a year
             without them, whose page shows the feed's block.
         event_reminders: The sign-up moments, written by hand (NOTIF-05); the
-            keynotes' moments are derived from the feed (``year_moments``).
+            keynotes' moments are derived from the feed (`year_moments`).
         safety_contacts: Help & safety's ways to report a concern, each from a public
             source (INFO-07, D-45, D-281); empty for a year without them.
         help: Help & safety's other lines and links; None for a year without them,
@@ -236,10 +236,10 @@ class YearData:
     """Everything bundled for one conference year.
 
     Attributes:
-        conference: The facts from ``conference.toml``.
-        content: The texts and overrides from ``content.toml``.
-        folder: The year's folder, where ``read_snapshot()`` finds the snapshot.
-        map: The floor plans and their pins from ``map.toml`` (DATA-32); empty for a
+        conference: The facts from `conference.toml`.
+        content: The texts and overrides from `content.toml`.
+        folder: The year's folder, where `read_snapshot()` finds the snapshot.
+        map: The floor plans and their pins from `map.toml` (DATA-32); empty for a
             year without the file.
     """
 
@@ -263,16 +263,16 @@ class YearData:
     def read_snapshot(self) -> Snapshot:
         """Read the year's bundled feed snapshot (D-38, NEW-03).
 
-        It is read on demand, not by ``load_year()``: once a feed cache exists the app
-        never needs it. The bytes are not checked here; ``feed.process`` does that, and a
+        It is read on demand, not by `load_year()`: once a feed cache exists the app
+        never needs it. The bytes are not checked here; `feed.process` does that, and a
         test processes the committed snapshot.
 
         Returns:
             The snapshot's bytes and capture time.
 
         Raises:
-            YearDataError: The year bundles no snapshot (``snapshot_captured_at`` is not
-                set), or ``conference.json`` is missing: a broken build.
+            YearDataError: The year bundles no snapshot (`snapshot_captured_at` is not
+                set), or `conference.json` is missing: a broken build.
         """
         year = self.conference.year
         captured_at = self.conference.snapshot_captured_at
@@ -291,13 +291,13 @@ class YearData:
 def load_year(
     year: int = YEAR, data_dir: Path = DATA_DIR, *, check_sessions: bool = False
 ) -> YearData:
-    """Load and check the data files of ``year``.
+    """Load and check the data files of `year`.
 
     Args:
-        year: The conference year; its files are in ``data_dir/<year>/``.
+        year: The conference year; its files are in `data_dir/<year>/`.
         data_dir: The folder that holds the year folders.
         check_sessions: Also refuse a keynote whose session the year's bundled
-            snapshot lacks, or has on a track not in ``KEYNOTE_TRACKS`` (D-217), and a
+            snapshot lacks, or has on a track not in `KEYNOTE_TRACKS` (D-217), and a
             sponsor credit whose slug it lacks (D-337). The tests and tools ask; the app
             does not, since
             parsing the snapshot at every start would cost what D-38 saves, and a
@@ -308,7 +308,7 @@ def load_year(
 
     Raises:
         YearDataError: A file is missing, is not valid TOML, or breaks the schema.
-            ``map.toml`` alone may be missing: the year then has no plans.
+            `map.toml` alone may be missing: the year then has no plans.
     """
     folder = data_dir / str(year)
     conference_file = f"{year}/conference.toml"

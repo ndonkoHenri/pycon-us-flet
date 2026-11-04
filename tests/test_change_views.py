@@ -1,8 +1,8 @@
 """The change log's words: each change's line and sentence, sections and counts (NEW-04).
 
-Most cases build a ``Change`` by hand, so each string is pinned exactly; one runs a real
-feed pair (``tests/feeds.py``) through ``diff()``. Every test runs under both machine
-zones (``machine_tz``, D-43): the words are in conference time whatever the device's.
+Most cases build a `Change` by hand, so each string is pinned exactly; one runs a real
+feed pair (`tests/feeds.py`) through `diff()`. Every test runs under both machine
+zones (`machine_tz`, D-43): the words are in conference time whatever the device's.
 """
 
 from datetime import UTC, datetime, timedelta, tzinfo
@@ -40,7 +40,7 @@ NOW = datetime(2026, 5, 16, 17, 42, tzinfo=UTC)
 
 
 def at(day: int, hour: int, minute: int = 0, zone: tzinfo = LA) -> datetime:
-    """A moment of May 2026 in ``zone``, Long Beach's by default."""
+    """A moment of May 2026 in `zone`, Long Beach's by default."""
     return datetime(2026, 5, day, hour, minute, tzinfo=zone)
 
 
@@ -61,12 +61,12 @@ def change(
     new: Listing | None,
     key: str = "142",
 ) -> Change:
-    """A change of session ``key``."""
+    """A change of session `key`."""
     return Change(key, kind, old, new)
 
 
 def view(c: Change, zone: tzinfo = LA, *, use_24h: bool = False) -> ChangeView:
-    """The view of ``c`` in ``zone``."""
+    """The view of `c` in `zone`."""
     return change_view(c, zone, use_24h=use_24h)
 
 
@@ -238,7 +238,7 @@ def test_detected_label_in_24_hour_form() -> None:
 
 
 def batch_of(*changes: Change, at_: datetime = NOW, seen: bool = False) -> Batch:
-    """A batch of ``changes`` detected at ``at_``."""
+    """A batch of `changes` detected at `at_`."""
     return Batch(detected_at=at_, changes=changes, seen=seen)
 
 

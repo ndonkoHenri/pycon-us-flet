@@ -1,11 +1,11 @@
 """Now's Schedule changes card: "2 saved sessions changed · Review" (ux.md §5.1 item 6).
 
 NEW-04, D-255. Under Your next session on the conference days, only while the unseen
-batches of the last 24 hours change saved sessions (``core.change_views.now_card_text()``:
+batches of the last 24 hours change saved sessions (`core.change_views.now_card_text()`:
 each session once, additions left out, changes to unsaved sessions never). A tap pushes
-Schedule changes on Now (``/now/changes/<year>``), so Back returns here. The card goes
+Schedule changes on Now (`/now/changes/<year>`), so Back returns here. The card goes
 once its batches are seen: 2 s on the list, or Mark all as seen (ux.md §6.4); left
-sooner, it stays. Apart from ``now.py`` so that the screen stays under about 400 lines
+sooner, it stays. Apart from `now.py` so that the screen stays under about 400 lines
 (D-66).
 """
 
@@ -36,12 +36,12 @@ def changes_card(
 ) -> list[ft.Control]:
     """Return the card, or nothing while no unseen change touches a saved session.
 
-    One button node, read "2 saved sessions changed, Review" (``LinkTile``).
+    One button node, read "2 saved sessions changed, Review" (`LinkTile`).
 
     Args:
-        change_log: The session's ``ChangeLog``.
+        change_log: The session's `ChangeLog`.
         saved: The ids of the saved sessions.
-        now: The current instant (aware), ``clock.now()``.
+        now: The current instant (aware), `clock.now()`.
         view_path: Now's View path, which the list is pushed on.
         year: The active conference year: the list's drill id (D-255).
     """

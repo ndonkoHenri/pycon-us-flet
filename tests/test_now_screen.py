@@ -1,6 +1,6 @@
 """Tests for the sections the Now tab shows in each season (#95; D-14, ux.md §5.1).
 
-The screen runs in ``tests/now_view.py``'s harness at fixed times of the 2026 feed.
+The screen runs in `tests/now_view.py`'s harness at fixed times of the 2026 feed.
 """
 
 from collections.abc import Callable

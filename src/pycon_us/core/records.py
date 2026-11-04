@@ -1,11 +1,11 @@
 """Decode the feed's JSON records into frozen records (D-42; DATA-01, DATA-22, DATA-24, DATA-26).
 
-Each decoder takes one JSON value and returns its record, or raises ``TypeError`` or
-``ValueError`` naming the field and the problem; ``feed.process()`` then skips that record.
+Each decoder takes one JSON value and returns its record, or raises `TypeError` or
+`ValueError` naming the field and the problem; `feed.process()` then skips that record.
 Ids become strings and times aware datetimes in the conference zone, and a lone surrogate
-in a string becomes U+FFFD (#150). Unknown fields are ignored. ``Slot`` and ``OpenSpace``
-are the feed as it is, before Ionic's rules (``core/rules.py``) make sessions of them.
-Sponsors have no id for ``feed.process()`` to check, so ``sponsor_levels()`` decodes the
+in a string becomes U+FFFD (#150). Unknown fields are ignored. `Slot` and `OpenSpace`
+are the feed as it is, before Ionic's rules (`core/rules.py`) make sessions of them.
+Sponsors have no id for `feed.process()` to check, so `sponsor_levels()` decodes the
 whole section and skips its own bad records.
 """
 
@@ -28,21 +28,21 @@ from pycon_us.core.slugs import sponsor_slug
 logger = logging.getLogger(__name__)
 
 OPEN_SPACE_ID_OFFSET = 9000
-"""Added to an open space's ``conf_key``, which collides with the schedule's (DATA-05)."""
+"""Added to an open space's `conf_key`, which collides with the schedule's (DATA-05)."""
 
 
 @dataclass(frozen=True)
 class Slot:
-    """One record of the feed's ``schedule``, decoded but not yet processed.
+    """One record of the feed's `schedule`, decoded but not yet processed.
 
     Attributes:
-        id: Its ``conf_key``, as a string (D-42).
-        name: The name as the feed gives it: it may hold a Markdown link or a ``(Room)``.
+        id: Its `conf_key`, as a string (D-42).
+        name: The name as the feed gives it: it may hold a Markdown link or a `(Room)`.
         kind: The feed's kind.
         room: The room text; several rooms are joined by ", ".
         description: The HTML description; empty when there is none.
         start: Aware, in the conference zone.
-        end: Aware, in the conference zone; never before ``start``.
+        end: Aware, in the conference zone; never before `start`.
         url: Its page on the conference site; empty when there is none.
         authors: The speakers' names, as text (DATA-15 links them by name).
         has_contact: Whether the feed lists a contact; a placeholder has none.
@@ -64,13 +64,13 @@ class Slot:
 
 @dataclass(frozen=True)
 class OpenSpace:
-    """One record of the feed's ``open-spaces``, decoded (DATA-05).
+    """One record of the feed's `open-spaces`, decoded (DATA-05).
 
     Attributes:
         conf_key: Its key in the open-space signups; it collides with schedule keys.
         title: The title.
         description: The description, in Markdown (not HTML).
-        room: Where it meets: the feed's ``room_display``, or ``room`` when that is empty.
+        room: Where it meets: the feed's `room_display`, or `room` when that is empty.
         start: Aware, in the conference zone; None until it is scheduled.
         end: Aware, in the conference zone; None until it is scheduled.
         image_url: Its image as the feed gives it, possibly site-relative; may be empty.
@@ -86,14 +86,14 @@ class OpenSpace:
 
     @property
     def session_id(self) -> str:
-        """The id of the session it becomes: ``conf_key + 9000`` (D-42)."""
+        """The id of the session it becomes: `conf_key + 9000` (D-42)."""
         return str(self.conf_key + OPEN_SPACE_ID_OFFSET)
 
 
 def nested_posters(schedule: list[object]) -> list[object]:
     """Return the posters nested in poster slots, as 2025's feed lists them (D-121).
 
-    Ionic never read a slot's ``sessions`` for a poster slot, and its branch for other
+    Ionic never read a slot's `sessions` for a poster slot, and its branch for other
     kinds (DATA-27) is not ported: those are logged and ignored.
     """
     nested: list[object] = []
@@ -110,7 +110,7 @@ def nested_posters(schedule: list[object]) -> list[object]:
 
 
 def slot(item: object, zone: ZoneInfo) -> Slot:
-    """Decode one record of ``schedule``."""
+    """Decode one record of `schedule`."""
     record = _object(item)
     start, end = _moment(record, "start", zone), _moment(record, "end", zone)
     _check_order(start, end)
@@ -130,7 +130,7 @@ def slot(item: object, zone: ZoneInfo) -> Slot:
 
 
 def open_space(item: object, zone: ZoneInfo) -> OpenSpace:
-    """Decode one record of ``open-spaces``; it may not be scheduled yet."""
+    """Decode one record of `open-spaces`; it may not be scheduled yet."""
     record = _object(item)
     start, end = (
         _schedule_time(record, "start", zone),
@@ -164,7 +164,7 @@ def _speaker(item: object) -> Speaker:
 
 
 def poster(item: object) -> tuple[Poster, list[Speaker]]:
-    """Decode one record of ``posters``, with its authors' speaker records."""
+    """Decode one record of `posters`, with its authors' speaker records."""
     record = _object(item)
     speakers = [_speaker(speaker) for speaker in _list(record, "speakers")]
     decoded = Poster(
@@ -177,7 +177,7 @@ def poster(item: object) -> tuple[Poster, list[Speaker]]:
 
 
 def nested_poster(item: object) -> tuple[Poster, list[Speaker]]:
-    """Decode a poster nested in a poster slot (2025): ``name`` and ``description`` (D-121)."""
+    """Decode a poster nested in a poster slot (2025): `name` and `description` (D-121)."""
     record = _object(item)
     speakers = [_speaker(speaker) for speaker in _list(record, "speakers")]
     decoded = Poster(
@@ -190,7 +190,7 @@ def nested_poster(item: object) -> tuple[Poster, list[Speaker]]:
 
 
 def sprint(item: object) -> Sprint:
-    """Decode one record of ``sprints``."""
+    """Decode one record of `sprints`."""
     record = _object(item)
     logo_url = record.get("logo_url")
     return Sprint(
@@ -204,7 +204,7 @@ def sprint(item: object) -> Sprint:
 
 
 def job_listing(item: object) -> JobListing:
-    """Decode one record of ``job-listings``."""
+    """Decode one record of `job-listings`."""
     record = _object(item)
     return JobListing(
         id=_id(record, "id"),
@@ -218,16 +218,16 @@ def job_listing(item: object) -> JobListing:
 def sponsor_levels(
     document: Mapping[str, object], skip: Callable[[str, object], None]
 ) -> list[SponsorLevel]:
-    """Decode ``conference.sponsors``, an object of sponsor lists keyed by level (DATA-22).
+    """Decode `conference.sponsors`, an object of sponsor lists keyed by level (DATA-22).
 
     A feed without the section has no levels. A section that is not an object, a level
-    that is not a list and a sponsor that cannot be read are each passed to ``skip``, and
+    that is not a list and a sponsor that cannot be read are each passed to `skip`, and
     the rest is kept; a level left without sponsors is not listed. The levels come in
-    feed order: ``feed.process()`` sorts them.
+    feed order: `feed.process()` sorts them.
 
     Args:
-        document: The whole feed; ``feed.process()`` has checked that its
-            ``conference``, when present, is an object.
+        document: The whole feed; `feed.process()` has checked that its
+            `conference`, when present, is an object.
         skip: Called with where and why for each record that cannot be read.
 
     Returns:
@@ -259,9 +259,9 @@ def sponsor_levels(
 
 
 def sponsor(item: object, level: str) -> Sponsor:
-    """Decode one sponsor of the level ``level``.
+    """Decode one sponsor of the level `level`.
 
-    Its ``description`` is plain text: its line breaks are kept, each one line feed (the
+    Its `description` is plain text: its line breaks are kept, each one line feed (the
     feed writes some as CR LF). An empty booth or table reads as None, as Ionic showed
     no pill for one.
     """
@@ -294,19 +294,19 @@ def sponsor(item: object, level: str) -> Sponsor:
 
 
 def without_surrogates(value: str) -> str:
-    r"""Return ``value`` with each lone surrogate replaced by U+FFFD; the rest is kept.
+    r"""Return `value` with each lone surrogate replaced by U+FFFD; the rest is kept.
 
-    JSON can escape a lone surrogate (``"\ud800"``) and ``json.loads`` keeps it as a code
+    JSON can escape a lone surrogate (`"\ud800"`) and `json.loads` keeps it as a code
     point, but strict UTF-8 cannot encode one, and Flet sends every string to Flutter as
     strict UTF-8 (msgpack), so one would fail there (#150). An escaped pair is already one
-    supplementary character (an emoji) after ``json.loads``, but a pair that arrives as
-    CESU-8 bytes stays two code points, because ``json.loads`` decodes bytes with
-    ``surrogatepass``. The UTF-16 round trip joins such a pair into its character and
-    replaces each lone surrogate with one U+FFFD. UTF-8's ``errors="replace"`` is not
-    used: it would turn them into ``?``.
+    supplementary character (an emoji) after `json.loads`, but a pair that arrives as
+    CESU-8 bytes stays two code points, because `json.loads` decodes bytes with
+    `surrogatepass`. The UTF-16 round trip joins such a pair into its character and
+    replaces each lone surrogate with one U+FFFD. UTF-8's `errors="replace"` is not
+    used: it would turn them into `?`.
 
-    The record decoders apply it to every string they return, and ``feed.process()`` to
-    the ``conference.content`` blocks.
+    The record decoders apply it to every string they return, and `feed.process()` to
+    the `conference.content` blocks.
     """
     if value.isascii():  # most feed strings: no surrogate, and ten times faster
         return value
@@ -333,7 +333,7 @@ def _place(record: Mapping[str, object], key: str) -> str | None:
     """Return a booth or table as text, or None when it is missing, null or blank.
 
     The feed writes them as strings; a number reads as its digits, as Ionic's
-    ``String(booth_number)`` read it.
+    `String(booth_number)` read it.
     """
     value = record.get(key)
     if value is None:
@@ -379,21 +379,21 @@ def _schedule_time(
 
 
 def _check_order(start: datetime, end: datetime) -> None:
-    """Refuse a record whose ``end`` instant comes before its ``start`` (D-43, #513).
+    """Refuse a record whose `end` instant comes before its `start` (D-43, #513).
 
-    Compared in UTC: two datetimes in the same ``ZoneInfo`` compare by wall clock and
-    ignore ``fold`` (PEP 495), so a session from 1:40 PDT to 1:10 PST, across the end of
+    Compared in UTC: two datetimes in the same `ZoneInfo` compare by wall clock and
+    ignore `fold` (PEP 495), so a session from 1:40 PDT to 1:10 PST, across the end of
     summer time, would otherwise read as ending before it starts.
 
     Raises:
-        ValueError: ``end`` is before ``start``.
+        ValueError: `end` is before `start`.
     """
     if end.astimezone(UTC) < start.astimezone(UTC):
         raise ValueError(f"ends at {end.isoformat()}, before it starts")
 
 
 def _moment(record: Mapping[str, object], key: str, zone: ZoneInfo) -> datetime:
-    """Return an ISO 8601 time with a UTC offset as an aware datetime in ``zone``."""
+    """Return an ISO 8601 time with a UTC offset as an aware datetime in `zone`."""
     text = _text(record, key)
     try:
         moment = datetime.fromisoformat(text)

@@ -1,10 +1,10 @@
-"""The private API's calls as Ionic's ``pycon-api.ts`` makes them (D-52, D-53, API-12).
+"""The private API's calls as Ionic's `pycon-api.ts` makes them (D-52, D-53, API-12).
 
-Each ``Endpoint`` constant is one call: its method, path, timeout and whether it is
-signed or enveloped; ``ENDPOINTS`` lists every call the app ports, which
-``tests/test_api_endpoints.py`` checks against ``tools/mock_api/README.md`` and the
+Each `Endpoint` constant is one call: its method, path, timeout and whether it is
+signed or enveloped; `ENDPOINTS` lists every call the app ports, which
+`tests/test_api_endpoints.py` checks against `tools/mock_api/README.md` and the
 mock's routes. The query builders encode each query exactly as Ionic did, since the
-signature covers it byte for byte. ``services/api.py``'s ``ApiClient.request`` sends
+signature covers it byte for byte. `services/api.py`'s `ApiClient.request` sends
 them.
 """
 
@@ -16,18 +16,18 @@ from pycon_us.core.signing import enc
 
 @dataclass(frozen=True)
 class Endpoint:
-    """One call of the private API, as Ionic's ``pycon-api.ts`` makes it.
+    """One call of the private API, as Ionic's `pycon-api.ts` makes it.
 
     Attributes:
-        name: The call's name in ``tools/mock_api/README.md``.
+        name: The call's name in `tools/mock_api/README.md`.
         method: The HTTP method, upper case.
-        path: The path under ``/<year>/api/v1/``; each ``{}`` is one path segment that
-            ``ApiClient.request`` fills from its arguments.
+        path: The path under `/<year>/api/v1/`; each `{}` is one path segment that
+            `ApiClient.request` fills from its arguments.
         timeout: Ionic's timeout in seconds (here for connect, each read and the pool).
-        signed: Whether the request carries the ``X-API-*`` headers; only
-            ``authenticate`` doesn't.
-        enveloped: Whether a reply is ``{"code", "data"}`` and the caller wants the
-            ``data``; Ionic reads every other reply bare.
+        signed: Whether the request carries the `X-API-*` headers; only
+            `authenticate` doesn't.
+        enveloped: Whether a reply is `{"code", "data"}` and the caller wants the
+            `data`; Ionic reads every other reply bare.
     """
 
     name: str
@@ -66,22 +66,22 @@ ENDPOINTS = (
     INVENTORY, FETCH_PRODUCTS, REDEEM, COC_ATTENDEES, COC_SCAN, COC_REPORT,
     LEAD_SPONSORS, LEAD_CAPTURE, LEAD_NOTE,
 )  # fmt: skip
-"""Every call of the contract the app ports. Ionic's ``attendees_by_product/<id>/`` is
-never called, so it is not ported (API-05); ``COC_SCAN``, Ionic's per-frame GET, stays
-as API-08's contract but the app records every incident with ``COC_REPORT`` (D-430)."""
+"""Every call of the contract the app ports. Ionic's `attendees_by_product/<id>/` is
+never called, so it is not ported (API-05); `COC_SCAN`, Ionic's per-frame GET, stays
+as API-08's contract but the app records every incident with `COC_REPORT` (D-430)."""
 
 
 def fetch_products_query(code: str, ids: Iterable[int | str], *, door: bool) -> str:
-    """Build ``fetch_products``' query as Ionic does, encoding nothing (153, 169).
+    """Build `fetch_products`' query as Ionic does, encoding nothing (153, 169).
 
     Args:
         code: The attendee's access code, interpolated raw.
         ids: The door's product ids, or the swag page's category ids.
-        door: True for the door (``product_pk_list``, ``door_check_mode``), False for
-            swag pickup (``category_pk_list``, ``redemption_mode``).
+        door: True for the door (`product_pk_list`, `door_check_mode`), False for
+            swag pickup (`category_pk_list`, `redemption_mode`).
 
     Returns:
-        The query, without its ``?``.
+        The query, without its `?`.
     """
     name, mode = (
         ("product_pk_list", "door_check_mode")
@@ -99,7 +99,7 @@ def coc_capture_query(code: str) -> str:
         code: The attendee's access code.
 
     Returns:
-        The query, without its ``?``.
+        The query, without its `?`.
     """
     return f"attendee_access_code={enc(code)}"
 
@@ -114,7 +114,7 @@ def lead_capture_query(code: str, validator: str, sponsor_id: str | None = None)
             account, which sends none.
 
     Returns:
-        The query, without its ``?``.
+        The query, without its `?`.
     """
     query = f"attendee_access_code={enc(code)}&badge_validator={enc(validator)}"
     return query if sponsor_id is None else f"{query}&sponsor_id={enc(sponsor_id)}"

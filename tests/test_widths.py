@@ -26,17 +26,17 @@ from pycon_us.ui.widths import (
 )
 
 SCREENS_DIR = Path(screens.__file__).parent
-"""Every screen module's folder, ``pycon_us/screens``."""
+"""Every screen module's folder, `pycon_us/screens`."""
 
 FULL_WIDTH = {"plan"}
-"""The screen modules of class ``FULL``, which call no hook: the floor viewer."""
+"""The screen modules of class `FULL`, which call no hook: the floor viewer."""
 
 WIDTH_CALLS = {"use_margin", "InfoBody"}
 """The calls that give a page its width class: the hook, or the info pages' body."""
 
 
 def calls(source: str) -> set[str]:
-    """The names a module's source calls, as ``f()`` or ``module.f()``.
+    """The names a module's source calls, as `f()` or `module.f()`.
 
     Args:
         source: The module's Python source.
@@ -53,7 +53,7 @@ def calls(source: str) -> set[str]:
 
 
 def lacks_width_class(source: str) -> bool:
-    """Whether a module builds a page (``AppScaffold``) without a width class.
+    """Whether a module builds a page (`AppScaffold`) without a width class.
 
     Args:
         source: The module's Python source.
@@ -67,7 +67,7 @@ async def _jump() -> None:
 
 
 def content_width(window: float, cap: float, *, root: bool) -> float:
-    """The width a screen's content gets in a window ``window`` dp wide.
+    """The width a screen's content gets in a window `window` dp wide.
 
     Args:
         window: The window's width, with no insets.
@@ -130,7 +130,7 @@ def test_the_margins_centre_the_content_in_the_body() -> None:
 def test_use_margin_takes_the_rail_off_on_tab_roots_only(
     monkeypatch: pytest.MonkeyPatch, path: str, wide: bool, margin: float
 ) -> None:
-    """``use_margin`` reads the layout and the View: only a root has the rail beside it."""
+    """`use_margin` reads the layout and the View: only a root has the rail beside it."""
     layout = Layout()
     layout.set_width(1300.0 if wide else 500.0)
     monkeypatch.setattr(widths, "use_layout", lambda: layout)
@@ -139,7 +139,7 @@ def test_use_margin_takes_the_rail_off_on_tab_roots_only(
 
 
 def test_a_list_s_padding_puts_the_margin_on_both_sides() -> None:
-    """``sides`` keeps the list's own top and bottom, so it scrolls from the margins."""
+    """`sides` keeps the list's own top and bottom, so it scrolls from the margins."""
     assert sides(230.0, top=8, bottom=24) == ft.Padding.only(
         left=230, top=8, right=230, bottom=24
     )
@@ -147,7 +147,7 @@ def test_a_list_s_padding_puts_the_margin_on_both_sides() -> None:
 
 
 def test_fixed_chrome_sits_between_the_margins_in_one_container() -> None:
-    """``capped`` is always one container, so a rotation keeps its content in place."""
+    """`capped` is always one container, so a rotation keeps its content in place."""
     strip = ft.Text("Offline")
     box = capped(strip, 190.0)
     assert isinstance(box, ft.Container)
@@ -162,7 +162,7 @@ def test_the_now_button_keeps_to_the_list_s_right_edge() -> None:
 
 
 def test_every_screen_that_builds_a_page_has_a_width_class() -> None:
-    """A screen module calling ``AppScaffold`` calls ``use_margin()``, or is FULL.
+    """A screen module calling `AppScaffold` calls `use_margin()`, or is FULL.
 
     Jobs and Licences landed after D-305 without it and stretched on a tablet (#547).
     """
@@ -177,7 +177,7 @@ def test_every_screen_that_builds_a_page_has_a_width_class() -> None:
 
 
 def test_the_guard_flags_a_page_without_a_width_class() -> None:
-    """A page body with no hook fails the guard; with the hook or ``InfoBody`` it passes."""
+    """A page body with no hook fails the guard; with the hook or `InfoBody` it passes."""
     bare = "def Page():\n    return AppScaffold(title='Jobs', body=ft.ListView([]))\n"
     hooked = "def Page():\n    m = use_margin(LIST)\n    return AppScaffold(body=m)\n"
     info = "def Page():\n    return AppScaffold(body=info_page.InfoBody([]))\n"

@@ -1,11 +1,11 @@
 """The session's private-API client, there only while a mock API URL is set (D-51).
 
-``PrivateApi`` holds ``Services.api``: an ``ApiClient`` on the mock base URL that
-Developer sets (``Prefs.mock_api_url``, DEV-01), else None, so a normal install has no
-client and no code path that could send a private-API request. ``connect()`` rebuilds
-it when the URL changes and closes the one it replaces. ``parse_mock_api_url()`` checks
-the Developer field, refusing the PSF's hosts as the client does (``refuse_private_psf``),
-and ``check_connection()`` is Developer's "Check mock connection": one signed call that
+`PrivateApi` holds `Services.api`: an `ApiClient` on the mock base URL that
+Developer sets (`Prefs.mock_api_url`, DEV-01), else None, so a normal install has no
+client and no code path that could send a private-API request. `connect()` rebuilds
+it when the URL changes and closes the one it replaces. `parse_mock_api_url()` checks
+the Developer field, refusing the PSF's hosts as the client does (`refuse_private_psf`),
+and `check_connection()` is Developer's "Check mock connection": one signed call that
 says whether the mock answers, so a device check needs no sign-in yet (#668).
 """
 
@@ -32,14 +32,14 @@ CONNECTED = "Connected to the local mock server."
 
 SIGNED_OUT_REFUSAL = "Unknown API key."
 """The mock's 401 message for a call without a known key: the check's signed-out
-answer (``tools/mock_api``)."""
+answer (`tools/mock_api`)."""
 
 
 def signed_out() -> tuple[None, None]:
-    """Return no key and no secret: the credentials of a ``PrivateApi`` given none.
+    """Return no key and no secret: the credentials of a `PrivateApi` given none.
 
-    Signed out, a signed call goes without ``X-API-Key`` and the mock answers 401.
-    The app passes ``Account.credentials`` instead (#684).
+    Signed out, a signed call goes without `X-API-Key` and the mock answers 401.
+    The app passes `Account.credentials` instead (#684).
     """
     return None, None
 
@@ -48,8 +48,8 @@ def parse_mock_api_url(text: str) -> str | None:
     """Return the mock API base URL the field names, or None when it is empty (off).
 
     Args:
-        text: An ``http://`` or ``https://`` URL; plain HTTP is the mock on the laptop
-            (development.md §6). A final ``/`` is dropped, as the paths start with one.
+        text: An `http://` or `https://` URL; plain HTTP is the mock on the laptop
+            (development.md §6). A final `/` is dropped, as the paths start with one.
 
     Raises:
         ValueError: The text is not such a URL, or it is a PSF host, whose private API
@@ -69,13 +69,13 @@ def parse_mock_api_url(text: str) -> str | None:
 
 
 class PrivateApi:
-    """The session's ``ApiClient`` while a mock URL is set, else None (D-51).
+    """The session's `ApiClient` while a mock URL is set, else None (D-51).
 
-    ``Services.api`` reads ``client``. Mutable, unlike ``Services``: the client changes
+    `Services.api` reads `client`. Mutable, unlike `Services`: the client changes
     when Developer saves or clears the URL.
 
     Attributes:
-        client: The client on ``base_url``, or None while no URL is set.
+        client: The client on `base_url`, or None while no URL is set.
         base_url: The mock's base URL the client uses, or None.
     """
 
@@ -90,7 +90,7 @@ class PrivateApi:
             transport: The HTTP transport every client gets; tests pass the mock's,
                 the app leaves it None.
             credentials: What every client signs with, read on each request: the
-                ``Account`` store's (``Account.credentials``), signed out by default.
+                `Account` store's (`Account.credentials`), signed out by default.
         """
         self._transport = transport
         self._credentials = credentials
@@ -105,22 +105,22 @@ class PrivateApi:
         year: int,
         keep: Callable[[], Awaitable[bool]] | None = None,
     ) -> bool:
-        """Use a client on ``base_url``, or none; the client it replaces is closed.
+        """Use a client on `base_url`, or none; the client it replaces is closed.
 
         The same URL keeps the client, and the clock skew it has learned (D-53). One
-        change at a time, ``keep`` included: Flet runs each click in its own task, so a
+        change at a time, `keep` included: Flet runs each click in its own task, so a
         Clear pressed while a Save closes the old client would otherwise interleave
         with it and leave a client, or a stored URL, behind (#668, D-51).
 
         Args:
-            base_url: The mock's base URL (``parse_mock_api_url()``), or None to turn
+            base_url: The mock's base URL (`parse_mock_api_url()`), or None to turn
                 the private API off.
             year: The conference year, the first segment of every path.
             keep: Stores the URL once the client is in place (Developer's save), or
                 None to store nothing.
 
         Returns:
-            What ``keep`` returned (whether it was stored), or True without one.
+            What `keep` returned (whether it was stored), or True without one.
         """
         async with self._changing:
             if base_url != self.base_url:
@@ -128,7 +128,7 @@ class PrivateApi:
             return True if keep is None else await keep()
 
     async def _replace(self, base_url: str | None, year: int) -> None:
-        """Close the current client, then build one on ``base_url``, or none."""
+        """Close the current client, then build one on `base_url`, or none."""
         old, self.client, self.base_url = self.client, None, base_url
         if old is not None:
             await old.aclose()
@@ -145,14 +145,14 @@ class PrivateApi:
 async def check_connection(client: ApiClient) -> tuple[str, bool]:
     """Send one signed call and say whether the mock answered as the private API does.
 
-    ``check_features`` signed out reaches the mock's route and its key check, so the
+    `check_features` signed out reaches the mock's route and its key check, so the
     mock's 401 "Unknown API key." means it is there, on the right year; signed in
-    (#684) it answers 200 with ``{"features": {...}}``. Any other answer, another
+    (#684) it answers 200 with `{"features": {...}}`. Any other answer, another
     401 or another body included, is another server (a wrong port, a proxy), and is
     said as the error; so is no answer.
 
     Args:
-        client: ``Services.api``.
+        client: `Services.api`.
 
     Returns:
         What to say, and whether it is connected.

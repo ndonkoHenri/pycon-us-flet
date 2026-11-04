@@ -349,7 +349,7 @@ def test_error_roles_are_the_seeds_own(dark: bool) -> None:
 
 
 def adaptive_true_calls(source: str) -> list[int]:
-    """Return the lines of calls in ``source`` that pass ``adaptive=True``."""
+    """Return the lines of calls in `source` that pass `adaptive=True`."""
     return [
         node.lineno
         for node in ast.walk(ast.parse(source))
@@ -362,7 +362,7 @@ def adaptive_true_calls(source: str) -> list[int]:
 
 
 def test_nothing_sets_adaptive() -> None:
-    """No call in ``src`` passes ``adaptive=True``.
+    """No call in `src` passes `adaptive=True`.
 
     D-10: Material only, identical on both platforms.
     """
@@ -375,14 +375,14 @@ def test_nothing_sets_adaptive() -> None:
 
 
 def test_adaptive_scan_finds_the_keyword() -> None:
-    """The scan finds a call passing ``adaptive=True``, not one passing False."""
+    """The scan finds a call passing `adaptive=True`, not one passing False."""
     assert adaptive_true_calls(
         "ft.Switch(adaptive=True)\nft.Switch(adaptive=False)\n"
     ) == [1]
 
 
 def resolved(role: object, dark: bool) -> str:
-    """The #RRGGBB a scheme role (``ft.Colors.ON_SURFACE``, "onsurface") takes."""
+    """The #RRGGBB a scheme role (`ft.Colors.ON_SURFACE`, "onsurface") takes."""
     name = str(getattr(role, "value", role))
     color_scheme = scheme(dark)
     by_name = {

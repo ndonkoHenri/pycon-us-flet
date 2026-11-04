@@ -1,13 +1,13 @@
 """The HTML → Markdown converter on the recorded 2025 and 2026 feeds (D-114, D-115; DATA-25).
 
-The 22 samples are S3's (``docs/spikes/03-html-markdown.md``), selected from the feed
+The 22 samples are S3's (`docs/spikes/03-html-markdown.md`), selected from the feed
 fixtures by year, field and a substring only that value contains. Their expected Markdown
-in ``fixtures/html_md/samples.json`` is what S3 rendered correctly on the Android 16
+in `fixtures/html_md/samples.json` is what S3 rendered correctly on the Android 16
 emulator; a change to it is a change of rendering, to be reviewed and checked on a device.
 
 The invariant runs over every value of every HTML field of both feeds: no visible
-character is lost or added (whitespace aside), and no raw tag, ``$`` or LaTeX opener is
-left outside code. It is static, so the named tests in ``test_html_md.py`` pin the rest.
+character is lost or added (whitespace aside), and no raw tag, `$` or LaTeX opener is
+left outside code. It is static, so the named tests in `test_html_md.py` pin the rest.
 """
 
 import html
@@ -44,7 +44,7 @@ HTML_FIELDS = (
 
 @cache
 def feed(year: int) -> dict[str, Any]:
-    """The recorded feed of ``year`` as JSON, read once."""
+    """The recorded feed of `year` as JSON, read once."""
     return json.loads((FIXTURES / "feeds" / f"conference-{year}.json").read_text())
 
 
@@ -55,9 +55,9 @@ def site_url(year: int) -> str:
 
 
 def values_at(node: object, path: str) -> Iterator[str]:
-    """Yield the strings at a census path such as ``.schedule[].speakers[].bio``.
+    """Yield the strings at a census path such as `.schedule[].speakers[].bio`.
 
-    ``[]`` walks every item of a list and ``*`` every value of an object.
+    `[]` walks every item of a list and `*` every value of an object.
     """
     key, _, rest = path.removeprefix(".").partition(".")
     if not key:
@@ -77,7 +77,7 @@ def values_at(node: object, path: str) -> Iterator[str]:
 
 
 def html_fields(year: int) -> Iterator[str]:
-    """Yield every value of every HTML field of ``year``'s recorded feed."""
+    """Yield every value of every HTML field of `year`'s recorded feed."""
     for path in HTML_FIELDS:
         yield from values_at(feed(year), path)
 
@@ -108,7 +108,7 @@ def html_text(value: str) -> str:
 def markdown_text(markdown: str) -> str:
     """Our Markdown's visible characters: our syntax removed, references decoded.
 
-    Outside code spans every raw ``*``, ``~``, ``[`` and ``]`` is ours, because text is
+    Outside code spans every raw `*`, `~`, `[` and `]` is ours, because text is
     escaped (D-115); code spans show their content as it is.
     """
     markdown = re.sub(r"\]\([^)\s]*\)", "]", markdown)  # link destinations
@@ -125,7 +125,7 @@ def markdown_text(markdown: str) -> str:
 
 
 def outside_code(markdown: str) -> str:
-    """Return ``markdown`` with its code spans removed."""
+    """Return `markdown` with its code spans removed."""
     return re.sub(r"(`+).*?\1", "", markdown)
 
 

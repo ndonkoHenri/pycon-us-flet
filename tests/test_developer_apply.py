@@ -1,7 +1,7 @@
 """Tests for the Developer screen's Apply and Reset, and its pickers (#88; D-73).
 
-The fixtures and lookups are ``tests/developer_screen.py``'s; the controls, the fields and
-the flags are ``test_developer.py``'s. The pickers on a device are checked on devices
+The fixtures and lookups are `tests/developer_screen.py`'s; the controls, the fields and
+the flags are `test_developer.py`'s. The pickers on a device are checked on devices
 (the PR).
 """
 

@@ -1,10 +1,10 @@
-"""Tests for the expo at a booth: ``?booth=N``, More's Expo hall and the camera (#405).
+"""Tests for the expo at a booth: `?booth=N`, More's Expo hall and the camera (#405).
 
-``…/plan/expo?booth=613`` opens the hall with that booth selected and its card, and a
+`…/plan/expo?booth=613` opens the hall with that booth selected and its card, and a
 number the plan doesn't draw opens the List under a live line (EXPO-05). A booth picked
 from a link or a List row is brought into view above its card (D-377): the camera's
-maths is pure (``screens/expo_camera.py``), and in a session ``FakeViewer`` stands in
-for the viewer as in ``test_expo_hall.py``. How the move looks, and what TalkBack and
+maths is pure (`screens/expo_camera.py`), and in a session `FakeViewer` stands in
+for the viewer as in `test_expo_hall.py`. How the move looks, and what TalkBack and
 VoiceOver say of the line, are checked on devices (the PR).
 """
 
@@ -51,7 +51,7 @@ def booth(number: str) -> Booth:
 
 
 def free(body: float = BODY) -> float:
-    """How far down the hall is in sight above a card of ``body``'s height."""
+    """How far down the hall is in sight above a card of `body`'s height."""
     return BOX[1] - covered(BOX[1], body, crowded=CROWDED)
 
 
@@ -86,7 +86,7 @@ def test_booth_href_pushes_the_hall_at_a_booth_and_back_returns_to_its_opener() 
 
 
 def test_more_s_expo_hall_returns_to_more() -> None:
-    """``/more/plan/expo`` is one pushed View: Back returns to More."""
+    """`/more/plan/expo` is one pushed View: Back returns to More."""
     assert parent_of("/more/plan/expo") == "/more"
 
 
@@ -175,7 +175,7 @@ def test_no_band_above_the_card_leaves_the_camera_alone() -> None:
 async def test_a_link_opens_the_hall_with_its_booth_in_view_and_back_returns(
     open_at: links.Open, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """``/map/plan/expo?booth=407``: selected, its card, above it; Back to the Map."""
+    """`/map/plan/expo?booth=407`: selected, its card, above it; Back to the Map."""
     viewer = FakeViewer()
     viewer.install(monkeypatch)
     shown = await open_at("/map/plan/expo?booth=407")

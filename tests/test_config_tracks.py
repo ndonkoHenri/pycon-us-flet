@@ -13,7 +13,7 @@ YEARS = sorted(
 
 
 def test_track_name_is_the_short_name_and_the_plural_stays_on_the_track() -> None:
-    """``track_name`` says "AI"; the AI track itself holds the title of its list."""
+    """`track_name` says "AI"; the AI track itself holds the title of its list."""
     conference = load_year(2026).conference
     assert conference.track_name("Ai") == "AI"
     assert conference.track("Ai").plural == "Future of AI with Python"
@@ -49,7 +49,7 @@ def test_2026_registry_names_every_processed_track() -> None:
 
 
 def test_track_name_is_not_the_key() -> None:
-    """``track_name`` gives the display name "Lightning talks", not the key."""
+    """`track_name` gives the display name "Lightning talks", not the key."""
     assert load_year(2026).conference.track_name("Lightning-talks") == "Lightning talks"
 
 
@@ -80,7 +80,7 @@ def test_every_track_has_an_icon_of_its_own(year: int) -> None:
 
 
 def test_track_pages_have_clean_explicit_slugs() -> None:
-    """DATA-29: written in the year data, never Ionic's derived ``ais`` or ``…talkss``."""
+    """DATA-29: written in the year data, never Ionic's derived `ais` or `…talkss`."""
     slugs = {t.key: t.slug for t in load_year(2026).conference.tracks}
     assert slugs == {
         "Talk": "talks",

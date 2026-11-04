@@ -1,16 +1,16 @@
 """The screen harness: a screen over a feed in a real Flet session (#253, #286, #623).
 
-``showing(screen, *modules, ...)`` renders a screen over a feed under the store
-providers (``tests/sessions.py``'s ``provide()``) with the memory fakes' services
-(``memory_services()``): each module's ``AppScaffold`` is replaced by a row of its
+`showing(screen, *modules, ...)` renders a screen over a feed under the store
+providers (`tests/sessions.py`'s `provide()`) with the memory fakes' services
+(`memory_services()`): each module's `AppScaffold` is replaced by a row of its
 actions over its body (and its floating button under it), so all are in the tree,
-``page.navigate`` is recorded and each row body is counted, each in the ``Shown`` of the
+`page.navigate` is recorded and each row body is counted, each in the `Shown` of the
 screen it belongs to, however many are open. Every screen's tests use it (#286); what
 is one screen's own (a held clock, minute ticks, recorded scrolls) stays in its test
-module, in a ``Shown`` subclass (``kind``) that its stand-ins find with ``current()``.
+module, in a `Shown` subclass (`kind`) that its stand-ins find with `current()`.
 
-Like ``tests/sessions.py``, it reaches into Flet internals (``_context_page``,
-``Session.index``, ``Session.dispatch_event``, ``Control._i``, ``page._dialogs``): a
+Like `tests/sessions.py`, it reaches into Flet internals (`_context_page`,
+`Session.index`, `Session.dispatch_event`, `Control._i`, `page._dialogs`): a
 Flet pin bump (D-81) that renames one breaks these two modules, not the components.
 """
 
@@ -59,21 +59,21 @@ class Shown:
     prefs: Prefs
     favorites: Favorites
     went: list[str]
-    """What ``page.navigate`` was asked for, in order."""
+    """What `page.navigate` was asked for, in order."""
     titles: list[str]
-    """The titles ``AppScaffold`` was given, in order."""
+    """The titles `AppScaffold` was given, in order."""
     view_path: str | None
-    """What ``ft.use_view_path()`` answers on this screen; None: its Router answers."""
+    """What `ft.use_view_path()` answers on this screen; None: its Router answers."""
     rows: list[str] = field(default_factory=list)
     """The session ids whose row bodies (sessions and notices) ran, in order."""
     retaps: list[Callable[[], object] | None] = field(default_factory=list)
-    """The re-tap action ``AppScaffold`` was given on each render, in order."""
+    """The re-tap action `AppScaffold` was given on each render, in order."""
     still_bars: list[bool] = field(default_factory=list)
-    """``AppScaffold``'s ``still_bar`` on each render, in order (D-447)."""
+    """`AppScaffold`'s `still_bar` on each render, in order (D-447)."""
     change_log: ChangeLog = field(default_factory=ChangeLog)
-    """The ``ChangeLog`` store the screen was given: empty unless the test filled it."""
+    """The `ChangeLog` store the screen was given: empty unless the test filled it."""
     layout: Layout = field(default_factory=Layout)
-    """The ``Layout`` store the screen was given: a phone's in portrait, to turn."""
+    """The `Layout` store the screen was given: a phone's in portrait, to turn."""
 
     @property
     def launcher(self) -> MemoryLauncher:
@@ -87,7 +87,7 @@ class Shown:
 
     @property
     def storage(self) -> Storage:
-        """The storage the screen was given, writing under the test's ``tmp_path``."""
+        """The storage the screen was given, writing under the test's `tmp_path`."""
         return self.services.storage
 
     def find[T: ft.BaseControl](self, kind: type[T]) -> list[T]:
@@ -95,11 +95,11 @@ class Shown:
         return find(self.session, kind)
 
     def nodes(self, key: str) -> list[ft.Semantics]:
-        """The ``Semantics`` that ``key`` names, in no set order (D-33's identifiers).
+        """The `Semantics` that `key` names, in no set order (D-33's identifiers).
 
-        A key ending in a dot names a family: ``"track.session."`` finds every row's
-        node. Any other key is a whole identifier: ``"session.room"`` finds the room
-        tile's node, never the folded rooms' ``"session.room.<key>"``.
+        A key ending in a dot names a family: `"track.session."` finds every row's
+        node. Any other key is a whole identifier: `"session.room"` finds the room
+        tile's node, never the folded rooms' `"session.room.<key>"`.
         """
         if key.endswith("."):
             return find(
@@ -110,18 +110,18 @@ class Shown:
         return find(self.session, ft.Semantics, lambda c: c.identifier == key)
 
     def node(self, identifier: str) -> ft.Semantics:
-        """The mounted ``Semantics`` with this identifier: one, and current."""
+        """The mounted `Semantics` with this identifier: one, and current."""
         found = find(self.session, ft.Semantics, lambda c: c.identifier == identifier)
         assert len(found) == 1, identifier
         return found[0]
 
     def texts(self) -> list[str]:
-        """Return the value of every mounted ``Text``, in no set order."""
+        """Return the value of every mounted `Text`, in no set order."""
         return [str(t.value) for t in self.find(ft.Text)]
 
     @property
     def snack_bars(self) -> list[ft.SnackBar]:
-        """The ``SnackBar``s in the page's dialog list, open or closed."""
+        """The `SnackBar`s in the page's dialog list, open or closed."""
         return [
             d for d in self.session.page._dialogs.controls if isinstance(d, ft.SnackBar)
         ]
@@ -131,24 +131,24 @@ class Shown:
         await settle()
 
     async def click(self, control: ft.BaseControl) -> None:
-        """Dispatch a click to ``control`` as the client would; let it run out."""
+        """Dispatch a click to `control` as the client would; let it run out."""
         await self.event(control, "click", None)
 
     async def event(self, control: ft.BaseControl, name: str, data: Any = None) -> None:
-        """Dispatch an event to ``control`` as the client would; let it run out."""
+        """Dispatch an event to `control` as the client would; let it run out."""
         await self.session.dispatch_event(control._i, name, data)
         await settle()
 
 
 _OPEN: dict[ft.Page, Shown] = {}
-"""The screens ``showing()`` has open, by page: a test may open several at once."""
+"""The screens `showing()` has open, by page: a test may open several at once."""
 
 
 def _shown_now() -> Shown | None:
     """The open screen whose session is rendering or handling an event now.
 
     Flet binds a session's page to the context for each of its renders and events
-    (``_context_page``: its scheduler task, ``Session.dispatch_event``), so the page in
+    (`_context_page`: its scheduler task, `Session.dispatch_event`), so the page in
     the context names the screen a scaffold, a View path or a row body belongs to.
     """
     page = _context_page.get()
@@ -159,10 +159,10 @@ def current[S: Shown](kind: type[S]) -> S:
     """The open screen whose session is rendering or handling an event now.
 
     For a test module's own stand-ins (a recorded scroll, a counted slot): each
-    records in the ``Shown`` of the screen that called it, however many are open.
+    records in the `Shown` of the screen that called it, however many are open.
 
     Args:
-        kind: The ``Shown`` subclass the screen was opened with (``showing(kind=)``).
+        kind: The `Shown` subclass the screen was opened with (`showing(kind=)`).
     """
     shown = _shown_now()
     assert isinstance(shown, kind), "no screen of that kind is rendering now"
@@ -179,10 +179,10 @@ def _scaffold(
     fab: ft.FloatingActionButton | None = None,
     still_bar: bool = False,
 ) -> ft.Control:
-    """Stand in for ``AppScaffold``: the actions in a row, the body, the button under.
+    """Stand in for `AppScaffold`: the actions in a row, the body, the button under.
 
     The row holds the actions as an app bar does; the title, the re-tap action and
-    ``still_bar`` are recorded in the ``Shown`` of the screen that rendered it.
+    `still_bar` are recorded in the `Shown` of the screen that rendered it.
     """
     if shown := _shown_now():
         shown.titles.append(title)
@@ -194,18 +194,18 @@ def _scaffold(
 
 
 class _RowCounter:
-    """A row phrase that appends each row body's id to its own screen's ``rows``.
+    """A row phrase that appends each row body's id to its own screen's `rows`.
 
     Each session or notice row body says its phrase once: counting the calls counts
-    the bodies (S2's ``ROW_RENDERS``, D-153).
+    the bodies (S2's `ROW_RENDERS`, D-153).
     """
 
     def __init__(self, phrase: Callable[..., str]) -> None:
-        """Wrap the row phrase function ``phrase``, which it still calls."""
+        """Wrap the row phrase function `phrase`, which it still calls."""
         self.phrase = phrase
 
     def __call__(self, *args: Any, **kwargs: Any) -> str:
-        """Record the row's session id in its screen's ``rows``, then say the phrase."""
+        """Record the row's session id in its screen's `rows`, then say the phrase."""
         if shown := _shown_now():
             shown.rows.append(cast(SessionView, args[-1]).session.id)
         return self.phrase(*args, **kwargs)
@@ -257,38 +257,38 @@ async def showing[S: Shown = Shown](
     staff: Staff | None = None,
     outbox: OutboxDb | None = None,
 ) -> AsyncIterator[S]:
-    """Render ``screen`` under the store providers; close the session on the way out.
+    """Render `screen` under the store providers; close the session on the way out.
 
     Args:
         screen: The screen's component, or a component around it.
-        *modules: The modules whose ``AppScaffold`` is replaced: the screen's.
+        *modules: The modules whose `AppScaffold` is replaced: the screen's.
         year: The year data the services carry.
-        conference: The ``Conference`` store, with or without data.
+        conference: The `Conference` store, with or without data.
         tmp_path: Where the storage writes.
         monkeypatch: To replace the scaffold, the View path and the phrases.
         view_path: The View's path, which the rows' links start from; None when
-            ``screen`` is a real ``ft.Router``, which answers it: the screen is then
+            `screen` is a real `ft.Router`, which answers it: the screen is then
             rendered as the page's Views, as the app renders it.
-        prefs: The ``Prefs`` store, for other settings; by default a loaded one with
+        prefs: The `Prefs` store, for other settings; by default a loaded one with
             the defaults.
-        favorites: The ``Favorites`` store as the test set it up (not loaded yet,
+        favorites: The `Favorites` store as the test set it up (not loaded yet,
             say); by default a new one, loaded from the storage.
         saved: The session ids the storage holds as favourites before the screen
             opens, as an earlier session left them.
         memory: The view memory, when the test keeps one across sessions.
         route: The page's route before the first render, for a screen that reads
             its query (a room's highlight); the page's own by default.
-        kind: What makes the ``Shown``: a test module's subclass that adds what is
-            its screen's own, or a ``functools.partial`` of one.
-        change_log: The ``ChangeLog`` store, with the batches the test recorded; an
+        kind: What makes the `Shown`: a test module's subclass that adds what is
+            its screen's own, or a `functools.partial` of one.
+        change_log: The `ChangeLog` store, with the batches the test recorded; an
             empty one by default.
-        layout: The ``Layout`` store, for a test that turns the window; a phone's in
+        layout: The `Layout` store, for a test that turns the window; a phone's in
             portrait by default.
-        account: The ``Account`` store, for a screen that signs in or shows who is
+        account: The `Account` store, for a screen that signs in or shows who is
             signed in; a signed-out one by default.
         private_api: The services' private-API holder, for a screen that talks to
             the mock (its transport); one without a client by default.
-        staff: The ``Staff`` store, for a screen that shows the staff outbox; a new
+        staff: The `Staff` store, for a screen that shows the staff outbox; a new
             one by default.
         outbox: The services' outbox, for a screen that reads its rows; none by
             default.

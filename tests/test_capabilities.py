@@ -18,13 +18,13 @@ CONSTANTS = ("SECURE_STORAGE", "PERMISSIONS", "REMINDERS", "SCANNER")
 
 @pytest.fixture
 def reload_after() -> Iterator[None]:
-    """Reload ``capabilities`` after the test, under the real environment."""
+    """Reload `capabilities` after the test, under the real environment."""
     yield
     importlib.reload(capabilities)
 
 
 def any_spec(name: str, *args: object) -> ModuleSpec:
-    """A ``find_spec`` stand-in that finds every module, whatever its name."""
+    """A `find_spec` stand-in that finds every module, whatever its name."""
     return ModuleSpec(name, None)
 
 
@@ -48,9 +48,9 @@ def test_a_bundled_module_is_available_in_a_packaged_build(
 
 
 def test_every_capability_is_off_in_the_companion_app(reload_after: None) -> None:
-    """Without ``FLET_PLATFORM``, every constant is False, all extensions found.
+    """Without `FLET_PLATFORM`, every constant is False, all extensions found.
 
-    ``flet run`` and the companion app never set ``FLET_PLATFORM`` (F14).
+    `flet run` and the companion app never set `FLET_PLATFORM` (F14).
     """
     with pytest.MonkeyPatch.context() as patch:
         patch.delenv("FLET_PLATFORM", raising=False)
@@ -84,10 +84,10 @@ def test_the_bundled_extensions_are_found_by_their_module_names(
 ) -> None:
     """In a packaged build, the real modules turn their capabilities on (#446, #684).
 
-    ``pyproject.toml`` bundles ``flet-permission-handler``, the monorepo's
-    ``flet-notifications`` and ``flet-secure-storage``, whose modules are
-    ``flet_permission_handler``, ``flet_notifications`` and ``flet_secure_storage``;
-    ``uv sync`` installs them on the host too.
+    `pyproject.toml` bundles `flet-permission-handler`, the monorepo's
+    `flet-notifications` and `flet-secure-storage`, whose modules are
+    `flet_permission_handler`, `flet_notifications` and `flet_secure_storage`;
+    `uv sync` installs them on the host too.
     """
     with pytest.MonkeyPatch.context() as patch:
         patch.setenv("FLET_PLATFORM", "android")

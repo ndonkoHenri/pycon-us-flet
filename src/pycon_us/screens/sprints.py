@@ -1,16 +1,16 @@
-"""Sprints (``/more/sprints``): the projects of the development sprints (EVT-05..08).
+"""Sprints (`/more/sprints`): the projects of the development sprints (EVT-05..08).
 
-The Tracks hub opens the same page as its child, ``/more/tracks/sprints``, so Back
+The Tracks hub opens the same page as its child, `/more/tracks/sprints`, so Back
 returns to the hub (D-207).
 
 The feed lists the projects that sign up for the sprints, the two days of coding after
 the talks, which have no sessions (D-126). The page says when they are, from the year's
-dates (``ConferenceInfo.first_sprint_day`` to ``last_day``), then shows a card per
+dates (`ConferenceInfo.first_sprint_day` to `last_day`), then shows a card per
 project, by name: its logo on a white tile, or its initials when the feed has none or
 it cannot load (offline); its name, "by <submitter>"; its description, cut at four lines
 with "More" when it is long, which shows the whole text with its links (EVT-05); and
 "Project page", which opens the project's site in the in-app browser. The card is
-``screens/sprint_card.py``'s.
+`screens/sprint_card.py`'s.
 
 The status strip heads the page in every state (D-32): it says when the projects
 are not fresh or a refresh failed offline, and offers Refresh. A filter field pinned
@@ -20,9 +20,9 @@ opens the year's sprint page and its project form on us.pycon.org (EVT-08).
 
 Long lists stay cheap as the Speakers list does (D-153): the projects are ordered once
 per feed version, and each card is a memoised component keyed by project id, so a
-keystroke re-renders no card that stays. A refresh is the ``Conference`` store's, which
+keystroke re-renders no card that stays. A refresh is the `Conference` store's, which
 never wipes the cache (EVT-07, D-145): the strip's Refresh, a pull on the list
-(``pullable()``, D-449), or Try again without data, when the page loads and fails as
+(`pullable()`, D-449), or Try again without data, when the page loads and fails as
 the Speakers list does (ux.md §4.1).
 """
 
@@ -243,7 +243,7 @@ def _menu(info: ConferenceInfo, svc: Services) -> list[ft.Control]:
 
     Each item leaves the app: a link, read "Opens in browser" after its words, as
     session detail's "Open on us.pycon.org" is (D-186), whose label wraps at 200 %
-    text (``menu_item()``, F47, D-233). A year without either URL has no item for it,
+    text (`menu_item()`, F47, D-233). A year without either URL has no item for it,
     and without both, and with View source hidden, no menu (no dead control, ux.md §1).
     """
     links: list[tuple[str, str, str]] = []
@@ -258,7 +258,7 @@ def _menu(info: ConferenceInfo, svc: Services) -> list[ft.Control]:
 
 
 def _menu_item(label: str, url: str, key: str, svc: Services) -> ft.PopupMenuItem:
-    """One link of the menu, ``sprints.<key>``, read "<label>, Opens in browser"."""
+    """One link of the menu, `sprints.<key>`, read "<label>, Opens in browser"."""
 
     @report_errors
     async def go() -> None:

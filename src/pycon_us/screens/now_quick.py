@@ -1,11 +1,11 @@
 """Now's quick info buttons: Wi-Fi, Help & safety, Venue & hours (INFO-08, INFO-07, MAP-09).
 
 During the conference these are the pages people need most, and More is two taps away
-(ux.md §5.1 item 11). A wrapping row of three ``FilledTonalButton``s pushes each page
-over Now, ``/now/wifi``, so Back returns here (D-17). They show in the conference and
+(ux.md §5.1 item 11). A wrapping row of three `FilledTonalButton`s pushes each page
+over Now, `/now/wifi`, so Back returns here (D-17). They show in the conference and
 sprint seasons only, after the sessions and the Schedule link and before the sponsor
 spotlight, so at peak times they never push Now's sessions down (D-338, D-327).
-Apart from ``now.py`` so that the screen stays under about 400 lines (D-66, D-190).
+Apart from `now.py` so that the screen stays under about 400 lines (D-66, D-190).
 """
 
 import flet as ft
@@ -23,7 +23,7 @@ PAGES = ("wifi", "help", "venue")
 
 
 def entries() -> tuple[MoreEntry, ...]:
-    """Return More's At the venue entries in the row's order (``PAGES``).
+    """Return More's At the venue entries in the row's order (`PAGES`).
 
     The titles and icons stay More's own, so the two never disagree.
     """
@@ -46,7 +46,7 @@ def QuickInfo(view_path: str) -> ft.Control:
 @ft.memo
 @ft.component
 def _QuickInfo(view_path: str) -> ft.Control:
-    """The body of ``QuickInfo``; it runs only when its View path changes."""
+    """The body of `QuickInfo`; it runs only when its View path changes."""
     return ft.Container(
         # Wrapping, so at 200 % text a button that no longer fits moves down whole.
         ft.Row(
@@ -60,7 +60,7 @@ def _QuickInfo(view_path: str) -> ft.Control:
 
 
 def _button(entry: MoreEntry, view_path: str) -> ft.Control:
-    """One page's button, ``now.quick.<page>`` (D-33), pushing it on ``view_path``."""
+    """One page's button, `now.quick.<page>` (D-33), pushing it on `view_path`."""
     page = ft.context.page
     segment = entry.location.rsplit("/", 1)[-1]
 

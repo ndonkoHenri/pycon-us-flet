@@ -1,4 +1,4 @@
-"""Tests for the room's ``LocationCard`` on session detail (DATA-33, D-349).
+"""Tests for the room's `LocationCard` on session detail (DATA-33, D-349).
 
 Under the When and where card, a session in one room with a pin shows that room's
 card, which pushes the floor viewer at the pin; multi-room sessions keep their tiles.
@@ -32,7 +32,7 @@ ELSEWHERE = "9173"
 async def render(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> AsyncIterator[Render]:
-    """Provide an async function that renders a session's detail at ``VIEW`` by id."""
+    """Provide an async function that renders a session's detail at `VIEW` by id."""
     async with rendering(tmp_path, monkeypatch) as show:
         yield show
 
@@ -75,7 +75,7 @@ async def test_the_card_sits_under_when_and_where_and_keeps_the_room_tile(
 
 
 def ancestors(control: ft.BaseControl) -> list[ft.BaseControl]:
-    """The controls ``control`` is in, from its parent up to the page."""
+    """The controls `control` is in, from its parent up to the page."""
     found: list[ft.BaseControl] = []
     parent = control.parent
     while parent is not None:
@@ -114,9 +114,9 @@ ROOM_101AB = "231"
 
 
 def drop(detail: Detail, session_id: str) -> None:
-    """Publish a newer feed without ``session_id``, its rooms rebuilt from the rest.
+    """Publish a newer feed without `session_id`, its rooms rebuilt from the rest.
 
-    The data core builds the rooms index from the sessions (``rules.rooms``), so a
+    The data core builds the rooms index from the sessions (`rules.rooms`), so a
     room whose last session goes goes with it.
     """
     data = cast(ConferenceData, detail.conference.data)

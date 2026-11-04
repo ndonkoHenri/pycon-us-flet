@@ -1,13 +1,13 @@
 """The platform's share sheet: where it points from, a text, and a bug report (D-62).
 
-Session detail's Share sends a text (``share_text()``, NEW-06); About this app's Report
-a problem and the Developer screen's Share log send the app's ``console.log`` with the
+Session detail's Share sends a text (`share_text()`, NEW-06); About this app's Report
+a problem and the Developer screen's Share log send the app's `console.log` with the
 plain diagnostics as its text, or the diagnostics alone where there is no log
-(``share_console_log()``, INFO-04, D-297). Both point the sheet from the window's centre
-(``centre()``), which a phone ignores and a tablet needs (D-09). A failure to open the
+(`share_console_log()`, INFO-04, D-297). Both point the sheet from the window's centre
+(`centre()`), which a phone ignores and a tablet needs (D-09). A failure to open the
 sheet is expected (D-71): it is logged by its class only, since the error's text repeats
 the call's arguments (D-72). The rows that report a problem, About this app's and Help &
-safety's, hold the share's state through ``use_problem_report()`` (INFO-11).
+safety's, hold the share's state through `use_problem_report()` (INFO-11).
 """
 
 import logging
@@ -35,7 +35,7 @@ NOT_SHARED = "Couldn't open the share sheet"
 """What a failed share says: session detail's SnackBar, and a report's outcome line."""
 
 WITH_LOG = "Sends the app's log and diagnostics, for a bug report"
-"""A report row's second line in a packaged build, where ``console.log`` is a file (F14)."""
+"""A report row's second line in a packaged build, where `console.log` is a file (F14)."""
 
 WITHOUT_LOG = (
     "Sends diagnostics. Not a packaged build: the log is in the terminal that runs it"
@@ -47,23 +47,23 @@ LOG_SHARED: Outcome = ("Log and diagnostics shared.", True)
 DIAGNOSTICS_SHARED: Outcome = ("Diagnostics shared.", True)
 NO_LOG_YET: Outcome = ("Diagnostics shared. There was no log to add yet.", True)
 REPORT_OFFERED: Outcome = ("Handed to the share sheet.", True)
-"""When the platform cannot say how the sheet ended (``UNAVAILABLE``): true either way."""
+"""When the platform cannot say how the sheet ended (`UNAVAILABLE`): true either way."""
 
 REPORT_SUBJECT = f"{APP_NAME}: problem report"
 """The subject of an email made from a report."""
 
 
 class ProblemReport(NamedTuple):
-    """A report row's state and action, from ``use_problem_report()``."""
+    """A report row's state and action, from `use_problem_report()`."""
 
     outcome: Outcome
-    """How the last share ended, said under the rows; ``NO_OUTCOME`` before one."""
+    """How the last share ended, said under the rows; `NO_OUTCOME` before one."""
     sharing: bool
     """The share sheet is up: the row is disabled until it closes."""
     packaged: bool
-    """A packaged build, whose share adds ``console.log`` (``report_subtitle()``)."""
+    """A packaged build, whose share adds `console.log` (`report_subtitle()`)."""
     share: Callable[[], Awaitable[None]]
-    """The row's action: ``share_console_log()``, its outcome kept for the line."""
+    """The row's action: `share_console_log()`, its outcome kept for the line."""
 
 
 def use_problem_report() -> ProblemReport:
@@ -108,8 +108,8 @@ def report_outcome(identifier: str, outcome: Outcome, *, tokens: Tokens) -> ft.C
     are no words.
 
     Args:
-        identifier: For UI flows, e.g. ``help.report_outcome``.
-        outcome: ``ProblemReport.outcome``.
+        identifier: For UI flows, e.g. `help.report_outcome`.
+        outcome: `ProblemReport.outcome`.
         tokens: The theme's tokens, for the line's colours.
     """
     return ft.Semantics(
@@ -121,10 +121,10 @@ def report_outcome(identifier: str, outcome: Outcome, *, tokens: Tokens) -> ft.C
 
 
 def new_issue_url(source_url: str) -> str:
-    """Return the page that opens a new issue in the repository at ``source_url`` (D-88).
+    """Return the page that opens a new issue in the repository at `source_url` (D-88).
 
     Args:
-        source_url: ``SOURCE_URL``, once the repository is public.
+        source_url: `SOURCE_URL`, once the repository is public.
     """
     return f"{source_url.rstrip('/')}/issues/new"
 
@@ -132,7 +132,7 @@ def new_issue_url(source_url: str) -> str:
 def centre(page: ft.Page) -> ft.Offset | None:
     """Return the middle of the window, where the share sheet points from on a tablet.
 
-    Flet sends the point without a size; since the pin ``08b89cce5`` share_plus 13.3.1
+    Flet sends the point without a size; since the pin `08b89cce5` share_plus 13.3.1
     turns that empty rectangle into a small one at the view's centre, so an iPad opens
     the sheet (F263; before, it refused, F115).
     """
@@ -142,11 +142,11 @@ def centre(page: ft.Page) -> ft.Offset | None:
 
 
 async def share_text(svc: Services, text: str, *, subject: str) -> None:
-    """Open the share sheet with ``text``; call it from an event handler.
+    """Open the share sheet with `text`; call it from an event handler.
 
     When the platform reports that the sheet could not open, a SnackBar says so, on the
     View the button is on (D-210). Whether the person then shared or dismissed it needs
-    no answer. The caller wraps it in ``focus_back()``, so the button gets the focus
+    no answer. The caller wraps it in `focus_back()`, so the button gets the focus
     again once the sheet has closed (D-372).
 
     Args:
@@ -168,7 +168,7 @@ def report_subtitle(packaged: bool) -> str:
     """Return a report row's second line: what a tap sends, said before it (D-297).
 
     Args:
-        packaged: A packaged build (``is_embedded()``), which writes ``console.log``.
+        packaged: A packaged build (`is_embedded()`), which writes `console.log`.
     """
     return WITH_LOG if packaged else WITHOUT_LOG
 
@@ -181,29 +181,29 @@ async def share_console_log(
     prefs: Prefs,
     favorites: Favorites,
 ) -> Outcome:
-    """Open the share sheet with ``console.log`` and the diagnostics as its text.
+    """Open the share sheet with `console.log` and the diagnostics as its text.
 
     The one way the app shares a bug report (INFO-04, D-297): About this app's Report a
     problem, the Developer screen's Share log and Help & safety's Report a problem with
     the app (INFO-11). The text is
-    ``diagnostics_text()`` (D-271); the log holds no secrets or email addresses: the app
-    never logs them, and the handler writes any address a line quotes as ``<email>``
+    `diagnostics_text()` (D-271); the log holds no secrets or email addresses: the app
+    never logs them, and the handler writes any address a line quotes as `<email>`
     (D-196). Where there is no log to add, the companion app's run, whose Python is on
     the laptop (F14), or a packaged build's empty or unreadable log, the diagnostics go
-    alone. Call it from an ``async`` handler (D-70); the sheet points from the window's
+    alone. Call it from an `async` handler (D-70); the sheet points from the window's
     centre (D-62).
 
     Args:
         svc: The session's services: the year, the storage paths and the share sheet.
-        packaged: A packaged build, where the template writes ``console.log``.
+        packaged: A packaged build, where the template writes `console.log`.
         conference: The published schedule, for the diagnostics.
         prefs: The Developer options in effect, for the diagnostics.
         favorites: The saved sessions, counted in the diagnostics.
 
     Returns:
         What to say: what was shared, or that the sheet failed; nothing
-        (``NO_OUTCOME``) when it was dismissed; that the sheet had the report when the
-        platform cannot say which (``UNAVAILABLE``, on some Android share targets).
+        (`NO_OUTCOME`) when it was dismissed; that the sheet had the report when the
+        platform cannot say which (`UNAVAILABLE`, on some Android share targets).
     """
     page = ft.context.page
     facts = await gather_facts(
@@ -248,7 +248,7 @@ async def share_console_log(
 
 
 async def _console_log(svc: Services) -> Path | None:
-    """Return the packaged app's ``console.log`` when it has something in it, else None.
+    """Return the packaged app's `console.log` when it has something in it, else None.
 
     A path the platform cannot give is logged by its class (D-72); the report then
     carries the diagnostics alone.

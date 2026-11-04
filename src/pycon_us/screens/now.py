@@ -1,28 +1,28 @@
-"""Now (``/now``), the start screen: "what should I do next?" (SCHED-25, SCHED-26; D-14).
+"""Now (`/now`), the start screen: "what should I do next?" (SCHED-25, SCHED-26; D-14).
 
-From the top (ux.md §5.1): the status header (``now_header``), the status strip, which
+From the top (ux.md §5.1): the status header (`now_header`), the status strip, which
 refreshes the feed every 15 min while Now shows (D-175), the Scan badges card for an
-account with a staff tool (``staff_entry``, D-421) in every season, then by season:
+account with a staff tool (`staff_entry`, D-421) in every season, then by season:
 
 - before the conference, the key dates and "Build your schedule";
-- on its days, **Your next session** (``now_card``: ``agenda.next_for_me()``'s saved
+- on its days, **Your next session** (`now_card`: `agenda.next_for_me()`'s saved
   session to go to next, with its star, its countdown and "Show room", and its elapsed
   bar once it is on), the Schedule changes card while changes to saved sessions are
-  unseen (``now_changes``, D-255), **Happening now** (the other sessions on, saved
-  ones first, each with an elapsed bar), **Up next** (the next slot, ``NowNext.up_next``, but the
+  unseen (`now_changes`, D-255), **Happening now** (the other sessions on, saved
+  ones first, each with an elapsed bar), **Up next** (the next slot, `NowNext.up_next`, but the
   card's session), each folded at peak times after your saved sessions and three
-  others (``now_fold``, D-327), and a link to the Schedule;
+  others (`now_fold`, D-327), and a link to the Schedule;
 - on the last evening and the sprint days, the Sprints page; afterwards, the schedule
   to look back at;
 - on the conference and sprint days, after the sessions, the quick info buttons
-  (``now_quick``: Wi-Fi, Help & safety, Venue & hours, D-338);
-- in every season, the sponsor spotlight (``now_spotlight``, D-37, D-298) when a
+  (`now_quick`: Wi-Fi, Help & safety, Venue & hours, D-338);
+- in every season, the sponsor spotlight (`now_spotlight`, D-37, D-298) when a
   sponsor may appear there.
 
 Schedule filters never apply (D-20). The screen recomputes on the minute tick
-(``use_minute()``): every 60 s while it is mounted and the app is in the foreground,
-and at once on a resume (D-40, D-175), from ``clock.now()``, so the Developer fake clock
-drives it (D-187). The sections are ``now_sections``'s; their rows are the memoised
+(`use_minute()`): every 60 s while it is mounted and the app is in the foreground,
+and at once on a resume (D-40, D-175), from `clock.now()`, so the Developer fake clock
+drives it (D-187). The sections are `now_sections`'s; their rows are the memoised
 session rows, their views built once per feed version (D-153, D-184), and a row pushes
 its session over Now, so Back returns here (D-17). Without data, the skeleton, then "Can't load the schedule" (D-32).
 """

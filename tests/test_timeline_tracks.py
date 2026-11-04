@@ -1,7 +1,7 @@
 """Tests for the track pages' query and a Posters row's posters.
 
-``track_sessions()`` and ``posters()`` in ``core/timeline.py``; the timeline itself is
-tested in ``test_timeline.py``. #85: DATA-20, SESS-09, SCHED-22; D-153.
+`track_sessions()` and `posters()` in `core/timeline.py`; the timeline itself is
+tested in `test_timeline.py`. #85: DATA-20, SESS-09, SCHED-22; D-153.
 """
 
 from typing import Any
@@ -45,7 +45,7 @@ def test_the_posters_track_lists_the_posters_not_the_posters_row(year: int) -> N
 
 
 def _without_posters(doc: dict[str, Any]) -> None:
-    """Drop the posters from a feed: 2026's ``posters`` list, 2025's poster slot."""
+    """Drop the posters from a feed: 2026's `posters` list, 2025's poster slot."""
     doc["posters"] = []
     for slot in doc["schedule"]:
         if slot.get("kind") == "poster":

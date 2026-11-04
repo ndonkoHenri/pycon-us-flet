@@ -1,10 +1,10 @@
 """Tests for decoding the feed into the model (D-41, D-42; DATA-01, DATA-13, DATA-24, DATA-26).
 
-They run on the recorded 2025 and 2026 feeds, under two machine time zones (``machine_tz``).
+They run on the recorded 2025 and 2026 feeds, under two machine time zones (`machine_tz`).
 Edge cases are deep copies of the recorded feeds with one record changed. Ionic's rules
-have their own tests in ``test_rules.py`` and ``test_rules_details.py``, and the
-invariants and snapshot of the processed model are in ``test_feed_invariants.py``. Text
-repair and the records that are skipped are ``test_feed_records.py``'s.
+have their own tests in `test_rules.py` and `test_rules_details.py`, and the
+invariants and snapshot of the processed model are in `test_feed_invariants.py`. Text
+repair and the records that are skipped are `test_feed_records.py`'s.
 """
 
 from datetime import date, datetime
@@ -31,7 +31,7 @@ def test_recorded_feeds_have_no_unreadable_record(year: int) -> None:
 def test_the_bundled_snapshot_processes_cleanly() -> None:
     """NEW-03: the snapshot the app opens with offline reads without a skipped record.
 
-    ``tools/update_snapshot.py`` refuses a feed that fails this, so it holds for every
+    `tools/update_snapshot.py` refuses a feed that fails this, so it holds for every
     snapshot the tool writes. The P0-13 invariants should take the snapshot as an input
     too when they land.
     """

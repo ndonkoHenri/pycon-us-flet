@@ -1,7 +1,7 @@
-"""Tests for the leads list's data: ``lead_list.py``'s reads, ``core/lead_views.py``.
+"""Tests for the leads list's data: `lead_list.py`'s reads, `core/lead_views.py`.
 
-LEAD-06, LEAD-08 (#743). The reads run against a real ``outbox-<year>.db`` in a temp
-dir; ``lead_view()``, ``phrase()`` and ``filter_leads()`` are pure.
+LEAD-06, LEAD-08 (#743). The reads run against a real `outbox-<year>.db` in a temp
+dir; `lead_view()`, `phrase()` and `filter_leads()` are pure.
 """
 
 from dataclasses import replace

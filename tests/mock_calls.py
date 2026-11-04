@@ -1,6 +1,6 @@
 """Helpers for the mock API's staff-endpoint tests: a seeded state and signed calls.
 
-Each call is signed the way Ionic signs it (``core/signing.py``) over the exact path
+Each call is signed the way Ionic signs it (`core/signing.py`) over the exact path
 and body bytes sent, so the tests exercise the signature check as well as the endpoint.
 """
 
@@ -17,10 +17,10 @@ BASE = "/2026/api/v1/"
 
 
 class Clock:
-    """A clock the test moves by hand; the mock reads it through ``MockState.now``."""
+    """A clock the test moves by hand; the mock reads it through `MockState.now`."""
 
     def __init__(self, at: float = NOW) -> None:
-        """Start the clock at ``at``."""
+        """Start the clock at `at`."""
         self.at = at
 
     def __call__(self) -> float:
@@ -45,14 +45,14 @@ def call(
     role: str = "",
     payload: object = None,
 ) -> tuple[int, object]:
-    """Send one request to ``handle``, signed as ``role`` unless it is empty.
+    """Send one request to `handle`, signed as `role` unless it is empty.
 
     Args:
         state: The mock's state.
         method: The HTTP method.
-        endpoint: The path under ``/2026/api/v1/``, with its query as it is sent.
-        role: The seeded account to sign as, or ``""`` to send no credentials.
-        payload: The JSON body, serialised as ``JSON.stringify`` would, or None.
+        endpoint: The path under `/2026/api/v1/`, with its query as it is sent.
+        role: The seeded account to sign as, or `""` to send no credentials.
+        payload: The JSON body, serialised as `JSON.stringify` would, or None.
 
     Returns:
         The status and the decoded body.

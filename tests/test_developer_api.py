@@ -1,7 +1,7 @@
 """Tests for the Developer screen's Mock API section (DEV-01, D-51, #668).
 
-``MockApiSection`` runs outside a renderer, its hooks replaced, over the seeded mock
-behind ``tools/mock_api/transport.py``. How it looks is checked on devices (the PR).
+`MockApiSection` runs outside a renderer, its hooks replaced, over the seeded mock
+behind `tools/mock_api/transport.py`. How it looks is checked on devices (the PR).
 """
 
 import asyncio
@@ -78,11 +78,11 @@ def render(
 
 
 def identified(root: ft.Control) -> dict[str, ft.Semantics]:
-    """Every identified node under ``root``, by its identifier."""
+    """Every identified node under `root`, by its identifier."""
     found: dict[str, ft.Semantics] = {}
 
     def visit(control: Any) -> None:
-        """Note ``control`` if it has an identifier, then look under it."""
+        """Note `control` if it has an identifier, then look under it."""
         if isinstance(control, ft.Semantics) and control.identifier:
             found[control.identifier] = control
         for name in ("content", "controls"):
@@ -96,7 +96,7 @@ def identified(root: ft.Control) -> dict[str, ft.Semantics]:
 
 
 async def type_url(render: Callable[[], ft.Column], text: str) -> None:
-    """Type into the URL field as Flutter reports it: the value, then ``on_change``."""
+    """Type into the URL field as Flutter reports it: the value, then `on_change`."""
     text_field = cast(
         ft.TextField, identified(render())["developer.mock_api_url"].content
     )
@@ -107,7 +107,7 @@ async def type_url(render: Callable[[], ft.Column], text: str) -> None:
 
 
 async def press(render: Callable[[], ft.Column], identifier: str) -> None:
-    """Render, then click the button or row under ``identifier`` and await it."""
+    """Render, then click the button or row under `identifier` and await it."""
     control = cast(Any, identified(render())[identifier].content)
     await control.on_click()
 
@@ -248,7 +248,7 @@ async def test_a_clear_during_a_save_s_write_ends_cleared(
     async def held_first_set(
         name: str, arguments: Any = None, timeout: Any = None
     ) -> Any:
-        """Hold the first ``set`` until the test lets it; answer the rest at once."""
+        """Hold the first `set` until the test lets it; answer the rest at once."""
         if name == "set" and not writing.is_set():
             writing.set()
             await release.wait()

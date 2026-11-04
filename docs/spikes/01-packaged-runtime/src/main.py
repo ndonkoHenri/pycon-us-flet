@@ -1,11 +1,11 @@
 """S1 reproducer: our runtime stack inside a packaged Flet app.
 
 Spike S1 (docs/spikes/01-packaged-runtime.md). On start the stub reads the cached
-2026 feed from the durable data directory (``FLET_APP_STORAGE_DATA``), then
+2026 feed from the durable data directory (`FLET_APP_STORAGE_DATA`), then
 refreshes it from the public feed with httpx and writes it back atomically. It
 also exercises sqlite3, SharedPreferences, SecureStorage and zoneinfo with tzdata.
-Every measurement is shown on screen and printed as a line starting with ``S1 ``
-(on Android, stdout goes to logcat under the tag ``flet.python``).
+Every measurement is shown on screen and printed as a line starting with `S1 `
+(on Android, stdout goes to logcat under the tag `flet.python`).
 """
 
 import time

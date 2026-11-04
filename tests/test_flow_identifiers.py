@@ -1,9 +1,9 @@
-"""Tests for the identifiers that the Maestro flows in ``maestro/`` tap (#348, D-252).
+"""Tests for the identifiers that the Maestro flows in `maestro/` tap (#348, D-252).
 
 A Maestro flow finds a control by its semantics identifier (D-33), which reaches
 Android as the node's resource id and iOS as its accessibility identifier. The app
-bar's Search button had none: its icon now carries ``app.search`` in an unlabelled
-``Semantics``, as the bottom bar's icons carry ``app.nav.<tab>`` (D-166), so the
+bar's Search button had none: its icon now carries `app.search` in an unlabelled
+`Semantics`, as the bottom bar's icons carry `app.nav.<tab>` (D-166), so the
 button stays one node named by its tooltip (D-234).
 """
 
@@ -24,9 +24,9 @@ def test_the_search_button_s_icon_carries_app_search_inside_its_merged_node(
 ) -> None:
     """D-252: the identifier is in the merged node, beside the tooltip that names it.
 
-    The ``Semantics`` sits in the icon, under the ``MergeSemantics`` that ``merged()``
+    The `Semantics` sits in the icon, under the `MergeSemantics` that `merged()`
     puts straight around the button (F55), so it adds no node: the button is still one
-    stop named "Search", and that node carries ``app.search``.
+    stop named "Search", and that node carries `app.search`.
     """
     button = merged_button(search_button(ViewMemory(), "all"))
     assert button.tooltip == "Search"

@@ -1,8 +1,8 @@
 """Tests for the bottom bar, the rail and the re-tap scroll (#75, #387; D-144, D-277).
 
 The bar's and the rail's own parts and the re-tap scroll, built outside a renderer
-with the fixtures of ``tests/chrome.py`` (#264); how they sit on ``AppScaffold``'s
-Views and what a tap does are in ``test_navigation_views.py``. What they look like,
+with the fixtures of `tests/chrome.py` (#264); how they sit on `AppScaffold`'s
+Views and what a tap does are in `test_navigation_views.py`. What they look like,
 that a re-tap scrolls a real list and what TalkBack and VoiceOver read are checked on
 devices (the PR).
 """
@@ -60,7 +60,7 @@ def test_the_bar_has_the_five_tab_roots_in_order_with_their_labels() -> None:
 
 
 def test_each_tab_has_an_app_nav_identifier_for_ui_tests() -> None:
-    """Each tab carries an ``app.nav.<tab>`` identifier."""
+    """Each tab carries an `app.nav.<tab>` identifier."""
     assert [tab.identifier for tab in TABS] == [
         "app.nav.now",
         "app.nav.schedule",
@@ -71,7 +71,7 @@ def test_each_tab_has_an_app_nav_identifier_for_ui_tests() -> None:
 
 
 def test_each_tab_root_s_title_has_a_screen_identifier_for_ui_tests() -> None:
-    """Each tab names its root title's identifier, ``<screen>.title``."""
+    """Each tab names its root title's identifier, `<screen>.title`."""
     assert [tab.title_identifier for tab in TABS] == [
         "now.title",
         "schedule.title",
@@ -114,7 +114,7 @@ def test_each_destination_is_labelled_and_outlined_until_selected() -> None:
 def test_the_rail_has_the_bar_s_labels_and_icons_and_no_identifier_node() -> None:
     """The rail's destinations are the bar's, with plain icons (#163, F95).
 
-    An identifier ``Semantics`` there would be a second, empty TalkBack stop in each
+    An identifier `Semantics` there would be a second, empty TalkBack stop in each
     destination: flows find a rail destination by its name until Flet can tag it.
     """
     rail = inner_rail(navigation_rail("/now", ignore, visible=True))
@@ -145,7 +145,7 @@ def test_the_rail_shows_every_label_at_the_top_with_its_root_selected(
 
 @pytest.mark.parametrize("visible", [True, False])
 def test_the_rail_shows_only_when_asked(visible: bool) -> None:
-    """``visible`` decides whether the rail shows; hidden, it keeps its destinations."""
+    """`visible` decides whether the rail shows; hidden, it keeps its destinations."""
     stack = navigation_rail("/map", ignore, visible=visible)
     assert stack.visible is visible  # the rail and its fade show or hide together
     assert len(inner_rail(stack).destinations) == len(TABS)
@@ -192,7 +192,7 @@ def test_a_rail_that_fits_has_no_fade_and_no_space_under_more() -> None:
 def test_the_rail_fades_only_when_shorter_than_its_destinations(
     hooks: Hooks, monkeypatch: pytest.MonkeyPatch, height: float, short: bool
 ) -> None:
-    """``Rail`` measures itself and fades under ``RAIL_FIT_DP``, 320 dp (D-309).
+    """`Rail` measures itself and fades under `RAIL_FIT_DP`, 320 dp (D-309).
 
     About 303 dp on an Android phone in landscape; an iPhone 17's (about 325 dp) or a
     tablet's shows all five.
@@ -210,7 +210,7 @@ def test_the_rail_fades_only_when_shorter_than_its_destinations(
 
 
 async def test_a_tap_on_the_bar_or_the_rail_hands_its_index_on() -> None:
-    """The bar and the rail each hand the tapped destination's index to ``on_select``."""
+    """The bar and the rail each hand the tapped destination's index to `on_select`."""
     picked: list[int] = []
 
     async def select(index: int) -> None:
@@ -229,7 +229,7 @@ async def test_a_tap_on_the_bar_or_the_rail_hands_its_index_on() -> None:
 
 
 class FakeList:
-    """A mounted ``ListView``: records where it was asked to scroll."""
+    """A mounted `ListView`: records where it was asked to scroll."""
 
     def __init__(self) -> None:
         """Start with no scroll asked for."""
@@ -242,7 +242,7 @@ class FakeList:
 
 @pytest.fixture
 def prefs(monkeypatch: pytest.MonkeyPatch) -> Prefs:
-    """Default ``Prefs`` for ``navigation``, with ``use_memo`` building at once."""
+    """Default `Prefs` for `navigation`, with `use_memo` building at once."""
     prefs = Prefs()
     monkeypatch.setattr(navigation, "use_prefs", lambda: prefs)
     # One render, outside a renderer: use_memo just builds the value.
@@ -251,7 +251,7 @@ def prefs(monkeypatch: pytest.MonkeyPatch) -> Prefs:
 
 
 def mounted() -> tuple[FakeList, Callable[[], Any]]:
-    """Call ``use_scroll_to_top()`` and mount a ``FakeList`` on its ref."""
+    """Call `use_scroll_to_top()` and mount a `FakeList` on its ref."""
     list_ref, scroll_to_top = use_scroll_to_top()
     fake = FakeList()
     list_ref.current = cast(ft.ListView, fake)
@@ -259,7 +259,7 @@ def mounted() -> tuple[FakeList, Callable[[], Any]]:
 
 
 async def test_a_retap_scrolls_the_root_s_list_to_the_top(prefs: Prefs) -> None:
-    """A re-tap scrolls the mounted list to offset 0 over ``RETAP_SCROLL_MS``."""
+    """A re-tap scrolls the mounted list to offset 0 over `RETAP_SCROLL_MS`."""
     fake, scroll_to_top = mounted()
     await scroll_to_top()
     assert fake.scrolls == [{"offset": 0, "duration": RETAP_SCROLL_MS}]

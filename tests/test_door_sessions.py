@@ -1,7 +1,7 @@
-"""Tests for Door check's sessions and the choice, ``core/door_sessions.py`` (#764).
+"""Tests for Door check's sessions and the choice, `core/door_sessions.py` (#764).
 
-Pure: the seed's catalog (``tests/fixtures/mock/seed.json``) read through
-``parse_catalog()``, plus generated sessions, so the order, the day groups, the search
+Pure: the seed's catalog (`tests/fixtures/mock/seed.json`) read through
+`parse_catalog()`, plus generated sessions, so the order, the day groups, the search
 and the stored shape are pinned without a page (DOOR-02, D-433).
 """
 
@@ -36,7 +36,7 @@ WEDNESDAY = date(2026, 5, 13)
 
 
 def seed_catalog() -> Catalog:
-    """The seed's catalog, the door's part, as ``redeemable`` sends it."""
+    """The seed's catalog, the door's part, as `redeemable` sends it."""
     seed = json.loads(SEED.read_text())
     return door_catalog(
         parse_catalog(
@@ -153,7 +153,7 @@ def test_an_undated_session_is_labelled_by_its_name() -> None:
 
 
 def test_the_choice_round_trips_through_storage() -> None:
-    """``to_stored()`` and ``from_stored()`` keep every field, "All" included."""
+    """`to_stored()` and `from_stored()` keep every field, "All" included."""
     for choice in (
         DoorChoice(1, (11,), "Async in depth · Wed 1:30 PM"),
         DoorChoice(1, (10, 11), "Tutorials · All sessions", all_sessions=True),

@@ -1,7 +1,7 @@
 """Tests for the Prefs store's resolved values and Developer options (STORE-08..10).
 
-What follows the OS (dark mode, high contrast, motion) and what ``dev`` holds for the
-Developer screen, on hand-made ``Prefs``; loading and saving are ``test_prefs.py``'s.
+What follows the OS (dark mode, high contrast, motion) and what `dev` holds for the
+Developer screen, on hand-made `Prefs`; loading and saving are `test_prefs.py`'s.
 """
 
 from datetime import UTC, datetime
@@ -83,7 +83,7 @@ def test_an_animation_lasts_its_duration_unless_the_os_asks_for_less_motion(
 
 
 def test_developer_options_are_read_from_dev(monkeypatch: pytest.MonkeyPatch) -> None:
-    """In a packaged build, Developer, the fake clock and the feed come from ``dev``."""
+    """In a packaged build, Developer, the fake clock and the feed come from `dev`."""
     monkeypatch.setattr(prefs_module, "DEVELOPER_ALWAYS", False)  # a packaged build
     prefs = Prefs()
     assert (prefs.developer, prefs.fake_now, prefs.feed_url) == (False, None, None)

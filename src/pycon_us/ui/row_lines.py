@@ -1,9 +1,9 @@
 """The lines a session row is made of (D-227).
 
 The time-and-place line, supporting text, the overlap warning and the elapsed bar:
-plain builders, with no hooks, which ``ui.session_rows``'s ``SessionRow`` and
-``NoticeRow`` stack under a row's title (ux.md §3.9, D-184). What a row says to a
-screen reader is ``core.row_views``'s phrases, not these lines (D-200).
+plain builders, with no hooks, which `ui.session_rows`'s `SessionRow` and
+`NoticeRow` stack under a row's title (ux.md §3.9, D-184). What a row says to a
+screen reader is `core.row_views`'s phrases, not these lines (D-200).
 """
 
 from collections.abc import Sequence
@@ -18,7 +18,7 @@ _NBSP = "\u00a0"
 
 TRACK = ft.Colors.with_opacity(0.16, ft.Colors.ON_SURFACE)
 """The elapsed bar's track: a tint of the text, so it shows on every surface, the
-next-session card's included (about 1.4:1), and the ``live`` fill reads 3.7:1 or more
+next-session card's included (about 1.4:1), and the `live` fill reads 3.7:1 or more
 on it."""
 
 
@@ -31,7 +31,7 @@ def meta(
     that does not fit after the time moves to the next line whole, and the "·" ends
     the time's line rather than starting one; only a place wider than the row wraps
     inside itself. The time keeps "AM" on its line and breaks only after its dash
-    (``timefmt.on_screen()``, D-229).
+    (`timefmt.on_screen()`, D-229).
 
     Args:
         view: The session's row view.
@@ -59,11 +59,11 @@ def secondary(
 
 
 def overlap_line(names: Sequence[str], color: str) -> ft.Control:
-    """Return a row's overlap warning: ``WARNING_AMBER`` beside its lines (ux.md §3.7).
+    """Return a row's overlap warning: `WARNING_AMBER` beside its lines (ux.md §3.7).
 
     "Overlaps with “Typing deep dive”", cut at three lines as a title is (§3.6), then
     "and 2 more" on a line of its own, so the cut never hides the count (D-188's "Now:"
-    line). Both in ``Tokens.warning``, which reads at 4.5:1 or better on every surface
+    line). Both in `Tokens.warning`, which reads at 4.5:1 or better on every surface
     (§3.3). The icon is one line tall, scaled with the text, and tops the text, so it
     is beside its first line at every size (D-373).
     """
@@ -99,8 +99,8 @@ def overlap_line(names: Sequence[str], color: str) -> ft.Control:
 def elapsed_bar(elapsed: int, color: str) -> ft.Control:
     """A row's elapsed bar (ux.md §3.9); it stays under reduced motion (D-173).
 
-    M3's current bar (``year_2023=False``): a gap after the fill, then the track, and
-    a stop dot at its end in ``on_surface_variant`` (4.5:1 or more on every surface),
+    M3's current bar (`year_2023=False`): a gap after the fill, then the track, and
+    a stop dot at its end in `on_surface_variant` (4.5:1 or more on every surface),
     which marks where 100 % is, as M3 asks of a track under 3:1 (WCAG 1.4.11).
     """
     return ft.Container(

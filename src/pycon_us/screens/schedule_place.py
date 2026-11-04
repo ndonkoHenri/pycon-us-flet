@@ -4,28 +4,28 @@ A list keeps its pixel offset, and a lazy list keeps the offset of its first bui
 by index (F70), so when the text grows the rows above the top grow and earlier rows
 show: a slot or more (#337). Flet gives Python no text scale and no event for it (U16),
 so the Schedule measures the change itself and puts the place back by key. What it
-measures and records is ``screens/schedule_layout.py`` (``LayoutRecord``, which
-``PlaceKeeper`` extends with the jumps):
+measures and records is `screens/schedule_layout.py` (`LayoutRecord`, which
+`PlaceKeeper` extends with the jumps):
 
-- ``layout_probe()``, above the day pages, lays out an invisible "10:00" and reports its
+- `layout_probe()`, above the day pages, lays out an invisible "10:00" and reports its
   width and the screen's: a text-size change (or a rotation) changes one of them. It
   sits before the pages, so Flutter lays it out, and reports it, before their items;
-- each slot and the now line report their height (``on_size_change``) to
-  ``PlaceKeeper.measured()``. Nothing renders from the heights, so D-153's memo holds;
-- at each scroll end, ``PlaceKeeper.scrolled()`` records the item at the top and how far
-  into it (``core/list_place.place_at()``), in ``ViewMemory.schedule_places``;
+- each slot and the now line report their height (`on_size_change`) to
+  `PlaceKeeper.measured()`. Nothing renders from the heights, so D-153's memo holds;
+- at each scroll end, `PlaceKeeper.scrolled()` records the item at the top and how far
+  into it (`core/list_place.place_at()`), in `ViewMemory.schedule_places`;
 - when the measured widths or the time's position (D-216) change, the places' offsets
-  are stale (``relaid()``): the shown list is put back at once, by a keyed jump to its
-  item and then as far into it as before, scaled (``put_back()``); another day is put
-  back when it shows again (``restore()``). Each list is built in full until it is put
-  back (``pending()``), so its item is built for the jump (D-154);
+  are stale (`relaid()`): the shown list is put back at once, by a keyed jump to its
+  item and then as far into it as before, scaled (`put_back()`); another day is put
+  back when it shows again (`restore()`). Each list is built in full until it is put
+  back (`pending()`), so its item is built for the jump (D-154);
 - put-backs take turns, and each jump waits for its own scroll end, as every jump
   waits on the one signal, and comes long enough after the list's last end that Flet
   sends its own (F182, D-364);
-- a filter change (``lay_out()``) carries each place into the new list, its item or the
-  next one still shown (``core/list_place.carried()``), keeps the heights of the slots
+- a filter change (`lay_out()`) carries each place into the new list, its item or the
+  next one still shown (`core/list_place.carried()`), keeps the heights of the slots
   it left as they were, and marks the places stale: the shown list is put back once
-  Flutter has laid the change out (``put_back_refiltered()``), another day when it
+  Flutter has laid the change out (`put_back_refiltered()`), another day when it
   shows again (#333, D-371). A user's scroll stops a put-back between its jumps, and
   one started while a put-back waits drops its place for good.
 """
@@ -50,7 +50,7 @@ logger = logging.getLogger(__name__)
 END_GAP_S = SCROLL_EVENT_MS / 1000 + 0.05
 """How long after a list's last scroll end a put-back's next jump waits, in seconds.
 
-Flet sends a list's scroll end only when its last one was at least ``scroll_interval``
+Flet sends a list's scroll end only when its last one was at least `scroll_interval`
 before, and drops it otherwise (F182, U162): the jump would move the list and never
 say so."""
 
@@ -60,9 +60,9 @@ seconds: until a day item reports its height, at most this (D-371)."""
 
 
 class PlaceKeeper(LayoutRecord):
-    """The Schedule's day lists' layout (``LayoutRecord``), and the jumps that use it.
+    """The Schedule's day lists' layout (`LayoutRecord`), and the jumps that use it.
 
-    One per mounted Schedule (``ft.use_memo``).
+    One per mounted Schedule (`ft.use_memo`).
 
     Attributes:
         turn: Held by the put-back that is moving a list: one at a time (#600, D-364).
@@ -86,18 +86,18 @@ class PlaceKeeper(LayoutRecord):
 
         Put-backs take turns (#600, D-364): every jump waits on the one scroll-end
         signal, so a put-back waits for the one before it to stop, and each jump waits
-        for its own end, so no end answers a later jump; each comes ``END_GAP_S`` after
+        for its own end, so no end answers a later jump; each comes `END_GAP_S` after
         the list's last end, so Flet sends its end (F182). At the largest sizes a text-size
         change is two layout changes, the text's width and then the time's position
         (D-216): the first put-back stops at its jump's end, and the second jumps in
-        the final layout. A newer change (``round``) stops a put-back after any wait,
+        the final layout. A newer change (`round`) stops a put-back after any wait,
         before it moves the list again; so does a scroll of the user's, which drops the
         place (#333, D-371).
 
         Args:
             day: The list's day.
             list_ref: The list's ref.
-            ended: The screen's scroll-end signal (``Signals.ended``).
+            ended: The screen's scroll-end signal (`Signals.ended`).
 
         Returns:
             Whether a place waited for it, so the screen re-renders the list lazy again.
@@ -129,14 +129,14 @@ class PlaceKeeper(LayoutRecord):
         """Put the shown list back at its place after a filter change (#333, D-371).
 
         Once Flutter has laid the change out, so the keyed jump reads the new list: at
-        the first height report since the change (``reported``), the new slots' or the
-        list built in full's, else after ``LAYOUT_S``. The change marked the place
-        stale (``refilter()``); ``put_back()`` does the rest.
+        the first height report since the change (`reported`), the new slots' or the
+        list built in full's, else after `LAYOUT_S`. The change marked the place
+        stale (`refilter()`); `put_back()` does the rest.
 
         Args:
             day: The shown day.
             list_ref: Its list's ref.
-            ended: The screen's scroll-end signal (``Signals.ended``).
+            ended: The screen's scroll-end signal (`Signals.ended`).
 
         Returns:
             Whether a place waited for it, so the screen re-renders the list lazy again.
@@ -190,7 +190,7 @@ class PlaceKeeper(LayoutRecord):
         """Return how far into the place's item to put the top, in dp.
 
         As far in as before, scaled to the item's height in this layout
-        (``rescaled()``). The item's top when the time has moved above its rows or back
+        (`rescaled()`). The item's top when the time has moved above its rows or back
         since (D-216), as the distance measured rows laid out the other way; or when
         the item has not reported its height in this layout yet, as a height from
         another layout would scale it past the item (#600, D-364).
@@ -216,14 +216,14 @@ class PlaceKeeper(LayoutRecord):
         The item fell out of the built range (F7), and its old offset is near it. Each
         step waits on the device, and a newer change (a jump to now, another layout)
         may take over meanwhile: then it stops at once, before it moves the list again,
-        and ``put_back()`` sees the change in ``round``.
+        and `put_back()` sees the change in `round`.
 
         Args:
-            mine: The put-back's ``round``.
+            mine: The put-back's `round`.
             day: The list's day.
             place: The place to put back.
             list_ref: The list's ref.
-            ended: The screen's scroll-end signal (``Signals.ended``).
+            ended: The screen's scroll-end signal (`Signals.ended`).
 
         Returns:
             How the last keyed jump ended; "still" when it asked none.
@@ -243,9 +243,9 @@ class PlaceKeeper(LayoutRecord):
     async def ended_apart(self, day: date) -> None:
         """Wait until a scroll end of the day's list would reach Python (F182).
 
-        ``END_GAP_S`` after its last end, as Flet drops an end that comes sooner. It
+        `END_GAP_S` after its last end, as Flet drops an end that comes sooner. It
         yields at least once, so a render asked before the jump (the list built in
-        full, ``schedule.py``) reaches the device first.
+        full, `schedule.py`) reaches the device first.
         """
         last = self.last_end.get(day, -END_GAP_S)
         await asyncio.sleep(max(0.0, last + END_GAP_S - time.monotonic()))
@@ -260,8 +260,8 @@ class PlaceKeeper(LayoutRecord):
     ) -> Jump:
         """Jump to the item with this key, once, so that its end reaches Python.
 
-        "still" without a jump when a newer change took over (``round``) or the user
-        scrolls (``moving``) after the wait.
+        "still" without a jump when a newer change took over (`round`) or the user
+        scrolls (`moving`) after the wait.
         """
         await self.ended_apart(day)
         if self._stopped(mine, day):
@@ -284,8 +284,8 @@ class PlaceKeeper(LayoutRecord):
 
         So its end cannot answer a keyed jump asked after it: every jump waits on the
         one signal. A list already there sends no end: the wait gives up after
-        ``LANDING_S``. Nothing when a newer change took over (``round``) or the user
-        scrolls (``moving``) after the wait.
+        `LANDING_S`. Nothing when a newer change took over (`round`) or the user
+        scrolls (`moving`) after the wait.
         """
         await self.ended_apart(day)
         if self._stopped(mine, day):
@@ -302,7 +302,7 @@ class PlaceKeeper(LayoutRecord):
     def _stopped(self, mine: int, day: date) -> bool:
         """Return whether a put-back must not move the list now.
 
-        A newer change took over, or the user's scroll did (``_taken()``).
+        A newer change took over, or the user's scroll did (`_taken()`).
         """
         return mine != self.round or self._taken(day)
 
@@ -311,7 +311,7 @@ class PlaceKeeper(LayoutRecord):
 
         The list scrolls, the user's own scroll once the put-back's last jump has had
         its end; or the user started a scroll since the put-back began, which dropped
-        the place (``scrolled()``), even if it has ended (D-371).
+        the place (`scrolled()`), even if it has ended (D-371).
         """
         return day in self.moving or self.pending(day) is None
 
@@ -320,7 +320,7 @@ class PlaceKeeper(LayoutRecord):
 
         A put-back still waiting stops, and its stale place goes, so the jump's scroll
         end records the new place: else the stale place would wait for a put-back that
-        never comes, and keep every later scroll end from counting (``scrolled()``).
+        never comes, and keep every later scroll end from counting (`scrolled()`).
         A place that is not stale stays: a list already on the now slot does not
         scroll, so no end comes to replace it, and a filter change would then have no
         place to carry (#628's Android check, D-371).
@@ -335,7 +335,7 @@ class PlaceKeeper(LayoutRecord):
     ) -> bool:
         """Put a day list that shows again where it was (D-18, D-331).
 
-        By key when a text-size change made its offset stale (``put_back()``), else at
+        By key when a text-size change made its offset stale (`put_back()`), else at
         the offset where its last scroll ended. A day list that shows again is a new
         list on the device, at the top: the tab bar's pages keep nothing of a page they
         no longer show.

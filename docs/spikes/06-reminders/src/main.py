@@ -1,16 +1,16 @@
 """S6 reproducer: can a scheduled reminder fire while the app isn't running?
 
 Spike S6 (docs/spikes/06-reminders.md). The app drives the throwaway
-``flet_s6_reminders`` extension (the E3 API over flutter_local_notifications):
+`flet_s6_reminders` extension (the E3 API over flutter_local_notifications):
 it asks for permission, schedules reminders a few minutes ahead, lists and
 cancels them, and shows how it was opened (a cold-start tap or a tap while
-running). Every step is also printed as a line starting with ``S6 `` (logcat tag
-``flet.python`` on Android), so the drivers can read it.
+running). Every step is also printed as a line starting with `S6 ` (logcat tag
+`flet.python` on Android), so the drivers can read it.
 
 A start route runs one step with no tap, which the iOS simulator needs:
-``/schedule/<seconds>[/<exact|inexact>[/<id>]]``, ``/many/<count>/<seconds>``,
-``/move`` and ``/keep-shown/<seconds>[/exact]``.
-A reminder's payload is ``/opened/<id>``, the route a tap would open in the app.
+`/schedule/<seconds>[/<exact|inexact>[/<id>]]`, `/many/<count>/<seconds>`,
+`/move` and `/keep-shown/<seconds>[/exact]`.
+A reminder's payload is `/opened/<id>`, the route a tap would open in the app.
 
 Imperative on purpose: the subject is the notification plumbing, not the UI.
 """
@@ -30,13 +30,13 @@ TEST_LEAD_S = 120
 
 
 def log(event: str, **values: object) -> None:
-    """Print one ``S6`` line with the wall-clock time, for the drivers."""
+    """Print one `S6` line with the wall-clock time, for the drivers."""
     fields = " ".join(f"{key}={value}" for key, value in values.items())
     print(f"S6 {event} wall={time.time():.3f} {fields}", flush=True)
 
 
 def utc_hms(at: datetime) -> str:
-    """Format an instant as ``HH:MM:SS UTC`` for titles and bodies."""
+    """Format an instant as `HH:MM:SS UTC` for titles and bodies."""
     return at.astimezone(UTC).strftime("%H:%M:%S UTC")
 
 

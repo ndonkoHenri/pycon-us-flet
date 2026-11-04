@@ -1,7 +1,7 @@
-"""Session detail (``…/session/<id>``): time and place first (SESS-01..03; ux.md §5.5).
+"""Session detail (`…/session/<id>`): time and place first (SESS-01..03; ux.md §5.5).
 
 The app bar holds the star (D-30), Share (NEW-06) and an overflow
-(``screens.session_extras.SessionMenu``) with "Open on us.pycon.org" when the session
+(`screens.session_extras.SessionMenu`) with "Open on us.pycon.org" when the session
 has a public page, and Add to calendar on every session that can be saved (SESS-04,
 D-272); a break or a notice has neither, so it has no overflow (D-60), and an unknown or
 removed session gets no Add to calendar (D-186). An open space's page is its entry on
@@ -11,13 +11,13 @@ the site's open-spaces page, which its detail shows as a link in the page instea
 The page's heading is the title under the badges, so the app bar's title stays empty;
 for 24 h after a change, a badge per kind says the old value ("Moved from Room 102A").
 Then the "When and where" card and the room's location card
-(``ui.when_where``), for a session that needs registration a card that says so and
+(`ui.when_where`), for a session that needs registration a card that says so and
 links the year's registration page, then the speakers (their rows push their pages; a
 pseudo-speaker such as "Hosted by …" is text) and the description, whose links open by
-the link rule (``ui.links.feed_markdown``, D-197); a keynote's or panel's people and
-abstract come from the year data instead (``screens.keynote_people``, SESS-08). Last,
+the link rule (`ui.links.feed_markdown`, D-197); a keynote's or panel's people and
+abstract come from the year data instead (`screens.keynote_people`, SESS-08). Last,
 a Posters row's posters and an open space's image and site link
-(``screens.session_extras``).
+(`screens.session_extras`).
 
 An unknown id shows the not-found state under the back arrow, so Back pops one level
 (D-186). A session that a newer feed drops while its detail is open keeps the content
@@ -244,7 +244,7 @@ def _header(
 
     A change of the last 24 h replaces the rows' Changed with a badge per kind that
     says the old value, "Moved from Room 102A" (ux.md §5.5). At large text
-    (``Prefs.time_above``) the title steps down (``PageTitle``, D-328).
+    (`Prefs.time_above`) the title steps down (`PageTitle`, D-328).
     """
     title = PageTitle(
         session.name,

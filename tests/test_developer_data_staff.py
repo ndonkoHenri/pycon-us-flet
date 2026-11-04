@@ -1,8 +1,8 @@
 """Developer › Data's staff data: Clear staff data and Reset app's warning (#695, D-414).
 
-``ClearStaffData`` and ``DataActions`` run outside a renderer, their hooks replaced
-(``tests/data_section.py``'s hand renderer); the rows are seeded into a real
-``outbox-<year>.db``. How the rows and the confirmations look is checked on devices
+`ClearStaffData` and `DataActions` run outside a renderer, their hooks replaced
+(`tests/data_section.py`'s hand renderer); the rows are seeded into a real
+`outbox-<year>.db`. How the rows and the confirmations look is checked on devices
 (the PR).
 """
 
@@ -75,7 +75,7 @@ B = "b@example.com"
 
 
 def seed(db: OutboxDb, owner: str, *statuses: Status) -> None:
-    """Store one lead row of ``owner``'s in each of ``statuses``."""
+    """Store one lead row of `owner`'s in each of `statuses`."""
     for status in statuses:
         code = f"{owner[0]}{len(db.rows(owner, tuple(Status)) or [])}"
         decide = partial(
@@ -112,7 +112,7 @@ def confirm(dialog: ft.AlertDialog, identifier: str) -> ft.TextButton:
 
 
 def test_the_confirmation_names_every_loss_and_the_unsynced_count() -> None:
-    """Unsynced records: the button says how many, in ``error`` (DEV-03)."""
+    """Unsynced records: the button says how many, in `error` (DEV-03)."""
     dialog = staff_confirmation(
         Counts(pending=2, failed=1, synced=12),
         on_confirm=lambda: None,
@@ -182,10 +182,10 @@ def clear(
     rendered: Rendered,
     staff: Staff,
 ) -> Callable[..., ft.Control]:
-    """Render ``ClearStaffData`` for a mock URL or none; return its control."""
+    """Render `ClearStaffData` for a mock URL or none; return its control."""
 
     def render(*, mock: bool = True) -> ft.Control:
-        """Render it again, with its state kept in ``rendered``."""
+        """Render it again, with its state kept in `rendered`."""
         prefs = Prefs(loaded=True, dev={DEV_MOCK_API_URL: "http://10.0.2.2:8000"})
         if not mock:
             prefs = Prefs(loaded=True)

@@ -1,11 +1,11 @@
 """Tests for session detail (SESS-01, -02; ux.md §5.5): the header, When and where.
 
-The speakers and the description are ``test_session_people.py``'s; the registration
-card, the app bar, the states and the change badges ``test_session_actions.py``'s;
-Share, the posters and an open space's extras ``test_session_extras.py``'s.
+The speakers and the description are `test_session_people.py`'s; the registration
+card, the app bar, the states and the change badges `test_session_actions.py`'s;
+Share, the posters and an open space's extras `test_session_extras.py`'s.
 
-``SessionDetail`` runs in a real Flet session (``tests/session_detail.py``), as the
-rows do in ``test_session_rows.py``. How the screen looks, at 200 % text and in dark
+`SessionDetail` runs in a real Flet session (`tests/session_detail.py`), as the
+rows do in `test_session_rows.py`. How the screen looks, at 200 % text and in dark
 mode, is checked on devices (the PR); here, what it says and what a tap does.
 """
 
@@ -250,7 +250,7 @@ async def test_the_room_tile_pushes_the_room_with_the_session_highlighted(
 
 
 def other_rooms(detail: Detail) -> Fold:
-    """Return the fold of the detail's other rooms, ``session.other_rooms``."""
+    """Return the fold of the detail's other rooms, `session.other_rooms`."""
     return fold_named(detail.find(ft.Container), "session.other_rooms")
 
 

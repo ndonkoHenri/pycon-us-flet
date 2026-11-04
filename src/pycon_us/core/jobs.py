@@ -1,23 +1,23 @@
 """Job listings: their roles, what search matches, and their sponsors (SPON-09; D-278).
 
-Sponsors write their listings as HTML in three shapes, and ``parse_roles()`` reads two of
+Sponsors write their listings as HTML in three shapes, and `parse_roles()` reads two of
 them as links, where Ionic linked a role only when its URL was the anchor's text
 (Bloomberg: 15 roles, 0 links):
 
 - **Anchors** (Bloomberg, Temporal, NVIDIA, Sentry, Old Mission, Tower Research): each
-  ``<a href>`` is a role, titled by its text.
-- **Bare URLs** (Hudson River Trading's ``Title | URL`` items; Anaconda's, Capital One's
+  `<a href>` is a role, titled by its text.
+- **Bare URLs** (Hudson River Trading's `Title | URL` items; Anaconda's, Capital One's
   and Qube's careers page alone in a paragraph): a list item or paragraph without an
-  anchor that holds one bare ``http(s)`` URL is a role, titled by the text before the
-  URL, else by the URL's last segment, as Ionic's ``shortenUrl`` did.
+  anchor that holds one bare `http(s)` URL is a role, titled by the text before the
+  URL, else by the URL's last segment, as Ionic's `shortenUrl` did.
 - **Long form** (SerpApi, marimo): a listing with a heading is a written job description,
   not a list of roles. It gets no roles, and its Markdown shows instead.
 
-A placeholder such as ``N/A`` (OpenEDG) is no roles and no description
-(``is_placeholder``). ``feed.process()`` reads each listing once (``read_listing``), and
-the screens find a sponsor's listings by its exact name (``listings_of``), and a
-listing's sponsor the same way (``sponsor_of``). Job listings' filter keeps the listings
-whose text holds every word (``filter_listings``, SPON-07).
+A placeholder such as `N/A` (OpenEDG) is no roles and no description
+(`is_placeholder`). `feed.process()` reads each listing once (`read_listing`), and
+the screens find a sponsor's listings by its exact name (`listings_of`), and a
+listing's sponsor the same way (`sponsor_of`). Job listings' filter keeps the listings
+whose text holds every word (`filter_listings`, SPON-07).
 """
 
 import re
@@ -42,7 +42,7 @@ _BREAKS = frozenset(
 _WEB_SCHEMES = frozenset({"http", "https"})  # a role opens a page; mailto: is no role
 
 _SEPARATORS = " |:,;-–—·"
-"""Trimmed off the text before a bare URL: ``Research Engineer | https://…``."""
+"""Trimmed off the text before a bare URL: `Research Engineer | https://…`."""
 
 _PLACEHOLDERS = frozenset({"", "na", "none", "tba", "tbd"})
 """A listing's whole text, folded and without punctuation, that says nothing."""
@@ -53,15 +53,15 @@ def parse_roles(html: str, site_url: str) -> tuple[Role, ...]:
 
     An anchor is a role, titled by its text, or by its URL's last segment when its text
     is empty or a URL. A list item or paragraph without an anchor that holds exactly one
-    bare ``http(s)`` URL is a role, titled by the text before the URL, its separators
+    bare `http(s)` URL is a role, titled by the text before the URL, its separators
     trimmed, else by the URL's last segment. A line break or a block's edge separates
-    words and URLs, and ``script`` and ``style`` text is not read, as in ``html_md``. A
-    listing with a heading is long form and has none. A link is what ``feed_link()``
-    makes of it (a site path joins the year's site); only ``http`` and ``https`` links
+    words and URLs, and `script` and `style` text is not read, as in `html_md`. A
+    listing with a heading is long form and has none. A link is what `feed_link()`
+    makes of it (a site path joins the year's site); only `http` and `https` links
     are roles.
 
     Args:
-        html: The listing's ``description_html``.
+        html: The listing's `description_html`.
         site_url: The year's site, which a site-relative link joins.
 
     Returns:
@@ -74,10 +74,10 @@ def parse_roles(html: str, site_url: str) -> tuple[Role, ...]:
 
 
 def is_placeholder(text: str) -> bool:
-    """Return whether a listing's text says nothing: blank, ``-``, ``N/A`` and the like.
+    """Return whether a listing's text says nothing: blank, `-`, `N/A` and the like.
 
     Args:
-        text: The listing's visible text (``html_md.to_text``).
+        text: The listing's visible text (`html_md.to_text`).
     """
     return re.sub(r"[\W_]+", "", fold(text)) in _PLACEHOLDERS
 
@@ -93,7 +93,7 @@ def read_listing(
     Args:
         listing: The listing as decoded.
         site_url: The year's site, which relative links join.
-        markdown: ``feed.process()``'s converter, which converts each value once.
+        markdown: `feed.process()`'s converter, which converts each value once.
     """
     text = html_md.to_text(listing.description)
     if is_placeholder(text):
@@ -114,10 +114,10 @@ def filter_listings(
     """Return the listings a filter keeps: those whose text holds every word (SPON-07).
 
     The query folds as search's does (D-46), and each word may sit anywhere in the
-    listing's ``search_text`` (its sponsor, role titles and visible text), as a
-    substring; never in its markup, where Ionic's filter found ``nofollow``. A filter
-    with no word to match returns ``listings`` itself, so the screen knows no filter
-    applies: a blank one, and one that folds to nothing (a lone ``’``).
+    listing's `search_text` (its sponsor, role titles and visible text), as a
+    substring; never in its markup, where Ionic's filter found `nofollow`. A filter
+    with no word to match returns `listings` itself, so the screen knows no filter
+    applies: a blank one, and one that folds to nothing (a lone `’`).
 
     Args:
         listings: The feed's listings, in feed order.
@@ -132,7 +132,7 @@ def filter_listings(
 def listings_of(data: ConferenceData, sponsor: Sponsor) -> tuple[JobListing, ...]:
     """Return the sponsor's job listings: those naming it exactly, in feed order (SPON-05).
 
-    Listings carry the sponsor's name, not its slug, and ``tools/sponsor_invariants.py``
+    Listings carry the sponsor's name, not its slug, and `tools/sponsor_invariants.py`
     checks that every listing names a sponsor. Thirteen listings need no index.
 
     Args:
@@ -164,7 +164,7 @@ def sponsor_of(data: ConferenceData, listing: JobListing) -> Sponsor | None:
 
 @dataclass
 class _Anchor:
-    """An open ``<a>``: its ``href`` and the text read so far."""
+    """An open `<a>`: its `href` and the text read so far."""
 
     href: str | None
     start: int  # where it starts in the listing's text
@@ -173,7 +173,7 @@ class _Anchor:
 
 @dataclass
 class _Block:
-    """An open ``<p>`` or ``<li>``: its own text, and whether it holds an anchor.
+    """An open `<p>` or `<li>`: its own text, and whether it holds an anchor.
 
     Each piece of text keeps where it starts in the listing's text, so that a role found
     when the block ends still sorts by where its URL was.
@@ -184,7 +184,7 @@ class _Block:
     has_anchor: bool = False
 
     def offset(self, index: int) -> int:
-        """Return where the block's text at ``index`` is in the listing's text."""
+        """Return where the block's text at `index` is in the listing's text."""
         for start, piece in self.pieces:
             if index < len(piece):
                 return start + index
@@ -193,10 +193,10 @@ class _Block:
 
 
 class _RoleParser(HTMLParser):
-    """Collects a listing's roles as ``parse_roles()`` describes, and its headings."""
+    """Collects a listing's roles as `parse_roles()` describes, and its headings."""
 
     def __init__(self, site_url: str) -> None:
-        """Start with no role; links join ``site_url``."""
+        """Start with no role; links join `site_url`."""
         super().__init__(convert_charrefs=True)
         self.site_url = site_url
         self.long_form = False
@@ -285,7 +285,7 @@ class _RoleParser(HTMLParser):
         self._found.append((block.offset(matches[0].start()), role))
 
     def _web_link(self, href: str | None) -> str | None:
-        """Return the ``http(s)`` address ``href`` stands for, or None without a host."""
+        """Return the `http(s)` address `href` stands for, or None without a host."""
         link = feed_link(href, self.site_url)
         if link is None:
             return None
@@ -294,9 +294,9 @@ class _RoleParser(HTMLParser):
 
 
 def _url_title(url: str) -> str:
-    """Title a role by its URL's last path segment, as Ionic's ``shortenUrl`` did.
+    """Title a role by its URL's last path segment, as Ionic's `shortenUrl` did.
 
-    ``…/about-us/careers`` is "Careers" and ``…/python-jobs`` "Python jobs": the segment
+    `…/about-us/careers` is "Careers" and `…/python-jobs` "Python jobs": the segment
     decoded, its dashes and underscores spaces, its first letter upper-cased. A URL
     without a path is titled by its host.
     """

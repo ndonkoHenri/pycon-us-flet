@@ -3,7 +3,7 @@
 DATA-17, SCHED-01, D-18, D-192. On the recorded feed, the day before the conference:
 the Schedule opens on its first day; its third tab lists the third day's rows in their
 place of the first day's. A session opened from there is a pushed View, and Back
-returns to the third day, not to the first (the day is kept in ``ViewMemory``, D-18).
+returns to the third day, not to the first (the day is kept in `ViewMemory`, D-18).
 """
 
 import flet.testing as ftt

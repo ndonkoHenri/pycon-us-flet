@@ -1,8 +1,8 @@
 """The CoC result's email, hidden until revealed (#762; MASK-05, O-7).
 
-An "Incident recorded" result carries the reply's email (``ScanResult.email``), never
-on the panel. Its result action "Show email" (``coc.show_email``) reveals it on a line
-of its own under the panel (``ScanScreen``'s ``result_note``), above the badge field
+An "Incident recorded" result carries the reply's email (`ScanResult.email`), never
+on the panel. Its result action "Show email" (`coc.show_email`) reveals it on a line
+of its own under the panel (`ScanScreen`'s `result_note`), above the badge field
 and so above the keyboard, outside the panel's live region: a screen reader says it
 only when it is focused. The button then reads "Hide email". The reveal belongs to
 that result: the next result, or the result's clear, hides it again, and the email
@@ -21,19 +21,19 @@ SHOW_EMAIL = "Show email"
 HIDE_EMAIL = "Hide email"
 
 type Reveal = Callable[[Callable[[int], int]], None]
-"""Sets the serial of the result whose email shows (a ``use_state`` setter)."""
+"""Sets the serial of the result whose email shows (a `use_state` setter)."""
 
 
 def email_actions(shown: Shown, *, revealed: int, reveal: Reveal) -> list[ft.Control]:
     """Return the result's "Show email" or "Hide email".
 
-    The CoC tool's ``result_actions``. A result without an email (not recorded, or a
+    The CoC tool's `result_actions`. A result without an email (not recorded, or a
     reply without one) gets nothing.
 
     Args:
         shown: The result on the panel.
         revealed: The serial of the result whose email shows, 0 for none.
-        reveal: Sets ``revealed``; given a function of the latest value (#756).
+        reveal: Sets `revealed`; given a function of the latest value (#756).
     """
     email = shown.result.email
     if not email:
@@ -57,7 +57,7 @@ def email_actions(shown: Shown, *, revealed: int, reveal: Reveal) -> list[ft.Con
 def email_note(shown: Shown, *, revealed: int) -> ft.Control | None:
     """Return the revealed email under the panel, or None while it is hidden.
 
-    The CoC tool's ``result_note``: one node, said only when focused.
+    The CoC tool's `result_note`: one node, said only when focused.
 
     Args:
         shown: The result on the panel.

@@ -1,16 +1,16 @@
 """Check the live public feed with our parser and the feed invariants (D-77, D-84; DEV-08).
 
-The weekly ``.github/workflows/feed-check.yml`` runs it. By hand, from the repo root::
+The weekly `.github/workflows/feed-check.yml` runs it. By hand, from the repo root:
 
     uv run python -m tools.check_feed              # config.YEAR
     uv run python -m tools.check_feed 2025 2026    # any years with a data/<year>/ folder
 
-For each year it fetches the ``feed_url`` of ``data/<year>/conference.toml``, processes it
-with ``feed.process``, the app's own parser, and runs every invariant of
-``tools/feed_invariants.py``, the ones the tests run on the recorded feeds. A year fails
+For each year it fetches the `feed_url` of `data/<year>/conference.toml`, processes it
+with `feed.process`, the app's own parser, and runs every invariant of
+`tools/feed_invariants.py`, the ones the tests run on the recorded feeds. A year fails
 when its feed cannot be fetched (a 404 included), does not parse, or breaks an invariant;
 a record the parser skips breaks "no session is lost". Keys the recorded feeds
-(``tests/fixtures/feeds``) do not have are printed but never fail: the parser ignores them
+(`tests/fixtures/feeds`) do not have are printed but never fail: the parser ignores them
 (testing-and-quality.md §12).
 
 Then it says whether next year's feed is published, at this year's URL with the next year
@@ -53,9 +53,9 @@ def check_year(
     """Fetch a year's public feed, process it and run the invariants.
 
     Args:
-        year: The conference year; its feed URL comes from its ``conference.toml``.
+        year: The conference year; its feed URL comes from its `conference.toml`.
         data_dir: The folder that holds the year folders.
-        transport: The HTTP transport; tests pass an ``httpx.MockTransport``.
+        transport: The HTTP transport; tests pass an `httpx.MockTransport`.
 
     Returns:
         Whether the feed passed, and the report's lines.
@@ -109,9 +109,9 @@ def next_year_status(
     *,
     transport: httpx.BaseTransport | None = None,
 ) -> str:
-    """Say whether the feed of the year after ``year`` is published; never fails.
+    """Say whether the feed of the year after `year` is published; never fails.
 
-    Its URL is ``year``'s feed URL with the next year in its path (D-05's pattern).
+    Its URL is `year`'s feed URL with the next year in its path (D-05's pattern).
 
     Returns:
         One line for the report.
@@ -150,13 +150,13 @@ def next_year_status(
 def new_keys(
     document: dict[str, Any], references: Sequence[dict[str, Any]]
 ) -> list[str]:
-    """List the keys of ``document`` that none of ``references`` has.
+    """List the keys of `document` that none of `references` has.
 
     It compares the top-level sections and the fields of each section's records, one
     level deep: enough to notice that the feed's format has moved.
 
     Returns:
-        One ``section: key, key`` entry per section with new keys, ``(top level)`` for
+        One `section: key, key` entry per section with new keys, `(top level)` for
         new sections; empty when there is nothing new.
     """
     known: dict[str, set[str]] = {}
@@ -176,8 +176,8 @@ def main(
     """Check the requested years and report on next year's feed.
 
     Args:
-        argv: The command-line arguments; ``sys.argv[1:]`` when None.
-        transport: The HTTP transport; tests pass an ``httpx.MockTransport``.
+        argv: The command-line arguments; `sys.argv[1:]` when None.
+        transport: The HTTP transport; tests pass an `httpx.MockTransport`.
 
     Returns:
         The exit status: 0 when every checked year passed, 1 otherwise.
@@ -234,7 +234,7 @@ def _recorded_documents() -> list[dict[str, Any]]:
 
 
 def _keys(document: dict[str, Any]) -> dict[str, set[str]]:
-    """The top-level keys under ``""``, and each list section's record keys."""
+    """The top-level keys under `""`, and each list section's record keys."""
     found = {"": set(document)}
     for section, records in document.items():
         if isinstance(records, list):

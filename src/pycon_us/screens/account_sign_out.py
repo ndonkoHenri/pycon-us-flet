@@ -1,10 +1,10 @@
 """The Account page's Sign out: its button and its confirmation (SHELL-13, AUTH-11).
 
-``sign_out_button()`` is disabled with a ring while Sign out first tries to send My
-schedule's unsent changes (``FavoritesSync.flush()``, D-411); ``sign_out_dialog()``
+`sign_out_button()` is disabled with a ring while Sign out first tries to send My
+schedule's unsent changes (`FavoritesSync.flush()`, D-411); `sign_out_dialog()`
 then asks, naming what stays and, when the try failed, what has not reached the
-account. Apart from ``account.py`` so that the page stays under about 400 lines (D-66),
-as Developer's confirmations are in ``developer_ui.py``. With unsynced staff rows the
+account. Apart from `account.py` so that the page stays under about 400 lines (D-66),
+as Developer's confirmations are in `developer_ui.py`. With unsynced staff rows the
 dialog asks "3 scans haven't synced. Sign out anyway?" and offers Sync now (D-414).
 """
 
@@ -71,16 +71,16 @@ def sign_out_dialog(
     Modal, so only its buttons or Back close it (Back cancels, D-208), and scrollable,
     so its words and buttons stay reachable at 200 % text. With unsynced staff rows it
     asks "3 scans haven't synced. Sign out anyway?", says they stay, offers Sync now
-    and signs out with "Sign out anyway (3 unsynced)", in ``error``; once Sync now has
+    and signs out with "Sign out anyway (3 unsynced)", in `error`; once Sync now has
     sent them, it is the plain dialog again (D-414). Both variants add D-411's line
     when My schedule didn't reach the account.
 
     Args:
         synced: Whether My schedule reached the account before it opened (D-411).
-        unsynced: The account's pending and failed staff rows, as ``Staff`` counts
+        unsynced: The account's pending and failed staff rows, as `Staff` counts
             them now.
         syncing: A sync pass runs: Sync now is disabled with a ring.
-        blocked: Why Sync now can't send (``queue_sheet.sync_blocked()``), said under
+        blocked: Why Sync now can't send (`queue_sheet.sync_blocked()`), said under
             it, or None.
         on_confirm: Signs out.
         on_cancel: Closes it; also called when Back dismisses it.

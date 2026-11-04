@@ -1,23 +1,23 @@
-"""Add to calendar: an ``.ics`` file handed to the phone's calendar (D-272; SESS-04, SESS-05).
+"""Add to calendar: an `.ics` file handed to the phone's calendar (D-272; SESS-04, SESS-05).
 
-``add_to_calendar()`` is the one route, for one session (session detail, #425) or the
-whole of My schedule (#426). No calendar takes a shared ``.ics`` on either platform
+`add_to_calendar()` is the one route, for one session (session detail, #425) or the
+whole of My schedule (#426). No calendar takes a shared `.ics` on either platform
 (P2-04), so each platform gets the path that reaches its calendar:
 
-- **iOS:** the file is served on the loopback (``LoopbackFile``, started per tap) and
-  opened in the in-app browser, whose ``text/calendar`` response iOS hands to its own
-  "Add All" sheet, alarm included. ``launch_url`` raises although the sheet showed
+- **iOS:** the file is served on the loopback (`LoopbackFile`, started per tap) and
+  opened in the in-app browser, whose `text/calendar` response iOS hands to its own
+  "Add All" sheet, alarm included. `launch_url` raises although the sheet showed
   (F91), so the server's answered GET is the success; the server stops once the call
-  returns or raises, ``SERVE_SECONDS`` at most. Never ``EXTERNAL_APPLICATION``: it
+  returns or raises, `SERVE_SECONDS` at most. Never `EXTERNAL_APPLICATION`: it
   opens Calendar's "Add Subscription Calendar" for a URL that stops answering.
 - **Android** (and a desktop window, a developer host only): the system save dialog
-  (``FilePicker.save_file``), then a SnackBar that says to open the file from the
+  (`FilePicker.save_file`), then a SnackBar that says to open the file from the
   Files app, where Google Calendar imports it, without the alarm (U71 makes it one
   tap). The user picks the folder and the result is opaque, so no folder is named;
   a cancel says nothing.
 
 Every outcome is said in place, on the View the user is on (D-210), so the function
-returns nothing, as ``ui.links.open_link()`` and ``ui.share.share_text()`` do. A failure
+returns nothing, as `ui.links.open_link()` and `ui.share.share_text()` do. A failure
 is logged by the error's class only (D-72).
 """
 
@@ -54,18 +54,18 @@ def saved_text(name: str) -> str:
     promises no alarm: Google Calendar's import drops it.
 
     Args:
-        name: The file's name as the app offered it, e.g. ``python-for-humans.ics``.
+        name: The file's name as the app offered it, e.g. `python-for-humans.ics`.
     """
     return f"Saved {name}. Open it from the Files app to add it to your calendar."
 
 
 async def add_to_calendar(svc: Services, slug: str, data: bytes) -> None:
-    """Hand an ``.ics`` file to the calendar by the platform's path; call it from a handler.
+    """Hand an `.ics` file to the calendar by the platform's path; call it from a handler.
 
     Args:
         svc: The session's services: the launcher (iOS) and the file picker (Android).
-        slug: The file's name without ``.ics``: letters, digits and ``-`` only.
-        data: The file, from ``core.ics.calendar_file()``.
+        slug: The file's name without `.ics`: letters, digits and `-` only.
+        data: The file, from `core.ics.calendar_file()`.
     """
     page = ft.context.page
     name = f"{slug}.ics"
@@ -108,25 +108,25 @@ async def _open_in_browser(svc: Services, name: str, data: bytes) -> bool:
 
 
 class LoopbackFile:
-    """One file served on ``127.0.0.1`` for one tap, at ``url``, until ``close()``.
+    """One file served on `127.0.0.1` for one tap, at `url`, until `close()`.
 
-    A ``ThreadingHTTPServer`` on a free port, answering on a daemon thread of its own:
-    the file at its path with ``CONTENT_TYPE``, and 404 to anything else, such as a
+    A `ThreadingHTTPServer` on a free port, answering on a daemon thread of its own:
+    the file at its path with `CONTENT_TYPE`, and 404 to anything else, such as a
     browser's icon. Each request is logged with its method, path and status, so a
     device's log shows what the browser and the calendar sheet asked for (D-272). Its
-    threads write no store (D-70): ``fetched`` is a ``threading.Event``, read by the
+    threads write no store (D-70): `fetched` is a `threading.Event`, read by the
     event loop once the launch is over.
 
     Attributes:
-        url: Where the file is served: ``http://127.0.0.1:<port>/<name>``.
+        url: Where the file is served: `http://127.0.0.1:<port>/<name>`.
         fetched: Set once a GET of the file has been answered in full.
     """
 
     def __init__(self, name: str, data: bytes) -> None:
-        """Start serving ``data`` as ``name``.
+        """Start serving `data` as `name`.
 
         Args:
-            name: The file's name, e.g. ``python-for-humans.ics``.
+            name: The file's name, e.g. `python-for-humans.ics`.
             data: The file's bytes.
 
         Raises:
@@ -144,7 +144,7 @@ class LoopbackFile:
     def close(self) -> None:
         """Stop answering and free the port; it blocks, so run it off the event loop.
 
-        ``shutdown()`` waits for ``serve_forever``'s next poll, up to half a second.
+        `shutdown()` waits for `serve_forever`'s next poll, up to half a second.
         """
         self._server.shutdown()
         self._server.server_close()
@@ -152,14 +152,14 @@ class LoopbackFile:
 
 
 class _Server(ThreadingHTTPServer):
-    """The loopback server of one ``LoopbackFile``: what it serves, and its ``fetched``."""
+    """The loopback server of one `LoopbackFile`: what it serves, and its `fetched`."""
 
     daemon_threads = True  # a request still open never holds the app's exit
 
     def __init__(
         self, file_path: str, name: str, data: bytes, fetched: threading.Event
     ) -> None:
-        """Bind a free port on ``127.0.0.1``; ``serve_forever()`` starts answering."""
+        """Bind a free port on `127.0.0.1`; `serve_forever()` starts answering."""
         super().__init__(("127.0.0.1", 0), _Handler)
         self.file_path = file_path
         self.name = name
@@ -198,5 +198,5 @@ class _Handler(BaseHTTPRequestHandler):
         return True
 
     def log_message(self, format: str, *args: object) -> None:
-        """Log the request line and status through ``logging``, not ``stderr``."""
+        """Log the request line and status through `logging`, not `stderr`."""
         logger.info("Calendar file server: %s", format % args)

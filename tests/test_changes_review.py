@@ -1,9 +1,9 @@
-"""Tests for the Review SnackBar and the Schedule's overflow (``screens/changes_review.py``).
+"""Tests for the Review SnackBar and the Schedule's overflow (`screens/changes_review.py`).
 
-NEW-04, D-255, D-335, #437. Each case runs in a real Flet session (``tests/sessions.py``)
-under a host that mounts the hook as ``App`` does and shows Schedule changes when the
-test opens it. Batches are recorded by ``ChangeLog.record()`` from feed pairs built in
-``tests/feeds.py``; the clock is held at 10:42 AM on Saturday, May 16 in Long Beach.
+NEW-04, D-255, D-335, #437. Each case runs in a real Flet session (`tests/sessions.py`)
+under a host that mounts the hook as `App` does and shows Schedule changes when the
+test opens it. Batches are recorded by `ChangeLog.record()` from feed pairs built in
+`tests/feeds.py`; the clock is held at 10:42 AM on Saturday, May 16 in Long Beach.
 """
 
 import asyncio
@@ -56,7 +56,7 @@ OPEN: list[Callable[[bool], None]] = []
 
 @pytest.fixture(autouse=True)
 def frozen_clock() -> Iterator[None]:
-    """Freeze ``clock.now()`` at ``NOW`` for the test, then return to real time."""
+    """Freeze `clock.now()` at `NOW` for the test, then return to real time."""
     clock.set_test_now(NOW)
     yield
     clock.set_test_now(None)
@@ -64,7 +64,7 @@ def frozen_clock() -> Iterator[None]:
 
 @ft.component
 def Host() -> ft.Control:
-    """Mount the hook as ``App`` does; show Schedule changes once the test opens it."""
+    """Mount the hook as `App` does; show Schedule changes once the test opens it."""
     use_review_snack_bar(use_services(), use_change_log(), use_favorites(), use_prefs())
     opened, set_opened = ft.use_state(False)
     OPEN[:] = [set_opened]
@@ -73,7 +73,7 @@ def Host() -> ft.Control:
 
 @pytest.fixture
 async def host(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> AsyncIterator[Shown]:
-    """The host in a real Flet session at ``/now/session/142``, nothing saved."""
+    """The host in a real Flet session at `/now/session/142`, nothing saved."""
     async with showing(
         Host,
         schedule_changes,
@@ -89,7 +89,7 @@ async def host(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> AsyncIterator
 
 
 def feed(*edits: Edit) -> ConferenceData:
-    """The recorded 2026 feed with ``edits`` applied, processed."""
+    """The recorded 2026 feed with `edits` applied, processed."""
 
     def apply(doc: dict[str, object]) -> None:
         for edit in edits:
@@ -100,7 +100,7 @@ def feed(*edits: Edit) -> ConferenceData:
 
 
 async def record(shown: Shown, before: ConferenceData, after: ConferenceData) -> None:
-    """Record the change from ``before`` to ``after`` as a network refresh publishes it."""
+    """Record the change from `before` to `after` as a network refresh publishes it."""
     await shown.change_log.record(
         shown.storage,
         Published(before, "network", URL),
@@ -203,7 +203,7 @@ async def test_it_closes_once_no_screen_reader_is_on(
 
 
 async def test_review_pushes_the_list_on_the_view_on_top(host: Shown) -> None:
-    """Review pushes ``changes/2026`` on the current View, so Back returns there."""
+    """Review pushes `changes/2026` on the current View, so Back returns there."""
     await record(host, feed(), feed(move(OTHER, "Room 101B")))
     await review(host)
     assert host.went == ["/now/session/142/changes/2026"]
@@ -211,7 +211,7 @@ async def test_review_pushes_the_list_on_the_view_on_top(host: Shown) -> None:
 
 
 async def test_review_over_search_drops_the_query(host: Shown) -> None:
-    """Over search, the list is pushed on ``/search``; the query is a view option."""
+    """Over search, the list is pushed on `/search`; the query is a view option."""
     host.session.page.route = "/search?q=pathlib"
     await record(host, feed(), feed(move(OTHER, "Room 101B")))
     await review(host)
@@ -221,7 +221,7 @@ async def test_review_over_search_drops_the_query(host: Shown) -> None:
 async def test_review_on_the_list_only_closes_it(
     host: Shown, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """On ``…/changes/2026`` Review pushes nothing and closes its SnackBar (D-255)."""
+    """On `…/changes/2026` Review pushes nothing and closes its SnackBar (D-255)."""
     host.prefs.screen_reader = True
     host.session.page.route = "/schedule/changes/2026"
     await record(host, feed(), feed(move(OTHER, "Room 101B")))
@@ -281,7 +281,7 @@ async def test_a_newer_batch_outlives_an_earlier_opening(
 async def test_mark_all_as_seen_closes_it(
     host: Shown, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """``close_review()``, which Mark all as seen calls, closes it, and only once."""
+    """`close_review()`, which Mark all as seen calls, closes it, and only once."""
     host.prefs.screen_reader = True
     await record(host, feed(), feed(move(OTHER, "Room 101B")))
     sent = updates(monkeypatch)

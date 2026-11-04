@@ -1,8 +1,8 @@
 """The outbox's sqlite database (architecture §12.1; D-49, D-56, D-120).
 
 Every test runs over a temporary data directory. The SQL is checked against its Python
-twins in ``core/outbox.py`` on random row sets (hypothesis): the due order against
-``due()``, the account switch's deletion against ``forget_synced()``.
+twins in `core/outbox.py` on random row sets (hypothesis): the due order against
+`due()`, the account switch's deletion against `forget_synced()`.
 """
 
 import contextlib
@@ -44,7 +44,7 @@ def db(tmp_path: Path) -> Iterator[OutboxDb]:
 def scan(
     db: OutboxDb, code: str = "A1", now: float = NOW
 ) -> outbox_enqueue.Enqueued | None:
-    """Enqueue ``OWNER``'s lead scan of ``code`` for sponsor 7."""
+    """Enqueue `OWNER`'s lead scan of `code` for sponsor 7."""
     decide = partial(
         outbox_enqueue.scan_lead,
         owner=OWNER,
@@ -58,7 +58,7 @@ def scan(
 
 
 def note(db: OutboxDb, code: str = "A1", text: str = "Met at the booth"):
-    """Enqueue ``OWNER``'s note on ``code``'s lead for sponsor 7."""
+    """Enqueue `OWNER`'s note on `code`'s lead for sponsor 7."""
     decide = partial(
         outbox_enqueue.save_note,
         owner=OWNER,
@@ -72,7 +72,7 @@ def note(db: OutboxDb, code: str = "A1", text: str = "Met at the booth"):
 
 
 def admit(db: OutboxDb, code: str = "A1", owner: str = OWNER):
-    """Enqueue ``owner``'s door check-in of ``code`` for product 3 in session ``s1``."""
+    """Enqueue `owner`'s door check-in of `code` for product 3 in session `s1`."""
     decide = partial(
         outbox_enqueue.admit,
         owner=owner,
@@ -147,7 +147,7 @@ def test_rows_survive_close_and_reopen_without_migrating_again(tmp_path: Path) -
 def test_a_version_1_file_gains_the_flag_with_its_rows_unflagged(
     tmp_path: Path,
 ) -> None:
-    """``OUTBOX_V2`` adds ``maybe_sent`` to a v1 file, its rows unflagged (D-410)."""
+    """`OUTBOX_V2` adds `maybe_sent` to a v1 file, its rows unflagged (D-410)."""
     with raw(tmp_path / "outbox-2026.db") as v1:
         v1.executescript(f"{MIGRATIONS[0]}PRAGMA user_version = 1;")
         v1.execute(
@@ -167,12 +167,12 @@ def test_a_version_1_file_gains_the_flag_with_its_rows_unflagged(
 def test_the_connection_refuses_any_thread_but_the_one_that_opened_it(
     db: OutboxDb,
 ) -> None:
-    """Every use is on the loop thread: sqlite's ``check_same_thread`` raises otherwise."""
+    """Every use is on the loop thread: sqlite's `check_same_thread` raises otherwise."""
     db.counts(OWNER)  # opened here, on the test's (the loop's) thread
     errors: list[BaseException] = []
 
     def elsewhere() -> None:
-        """Count from another thread, as ``to_thread`` would, and keep the error."""
+        """Count from another thread, as `to_thread` would, and keep the error."""
         try:
             db.counts(OWNER)
         except sqlite3.ProgrammingError as error:
@@ -279,7 +279,7 @@ def test_a_note_edited_while_sent_keeps_the_edit(
 
 
 def test_the_flag_outlives_an_edit_while_sent_and_a_later_save(db: OutboxDb) -> None:
-    """``flag_maybe_sent`` ignores the revision, and no later save clears it (D-410)."""
+    """`flag_maybe_sent` ignores the revision, and no later save clears it (D-410)."""
     lead = queued(scan(db))
     assert db.save(outbox.after_success(lead, {"id": 1}))
     queued(note(db, text="First"))
@@ -296,7 +296,7 @@ def test_the_flag_outlives_an_edit_while_sent_and_a_later_save(db: OutboxDb) -> 
 
 
 def test_a_decision_for_another_code_is_a_bug_and_stores_nothing(db: OutboxDb) -> None:
-    """``enqueue`` refuses a row whose code isn't the one its rows were read for."""
+    """`enqueue` refuses a row whose code isn't the one its rows were read for."""
     decide = partial(
         outbox_enqueue.scan_lead,
         owner=OWNER,
@@ -377,7 +377,7 @@ ROWS = st.lists(
 
 @contextlib.contextmanager
 def stored_rows(rows: list[Row]) -> Iterator[OutboxDb]:
-    """Yield a fresh database holding ``rows``, door rows with unique idempotency keys."""
+    """Yield a fresh database holding `rows`, door rows with unique idempotency keys."""
     insert = (
         "INSERT INTO outbox (kind, key, payload_json, owner, sponsor_id, status,"
         " tries, next_at, created_at, idem_key)"
@@ -406,7 +406,7 @@ def stored_rows(rows: list[Row]) -> Iterator[OutboxDb]:
 def test_the_due_sql_matches_the_pure_due_order(
     rows: list[Row], owner: str, now: float
 ) -> None:
-    """For any row set, ``due_rows()`` is ``core.outbox.due()``, row for row, in order."""
+    """For any row set, `due_rows()` is `core.outbox.due()`, row for row, in order."""
     with stored_rows(rows) as database:
         expected = outbox.due(everything(database), owner, now)
         assert database.due_rows(owner, now) == expected
@@ -416,7 +416,7 @@ def test_the_due_sql_matches_the_pure_due_order(
 def test_delete_synced_keeps_what_forget_synced_keeps(
     rows: list[Row], owner: str
 ) -> None:
-    """For any row set, ``delete_synced()`` leaves exactly ``forget_synced()``'s rows."""
+    """For any row set, `delete_synced()` leaves exactly `forget_synced()`'s rows."""
     with stored_rows(rows) as database:
         expected = outbox.forget_synced(everything(database), owner)
         assert database.delete_synced(owner)
@@ -429,7 +429,7 @@ def test_delete_synced_keeps_what_forget_synced_keeps(
 def test_services_build_the_outbox_in_the_data_directory_and_close_it(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """``Services.create`` points the outbox at the data directory; ``close()`` closes it."""
+    """`Services.create` points the outbox at the data directory; `close()` closes it."""
     monkeypatch.setenv("FLET_APP_STORAGE_DATA", str(tmp_path))
     svc = Services.create(ViewMemory())
     assert svc.outbox is not None

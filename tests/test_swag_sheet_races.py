@@ -1,10 +1,10 @@
 """Tests for the hand-out sheet's late client events and unmount (#769, #781's review).
 
 Flutter reports a sheet's dismissal after its exit animation, so it may come after the
-next sheet opened; the pinned Flet reads ``dismissible`` only as the sheet opens, so a
+next sheet opened; the pinned Flet reads `dismissible` only as the sheet opens, so a
 dismissal may come while Hand out is sending (#782); and a lookup may answer after the
-screen is gone. The screen tests share ``tests/test_swag_sheet.py``'s fixtures and
-helpers; the unmount one renders the hook alone, as ``tests/test_flet_effects.py`` does.
+screen is gone. The screen tests share `tests/test_swag_sheet.py`'s fixtures and
+helpers; the unmount one renders the hook alone, as `tests/test_flet_effects.py` does.
 """
 
 import asyncio
@@ -80,10 +80,10 @@ async def test_a_dismissal_while_sending_keeps_the_pause_until_the_answer(
     held = asyncio.Event()
 
     class Slow(httpx.AsyncBaseTransport):
-        """The recorder, answering a redeem once ``held`` is set."""
+        """The recorder, answering a redeem once `held` is set."""
 
         async def handle_async_request(self, request: httpx.Request) -> httpx.Response:
-            """Wait for ``held`` on a redeem, then let the recorder answer."""
+            """Wait for `held` on a redeem, then let the recorder answer."""
             if request.url.path.endswith(REDEEM.path):
                 await held.wait()
             return await recorder.handle_async_request(request)
@@ -112,13 +112,13 @@ async def test_an_offer_after_unmount_returns_none_at_once(tmp_path: Path) -> No
 
     @ft.component
     def Child() -> ft.Control:
-        """Return nothing to see; keep the hook's ``offer``."""
+        """Return nothing to see; keep the hook's `offer`."""
         handlers.append(use_swag_sheet().offer)
         return ft.Text("swag")
 
     @ft.component
     def Root() -> ft.Control:
-        """Return the child under the stores while ``mounted``, else nothing."""
+        """Return the child under the stores while `mounted`, else nothing."""
         mounted, set_mounted = ft.use_state(True)
         setters.append(set_mounted)
         body = provide(svc, Conference(), Prefs(loaded=True), Favorites(), Child)

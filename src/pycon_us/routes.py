@@ -1,12 +1,12 @@
 """The route table: tab roots, More pages, the global search and the recursive drill.
 
-``ROUTES`` follows decisions §M and architecture §5.2 in the shape S4 confirmed (D-141):
-each tab root, More page and ``/search`` ends with ``DRILL``, a recursive child that
-pushes one View per ``<kind>/<id>`` pair, so ``/schedule/session/42/speaker/17`` is
-three Views and Back pops one (D-17). ``/`` is ``Start``, which sends a session on,
-to ``/welcome`` on a first start (D-287); an unknown location is ``NotFound``,
-through ``UNKNOWN``, the table's last route (D-270). Back itself is ``main.py``'s
-``page.on_view_pop`` with ``locations.parent_of()`` (D-19).
+`ROUTES` follows decisions §M and architecture §5.2 in the shape S4 confirmed (D-141):
+each tab root, More page and `/search` ends with `DRILL`, a recursive child that
+pushes one View per `<kind>/<id>` pair, so `/schedule/session/42/speaker/17` is
+three Views and Back pops one (D-17). `/` is `Start`, which sends a session on,
+to `/welcome` on a first start (D-287); an unknown location is `NotFound`,
+through `UNKNOWN`, the table's last route (D-270). Back itself is `main.py`'s
+`page.on_view_pop` with `locations.parent_of()` (D-19).
 """
 
 from collections.abc import Callable
@@ -81,7 +81,7 @@ def Drill() -> ft.View:
     """One detail level: the detail screen for this level's own kind and id (D-141).
 
     The Router gives each level the params of its own pair (F6). Ids arrive quoted, as
-    ``drill_href()`` wrote them, and are unquoted here (D-42). The expo plan is the
+    `drill_href()` wrote them, and are unquoted here (D-42). The expo plan is the
     expo hall, booths and all (EXPO-01).
     """
     params = ft.use_route_params()
@@ -99,7 +99,7 @@ def Drill() -> ft.View:
             return ExpoPlan()
         case "plan":
             return PlanViewer(plan_id=ident)
-        case "changes":  # the change log of the year ``ident`` (D-255)
+        case "changes":  # the change log of the year `ident` (D-255)
             return ScheduleChanges(year=ident)
         case kind:  # DRILL only matches DRILL_KINDS: a new kind needs its case here
             raise ValueError(f"no screen for the drill kind {kind!r}")
@@ -107,17 +107,17 @@ def Drill() -> ft.View:
 
 @ft.component
 def Start() -> ft.View:
-    """``/``: send the session to a tapped reminder, Welcome, Now or where the user was.
+    """`/`: send the session to a tapped reminder, Welcome, Now or where the user was.
 
     A reminder tap held while the app started comes first (D-396); then Welcome
     until Get started (D-287), then where the user was (D-143); a cold start opens
     Now, or the Lead scanner for a lead-retrieval account (D-16, #689), whose stored
     sign-in the boot gate has already restored. A new
-    session in the same process (F26, F29) finds ``ViewMemory.last_location``
-    and rebuilds that stack; a deep link or ``--route`` start never comes here, except
-    one straight to ``/search``: with no opener to remember, the Router builds the
-    modal over ``/``, so ``Start`` mounts below it and must stay put, not replace the
-    entry (``is_top_view()``); Back from search then goes to ``search_base``. It shows
+    session in the same process (F26, F29) finds `ViewMemory.last_location`
+    and rebuilds that stack; a deep link or `--route` start never comes here, except
+    one straight to `/search`: with no opener to remember, the Router builds the
+    modal over `/`, so `Start` mounts below it and must stay put, not replace the
+    entry (`is_top_view()`); Back from search then goes to `search_base`. It shows
     the boot purple for the moment it is on screen, and shares the tab roots' View
     key, so Now replaces it without a transition (D-142).
     """
@@ -156,9 +156,9 @@ NOT_FOUND_BODY = "The link may be old or mistyped."
 def NotFound() -> ft.View:
     """An unknown location, such as a link to a page the app doesn't have (D-270).
 
-    Its own View, so it can do what the Router's ``not_found`` wrapper cannot
-    (``router.py:731-741``, F89): Back goes to Now, as on a root, rather than closing
-    the app after a cold link (``AppScaffold(unknown=True)``). Built like a detail's
+    Its own View, so it can do what the Router's `not_found` wrapper cannot
+    (`router.py:731-741`, F89): Back goes to Now, as on a root, rather than closing
+    the app after a cold link (`AppScaffold(unknown=True)`). Built like a detail's
     not-found state (D-186), but never naming the location: a link's path means
     nothing to the person who tapped it.
     """
@@ -199,8 +199,8 @@ UNKNOWN = ft.Route(path=":unknown*", component=NotFound)
 """The last route: every location no other route matches, at any depth (D-270, F89).
 
 A splat matches zero or more segments, and the Router tries routes in order, so
-only a location the table doesn't have gets here: ``/nope``, ``/now/nope``,
-``/now/session/42/nope``. Its View is the whole stack.
+only a location the table doesn't have gets here: `/nope`, `/now/nope`,
+`/now/session/42/nope`. Its View is the whole stack.
 """
 
 
@@ -210,9 +210,9 @@ def pushed(
     """Return a page's route: its own children first, then the drill (D-141).
 
     Args:
-        path: The page's segment(s) below its parent, e.g. ``"speakers"``.
+        path: The page's segment(s) below its parent, e.g. `"speakers"`.
         component: The page's screen.
-        *children: Pages below it, e.g. ``/more/tracks/<slug>``.
+        *children: Pages below it, e.g. `/more/tracks/<slug>`.
     """
     return ft.Route(path=path, component=component, children=[*children, DRILL])
 
@@ -315,6 +315,6 @@ ROUTES = [
 ]
 """Every route of the app (architecture §5.2).
 
-``/search`` is a global modal (D-19): the Router builds it over the last non-modal
-location, and our ``page.on_view_pop`` returns each Back one step.
+`/search` is a global modal (D-19): the Router builds it over the last non-modal
+location, and our `page.on_view_pop` returns each Back one step.
 """

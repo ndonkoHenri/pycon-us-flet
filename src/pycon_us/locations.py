@@ -1,10 +1,10 @@
 """The app's locations: drill links, Back targets and view options.
 
 A location is a route path, with an optional query of view options (decisions §M):
-``/schedule/session/42/speaker/17?highlight=99``. The helpers here are pure, so they are
-unit-tested on every route shape, apart from the ``use_query()`` hook. Screens import
+`/schedule/session/42/speaker/17?highlight=99`. The helpers here are pure, so they are
+unit-tested on every route shape, apart from the `use_query()` hook. Screens import
 them without importing the route table, which imports the screens (D-164):
-``routes.py`` holds the table itself, and a test keeps its pages and ``PAGES`` the same.
+`routes.py` holds the table itself, and a test keeps its pages and `PAGES` the same.
 """
 
 from typing import TYPE_CHECKING
@@ -30,7 +30,7 @@ LEAD_SCANNER = "/more/staff/lead"
 """The Lead scanner, where a lead-retrieval account opens the app (D-16, #689)."""
 
 DRILL_KINDS = ("session", "speaker", "room", "sponsor", "plan", "changes")
-"""The drill's segment pairs, ``<kind>/<id>``, one pushed View each (D-17, D-141)."""
+"""The drill's segment pairs, `<kind>/<id>`, one pushed View each (D-17, D-141)."""
 
 PAGES = frozenset(
     {
@@ -83,7 +83,7 @@ PAGES = frozenset(
 )
 """Every page path without a parameter: the places Back can walk up to (D-19).
 
-``/more/tracks/<slug>`` is a page too, but nothing below it walks up to it except
+`/more/tracks/<slug>` is a page too, but nothing below it walks up to it except
 through a drill pair, so only its parent needs to be here.
 """
 
@@ -92,32 +92,32 @@ def drill_href(view_path: str, kind: str, ident: str) -> str:
     """Return the location that pushes one detail level on top of a View.
 
     Args:
-        view_path: The View's own path (``ft.use_view_path()``), never ``page.route``,
+        view_path: The View's own path (`ft.use_view_path()`), never `page.route`,
             so a detail opens on top of the View that links to it, under any root.
-        kind: One of ``DRILL_KINDS``.
+        kind: One of `DRILL_KINDS`.
         ident: The session or speaker id, room or sponsor slug, or plan id. It is quoted
-            whole (D-42), so ``/``, ``:``, ``+``, spaces and non-ASCII stay inside one
-            segment; ``Drill`` unquotes it.
+            whole (D-42), so `/`, `:`, `+`, spaces and non-ASCII stay inside one
+            segment; `Drill` unquotes it.
 
     Returns:
-        The location, e.g. ``/now/session/poster%20detail%2B1``.
+        The location, e.g. `/now/session/poster%20detail%2B1`.
     """
     return f"{view_path.rstrip('/')}/{kind}/{quote(ident, safe='')}"
 
 
 BOOTH_PARAM = "booth"
-"""The expo's view option: ``…/plan/expo?booth=613`` selects that booth (EXPO-05)."""
+"""The expo's view option: `…/plan/expo?booth=613` selects that booth (EXPO-05)."""
 
 
 def booth_href(base: str, number: str) -> str:
     """Return the location that pushes the expo hall on a View, at one booth (EXPO-05).
 
     Args:
-        base: The View's own path (``ft.use_view_path()``): Back returns there.
+        base: The View's own path (`ft.use_view_path()`): Back returns there.
         number: The booth's number, quoted whole (D-42).
 
     Returns:
-        The location, e.g. ``/more/sponsors/sponsor/bloomberg/plan/expo?booth=613``.
+        The location, e.g. `/more/sponsors/sponsor/bloomberg/plan/expo?booth=613`.
     """
     return (
         f"{drill_href(base, 'plan', EXPO_PLAN)}?{BOOTH_PARAM}={quote(number, safe='')}"
@@ -127,15 +127,15 @@ def booth_href(base: str, number: str) -> str:
 def parent_of(location: str, search_base: str = "/now") -> str:
     """Return where Back goes from a location (D-19): one step, never more.
 
-    Drop the last drill pair; else walk up to the nearest page, so ``/more/staff/lead``
-    returns ``/more`` because ``/more/staff`` is not a page. ``/search`` returns to
-    ``search_base``, the location (query included) it was opened from. A tab root
-    returns ``/``, the start route. The query is dropped: view options do not survive
+    Drop the last drill pair; else walk up to the nearest page, so `/more/staff/lead`
+    returns `/more` because `/more/staff` is not a page. `/search` returns to
+    `search_base`, the location (query included) it was opened from. A tab root
+    returns `/`, the start route. The query is dropped: view options do not survive
     Back (decisions §M).
 
     Args:
         location: The popped View's route, or any location.
-        search_base: ``ViewMemory.search_base``.
+        search_base: `ViewMemory.search_base`.
 
     Returns:
         The parent location.
@@ -154,21 +154,21 @@ def parent_of(location: str, search_base: str = "/now") -> str:
 def start_target(
     last_location: str, search_base: str, *, onboarded: bool, lead: bool = False
 ) -> str:
-    """Return where the start route ``/`` sends a session (D-143, D-287, D-16).
+    """Return where the start route `/` sends a session (D-143, D-287, D-16).
 
-    Welcome comes first, until Get started (``Prefs.onboarded``). Only a plain start
-    reaches ``/``: a link or a ``--route`` start opens its own target, and Welcome
+    Welcome comes first, until Get started (`Prefs.onboarded`). Only a plain start
+    reaches `/`: a link or a `--route` start opens its own target, and Welcome
     waits for the next plain start. Then a new session in the same process returns
-    to where the user was. A location under ``/search`` cannot be rebuilt over its
-    opener (a fresh Router puts a global modal over ``/``), so it returns to the
+    to where the user was. A location under `/search` cannot be rebuilt over its
+    opener (a fresh Router puts a global modal over `/`), so it returns to the
     opener instead. A cold start, with no location yet, opens Now, or the Lead
-    scanner for a lead-retrieval account (``lands_on_lead()``, #689).
+    scanner for a lead-retrieval account (`lands_on_lead()`, #689).
 
     Args:
-        last_location: ``ViewMemory.last_location``; empty before any screen showed.
-        search_base: ``ViewMemory.search_base``.
-        onboarded: Welcome was seen (``Prefs.onboarded``).
-        lead: A cold start opens the Lead scanner (``lands_on_lead()``).
+        last_location: `ViewMemory.last_location`; empty before any screen showed.
+        search_base: `ViewMemory.search_base`.
+        onboarded: Welcome was seen (`Prefs.onboarded`).
+        lead: A cold start opens the Lead scanner (`lands_on_lead()`).
 
     Returns:
         The location to navigate to.
@@ -190,18 +190,18 @@ def launch_target(
     onboarded: bool,
     lead: bool = False,
 ) -> str:
-    """Return where the start route ``/`` sends a session, a reminder tap first (D-396).
+    """Return where the start route `/` sends a session, a reminder tap first (D-396).
 
     A tap on a reminder that started the app, or came before the boot gate opened,
     opens its route, as a link does: Welcome waits for the next plain start (D-287)
-    and the last location for the next one (D-143). Without a tap, ``start_target()``.
+    and the last location for the next one (D-143). Without a tap, `start_target()`.
 
     Args:
-        tap: The tapped reminder's route (``Scheduler.take_tap()``); empty for none.
-        last_location: ``ViewMemory.last_location``; empty before any screen showed.
-        search_base: ``ViewMemory.search_base``.
-        onboarded: Welcome was seen (``Prefs.onboarded``).
-        lead: A cold start opens the Lead scanner (``lands_on_lead()``).
+        tap: The tapped reminder's route (`Scheduler.take_tap()`); empty for none.
+        last_location: `ViewMemory.last_location`; empty before any screen showed.
+        search_base: `ViewMemory.search_base`.
+        onboarded: Welcome was seen (`Prefs.onboarded`).
+        lead: A cold start opens the Lead scanner (`lands_on_lead()`).
 
     Returns:
         The location to navigate to.
@@ -214,8 +214,8 @@ def launch_target(
 def lands_on_lead(prefs: Prefs, account: Account) -> bool:
     """Say whether a cold start or a sign-in lands on the Lead scanner (D-16, #689).
 
-    For a ``lead_retrieval`` account unless Settings' Start screen says Now
-    (``starts_on_lead()``), and only while a mock URL is set, since the scanner is
+    For a `lead_retrieval` account unless Settings' Start screen says Now
+    (`starts_on_lead()`), and only while a mock URL is set, since the scanner is
     "Not available" without one (D-51). Read once the boot gate has opened, so the
     stored account and setting are in (D-16): no landing race.
 
@@ -229,10 +229,10 @@ def lands_on_lead(prefs: Prefs, account: Account) -> bool:
 
 
 def in_search(location: str) -> bool:
-    """Return whether a location is ``/search`` or a detail pushed on it (D-19).
+    """Return whether a location is `/search` or a detail pushed on it (D-19).
 
     Args:
-        location: A location, query allowed, e.g. ``/search/session/42``.
+        location: A location, query allowed, e.g. `/search/session/42`.
     """
     return urlparse(location).path.split("/")[1] == "search"
 
@@ -241,10 +241,10 @@ def query_of(location: str) -> dict[str, str]:
     """Return a location's view options, the query (decisions §M; U9 interim).
 
     Args:
-        location: A location such as ``/search?scope=places``.
+        location: A location such as `/search?scope=places`.
 
     Returns:
-        Each option once, its last value winning; blank values are kept as ``""``.
+        Each option once, its last value winning; blank values are kept as `""`.
     """
     return dict(parse_qsl(urlparse(location).query, keep_blank_values=True))
 
@@ -252,14 +252,14 @@ def query_of(location: str) -> dict[str, str]:
 def is_top_view(location: str, view_path: str) -> bool:
     """Return whether a location addresses this View, so it is the top one (D-164).
 
-    Compare with ``page.route``, never ``ft.use_route_location()``: under a global
+    Compare with `page.route`, never `ft.use_route_location()`: under a global
     modal the Router renders the Views below it at the remembered opener's location,
-    so the opener's View would pass that test too (``/map`` under
-    ``/search?scope=places``), and so would ``Start`` under a modal entered directly.
+    so the opener's View would pass that test too (`/map` under
+    `/search?scope=places`), and so would `Start` under a modal entered directly.
 
     Args:
-        location: The addressed location, ``page.route``, query included.
-        view_path: The View's own path, ``ft.use_view_path()``.
+        location: The addressed location, `page.route`, query included.
+        view_path: The View's own path, `ft.use_view_path()`.
 
     Returns:
         True only for the View the location's path ends at.
@@ -271,12 +271,12 @@ def use_query() -> dict[str, str]:
     """Return the view options of the location that opened this View (U9 interim).
 
     Read once, when the View mounts, and only by the View the location addresses
-    (``is_top_view()``): a deep entry builds the Views below it too, and a global
+    (`is_top_view()`): a deep entry builds the Views below it too, and a global
     modal keeps its opener's Views mounted below it; the query is not theirs. Options
-    that must survive Back live in ``ViewMemory`` (D-18); the query only seeds them.
+    that must survive Back live in `ViewMemory` (D-18); the query only seeds them.
 
     Returns:
-        The options, as ``query_of()`` reads them; empty for a View below the top.
+        The options, as `query_of()` reads them; empty for a View below the top.
     """
     page = ft.context.page
     view_path = ft.use_view_path()

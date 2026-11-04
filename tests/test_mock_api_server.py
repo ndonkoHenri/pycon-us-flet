@@ -1,7 +1,7 @@
-"""The mock's LAN server: ``handle`` over a real socket, its log and its banner (#666).
+"""The mock's LAN server: `handle` over a real socket, its log and its banner (#666).
 
-The server runs in-process on ``127.0.0.1`` with an ephemeral port; these tests are
-marked ``loopback``, ``no_network``'s one opt-out, which lets httpx reach 127.0.0.1 and
+The server runs in-process on `127.0.0.1` with an ephemeral port; these tests are
+marked `loopback`, `no_network`'s one opt-out, which lets httpx reach 127.0.0.1 and
 nothing else.
 """
 
@@ -24,13 +24,13 @@ pytestmark = pytest.mark.loopback
 
 @pytest.fixture
 def state() -> MockState:
-    """A fresh seeded state on the fixed clock ``NOW``."""
+    """A fresh seeded state on the fixed clock `NOW`."""
     return state_at()
 
 
 @pytest.fixture
 def served(state: MockState) -> Iterator[httpx.Client]:
-    """Serve ``state`` on 127.0.0.1 in a thread; yield a client for it, then stop it."""
+    """Serve `state` on 127.0.0.1 in a thread; yield a client for it, then stop it."""
     with MockServer(("127.0.0.1", 0), state) as server:
         thread = threading.Thread(target=server.serve_forever, args=(0.05,))
         thread.start()
@@ -46,14 +46,14 @@ def served(state: MockState) -> Iterator[httpx.Client]:
 def signed(
     state: MockState, role: str, method: str, path: str, body: bytes = b""
 ) -> dict[str, str]:
-    """The three signing headers for ``role``'s request, as the app sends them."""
+    """The three signing headers for `role`'s request, as the app sends them."""
     who = account(state, role)
     headers = auth_headers(who.key, who.secret, state.now(), method, path, body)
     return {name: str(value) for name, value in headers.items()}
 
 
 def raw_request(served: httpx.Client, request: str) -> bytes:
-    """Send ``request`` as raw bytes (httpx won't send a malformed one); return the status."""
+    """Send `request` as raw bytes (httpx won't send a malformed one); return the status."""
     port = served.base_url.port
     assert port is not None
     with socket.create_connection(("127.0.0.1", port)) as raw:
@@ -69,7 +69,7 @@ def log_lines(capfd: pytest.CaptureFixture[str]) -> list[str]:
 def test_a_signed_request_is_answered_over_the_socket(
     state: MockState, served: httpx.Client
 ) -> None:
-    """A signed GET reaches ``handle`` over a real socket and gets its bare reply."""
+    """A signed GET reaches `handle` over a real socket and gets its bare reply."""
     path = f"{BASE}user/check_features/"
     reply = served.get(path, headers=signed(state, "staff", "GET", path))
     assert reply.status_code == 200
@@ -85,7 +85,7 @@ def test_a_signed_request_is_answered_over_the_socket(
 def test_a_signed_body_arrives_byte_for_byte(
     state: MockState, served: httpx.Client
 ) -> None:
-    """A PATCH's body reaches ``handle`` as sent, so its signature checks and it applies."""
+    """A PATCH's body reaches `handle` as sent, so its signature checks and it applies."""
     path = f"{BASE}user/mobile_state/"
     body = canonical_body({"favorites": ["7", 8]})
     headers = signed(state, "attendee", "PATCH", path, body)
@@ -97,7 +97,7 @@ def test_a_signed_body_arrives_byte_for_byte(
 def test_the_raw_query_is_signed_as_sent(
     state: MockState, served: httpx.Client
 ) -> None:
-    """The request target reaches ``handle`` undecoded, so an encoded query still signs."""
+    """The request target reaches `handle` undecoded, so an encoded query still signs."""
     path = f"{BASE}mask_violations/capture/?attendee_access_code=MOCK%30001"
     reply = served.get(path, headers=signed(state, "coc", "GET", path))
     assert reply.status_code == 200  # signed over "%30", read as "MOCK0001"
@@ -116,7 +116,7 @@ def test_authenticate_and_the_401_envelope(served: httpx.Client) -> None:
 
 
 def test_the_reply_has_one_date_the_mocks(served: httpx.Client) -> None:
-    """The only ``Date`` header is ``handle``'s, from the mock's clock (D-53)."""
+    """The only `Date` header is `handle`'s, from the mock's clock (D-53)."""
     reply = served.get(f"{BASE}nowhere/")
     assert reply.status_code == 404
     assert reply.headers.get_list("Date") == [formatdate(NOW, usegmt=True)]
@@ -124,7 +124,7 @@ def test_the_reply_has_one_date_the_mocks(served: httpx.Client) -> None:
 
 
 def test_a_malformed_length_is_refused_before_handle(served: httpx.Client) -> None:
-    """A ``Content-Length`` that is not plain digits is 400, and no endpoint runs."""
+    """A `Content-Length` that is not plain digits is 400, and no endpoint runs."""
     status = raw_request(
         served,
         f"PATCH {BASE}user/mobile_state/ HTTP/1.1\r\nHost: 127.0.0.1\r\n"
@@ -151,7 +151,7 @@ def test_the_log_names_the_call_but_no_query_body_or_secret(
 def test_a_lead_note_logs_one_line_without_the_access_code(
     state: MockState, served: httpx.Client, capfd: pytest.CaptureFixture[str]
 ) -> None:
-    """The code in ``lead_retrieval/<code>/note/`` is logged as ``<code>``, once."""
+    """The code in `lead_retrieval/<code>/note/` is logged as `<code>`, once."""
     capfd.readouterr()
     path = f"{BASE}lead_retrieval/MOCK0001/note/"
     body = canonical_body({"note": "met at the booth"})
@@ -216,7 +216,7 @@ def test_the_banner_on_loopback_says_phones_cannot_reach_it() -> None:
 
 
 def patch_favorites(state: MockState, served: httpx.Client) -> None:
-    """PATCH the attendee's favourites to ``["7"]``, signed, over the socket."""
+    """PATCH the attendee's favourites to `["7"]`, signed, over the socket."""
     path = f"{BASE}user/mobile_state/"
     body = canonical_body({"favorites": ["7"]})
     headers = signed(state, "attendee", "PATCH", path, body)
@@ -226,7 +226,7 @@ def patch_favorites(state: MockState, served: httpx.Client) -> None:
 def test_a_connect_fault_drops_the_connection_before_handle(
     state: MockState, served: httpx.Client, capfd: pytest.CaptureFixture[str]
 ) -> None:
-    """``connect`` closes the connection unanswered and the PATCH is never applied."""
+    """`connect` closes the connection unanswered and the PATCH is never applied."""
     capfd.readouterr()
     state.faults.inject("connect")
     with pytest.raises(httpx.TransportError):
@@ -239,7 +239,7 @@ def test_a_connect_fault_drops_the_connection_before_handle(
 def test_a_lost_response_applies_the_write_then_drops_the_reply(
     state: MockState, served: httpx.Client, capfd: pytest.CaptureFixture[str]
 ) -> None:
-    """``lost_response`` runs ``handle``, logs its status, and sends no reply."""
+    """`lost_response` runs `handle`, logs its status, and sends no reply."""
     capfd.readouterr()
     state.faults.inject("lost_response")
     with pytest.raises(httpx.TransportError):
@@ -252,7 +252,7 @@ def test_a_lost_response_applies_the_write_then_drops_the_reply(
 def test_a_timeout_fault_holds_the_request_until_the_client_gives_up(
     state: MockState, served: httpx.Client, capfd: pytest.CaptureFixture[str]
 ) -> None:
-    """``timeout`` never answers, so the client's own timeout ends the request."""
+    """`timeout` never answers, so the client's own timeout ends the request."""
     capfd.readouterr()
     state.faults.inject("timeout")
     path = f"{BASE}user/check_features/"
@@ -267,7 +267,7 @@ def test_a_timeout_fault_holds_the_request_until_the_client_gives_up(
 def test_a_skewed_mock_dates_its_replies_and_refuses_the_devices_time(
     state: MockState, served: httpx.Client
 ) -> None:
-    """``skew`` moves the ``Date`` header and the window, so a right clock is 403."""
+    """`skew` moves the `Date` header and the window, so a right clock is 403."""
     state.skew = 900
     path = f"{BASE}user/check_features/"
     reply = served.get(path, headers=signed(state, "staff", "GET", path))
@@ -276,7 +276,7 @@ def test_a_skewed_mock_dates_its_replies_and_refuses_the_devices_time(
 
 
 def test_the_command_line_switches_faults_and_skew_on() -> None:
-    """``--fault`` (repeatable), ``--every-request`` and ``--skew`` reach the state."""
+    """`--fault` (repeatable), `--every-request` and `--skew` reach the state."""
     args = parser().parse_args(
         ["--fault", "lost_response", "--fault", "revoked", "--skew", "-900"]
     )
@@ -288,13 +288,13 @@ def test_the_command_line_switches_faults_and_skew_on() -> None:
 
 
 def test_the_server_serves_the_app_s_year(monkeypatch: pytest.MonkeyPatch) -> None:
-    """A new ``config.YEAR`` needs no edit here, or the app's every call would be 404."""
+    """A new `config.YEAR` needs no edit here, or the app's every call would be 404."""
     monkeypatch.setattr(server, "YEAR", 2027)
     assert state_for(parser().parse_args([])).year == 2027
 
 
 def test_the_command_line_adds_made_up_attendees() -> None:
-    """``--attendees 3000`` serves 3,004 attendees; none by default."""
+    """`--attendees 3000` serves 3,004 attendees; none by default."""
     assert (
         len(state_for(parser().parse_args(["--attendees", "3000"])).attendees) == 3004
     )
@@ -303,13 +303,13 @@ def test_the_command_line_adds_made_up_attendees() -> None:
 
 @pytest.mark.parametrize("count", ["-1", "many", "2.5"])
 def test_a_bad_attendee_count_is_a_usage_error(count: str) -> None:
-    """``--attendees`` takes a whole number, 0 or more."""
+    """`--attendees` takes a whole number, 0 or more."""
     with pytest.raises(SystemExit):
         parser().parse_args(["--attendees", count])
 
 
 def test_an_unknown_fault_is_a_usage_error() -> None:
-    """``--fault`` accepts only the faults the mock models."""
+    """`--fault` accepts only the faults the mock models."""
     with pytest.raises(SystemExit):
         parser().parse_args(["--fault", "slow"])
 

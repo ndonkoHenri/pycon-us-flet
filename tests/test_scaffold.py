@@ -1,13 +1,13 @@
-"""Tests for the shared chrome: ``AppScaffold`` and ``SectionHeader`` (#76).
+"""Tests for the shared chrome: `AppScaffold` and `SectionHeader` (#76).
 
-``AppScaffold``'s bottom bar and its tab switches are tested in
-``test_navigation_views.py`` (the bar's own parts in ``test_navigation.py``, #75),
-``Shown`` and the content line in ``test_shown.py``, and the status strip in
-``test_status_strip.py`` (D-200).
+`AppScaffold`'s bottom bar and its tab switches are tested in
+`test_navigation_views.py` (the bar's own parts in `test_navigation.py`, #75),
+`Shown` and the content line in `test_shown.py`, and the status strip in
+`test_status_strip.py` (D-200).
 
-The builders run outside a renderer, with the fixtures of ``tests/chrome.py``:
-the hooks they call (``ft.use_view_path``, ``ft.use_effect`` and the store hooks) are
-replaced by ``Hooks``, and a fake page is bound as Flet binds a session's page. What
+The builders run outside a renderer, with the fixtures of `tests/chrome.py`:
+the hooks they call (`ft.use_view_path`, `ft.use_effect` and the store hooks) are
+replaced by `Hooks`, and a fake page is bound as Flet binds a session's page. What
 the controls look like, and that Flutter marks the title as a header, is checked on
 devices (the PR).
 """
@@ -123,7 +123,7 @@ async def test_back_on_a_pushed_view_is_left_to_flutters_navigator(
 
     Without one, Flet pops a View that can pop by itself, and the dialog open over it
     with it (F46, D-208, #235). The handler lets any pop it is asked about through:
-    the pop then reaches ``main.py``'s ``on_view_pop``, which navigates.
+    the pop then reaches `main.py`'s `on_view_pop`, which navigates.
     """
     view = view_at(hooks, page, view_path)
     assert view.can_pop is True  # the iOS edge swipe and predictive Back stay (D-148)
@@ -195,7 +195,7 @@ def test_the_body_sits_in_a_safe_area_and_the_actions_in_the_app_bar(
 def test_a_still_bar_keeps_its_colour_when_the_body_scrolls(
     hooks: Hooks, page: FakePage
 ) -> None:
-    """``still_bar``: the surface and no scrolled-under elevation, which would tint it.
+    """`still_bar`: the surface and no scrolled-under elevation, which would tint it.
 
     By default the bar is left to the theme, which colours it when the page scrolls
     under it; a still bar is for a body that scrolls only inside a box (D-447).

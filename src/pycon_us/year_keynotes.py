@@ -1,17 +1,17 @@
 """The year data of the keynotes and panels, and its checks (D-45, SESS-08, SPKR-04).
 
-``content.toml``'s ``[[keynotes]]`` build into the dataclasses below, through
-``year_schema.build()``, as ``config.Content.keynotes``: one entry per session, keyed by
+`content.toml`'s `[[keynotes]]` build into the dataclasses below, through
+`year_schema.build()`, as `config.Content.keynotes`: one entry per session, keyed by
 the feed's session id, since the feed names a keynote by its speaker and links its
 description to the site, and has no photo, role or bio for the people on stage.
-``check_keynotes()`` checks the entries' own rules when the year loads;
-``check_keynote_sessions()`` checks their ids against a feed's sessions, each a keynote
+`check_keynotes()` checks the entries' own rules when the year loads;
+`check_keynote_sessions()` checks their ids against a feed's sessions, each a keynote
 or a plenary: the loader's against the year's bundled snapshot when asked
-(``config.load_year(check_sessions=True)``), and the
+(`config.load_year(check_sessions=True)`), and the
 snapshot tool's against a new feed. The callers pass the tracks
-(``year_tracks.KEYNOTE_TRACKS``), so this module stays free of the config it builds part
+(`year_tracks.KEYNOTE_TRACKS`), so this module stays free of the config it builds part
 of.
-A module of its own, as ``year_pages`` is, so ``config.py`` grows by little (D-66).
+A module of its own, as `year_pages` is, so `config.py` grows by little (D-66).
 """
 
 from collections.abc import Collection, Iterable, Mapping
@@ -33,7 +33,7 @@ class KeynoteSpeaker:
         name: Their name as they write it, in their own capitals.
         role: What they do, in a few words, under the name: "CEO and co-founder,
             Fireworks AI".
-        photo_url: Their photo, an ``https://`` URL; empty for none, when the
+        photo_url: Their photo, an `https://` URL; empty for none, when the
             initials stand in.
         bio: A few sentences about them; empty for none.
     """
@@ -49,9 +49,9 @@ class Keynote:
     """What the app adds to one keynote or panel of the feed.
 
     Attributes:
-        session_id: The feed's session id (a slot's ``conf_key``, D-42); the loader
+        session_id: The feed's session id (a slot's `conf_key`, D-42); the loader
             refuses one the year's snapshot does not have.
-        kind: ``keynote`` or ``panel`` (``KINDS``): a keynote's card shows each
+        kind: `keynote` or `panel` (`KINDS`): a keynote's card shows each
             speaker's photo and bio, a panel's its people as a row of avatars.
         speakers: The people on stage, in the order the site lists them.
         title: The talk's own title, which the feed does not give; empty for none.
@@ -70,8 +70,8 @@ def check_keynotes(keynotes: tuple[Keynote, ...], file: str) -> None:
     """Check the entries' own rules: a known kind, one entry per session, no blank text.
 
     Args:
-        keynotes: The ``[[keynotes]]`` entries.
-        file: The data file they come from, for the messages (``2026/content.toml``).
+        keynotes: The `[[keynotes]]` entries.
+        file: The data file they come from, for the messages (`2026/content.toml`).
 
     Raises:
         YearDataError: A rule is broken; the message names the file and the key.
@@ -114,14 +114,14 @@ def check_keynote_sessions(
     a keynotes' track: the keynotes' own, or the plenaries', which the panels are.
 
     Args:
-        keynotes: The ``[[keynotes]]`` entries.
+        keynotes: The `[[keynotes]]` entries.
         sessions: The feed's sessions, by id.
         tracks: The track keys a keynote or panel can have
-            (``year_tracks.KEYNOTE_TRACKS``).
+            (`year_tracks.KEYNOTE_TRACKS`).
         file: The data file the entries come from, for the message.
 
     Raises:
-        YearDataError: An entry's ``session_id`` is not among ``sessions``, or names
+        YearDataError: An entry's `session_id` is not among `sessions`, or names
             a session of another track.
     """
     for index, keynote in enumerate(keynotes):
@@ -139,7 +139,7 @@ def keynote_of(keynotes: Iterable[Keynote], session_id: str) -> Keynote | None:
     """Return the keynote or panel entry of a session, or None for any other session.
 
     Args:
-        keynotes: The year's entries (``Content.keynotes``).
+        keynotes: The year's entries (`Content.keynotes`).
         session_id: A session id of the feed.
     """
     return next((k for k in keynotes if k.session_id == session_id), None)

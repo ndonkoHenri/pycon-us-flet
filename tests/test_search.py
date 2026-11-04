@@ -1,9 +1,9 @@
 """Tests for global search: the index, matching and results (D-46, D-180; NEW-02).
 
-The fold itself is tested in ``test_queries.py``. Here, over small built feeds: AND
+The fold itself is tested in `test_queries.py`. Here, over small built feeds: AND
 matching of folded words, grouping and ordering, scopes and empty queries. Search over
 both recorded feeds and the cut to each type's first rows (D-218) are in
-``test_search_feeds.py``.
+`test_search_feeds.py`.
 """
 
 import dataclasses
@@ -92,7 +92,7 @@ def model(
 
 
 def spot(key: str, label: str, sublabel: str = "") -> Pin:
-    """A venue spot's pin on the concourse plan (``MapData.venue_spots()``)."""
+    """A venue spot's pin on the concourse plan (`MapData.venue_spots()`)."""
     return Pin(
         key=key, label=label, plan="concourse", x=50.0, y=50.0, sublabel=sublabel
     )
@@ -270,7 +270,7 @@ def test_a_venue_spot_is_found_by_its_label_or_what_happens_there() -> None:
 
 
 def test_an_unknown_scope_is_an_error() -> None:
-    """An unknown scope raises ``ValueError`` naming it."""
+    """An unknown scope raises `ValueError` naming it."""
     with pytest.raises(ValueError, match="booths"):
         search(search_index(TYPING), "python", "booths")
 

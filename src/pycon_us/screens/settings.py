@@ -1,16 +1,16 @@
-"""Settings (``/more/settings``): Appearance, Reminders, Start screen and Data (THEME-01).
+"""Settings (`/more/settings`): Appearance, Reminders, Start screen and Data (THEME-01).
 
 Two Material controls instead of Ionic's four-mode Cupertino sheet, both following the
 OS until the user chooses otherwise (D-23, ux.md §6.9): the System, Light and Dark
 radio rows, which More held until this page existed (D-169), and a High contrast
 switch, which shows the OS flag until it is switched against it (D-286). A choice
-applies at once and is saved with ``Prefs.save()``; one that cannot be saved still
+applies at once and is saved with `Prefs.save()`; one that cannot be saved still
 applies for the session, and a SnackBar says so (D-120). Then Reminders, live in a build
-with E3 and in D-60's interim without (``settings_reminders.py``, D-401), "Open the app on" for a signed-in lead-retrieval
+with E3 and in D-60's interim without (`settings_reminders.py`, D-401), "Open the app on" for a signed-in lead-retrieval
 account (Now or Lead scanner, D-16, #689), and Data, the
 schedule's source and age with Refresh now, and the zone the times are in
-(``settings_data.py``). More pushes it at ``/more/settings``, and My schedule's
-Reminder settings at ``/my-schedule/settings``, so Back returns to the opener (D-17,
+(`settings_data.py`). More pushes it at `/more/settings`, and My schedule's
+Reminder settings at `/my-schedule/settings`, so Back returns to the opener (D-17,
 D-401).
 """
 
@@ -40,16 +40,16 @@ START_SCREEN = "Open the app on"
 """The Start screen section's heading (D-16)."""
 
 START_LABELS: dict[StartScreen, str] = {"now": "Now", "lead": "Lead scanner"}
-"""The Start screen's rows, in order: ``auto`` shows as Lead scanner, its meaning."""
+"""The Start screen's rows, in order: `auto` shows as Lead scanner, its meaning."""
 
 HIGH_CONTRAST = "High contrast"
 """The switch row's title."""
 
 FOLLOWS_DEVICE = "Follows your device setting"
-"""The switch row's subtitle while it follows the OS flag (``system``, D-286)."""
+"""The switch row's subtitle while it follows the OS flag (`system`, D-286)."""
 
 RADIO_WIDTH = 48
-"""A ``Radio``'s width with its padded 48 dp tap target, the leading slot of
+"""A `Radio`'s width with its padded 48 dp tap target, the leading slot of
 Appearance's rows. The switch row's icon gets a slot this wide, since a bare 24 dp
 icon would start its title 24 dp left of theirs (#503's review). Data's icons get it too."""
 
@@ -113,7 +113,7 @@ def appearance(
     """Return Appearance's radio rows: System, Light and Dark (D-23).
 
     Args:
-        selected: ``Prefs.theme``; the group is controlled (D-157).
+        selected: `Prefs.theme`; the group is controlled (D-157).
         on_change: Saves the choice.
     """
     return radio_rows("settings.appearance", APPEARANCE_LABELS, selected, on_change)
@@ -124,11 +124,11 @@ def start_screen(
 ) -> ft.Control:
     """Return the Start screen section: its heading over Now and Lead scanner (D-16).
 
-    ``auto``, the stored default, shows as Lead scanner, where it opens the app; a
-    choice stores ``now`` or ``lead``, and a sign-out keeps it (#689).
+    `auto`, the stored default, shows as Lead scanner, where it opens the app; a
+    choice stores `now` or `lead`, and a sign-out keeps it (#689).
 
     Args:
-        selected: ``Prefs.start_screen``.
+        selected: `Prefs.start_screen`.
         on_change: Saves the choice.
     """
     shown = "now" if selected == "now" else "lead"
@@ -149,13 +149,13 @@ def radio_rows[T: str](
 ) -> ft.Control:
     """Return a controlled group of radio rows, one per value (D-169).
 
-    Each row is a ``ListTile`` whose whole row selects (``toggle_inputs``), one node
-    with its identifier, ``<name>.<value>``, read as one radio button; the rows reflow
+    Each row is a `ListTile` whose whole row selects (`toggle_inputs`), one node
+    with its identifier, `<name>.<value>`, read as one radio button; the rows reflow
     at any text size, where three segments in one row clipped "System" at 200 % on
     360 dp (D-169).
 
     Args:
-        name: The identifiers' prefix, e.g. ``settings.appearance``.
+        name: The identifiers' prefix, e.g. `settings.appearance`.
         labels: Each value's title, in order.
         selected: The value the group shows (D-157).
         on_change: Saves the choice.
@@ -190,9 +190,9 @@ def high_contrast(
     so it sits under Appearance's radios and its title starts where theirs do.
 
     Args:
-        on: Whether high contrast applies (``Prefs.high_contrast_on``): under System,
+        on: Whether high contrast applies (`Prefs.high_contrast_on`): under System,
             the OS flag, so the switch follows it when it is read on resume.
-        follows_device: The setting is ``system``; the subtitle says so.
+        follows_device: The setting is `system`; the subtitle says so.
         on_change: Saves the setting the switch's new state stands for.
     """
     return named(

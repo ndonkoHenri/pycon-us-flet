@@ -1,9 +1,9 @@
 """Made-up attendees added after the seeded four, for a large CoC directory (#758).
 
-``--attendees N`` (``MockState.from_seed(attendees=N)``) adds N of them, so the name
+`--attendees N` (`MockState.from_seed(attendees=N)`) adds N of them, so the name
 search's 25-row cap and a directory of thousands can be tried on a device. They are
 generated, not seeded: the same N gives the same attendees. Every name is invented,
-every email is at ``example.com``, and some names carry accents so that folding is
+every email is at `example.com`, and some names carry accents so that folding is
 exercised (D-46).
 """
 
@@ -27,11 +27,11 @@ INCIDENTS = (0, 0, 0, 0, 1, 2, 3, 5)
 
 
 def crowd(count: int, first_id: int) -> list[dict[str, Any]]:
-    """Return ``count`` made-up attendees as seed entries, numbered from ``first_id``.
+    """Return `count` made-up attendees as seed entries, numbered from `first_id`.
 
-    Each is in the seed file's shape, so ``MockState.from_seed`` reads it as it reads
-    a seeded one. Attendee ``n`` has access code ``MOCK<n:04>`` and validator
-    ``v4l1d<n:02>``, as the seeded ones do, and no products.
+    Each is in the seed file's shape, so `MockState.from_seed` reads it as it reads
+    a seeded one. Attendee `n` has access code `MOCK<n:04>` and validator
+    `v4l1d<n:02>`, as the seeded ones do, and no products.
 
     Args:
         count: How many to make.

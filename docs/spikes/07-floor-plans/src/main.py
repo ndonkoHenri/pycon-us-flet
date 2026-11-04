@@ -1,26 +1,26 @@
-"""#361 reproducer: a real floor plan with 61 booths in an ``InteractiveViewer``.
+"""#361 reproducer: a real floor plan with 61 booths in an `InteractiveViewer`.
 
 Spike S7 (docs/spikes/07-floor-plans.md). Three tabs, Plain (a text list, the
 memory baseline), Plan (the Concourse floor plan) and Expo (the 2026 expo hall
 with its 61 booths from the Ionic app), each plan in
-``InteractiveViewer(min_scale=1, max_scale=natural / displayed)``. The toolbar
+`InteractiveViewer(min_scale=1, max_scale=natural / displayed)`. The toolbar
 switches what the spike compares:
 
-- **Tabs:** ``swipe`` puts the panes in a ``TabBarView``; ``fixed`` shows the
-  selected pane alone under the ``TabBar``.
-- **Hotspots:** ``containers`` (one ``Container`` per booth in
-  ``Semantics(button=True)``), ``gesture`` (one ``GestureDetector`` over the plan,
-  hit-tested here) or ``none``.
-- **Image:** ``expo.webp`` / ``expo.jpg`` (2048 px) or ``expo-source.jpg`` (4966 px);
-  **Cache:** ``Image.cache_width`` off or 1080 px. **2x tap:** a double-tap
-  ``GestureDetector`` around the viewer, on or off.
+- **Tabs:** `swipe` puts the panes in a `TabBarView`; `fixed` shows the
+  selected pane alone under the `TabBar`.
+- **Hotspots:** `containers` (one `Container` per booth in
+  `Semantics(button=True)`), `gesture` (one `GestureDetector` over the plan,
+  hit-tested here) or `none`.
+- **Image:** `expo.webp` / `expo.jpg` (2048 px) or `expo-source.jpg` (4966 px);
+  **Cache:** `Image.cache_width` off or 1080 px. **2x tap:** a double-tap
+  `GestureDetector` around the viewer, on or off.
 - **Cycle 20:** unmounts and mounts the Expo viewer 20 times.
 
 The viewer's buttons zoom (about the top-left corner, F76), pan, reset and try the
-three ways to bring a zoom back: ``save_state``/``restore_state``, a transform
-remembered from ``on_transform_changed`` and put back with ``reset``, ``zoom`` and
-``pan`` (U3's interim), and ``get_transform``. Every event prints an ``S7`` line
-(logcat ``flet.python``; the iOS unified log).
+three ways to bring a zoom back: `save_state`/`restore_state`, a transform
+remembered from `on_transform_changed` and put back with `reset`, `zoom` and
+`pan` (U3's interim), and `get_transform`. Every event prints an `S7` line
+(logcat `flet.python`; the iOS unified log).
 """
 
 import asyncio
@@ -50,7 +50,7 @@ AMBER = "#F2C14E"
 
 
 def log(*parts: object) -> None:
-    """Print one ``S7`` line with a monotonic timestamp in milliseconds."""
+    """Print one `S7` line with a monotonic timestamp in milliseconds."""
     print("S7", f"ms={time.monotonic() * 1000:.1f}", *parts, flush=True)
 
 
@@ -85,7 +85,7 @@ def booth_at(x: float, y: float, width: float, height: float) -> dict | None:
 
 
 def fitted(box: tuple[float, float], natural: tuple[int, int]) -> tuple[float, float]:
-    """Return the plan's size in the box with ``BoxFit.CONTAIN``.
+    """Return the plan's size in the box with `BoxFit.CONTAIN`.
 
     Args:
         box: The viewer's size in logical pixels.
@@ -97,11 +97,11 @@ def fitted(box: tuple[float, float], natural: tuple[int, int]) -> tuple[float, f
 
 @ft.component
 def Viewer(name: str, image: str, booths: bool, options: Options) -> ft.Control:
-    """One plan in an ``InteractiveViewer``, with its zoom buttons and hotspots.
+    """One plan in an `InteractiveViewer`, with its zoom buttons and hotspots.
 
     Args:
         name: The pane's name, in every log line and key.
-        image: The asset under ``plans/``.
+        image: The asset under `plans/`.
         booths: Whether to draw the expo's booths.
         options: The toolbar's choices.
     """
@@ -150,7 +150,7 @@ def Viewer(name: str, image: str, booths: bool, options: Options) -> ft.Control:
             set_selected("")
 
     def hotspot(booth: dict) -> ft.Control:
-        """One booth as a positioned, outlined ``Container`` in ``Semantics``."""
+        """One booth as a positioned, outlined `Container` in `Semantics`."""
         is_selected = booth["id"] == selected
         return ft.Container(
             left=booth["x"] * width,

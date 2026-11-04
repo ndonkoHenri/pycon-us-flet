@@ -1,30 +1,30 @@
 """The info pages' year data and its checks (D-263).
 
 The info pages (Wi-Fi, Help & safety, Venue & hours, About PyCon US, About the PSF,
-Social) say what the year's ``content.toml`` holds for them (D-45, INFO-05): each page's
-table is a dataclass here, built through ``year_schema.build()`` as a field of
-``config.Content``, and ``check_info()``, which ``config`` runs on every load, checks its
+Social) say what the year's `content.toml` holds for them (D-45, INFO-05): each page's
+table is a dataclass here, built through `year_schema.build()` as a field of
+`config.Content`, and `check_info()`, which `config` runs on every load, checks its
 rules. A module of its own, as the Open spaces and Lightning talks pages' is
-(``year_pages``, D-205), so ``config.py`` stays under D-66's ~400 lines.
+(`year_pages`, D-205), so `config.py` stays under D-66's ~400 lines.
 
-Wi-Fi has its table, ``[wifi]`` (``WifiInfo``, D-280), Help & safety its two,
-and Venue & hours its ``[[venue_hours]]`` (D-282), whose dataclasses are
-``core.hours``' since the open-now rule reads them, as feed processing reads
-``core.rules``' display-time overrides. The pages of links, About the PSF's ``[psf]``
-(D-283) and Social's ``[social]`` (D-284), have theirs in ``year_links``, split from
-this module at D-66's ~400 lines (#532); ``check_info()`` runs their checks too. For a
+Wi-Fi has its table, `[wifi]` (`WifiInfo`, D-280), Help & safety its two,
+and Venue & hours its `[[venue_hours]]` (D-282), whose dataclasses are
+`core.hours`' since the open-now rule reads them, as feed processing reads
+`core.rules`' display-time overrides. The pages of links, About the PSF's `[psf]`
+(D-283) and Social's `[social]` (D-284), have theirs in `year_links`, split from
+this module at D-66's ~400 lines (#532); `check_info()` runs their checks too. For a
 year without a page's table, the page shows the feed's own block for it
-(``ui.info_page``).
+(`ui.info_page`).
 
-The sponsor credits (D-337): ``[sponsor_credits]`` (``SponsorCredits``), the sponsor
+The sponsor credits (D-337): `[sponsor_credits]` (`SponsorCredits`), the sponsor
 who provides the Wi-Fi and the one who provides the quiet room, each by its slug with the
 public page that says so and the day someone checked it there (D-37, INFO-09, MAP-10);
-``check_credit_sponsors()`` checks the slugs against a feed's sponsors, as the keynotes'
+`check_credit_sponsors()` checks the slugs against a feed's sponsors, as the keynotes'
 ids are checked against its sessions (D-217).
 
-Help & safety (D-281): ``[[safety_contacts]]`` (``SafetyContact``), the ways to report
+Help & safety (D-281): `[[safety_contacts]]` (`SafetyContact`), the ways to report
 a concern, each with the public page that shows it and the day someone checked it
-there, and ``[help]`` (``HelpInfo``), the page's other lines and links.
+there, and `[help]` (`HelpInfo`), the page's other lines and links.
 """
 
 import re
@@ -46,10 +46,10 @@ CONTACT_KINDS = ("tel", "mailto", "https")
 """What a safety contact can be: a phone number, an email address or a web page."""
 
 E164 = re.compile(r"\+[1-9]\d{6,14}")
-"""A phone number in E.164: ``+``, a country code and the number, digits only."""
+"""A phone number in E.164: `+`, a country code and the number, digits only."""
 
 EMAIL = re.compile(r"[^@\s:/?#]+@[^@\s:/?#]+\.[^@\s:/?#.]+")
-"""An email address: a local part, ``@``, and a host name with a dot."""
+"""An email address: a local part, `@`, and a host name with a dot."""
 
 
 @dataclass(frozen=True)
@@ -61,12 +61,12 @@ class SafetyContact:
 
     Attributes:
         label: What a tap does, as the row's title: "Email the Code of Conduct team".
-        kind: ``tel``, ``mailto`` or ``https``; it names the row's identifier
-            (``help.report.<kind>``), so a year lists each kind once.
-        value: The number in E.164 (``+15625550100``), the address, or the ``https``
+        kind: `tel`, `mailto` or `https`; it names the row's identifier
+            (`help.report.<kind>`), so a year lists each kind once.
+        value: The number in E.164 (`+15625550100`), the address, or the `https`
             URL.
-        source: The public ``https`` page that shows the value.
-        checked: The day the value was last checked on ``source``.
+        source: The public `https` page that shows the value.
+        checked: The day the value was last checked on `source`.
     """
 
     label: str
@@ -77,12 +77,12 @@ class SafetyContact:
 
     @property
     def target(self) -> str:
-        """The link a tap opens: ``tel:+1…``, ``mailto:…`` or the web page."""
+        """The link a tap opens: `tel:+1…`, `mailto:…` or the web page."""
         return self.value if self.kind == "https" else f"{self.kind}:{self.value}"
 
 
 HELP_PLACES = ("info_desk", "lost_and_found", "quiet_room")
-"""The places Help & safety names, in order: each a ``HelpInfo`` line and its pin."""
+"""The places Help & safety names, in order: each a `HelpInfo` line and its pin."""
 
 
 @dataclass(frozen=True)
@@ -98,7 +98,7 @@ class HelpInfo:
         coc_summary: The Code of Conduct in a few sentences, in our words.
         coc_url: The full Code of Conduct, "Read the Code of Conduct".
         procedures_url: How reports are handled, "How reports are handled".
-        info_desk_pin: The information desk's pin, a key of ``map.toml``'s pins,
+        info_desk_pin: The information desk's pin, a key of `map.toml`'s pins,
             for its location card; empty for none.
         lost_and_found_pin: Lost and found's pin; empty for none.
         quiet_room_pin: The quiet room's pin; empty for none.
@@ -118,8 +118,8 @@ class HelpInfo:
     def pin_keys(self) -> tuple[tuple[str, str], ...]:
         """Return each place's pin field and its key, the empty ones included.
 
-        For the loader's check against ``map.toml`` (``check_pin_keys()``):
-        ``("help.quiet_room_pin", "quiet-room")``.
+        For the loader's check against `map.toml` (`check_pin_keys()`):
+        `("help.quiet_room_pin", "quiet-room")`.
         """
         return tuple(
             (f"help.{name}_pin", getattr(self, f"{name}_pin")) for name in HELP_PLACES
@@ -144,10 +144,10 @@ class SponsorCredit:
     """The sponsor who provides something at the venue, credited where it is (D-37).
 
     Attributes:
-        slug: The sponsor's slug (``slugs.sponsor_slug``, SPON-02), "temporal": named
+        slug: The sponsor's slug (`slugs.sponsor_slug`, SPON-02), "temporal": named
             explicitly, never guessed from a substring of the name as Ionic did.
-        source: The public ``https`` page that credits the sponsor with it.
-        checked: The day the credit was last checked on ``source``.
+        source: The public `https` page that credits the sponsor with it.
+        checked: The day the credit was last checked on `source`.
     """
 
     slug: str
@@ -157,7 +157,7 @@ class SponsorCredit:
 
 @dataclass(frozen=True)
 class SponsorCredits:
-    """``[sponsor_credits]``: who provides what, each credit optional (INFO-09, MAP-10).
+    """`[sponsor_credits]`: who provides what, each credit optional (INFO-09, MAP-10).
 
     Attributes:
         wifi: The Wi-Fi's sponsor, credited on the Wi-Fi page.
@@ -169,7 +169,7 @@ class SponsorCredits:
     quiet_room: SponsorCredit | None = None
 
     def items(self) -> tuple[tuple[str, SponsorCredit], ...]:
-        """Return the credits the year gives, by key (``wifi``, ``quiet_room``)."""
+        """Return the credits the year gives, by key (`wifi`, `quiet_room`)."""
         return tuple(
             (key, credit)
             for key in ("wifi", "quiet_room")
@@ -181,7 +181,7 @@ class SponsorCredits:
 class Directions:
     """Where Venue & hours' Directions button takes a maps app (MAP-11, D-313).
 
-    From ``conference.toml``'s ``[directions]``: a point, not the address, so the
+    From `conference.toml`'s `[directions]`: a point, not the address, so the
     maps app lands on the venue's door without geocoding a street name.
 
     Attributes:
@@ -196,7 +196,7 @@ class Directions:
 
 
 def check_directions(directions: Directions, file: str) -> None:
-    """Check ``[directions]``: a label, and a latitude and longitude on the globe.
+    """Check `[directions]`: a label, and a latitude and longitude on the globe.
 
     Args:
         directions: The table.
@@ -217,14 +217,14 @@ def check_directions(directions: Directions, file: str) -> None:
 def check_info(content: Content, conference: ConferenceInfo, file: str) -> None:
     """Check the info pages' tables in a year's content.
 
-    ``config``'s loader calls it with the content it built, after the other pages'
-    checks, so a table that breaks a rule fails the load with a ``YearDataError`` that
+    `config`'s loader calls it with the content it built, after the other pages'
+    checks, so a table that breaks a rule fails the load with a `YearDataError` that
     names the file and the key, as every year-data error does.
 
     Args:
-        content: The year's ``content.toml``, built.
+        content: The year's `content.toml`, built.
         conference: The year's facts, whose days the venue hours must fall on.
-        file: The data file it comes from, for the messages (``2026/content.toml``).
+        file: The data file it comes from, for the messages (`2026/content.toml`).
 
     Raises:
         YearDataError: A table breaks one of its rules.
@@ -259,11 +259,11 @@ def check_credit_sponsors(
 
     A typo, or a sponsor the feed dropped, would hide the credit on every phone: the
     loader checks the year's bundled snapshot when asked
-    (``config.load_year(check_sessions=True)``), and the snapshot tool a new feed, as
+    (`config.load_year(check_sessions=True)`), and the snapshot tool a new feed, as
     they check the keynotes' sessions (D-217).
 
     Args:
-        credits: The ``[sponsor_credits]`` table.
+        credits: The `[sponsor_credits]` table.
         data: The processed feed.
         file: The data file the credits come from, for the message.
 
@@ -281,10 +281,10 @@ def check_credit_sponsors(
 def check_safety_contacts(contacts: tuple[SafetyContact, ...], file: str) -> None:
     """Check the safety contacts: a label, a well-formed value, an https source.
 
-    ``build()`` already refuses a contact without ``source`` or ``checked``.
+    `build()` already refuses a contact without `source` or `checked`.
 
     Args:
-        contacts: The ``[[safety_contacts]]`` entries.
+        contacts: The `[[safety_contacts]]` entries.
         file: The data file they come from, for the messages.
 
     Raises:
@@ -325,12 +325,12 @@ def check_contact_value(contact: SafetyContact, file: str, key: str) -> None:
 
 
 def check_help(info: HelpInfo, file: str) -> None:
-    """Check ``[help]``: no blank line, ``https://`` links, no blank pin.
+    """Check `[help]`: no blank line, `https://` links, no blank pin.
 
-    Whether each pin is in ``map.toml`` is the loader's check (``check_pin_keys()``).
+    Whether each pin is in `map.toml` is the loader's check (`check_pin_keys()`).
 
     Args:
-        info: The ``[help]`` table.
+        info: The `[help]` table.
         file: The data file it comes from, for the messages.
 
     Raises:
@@ -353,19 +353,19 @@ def check_venue_hours(
 
     Each service has a name no other entry has (compared without case), no blank text,
     and, without hours of its own, a note that says why. Each opening is on a day of the
-    conference (``first_day`` to ``last_day``), opens and closes on a whole minute
-    (``07:30:00``, since the labels and the open-now rule work to the minute), opens
+    conference (`first_day` to `last_day`), opens and closes on a whole minute
+    (`07:30:00`, since the labels and the open-now rule work to the minute), opens
     before it closes, and does not overlap the service's other openings that day (one
     may close when the next opens).
 
     Args:
-        hours: The ``[[venue_hours]]`` entries; empty for a year without them.
+        hours: The `[[venue_hours]]` entries; empty for a year without them.
         conference: The year's facts, for its days.
         file: The data file they come from, for the messages.
 
     Raises:
         YearDataError: An entry breaks a rule; the message names the file, the entry
-            and the field (``2026/content.toml: venue_hours[0].open[1].closes: …``).
+            and the field (`2026/content.toml: venue_hours[0].open[1].closes: …`).
     """
     first, last = conference.first_day, conference.last_day
     names: set[str] = set()

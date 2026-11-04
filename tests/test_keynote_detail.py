@@ -1,8 +1,8 @@
-"""Tests for a keynote's and a panel's session detail (``screens/keynote_people.py``).
+"""Tests for a keynote's and a panel's session detail (`screens/keynote_people.py`).
 
 SESS-08, #104, D-217: the feed names a keynote by its speaker and links its description
-to the site, so its detail shows the year data's people and abstract. ``SessionDetail``
-runs in a real Flet session (``tests/session_detail.py``).
+to the site, so its detail shows the year data's people and abstract. `SessionDetail`
+runs in a real Flet session (`tests/session_detail.py`).
 """
 
 from collections.abc import AsyncIterator

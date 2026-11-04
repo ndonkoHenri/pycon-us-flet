@@ -1,7 +1,7 @@
 """Our processed feeds against Ionic's own processing of them, captured once (D-77; SCHED-19).
 
-Ionic is a reference, not an oracle. Where we chose to differ, ``INTENDED_DIFFERENCES``
-names the decision or feature id, the normaliser in ``tests/ionic.py`` turns Ionic's facts
+Ionic is a reference, not an oracle. Where we chose to differ, `INTENDED_DIFFERENCES`
+names the decision or feature id, the normaliser in `tests/ionic.py` turns Ionic's facts
 into what we intend, and a named test below shows the difference on the captured output.
 Everything else must match exactly, on both recorded feeds and under both machine zones.
 """
@@ -97,7 +97,7 @@ def test_rooms_match_ionic(year: int) -> None:
 
 @pytest.mark.parametrize("year", YEARS)
 def test_rooms_sort_as_ionic_sorted_them(year: int) -> None:
-    """D-125: ``room_sort_key`` gives localeCompare's numeric, accent-blind order."""
+    """D-125: `room_sort_key` gives localeCompare's numeric, accent-blind order."""
     names = [room["name"] for room in captured(year, "rooms")]
     assert sorted(names, key=room_sort_key) == names
 
@@ -230,7 +230,7 @@ def test_ionic_left_a_new_days_first_group_without_start(year: int) -> None:
 def test_ionic_seeded_2026s_sprint_rooms_into_every_year(year: int) -> None:
     """MAP-08: Ionic's empty rooms are its 2026 venue's sprint rooms, and so are ours.
 
-    Ours come from the year's ``map.toml``, so 2026 seeds exactly Ionic's rooms and
+    Ours come from the year's `map.toml`, so 2026 seeds exactly Ionic's rooms and
     2025, which has no plans, seeds none, where Ionic seeded 2026's venue into it.
     """
     empty = {room["name"] for room in captured(year, "rooms") if not room["sessions"]}

@@ -1,9 +1,9 @@
-"""Tests for the status strip's minute tick and ``use_minute()`` (D-200, D-175, D-40).
+"""Tests for the status strip's minute tick and `use_minute()` (D-200, D-175, D-40).
 
-The strip's body runs outside a renderer, with the fixtures of ``tests/strip.py`` and
-``tests/chrome.py``, and ``Services.run_every`` records each loop instead of running
+The strip's body runs outside a renderer, with the fixtures of `tests/strip.py` and
+`tests/chrome.py`, and `Services.run_every` records each loop instead of running
 it, so a test moves the clock and calls the tick by hand. The strip's line, layout
-and refreshes are ``test_status_strip.py``'s.
+and refreshes are `test_status_strip.py`'s.
 """
 
 from collections.abc import Callable
@@ -28,18 +28,18 @@ hooks, network = strip.hooks, strip.network
 
 @dataclass
 class Clock:
-    """``clock.now()`` for a test, moved by hand."""
+    """`clock.now()` for a test, moved by hand."""
 
     now: datetime
 
     def move(self, delta: timedelta) -> None:
-        """Move the clock on by ``delta``."""
+        """Move the clock on by `delta`."""
         self.now += delta
 
 
 @pytest.fixture
 def moving_clock(monkeypatch: pytest.MonkeyPatch) -> Clock:
-    """A ``Clock`` at 12:00:30 PM Pacific on May 11, 2026, which ``clock.now`` reads."""
+    """A `Clock` at 12:00:30 PM Pacific on May 11, 2026, which `clock.now` reads."""
     fake = Clock(datetime(2026, 5, 11, 12, 0, 30, tzinfo=PACIFIC))
     monkeypatch.setattr(clock, "now", lambda: fake.now)
     return fake
@@ -47,21 +47,21 @@ def moving_clock(monkeypatch: pytest.MonkeyPatch) -> Clock:
 
 @dataclass
 class Loops:
-    """Stands in for ``Services.run_every``: records each loop instead of running it."""
+    """Stands in for `Services.run_every`: records each loop instead of running it."""
 
     started: list[tuple[float, Callable[[], object]]] = field(default_factory=list)
 
     async def run_every(self, seconds: float, action: Callable[[], object]) -> None:
         """Record the loop's period and action instead of running it.
 
-        A bound method set on the class is not bound again: no ``self`` of Services.
+        A bound method set on the class is not bound again: no `self` of Services.
         """
         self.started.append((seconds, action))
 
 
 @pytest.fixture
 def loops(monkeypatch: pytest.MonkeyPatch) -> Loops:
-    """A ``Loops`` in place of ``Services.run_every``."""
+    """A `Loops` in place of `Services.run_every`."""
     fake = Loops()
     monkeypatch.setattr(Services, "run_every", fake.run_every)
     return fake
@@ -80,10 +80,10 @@ async def mounted_strip(
 
 
 def test_the_ticks_depend_on_auto_refresh_alone(hooks: Hooks, page: FakePage) -> None:
-    """The strip's effect re-runs only for ``auto_refresh``, and has no cleanup.
+    """The strip's effect re-runs only for `auto_refresh`, and has no cleanup.
 
     None is needed: Flet cancels the running loop on unmount (F2, D-387), which
-    ``tests/test_flet_effects.py`` pins and ``tests/test_session.py`` sees on a screen.
+    `tests/test_flet_effects.py` pins and `tests/test_session.py` sees on a screen.
     """
     render_strip(auto_refresh=True)
     (_, dependencies), cleanup = hooks.effects[-1], hooks.cleanups[-1]
@@ -152,7 +152,7 @@ async def test_on_now_and_schedule_a_tick_starts_a_refresh_when_one_is_due(
     moving_clock: Clock,
     network: Network,
 ) -> None:
-    """With ``auto_refresh``, a tick refreshes at once, then only 15 minutes on."""
+    """With `auto_refresh`, a tick refreshes at once, then only 15 minutes on."""
     tick = await mounted_strip(hooks, loops, auto_refresh=True)
     tick()  # nothing has started in this session yet
     first = conference._task
@@ -180,7 +180,7 @@ async def test_elsewhere_a_tick_never_refreshes(
     loops: Loops,
     moving_clock: Clock,
 ) -> None:
-    """Without ``auto_refresh``, ticks over two hours start no refresh."""
+    """Without `auto_refresh`, ticks over two hours start no refresh."""
     tick = await mounted_strip(hooks, loops)  # My schedule's strip
     tick()
     moving_clock.move(timedelta(hours=2))

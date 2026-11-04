@@ -1,6 +1,6 @@
 """Tests for the words the tablet flows match, against the app's own (#461).
 
-The Maestro flows find the rail's destinations by name (``subflows/tab.yaml``: the
+The Maestro flows find the rail's destinations by name (`subflows/tab.yaml`: the
 rail has no identifiers, D-277) and read About this app's lines by their text. Those
 words are written into the YAML, so a renamed tab, a reordered bar or reworded copy
 would fail only on a device. These checks fail here instead.
@@ -18,11 +18,11 @@ MAESTRO = ROOT / "maestro"
 ABOUT_APP = MAESTRO / "journeys" / "about_app.yaml"
 
 TAB_CALL = re.compile(r"^\s+TAB: (\w+)\n\s+NAME: \"([^\"]+)\"$", re.MULTILINE)
-"""A ``tab.yaml`` call's env: the tab's key, then its destination's name."""
+"""A `tab.yaml` call's env: the tab's key, then its destination's name."""
 
 
 def tab_calls() -> list[tuple[Path, str, str]]:
-    """Return every flow's ``tab.yaml`` calls as (file, key, name), in file order."""
+    """Return every flow's `tab.yaml` calls as (file, key, name), in file order."""
     return [
         (path, key, name)
         for path in sorted(MAESTRO.rglob("*.yaml"))
@@ -44,7 +44,7 @@ def test_the_flows_call_tab_yaml_with_names() -> None:
 
 
 def test_each_destination_s_name_is_its_label_and_place_in_the_bar() -> None:
-    """D-277: a rail destination's name follows ``TABS``' labels and order.
+    """D-277: a rail destination's name follows `TABS`' labels and order.
 
     A flow finds it by "<label>.*Tab <n> of 5", as TalkBack and VoiceOver read it.
     """
@@ -61,7 +61,7 @@ def test_about_app_expects_the_report_s_failure_line_word_for_word() -> None:
 
 
 def test_about_app_expects_the_schedule_line_s_two_sources() -> None:
-    """D-292: the Schedule row's two sources, in ``schedule_line()``'s words.
+    """D-292: the Schedule row's two sources, in `schedule_line()`'s words.
 
     Offline on Android the bundled data; on iOS, whose launch may reach it, the feed.
     """
@@ -71,16 +71,16 @@ def test_about_app_expects_the_schedule_line_s_two_sources() -> None:
 
 
 FAILS = "${SHARE_FAILS == 'true'}"
-"""The ``when: true:`` of the branch for a run where the sheet cannot open (U95)."""
+"""The `when: true:` of the branch for a run where the sheet cannot open (U95)."""
 OPENS = "${SHARE_FAILS != 'true'}"
-"""The ``when: true:`` of the branch for a run where the sheet opens."""
+"""The `when: true:` of the branch for a run where the sheet opens."""
 
 
 def share_branch(condition: str) -> str:
-    """Return the text of ``about_app``'s top-level step whose condition is ``condition``.
+    """Return the text of `about_app`'s top-level step whose condition is `condition`.
 
     Args:
-        condition: The branch's ``when: true:`` expression, ``FAILS`` or ``OPENS``.
+        condition: The branch's `when: true:` expression, `FAILS` or `OPENS`.
     """
     steps = re.split(r"^- ", ABOUT_APP.read_text(encoding="utf-8"), flags=re.MULTILINE)
     found = [step for step in steps if f"      true: {condition}\n" in step]
@@ -89,7 +89,7 @@ def share_branch(condition: str) -> str:
 
 
 def test_about_app_accepts_the_failure_line_only_when_the_run_expects_it() -> None:
-    """U95: only a ``SHARE_FAILS=true`` run (an iPad) passes with "Couldn't open…".
+    """U95: only a `SHARE_FAILS=true` run (an iPad) passes with "Couldn't open…".
 
     Elsewhere a share error must fail the flow rather than pass as the iPad's outcome.
     """

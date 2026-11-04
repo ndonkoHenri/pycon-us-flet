@@ -1,6 +1,6 @@
 """Tests for the Speakers screen's list and its filter field (#98; SPKR-01, D-153).
 
-The screen runs in ``tests/speakers_view.py``'s harness.
+The screen runs in `tests/speakers_view.py`'s harness.
 """
 
 from typing import cast

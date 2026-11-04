@@ -3,7 +3,7 @@
 At the largest text sizes a text-size change is two layout changes a few ms apart: one
 put-back moves a list at a time, a newer change or a jump to now supersedes the one on
 its way, each jump waits for its own scroll end, and the shown list is built in full
-before its keyed jump. The harness and the helpers are ``tests/test_schedule_place.py``'s,
+before its keyed jump. The harness and the helpers are `tests/test_schedule_place.py`'s,
 as are the place's own tests (D-331).
 """
 
@@ -182,7 +182,7 @@ class _StandIn:
 async def _superseded_in_wait(
     memory: ViewMemory, monkeypatch: pytest.MonkeyPatch, held: int
 ) -> tuple[bool, list[dict[str, object]]]:
-    """Put Saturday's place back, with a jump to now during its ``held``-th end-gap wait.
+    """Put Saturday's place back, with a jump to now during its `held`-th end-gap wait.
 
     Returns:
         What the put-back returned, and every jump it asked after the jump to now.
@@ -200,7 +200,7 @@ async def _superseded_in_wait(
     gate, waiting, waits = asyncio.Event(), asyncio.Event(), [0]
 
     async def ended_apart(day: date) -> None:
-        """Hold the ``held``-th wait until the gate opens; pass the others."""
+        """Hold the `held`-th wait until the gate opens; pass the others."""
         waits[0] += 1
         if waits[0] == held:
             waiting.set()
@@ -308,8 +308,8 @@ async def test_a_put_back_s_jump_waits_until_flet_would_send_its_end(
 ) -> None:
     """F182: Flet drops a list's scroll end that comes within its interval of the last.
 
-    So a put-back's next jump on that list waits ``END_GAP_S`` after the last end the
-    list sent, longer than the list's ``scroll_interval``; a list with no end yet
+    So a put-back's next jump on that list waits `END_GAP_S` after the last end the
+    list sent, longer than the list's `scroll_interval`; a list with no end yet
     waits for nothing.
     """
     assert END_GAP_S > scrolling.SCROLL_EVENT_MS / 1000

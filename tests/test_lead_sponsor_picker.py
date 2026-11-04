@@ -1,8 +1,8 @@
-"""Tests for the sponsor picker, ``screens/lead_sponsor.py`` (LEAD-05; API-09, STORE-11).
+"""Tests for the sponsor picker, `screens/lead_sponsor.py` (LEAD-05; API-09, STORE-11).
 
-The page runs in a real Flet session (``tests/harness.py``) over the mock's own
+The page runs in a real Flet session (`tests/harness.py`) over the mock's own
 transport, signed with the seeded staff account's key, so the list is what the mock's
-``handle()`` answers; a switch takes the transport offline. Its states are loading,
+`handle()` answers; a switch takes the transport offline. Its states are loading,
 "Couldn't load sponsors" with Retry, "No sponsors available" and the list; a tap saves
 the choice and goes back, Cancel leaves it, and only staff who scan for a sponsor reach
 it (architecture §12.4).
@@ -59,7 +59,7 @@ def staff(
     lead_retrieval: bool = False,
     mask_violation: bool = False,
 ) -> Account:
-    """A signed-in ``Account`` with only the given flags; door staff by default."""
+    """A signed-in `Account` with only the given flags; door staff by default."""
     return Account(
         signed_in=True,
         email="staff@example.com",
@@ -79,10 +79,10 @@ def switch() -> Switch:
 async def show(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch, switch: Switch
 ) -> AsyncIterator[Show]:
-    """Return a function that renders the picker for an account over ``switch``.
+    """Return a function that renders the picker for an account over `switch`.
 
-    It signs with the seeded staff account's key; ``chosen`` stores a sponsor first,
-    as an earlier pick left it, and ``transport`` replaces ``switch``.
+    It signs with the seeded staff account's key; `chosen` stores a sponsor first,
+    as an earlier pick left it, and `transport` replaces `switch`.
     """
 
     async def focus(_: ft.TextField) -> None:
@@ -95,7 +95,7 @@ async def show(
     def sharing(
         year: YearData, directory: Path, memory: ViewMemory | None = None
     ) -> Services:
-        """Return the memory services over the test's one ``stored``."""
+        """Return the memory services over the test's one `stored`."""
         svc = memory_services(year, directory, memory)
         cast(MemoryPrefs, svc.storage.prefs).values = stored
         return svc
@@ -110,7 +110,7 @@ async def show(
             chosen: LeadSponsor | None = None,
             transport: httpx.AsyncBaseTransport | None = None,
         ) -> Shown:
-            """Render the page signed in as ``account``, door staff by default."""
+            """Render the page signed in as `account`, door staff by default."""
             private_api = PrivateApi(
                 transport or switch, credentials=Login(who.key, who.secret)
             )
@@ -142,7 +142,7 @@ async def show(
 
 
 def rows(shown: Shown) -> list[str]:
-    """Each sponsor row's phrase, sorted: the list's own order is ``parse_sponsors``'."""
+    """Each sponsor row's phrase, sorted: the list's own order is `parse_sponsors`'."""
     return sorted(
         str(node.label)
         for node in shown.nodes("lead.sponsor.")
@@ -151,7 +151,7 @@ def rows(shown: Shown) -> list[str]:
 
 
 async def tap(shown: Shown, ident: str) -> None:
-    """Tap the row of the sponsor whose id is ``ident``."""
+    """Tap the row of the sponsor whose id is `ident`."""
     await shown.click(cast(ft.Container, shown.node(f"lead.sponsor.{ident}").parent))
 
 
@@ -182,7 +182,7 @@ async def test_searching_sam_leaves_sample_systems(show: Show) -> None:
 
 
 async def test_a_tap_saves_the_sponsor_and_goes_back(show: Show) -> None:
-    """The choice is stored as ``{id, name, logo_url}``; the page pops to the scanner."""
+    """The choice is stored as `{id, name, logo_url}`; the page pops to the scanner."""
     shown = await show(chosen=LeadSponsor("1", "Example Corp"))
     await tap(shown, "3")
     assert await shown.storage.get(staff_sponsor(2026)) == {
@@ -212,7 +212,7 @@ async def test_a_save_that_ends_after_cancel_leaves_the_user_where_they_are(
     save = lead_sponsor.save_sponsor
 
     async def slow_save(storage: Any, sponsor: LeadSponsor) -> bool:
-        """Save once ``held`` is set, as a slow write would."""
+        """Save once `held` is set, as a slow write would."""
         started.set()
         await held.wait()
         return await save(storage, sponsor)
@@ -261,7 +261,7 @@ async def test_a_refusal_is_said_as_not_loaded(show: Show) -> None:
 
 
 async def test_an_empty_list_says_none_are_available(show: Show) -> None:
-    """``{"sponsors": []}``: "No sponsors available", and no search field."""
+    """`{"sponsors": []}`: "No sponsors available", and no search field."""
     transport = httpx.MockTransport(
         lambda _: httpx.Response(200, json={"sponsors": []})
     )

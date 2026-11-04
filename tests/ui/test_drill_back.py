@@ -40,9 +40,9 @@ TOP_ROWS = 3
 def drill() -> tuple[int, Session, Speaker, Session]:
     """Return the day tab, the first session, its speaker and that speaker's next one.
 
-    The first day, in order, with a session among its first ``TOP_ROWS`` sessions whose
+    The first day, in order, with a session among its first `TOP_ROWS` sessions whose
     speaker is in the directory and has another session, listed after it on their page
-    (``speaker_sessions()``), so near its top too.
+    (`speaker_sessions()`), so near its top too.
     """
     data = recorded()
     for index in range(len(conference_days(data))):
@@ -105,7 +105,7 @@ async def test_drill_back_one_step(flet_app: ftt.FletTestApp, feed_url: str) -> 
 
 
 async def shows_session(t: RemoteTester, session: Session) -> None:
-    """Wait until session detail shows ``session``: its title node and its name."""
+    """Wait until session detail shows `session`: its title node and its name."""
     await wait_for_id(t, "session.title")
     await wait_for_text(t, session.name)
     await wait_for_id(t, "speaker.title", gone=True)  # a speaker's page has gone

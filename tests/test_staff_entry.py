@@ -1,9 +1,9 @@
 """Tests for the ways into the staff tools: More's section and Now's card (#725).
 
 SHELL-06, SHELL-07, SHELL-11, AUTH-05; D-16, D-169, D-421. More and Now run in a real
-Flet session (``tests/harness.py``, ``tests/now_view.py``) signed in as each seeded
-mock account, so the section and the card come and go as the ``Account`` store's
-flags change, and the counts follow the ``Staff`` store.
+Flet session (`tests/harness.py`, `tests/now_view.py`) signed in as each seeded
+mock account, so the section and the card come and go as the `Account` store's
+flags change, and the counts follow the `Staff` store.
 """
 
 import json
@@ -49,13 +49,13 @@ BUILT_ROWS = {
     "coc": ["more.staff.coc"],
     "all": ["more.staff.coc", "more.staff.door", "more.staff.lead", "more.staff.swag"],
 }
-"""Each role's rows of built tools, sorted: the Lead scanner (``lead_retrieval or
-door_check``), Door check (``door_check``, #766), Swag pickup (``door_check``, #769)
-and CoC incident (``mask_violation``, #760)."""
+"""Each role's rows of built tools, sorted: the Lead scanner (`lead_retrieval or
+door_check`), Door check (`door_check`, #766), Swag pickup (`door_check`, #769)
+and CoC incident (`mask_violation`, #760)."""
 
 
 def seeded(role: str) -> Account:
-    """An ``Account`` signed in as the mock's seeded account of ``role``."""
+    """An `Account` signed in as the mock's seeded account of `role`."""
     (seed,) = [a for a in json.loads(SEED.read_text())["accounts"] if a["role"] == role]
     flags = {FLAGS[name]: value for name, value in seed["features"].items()}
     return Account(
@@ -67,7 +67,7 @@ def seeded(role: str) -> Account:
 
 
 def mock_prefs(*, mock_url: bool = True) -> Prefs:
-    """Loaded prefs, with the mock's URL set unless ``mock_url`` is False (D-51)."""
+    """Loaded prefs, with the mock's URL set unless `mock_url` is False (D-51)."""
     prefs = Prefs(loaded=True)
     if mock_url:
         prefs.dev = {DEV_MOCK_API_URL: BASE_URL}
@@ -81,7 +81,7 @@ type ShowMore = Callable[..., Awaitable[Shown]]
 async def show_more(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> AsyncIterator[ShowMore]:
-    """Return a function that renders More for an account, a URL and a ``Staff``."""
+    """Return a function that renders More for an account, a URL and a `Staff`."""
     async with AsyncExitStack() as stack:
 
         async def render_more(
@@ -90,7 +90,7 @@ async def show_more(
             mock_url: bool = True,
             staff: Staff | None = None,
         ) -> Shown:
-            """Render More signed in as ``account``, with or without a mock URL."""
+            """Render More signed in as `account`, with or without a mock URL."""
             return await stack.enter_async_context(
                 showing(
                     More,
@@ -115,7 +115,7 @@ def staff_rows(shown: Shown) -> list[str]:
 
 
 def tile(node: ft.Semantics) -> ft.ListTile:
-    """The ``ListTile`` a ``LinkTile``'s identifier node holds."""
+    """The `ListTile` a `LinkTile`'s identifier node holds."""
     assert isinstance(node.content, ft.ListTile)
     return node.content
 
@@ -131,7 +131,7 @@ def second_line(node: ft.Semantics) -> tuple[str, str]:
 async def test_more_lists_the_built_tools_of_each_mock_account(
     show_more: ShowMore, role: str
 ) -> None:
-    """Each seeded role gets exactly its built tools' rows on More (``BUILT_ROWS``)."""
+    """Each seeded role gets exactly its built tools' rows on More (`BUILT_ROWS`)."""
     shown = await show_more(seeded(role))
     expected = BUILT_ROWS[role]
     assert staff_rows(shown) == expected
@@ -141,7 +141,7 @@ async def test_more_lists_the_built_tools_of_each_mock_account(
 async def test_the_lead_scanner_row_says_its_purpose_and_opens_its_route(
     show_more: ShowMore,
 ) -> None:
-    """Its row reads its purpose and pushes ``/more/staff/lead``; Back returns to More."""
+    """Its row reads its purpose and pushes `/more/staff/lead`; Back returns to More."""
     shown = await show_more(seeded("sponsor"))
     node = shown.node("more.staff.lead")
     assert tile(node).title == "Lead scanner"
@@ -262,7 +262,7 @@ async def test_no_card_without_a_mock_url(render: Callable[..., Any]) -> None:
 async def test_the_card_pushes_the_tool_under_now_so_back_returns_there(
     render: Callable[..., Any],
 ) -> None:
-    """A tap pushes ``/now/staff/lead``, whose parent is Now (D-421)."""
+    """A tap pushes `/now/staff/lead`, whose parent is Now (D-421)."""
     shown = await render(may(15, 11, 10), prefs=mock_prefs(), account=seeded("staff"))
     await shown.click(tile(shown.node(CARD)))
     assert shown.went == ["/now/staff/lead"]
@@ -305,7 +305,7 @@ async def test_the_card_opens_the_last_tool_opened_while_it_is_allowed(
 async def test_the_swag_pickup_row_says_its_purpose_and_opens_its_route(
     show_more: ShowMore,
 ) -> None:
-    """Staff get "Swag pickup", which pushes ``/more/staff/swag``; a sponsor doesn't."""
+    """Staff get "Swag pickup", which pushes `/more/staff/swag`; a sponsor doesn't."""
     shown = await show_more(seeded("staff"))
     node = shown.node("more.staff.swag")
     assert tile(node).title == "Swag pickup"
@@ -331,7 +331,7 @@ async def test_the_card_opens_swag_pickup_when_it_was_the_last_tool(
 
 
 def test_every_built_tool_has_its_route_under_more_and_under_now() -> None:
-    """A tool in ``BUILT_TOOLS`` is a page at both entries, so no entry is dead."""
+    """A tool in `BUILT_TOOLS` is a page at both entries, so no entry is dead."""
     for tool in TOOLS:
         if tool.key in BUILT_TOOLS:
             assert {tool.route, tool.now_route} <= PAGES

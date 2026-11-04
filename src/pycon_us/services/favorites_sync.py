@@ -1,20 +1,20 @@
 """Favourites follow the mock account while signed in (API-04, AUTH-12; D-55, D-406).
 
-``FavoritesSync`` is ``Services.favorites_sync``, and ``App`` runs it once the start has
-loaded the stores (``use_favorites_sync()``). It pulls ``mobile_state`` at the start,
-on resume (``app.on_resume()``'s ``request()``) and at each sign-in, and decides what
-to keep with ``core.favorites_sync.reconcile()``. Each local edit marks the list
-dirty and schedules one full-list PATCH a second later (``DEBOUNCE``); a quick run of
+`FavoritesSync` is `Services.favorites_sync`, and `App` runs it once the start has
+loaded the stores (`use_favorites_sync()`). It pulls `mobile_state` at the start,
+on resume (`app.on_resume()`'s `request()`) and at each sign-in, and decides what
+to keep with `core.favorites_sync.reconcile()`. Each local edit marks the list
+dirty and schedules one full-list PATCH a second later (`DEBOUNCE`); a quick run of
 stars sends one. One request at a time, in one loop: a pull asked for during a PATCH
 runs after it, so it never reads a list older than the one just sent.
 
-What the server has is saved per year as a ``SyncState`` (``pref_keys.favorites_sync``)
+What the server has is saved per year as a `SyncState` (`pref_keys.favorites_sync`)
 as soon as it changes, even while a request is out, and before any request, so a kill
 never forgets an unsent edit or a first sync that has not happened. A failure keeps it for the next start or resume. Nothing is sent while
 signed out, expired, with no mock URL (D-51) or with favourites that could not be read
-(D-172). The Account page's Sign out first tries once to send what waits (``flush()``,
+(D-172). The Account page's Sign out first tries once to send what waits (`flush()`,
 D-411); a sign-out stops the sync and forgets the state, and the local list stays
-(D-48). ``Favorites`` itself makes no request: it only notifies its edits.
+(D-48). `Favorites` itself makes no request: it only notifies its edits.
 """
 
 import asyncio
@@ -48,10 +48,10 @@ class FavoritesSync:
     """The session's favourites sync: one loop, one request at a time (D-406)."""
 
     def __init__(self, delay: float = DEBOUNCE) -> None:
-        """Start idle; ``run()`` reads the saved state.
+        """Start idle; `run()` reads the saved state.
 
         Args:
-            delay: The debounce, ``DEBOUNCE``; tests shorten it.
+            delay: The debounce, `DEBOUNCE`; tests shorten it.
         """
         self._delay = delay
         self._wake = asyncio.Event()
@@ -69,7 +69,7 @@ class FavoritesSync:
         self._saves: set[asyncio.Task[None]] = set()
 
     def request(self) -> None:
-        """Ask for a pull: at the start, on resume, at a sign-in, and to wake ``run``."""
+        """Ask for a pull: at the start, on resume, at a sign-in, and to wake `run`."""
         self._pull = True
         self._wake.set()
 
@@ -83,14 +83,14 @@ class FavoritesSync:
     ) -> None:
         """Keep the favourites and the account in step until the session closes.
 
-        Starts with a pull. ``Services.close()`` wakes it, so it returns (D-147).
+        Starts with a pull. `Services.close()` wakes it, so it returns (D-147).
 
         Args:
-            private_api: ``Services.private_api``; its client is read per request.
+            private_api: `Services.private_api`; its client is read per request.
             storage: Where the favourites and the sync state are kept.
-            favorites: The session's ``Favorites``, loaded.
-            account: The session's ``Account``, restored.
-            closed: ``Services.closed``.
+            favorites: The session's `Favorites`, loaded.
+            account: The session's `Account`, restored.
+            closed: `Services.closed`.
         """
         key = favorites_sync(storage.year)
         stored = await storage.get(key)
@@ -163,11 +163,11 @@ class FavoritesSync:
         own timeouts. Nothing is sent when nothing waits or nothing may be sent.
 
         Args:
-            private_api: ``Services.private_api``.
+            private_api: `Services.private_api`.
             storage: Where the favourites and the sync state are kept.
-            favorites: The session's ``Favorites``.
-            account: The session's ``Account``.
-            closed: ``Services.closed``.
+            favorites: The session's `Favorites`.
+            account: The session's `Account`.
+            closed: `Services.closed`.
 
         Returns:
             Whether the account has this device's list: True when nothing waits.
@@ -235,7 +235,7 @@ class FavoritesSync:
         """Pull and reconcile, or PATCH the local list; settle the state when it held.
 
         After each await it goes on only while the same account is signed in, usable,
-        and the session open (``_current()``): a late reply adopts and sends nothing.
+        and the session open (`_current()`): a late reply adopts and sends nothing.
         """
         generation = self._generation
         if not pull:
@@ -271,7 +271,7 @@ class FavoritesSync:
     def _current(
         self, generation: int, account: Account, closed: asyncio.Event
     ) -> bool:
-        """Whether a sync started in ``generation`` may still change or send anything."""
+        """Whether a sync started in `generation` may still change or send anything."""
         return (
             generation == self._generation
             and account.signed_in
@@ -332,10 +332,10 @@ class FavoritesSync:
         task.add_done_callback(self._saves.discard)
 
     async def _save(self, storage: Storage) -> None:
-        """Save the state when it changed; ``MERGE`` is the key's absence.
+        """Save the state when it changed; `MERGE` is the key's absence.
 
-        Writes take turns (``_saving``), so the loop's save before a request waits
-        for any that ``_save_soon()`` started, and the last state is what stays.
+        Writes take turns (`_saving`), so the loop's save before a request waits
+        for any that `_save_soon()` started, and the last state is what stays.
         """
         async with self._saving:
             state = self._state
@@ -353,16 +353,16 @@ class FavoritesSync:
 def use_favorites_sync(
     svc: Services, favorites: Favorites, account: Account, prefs: Prefs
 ) -> None:
-    """Run ``Services.favorites_sync`` once the start has loaded (a hook, D-70).
+    """Run `Services.favorites_sync` once the start has loaded (a hook, D-70).
 
-    Call it on every render, before any early return. ``prefs.loaded`` comes after the
+    Call it on every render, before any early return. `prefs.loaded` comes after the
     favourites' load and the account's restore, so the sync starts from both.
 
     Args:
         svc: The session's services.
-        favorites: The session's ``Favorites`` store.
-        account: The session's ``Account`` store.
-        prefs: The session's ``Prefs`` store.
+        favorites: The session's `Favorites` store.
+        account: The session's `Account` store.
+        prefs: The session's `Prefs` store.
     """
 
     @report_errors

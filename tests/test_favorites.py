@@ -1,7 +1,7 @@
 """Tests for the Favorites store: persistence, years, notifications and Undo (STORE-02).
 
-SharedPreferences is the in-memory fake from ``tests/fakes.py``; Flet's own type
-check in ``SharedPreferences.set`` still runs, so a value it would refuse fails here
+SharedPreferences is the in-memory fake from `tests/fakes.py`; Flet's own type
+check in `SharedPreferences.set` still runs, so a value it would refuse fails here
 too (F12).
 """
 
@@ -25,12 +25,12 @@ def shared() -> MemoryPrefs:
 
 @pytest.fixture
 def store(shared: MemoryPrefs, tmp_path: Path) -> Storage:
-    """Return the 2026 storage over ``shared``, with files under ``tmp_path``."""
+    """Return the 2026 storage over `shared`, with files under `tmp_path`."""
     return Storage(prefs=shared, directory=tmp_path, year=2026)
 
 
 async def loaded(store: Storage) -> Favorites:
-    """Return a new ``Favorites`` store loaded from ``store``."""
+    """Return a new `Favorites` store loaded from `store`."""
     favorites = Favorites()
     await favorites.load(store)
     return favorites
@@ -44,7 +44,7 @@ class Notifications:
     """
 
     def __init__(self, favorites: Favorites) -> None:
-        """Subscribe to ``favorites``, with nothing seen yet."""
+        """Subscribe to `favorites`, with nothing seen yet."""
         self.seen: list[str | None] = []
         assert isinstance(favorites, ft.Observable)
         favorites.subscribe(self)
@@ -170,7 +170,7 @@ async def test_a_toggle_saves_then_removes_a_session(store: Storage) -> None:
 
 
 async def test_a_toggle_notifies_exactly_once(store: Storage) -> None:
-    """Each toggle notifies ``ids`` exactly once."""
+    """Each toggle notifies `ids` exactly once."""
     favorites = await loaded(store)
     notified = Notifications(favorites)
     await favorites.toggle(store, "42")
@@ -182,7 +182,7 @@ async def test_a_toggle_notifies_exactly_once(store: Storage) -> None:
 async def test_the_star_changes_before_the_write_answers(
     store: Storage, shared: MemoryPrefs
 ) -> None:
-    """A toggle changes ``ids`` before the SharedPreferences write answers."""
+    """A toggle changes `ids` before the SharedPreferences write answers."""
     favorites = await loaded(store)
     writing, answer = asyncio.Event(), asyncio.Event()
 
@@ -221,7 +221,7 @@ async def test_two_quick_taps_keep_both_sessions(
 
 
 async def test_add_many_reports_only_the_sessions_it_saved(store: Storage) -> None:
-    """``add_many`` reports only the sessions it added, with one notification."""
+    """`add_many` reports only the sessions it added, with one notification."""
     favorites = await loaded(store)
     await favorites.toggle(store, "42")
     notified = Notifications(favorites)
@@ -233,7 +233,7 @@ async def test_add_many_reports_only_the_sessions_it_saved(store: Storage) -> No
 
 
 async def test_remove_many_reports_only_the_sessions_it_removed(store: Storage) -> None:
-    """``remove_many`` reports and stores only the sessions that were saved."""
+    """`remove_many` reports and stores only the sessions that were saved."""
     favorites = await loaded(store)
     await favorites.add_many(store, ["42", "17"])
     change = await favorites.remove_many(store, ["17", "99"])
@@ -264,7 +264,7 @@ async def test_an_edit_that_changes_nothing_neither_notifies_nor_writes(
 async def test_one_id_string_is_refused_rather_than_split_into_characters(
     method: str, store: Storage
 ) -> None:
-    """``add_many`` and ``remove_many`` refuse one id string with a ``TypeError``."""
+    """`add_many` and `remove_many` refuse one id string with a `TypeError`."""
     favorites = await loaded(store)
     with pytest.raises(TypeError, match="collection of session ids"):
         await getattr(favorites, method)(store, "42")
@@ -287,7 +287,7 @@ async def test_undo_brings_back_a_removed_session(store: Storage) -> None:
 
 
 async def test_undo_of_add_many_keeps_what_was_saved_before(store: Storage) -> None:
-    """Undo of ``add_many`` removes only what it added, not the earlier favourite."""
+    """Undo of `add_many` removes only what it added, not the earlier favourite."""
     favorites = await loaded(store)
     await favorites.toggle(store, "42")
     added = await favorites.add_many(store, ["42", "17", "18"])
@@ -298,7 +298,7 @@ async def test_undo_of_add_many_keeps_what_was_saved_before(store: Storage) -> N
 async def test_undo_of_remove_many_restores_every_removed_session(
     store: Storage,
 ) -> None:
-    """Undo of ``remove_many`` brings back every session it removed."""
+    """Undo of `remove_many` brings back every session it removed."""
     favorites = await loaded(store)
     await favorites.add_many(store, ["42", "17", "18"])
     removed = await favorites.remove_many(store, ["17", "18"])
@@ -333,7 +333,7 @@ async def test_undo_after_the_user_changed_the_same_session_does_nothing_twice(
 async def test_reset_forgets_every_saved_session_without_writing(
     store: Storage, shared: MemoryPrefs
 ) -> None:
-    """``reset()`` empties the favourites and notifies once, without writing.
+    """`reset()` empties the favourites and notifies once, without writing.
 
     The store stays loaded, so the next star saves as usual.
     """
@@ -351,7 +351,7 @@ async def test_reset_forgets_every_saved_session_without_writing(
 async def test_replace_takes_a_list_in_once_and_saves_it(
     store: Storage, shared: MemoryPrefs
 ) -> None:
-    """``replace()`` assigns the account's list in one notification and saves it (D-406).
+    """`replace()` assigns the account's list in one notification and saves it (D-406).
 
     The same list again changes nothing and writes nothing.
     """

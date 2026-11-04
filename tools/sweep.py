@@ -1,17 +1,17 @@
 """Run the staff tour once per text size and appearance, for a person to read the images.
 
-Usage, with the packaged build installed on a device of your own::
+Usage, with the packaged build installed on a device of your own:
 
     uv run python -m tools.sweep --device <id> [--modes max dark contrast ...]
 
 It starts this checkout's mock, or keeps the one running, and leaves it up for the next run
-(``uv run python -m tools.mock_api.own stop`` ends it). For each mode, ``default max`` unless
+(`uv run python -m tools.mock_api.own stop` ends it). For each mode, `default max` unless
 named, it signs in afresh at the default text size, since a chosen session or category would
-hide its picker, sets the device (``tools/device.py``) and runs
-``maestro/sweeps/staff_tour.yaml``. Images land under ``build/sweep/<mode>/``, in each run's
-``takeScreenshot/``. A mode that fails doesn't stop the rest, and the device goes back to its
+hide its picker, sets the device (`tools/device.py`) and runs
+`maestro/sweeps/staff_tour.yaml`. Images land under `build/sweep/<mode>/`, in each run's
+`takeScreenshot/`. A mode that fails doesn't stop the rest, and the device goes back to its
 defaults at the end. No images are judged here: look at each one
-(``docs/testing-and-quality.md`` §7.2).
+(`docs/testing-and-quality.md` §7.2).
 """
 
 import argparse
@@ -30,7 +30,7 @@ MODES = {
     "dark-contrast": ["--dark", "--contrast"],
     "max-dark-contrast": ["--text", "max", "--bold", "--dark", "--contrast"],
 }
-"""Each mode's ``tools.device prefs`` options: checklist items 3 and 4 of §9."""
+"""Each mode's `tools.device prefs` options: checklist items 3 and 4 of §9."""
 
 TOUR_SECONDS = 900
 """How long one tour may take on a busy host, so one stuck run can't hold the rest."""
@@ -72,7 +72,7 @@ def main(argv: list[str] | None = None) -> None:
     port = own.start(own.ROOT / "build" / "mock", [])
 
     def flow(name: str, folder: Path) -> bool:
-        """Run one sweep flow, with its output in ``folder``."""
+        """Run one sweep flow, with its output in `folder`."""
         return run_flow(maestro_command(args.device, platform, port, name, folder))
 
     def run_mode(mode: str) -> bool:

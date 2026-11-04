@@ -1,12 +1,12 @@
 """Schedule changes' seen marks: the unseen dot, the timer and Mark all as seen (ux.md §6.4).
 
-NEW-04. An item of an unseen batch has a 6 dp ``primary`` dot beside its icon and its
-sentence starts with "New: " (``item_phrase()``). The list marks the batches it shows
-seen once it has shown them 2 s as the top View (``use_seen_marks()``), which also
+NEW-04. An item of an unseen batch has a 6 dp `primary` dot beside its icon and its
+sentence starts with "New: " (`item_phrase()`). The list marks the batches it shows
+seen once it has shown them 2 s as the top View (`use_seen_marks()`), which also
 clears Now's card; left sooner, or a session pushed on it, they stay unseen. With a
 screen reader on, a 2 s timer would drop "New:" while the list is still being read, so
 the batches are marked when the list is left instead. The app bar's overflow has Mark all as seen, disabled with nothing unseen. The marks are
-saved in the log's file (``ChangeLog.mark_seen()``), so they survive a relaunch.
+saved in the log's file (`ChangeLog.mark_seen()`), so they survive a relaunch.
 """
 
 import asyncio
@@ -46,7 +46,7 @@ def use_seen_marks(
     A plain function that calls hooks, so the screen calls it once per render, before
     any early return (D-70). The list shows batches only while it is the top View: a
     session pushed on it, or a deep link to one beneath it, keeps it mounted unseen
-    (``is_top_view()``), so the screen passes none then. The wait restarts when the
+    (`is_top_view()`), so the screen passes none then. The wait restarts when the
     batches shown change (a refresh records one, a View is pushed or popped) or the
     screen reader is turned on or off, and stops when the list is left: Flet cancels
     the effect's task first. With a screen reader on there is no wait: the batches the
@@ -54,10 +54,10 @@ def use_seen_marks(
     once the session has closed (D-147): its log is stale.
 
     Args:
-        change_log: The session's ``ChangeLog``.
+        change_log: The session's `ChangeLog`.
         storage: Where the log is kept.
-        prefs: The ``Prefs`` store, read for ``screen_reader``.
-        closed: ``Services.closed``, set when a new session replaced this one.
+        prefs: The `Prefs` store, read for `screen_reader`.
+        closed: `Services.closed`, set when a new session replaced this one.
         shown: The unseen batches the list shows; none while it is not the top View,
             or shows no log (the not-found state).
     """
@@ -92,7 +92,7 @@ def _mark(
     closed: asyncio.Event,
     batches: tuple[Batch, ...] | None,
 ) -> None:
-    """Mark ``batches`` seen, unless none or the session has closed (D-147)."""
+    """Mark `batches` seen, unless none or the session has closed (D-147)."""
     if batches and not closed.is_set():
         change_log.mark_seen(storage, batches)
 
@@ -105,11 +105,11 @@ def mark_all_menu(
     Disabled in place rather than left out, so the button keeps its node (D-225).
 
     Args:
-        change_log: The session's ``ChangeLog``.
+        change_log: The session's `ChangeLog`.
         svc: The session's services: where the log is kept, and the launcher.
-        screen: The screen's name in identifiers: the menu is ``<screen>.overflow``
-            and the item ``<screen>.mark_all``.
-        source: The screen's ``__name__``, for View source (D-461).
+        screen: The screen's name in identifiers: the menu is `<screen>.overflow`
+            and the item `<screen>.mark_all`.
+        source: The screen's `__name__`, for View source (D-461).
     """
 
     @report_errors
@@ -135,7 +135,7 @@ def with_dot(icon: ft.Control, *, unseen: bool, fade_ms: int) -> ft.Control:
     Args:
         icon: The item's kind icon.
         unseen: Whether the item's batch is unseen.
-        fade_ms: The fade's length, ``prefs.motion_ms(FADE_MS)``.
+        fade_ms: The fade's length, `prefs.motion_ms(FADE_MS)`.
     """
     dot = ft.Container(
         width=DOT,

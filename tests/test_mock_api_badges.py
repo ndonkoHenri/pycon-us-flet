@@ -9,7 +9,7 @@ from tools.mock_api.state import MockState
 
 
 def test_every_seeded_attendee_is_encoded_once() -> None:
-    """Each attendee's ``code:validator`` code, name and text appear exactly once."""
+    """Each attendee's `code:validator` code, name and text appear exactly once."""
     state = MockState.from_seed()
     page = sheet(state.year, state.attendees.values())
     assert page.count("<svg") == len(state.attendees) == 4
@@ -33,7 +33,7 @@ def test_the_page_is_self_contained() -> None:
 
 
 def test_main_writes_the_sheet(tmp_path: Path) -> None:
-    """``python -m tools.mock_api.badges --out FILE`` writes the seeded sheet there."""
+    """`python -m tools.mock_api.badges --out FILE` writes the seeded sheet there."""
     out = tmp_path / "sheet" / "badges.html"
     main(["--out", str(out)])
     attendees = MockState.from_seed().attendees.values()

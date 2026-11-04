@@ -1,24 +1,24 @@
-"""Swag pickup (``/more/staff/swag``): the shared scan screen, looking up what's left.
+"""Swag pickup (`/more/staff/swag`): the shared scan screen, looking up what's left.
 
-A mount of ``ui/scan_screen.py``'s ``ScanScreen`` (SHIRT-01, SHIRT-02, SHIRT-04's
+A mount of `ui/scan_screen.py`'s `ScanScreen` (SHIRT-01, SHIRT-02, SHIRT-04's
 offline half; D-416). It re-checks its rule on every render (architecture §12.4): an
-account without ``door_check``, a signed-out session or no mock URL (D-51) sees "Not
-available for this account". It is mounted at ``/now/staff/swag`` too and records
-itself as the last tool opened (D-421); More and Now list it (``BUILT_TOOLS``, #769).
+account without `door_check`, a signed-out session or no mock URL (D-51) sees "Not
+available for this account". It is mounted at `/now/staff/swag` too and records
+itself as the last tool opened (D-421); More and Now list it (`BUILT_TOOLS`, #769).
 
 The **categories** head the screen, in the context slot rather than a pushed page:
-swag has a handful. A wrapping row of filter chips from ``swag_catalog()`` of the
-``redeemable`` catalog, fetched as the screen opens (a progress line meanwhile,
-"Couldn't load categories" with Retry on a failure, D-120; ``ui/staff_picker.py``'s
-``use_fetch()``); until it has loaded, a connection that returns restarts the fetch.
-The choice is the staff key ``staff_swag_categories()``, read from storage as the
+swag has a handful. A wrapping row of filter chips from `swag_catalog()` of the
+`redeemable` catalog, fetched as the screen opens (a progress line meanwhile,
+"Couldn't load categories" with Retry on a failure, D-120; `ui/staff_picker.py`'s
+`use_fetch()`); until it has loaded, a connection that returns restarts the fetch.
+The choice is the staff key `staff_swag_categories()`, read from storage as the
 screen opens, as the Lead scanner's sponsor is (D-425), so it survives a restart and
 goes at a sign-out (D-414); ids no longer in the catalog are ignored.
 
-Swag pickup is **online only** (D-56): while ``use_online()`` says offline (checked
+Swag pickup is **online only** (D-56): while `use_online()` says offline (checked
 every 5 s), and while no category is chosen, scanning is paused with the reason under
 the field, so a HID scanner's submit is dropped with its text (D-420, D-471). A badge
-is looked up by ``swag.look_up()``; items left open ``ui/swag_sheet.py``'s hand-out sheet,
+is looked up by `swag.look_up()`; items left open `ui/swag_sheet.py`'s hand-out sheet,
 pre-ticked, and the panel says how the hand-out went (#769). Scanning is paused while
 the sheet is open ("Paused while the hand-out is open").
 """
@@ -105,7 +105,7 @@ def SwagTool(*, owner: str) -> ft.Control:
     """The scan screen headed by the category chips, paused until it can scan.
 
     Args:
-        owner: The signed-in account (``Account.owner``).
+        owner: The signed-in account (`Account.owner`).
     """
     page = ft.context.page
     view_path = ft.use_view_path()
@@ -239,7 +239,7 @@ def category_chip(
 ) -> ft.Control:
     """Return a category's filter chip: one 48 dp stop, read with its state.
 
-    Its identifier is ``swag.category.<id>``; Flutter's chip says "selected".
+    Its identifier is `swag.category.<id>`; Flutter's chip says "selected".
 
     Args:
         category: The swag category.

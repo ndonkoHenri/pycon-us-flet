@@ -1,20 +1,20 @@
-"""The ``Account`` store: who is signed in to the mock API, and with which roles (P3).
+"""The `Account` store: who is signed in to the mock API, and with which roles (P3).
 
 Sign-in, the role flags, favourites sync and the staff outbox all read this one store
-(D-54, D-69); ``services.favorites_sync`` writes ``favorites_dirty`` (D-406). Its writes are awaited before it says so: ``sign_in`` saves the key, the
-secret and the account before ``signed_in`` turns True, and ``sign_out`` removes them
+(D-54, D-69); `services.favorites_sync` writes `favorites_dirty` (D-406). Its writes are awaited before it says so: `sign_in` saves the key, the
+secret and the account before `signed_in` turns True, and `sign_out` removes them
 before it turns False, so nothing reads a state that a relaunch would not find
-(STORE-04, AUTH-02; Ionic flipped "logged in" first). ``restore`` is strict: signed in
-only when the ``pycon.account`` preference and both secrets are there, and any part
+(STORE-04, AUTH-02; Ionic flipped "logged in" first). `restore` is strict: signed in
+only when the `pycon.account` preference and both secrets are there, and any part
 without the rest is cleared (STORE-03).
 
 Sign-in, sign-out and Reset app take turns on one lock: a sign-out or a reset waits for
 a sign-in under way and then removes what it saved, so a late reply never signs the
 user back in (D-198). A flag refresh writes under the same lock.
 
-The role flags follow the server: ``refresh_flags`` asks ``check_features`` at the
+The role flags follow the server: `refresh_flags` asks `check_features` at the
 start, on resume and when the Account screen mounts (D-54, API-03), one call at a
-time. A refused key makes the account ``expired``: still signed in, so what it owns
+time. A refused key makes the account `expired`: still signed in, so what it owns
 keeps its owner, but private calls stop until the user signs in again (D-57).
 
 The account stays when Developer's mock API URL is cleared or changed (D-398): with no
@@ -77,17 +77,17 @@ class Account:
         nickname: The signed-in account's nickname, else empty.
         lead_retrieval: May capture leads for a sponsor.
         door_check: May check attendees in at the door, hand out swag and capture
-            leads for a sponsor (``door_check_in``).
+            leads for a sponsor (`door_check_in`).
         mask_violation: May record Code of Conduct reports.
         is_speaker: Is a speaker.
         error: How the last sign-in failed, None after a success or a sign-out.
-        expired: The server refused the key (``check_features`` answered 401 or
+        expired: The server refused the key (`check_features` answered 401 or
             403): still signed in, as the owner of what this device recorded, but
             no private call is made until a sign-in clears it. Not stored: the next
             start's refresh finds it again.
         favorites_dirty: Whether this device's favourites have not reached the
             account yet: an edit or the first sync after sign-in is waiting
-            (``services.favorites_sync``, D-406). The Account screen says so (#688).
+            (`services.favorites_sync`, D-406). The Account screen says so (#688).
     """
 
     signed_in: bool = False
@@ -117,7 +117,7 @@ class Account:
 
     @property
     def role_flags(self) -> dict[str, bool]:
-        """The staff role flags as ``core/staff_tools.py``'s ``may_open()`` takes them."""
+        """The staff role flags as `core/staff_tools.py`'s `may_open()` takes them."""
         return {
             "lead_retrieval": self.lead_retrieval,
             "door_check": self.door_check,
@@ -125,23 +125,23 @@ class Account:
         }
 
     def credentials(self) -> Secrets:
-        """Return the key and the secret the ``ApiClient`` signs with; Nones signed out.
+        """Return the key and the secret the `ApiClient` signs with; Nones signed out.
 
-        ``Services.private_api`` reads it on every request (``api.Credentials``).
+        `Services.private_api` reads it on every request (`api.Credentials`).
         """
         return self._secrets if self.signed_in else (None, None)
 
     async def restore(self, storage: Storage, credentials: CredentialStorage) -> None:
         """Sign in again from what is saved, at the start, before the boot gate opens.
 
-        Only local reads. Signed in only when ``pycon.account`` and both secrets are
+        Only local reads. Signed in only when `pycon.account` and both secrets are
         there (STORE-03); any part without the rest is removed, e.g. the keychain
         items iOS keeps after an uninstall that took the preferences. A read that
         fails leaves the user signed out for the session and removes nothing, since
         it says nothing about what is stored (D-120).
 
         Args:
-            storage: Where ``pycon.account`` is.
+            storage: Where `pycon.account` is.
             credentials: Where the key and the secret are.
         """
         try:
@@ -172,25 +172,25 @@ class Account:
         email: str,
         password: str,
     ) -> SignIn:
-        """Sign in with ``authenticate``, and save the account before saying so.
+        """Sign in with `authenticate`, and save the account before saying so.
 
         One at a time (AUTH-02): a call while one is under way sends nothing. On
-        success the old ``pycon.account`` is removed, then the key, the secret and
-        the new ``pycon.account`` are written, and only then do the fields change and
-        ``signed_in`` turn True (STORE-04). So an app killed between the writes never
-        leaves one account's profile beside another's secrets: ``restore`` clears
+        success the old `pycon.account` is removed, then the key, the secret and
+        the new `pycon.account` are written, and only then do the fields change and
+        `signed_in` turn True (STORE-04). So an app killed between the writes never
+        leaves one account's profile beside another's secrets: `restore` clears
         secrets without a profile. A write that fails removes what was written and
         leaves the user signed out.
 
         Args:
-            api: ``Services.api``, the client on the mock URL.
-            storage: Where ``pycon.account`` goes.
+            api: `Services.api`, the client on the mock URL.
+            storage: Where `pycon.account` goes.
             credentials: Where the key and the secret go.
             email: What the user typed.
             password: What the user typed; never stored or logged.
 
         Returns:
-            How it ended; every failure but ``BUSY`` is also kept in ``error``.
+            How it ended; every failure but `BUSY` is also kept in `error`.
 
         Raises:
             PermissionError: The client's URL is the PSF's (D-51), which the
@@ -251,14 +251,14 @@ class Account:
         return SignIn.SIGNED_IN
 
     async def sign_out(self, storage: Storage, credentials: CredentialStorage) -> bool:
-        """Remove the key, the secret, ``pycon.account`` and the staff keys; sign out.
+        """Remove the key, the secret, `pycon.account` and the staff keys; sign out.
 
         Every removal is awaited before the store changes. A sign-in under way
         finishes first, so what it saves is removed too. Favourites stay (D-48), and
         so do the staff outbox's rows, under their owner (D-414).
 
         Args:
-            storage: Where ``pycon.account`` is.
+            storage: Where `pycon.account` is.
             credentials: Where the key and the secret are.
 
         Returns:
@@ -276,11 +276,11 @@ class Account:
     async def reset(self, storage: Storage, credentials: CredentialStorage) -> bool:
         """Sign out as after a fresh install, for Reset app (DEV-05, D-198).
 
-        A sign-out: ``Storage.clear_prefs()`` has removed ``pycon.account`` already,
+        A sign-out: `Storage.clear_prefs()` has removed `pycon.account` already,
         but a sign-in that was under way may have saved it again since.
 
         Args:
-            storage: Where ``pycon.account`` is.
+            storage: Where `pycon.account` is.
             credentials: Where the key and the secret are.
 
         Returns:
@@ -295,23 +295,23 @@ class Account:
         *,
         closed: asyncio.Event | None = None,
     ) -> asyncio.Task[None] | None:
-        """Ask ``check_features`` in the background and take its flags in (D-54, API-03).
+        """Ask `check_features` in the background and take its flags in (D-54, API-03).
 
         At start, on resume and when the Account screen mounts; nothing waits on it,
         so the boot gate never waits on the network (DATA-35). One call at a time: a
         call while one is in flight returns that one. An absent flag is False and
-        ``is_speaker`` stays as sign-in gave it (STORE-05, AUTH-04). Only a change is
-        assigned and saved to ``pycon.account``, so the store notifies only then; a
+        `is_speaker` stays as sign-in gave it (STORE-05, AUTH-04). Only a change is
+        assigned and saved to `pycon.account`, so the store notifies only then; a
         save that failed is tried again by the next answer (D-120). No
-        answer keeps the flags as stored; a refused key (``ApiError.is_auth``) sets
-        ``expired`` and keeps everything else (D-57). Nothing is written for a
+        answer keeps the flags as stored; a refused key (`ApiError.is_auth`) sets
+        `expired` and keeps everything else (D-57). Nothing is written for a
         session closed meanwhile, nor when the account signed out or changed while
         the call was out.
 
         Args:
-            api: ``Services.api``, None while no mock URL is set.
-            storage: Where ``pycon.account`` is.
-            closed: ``Services.closed``: a replaced session writes nothing (D-147).
+            api: `Services.api`, None while no mock URL is set.
+            storage: Where `pycon.account` is.
+            closed: `Services.closed`: a replaced session writes nothing (D-147).
 
         Returns:
             The refresh in flight, the one already running included, or None when
@@ -376,7 +376,7 @@ class Account:
             logger.info("Role flags refreshed")
 
     def _apply(self, profile: Profile, secrets: Secrets) -> None:
-        """Take the account in; ``signed_in`` last, once everything it covers is set."""
+        """Take the account in; `signed_in` last, once everything it covers is set."""
         self._secrets = secrets
         self._flags_unsaved = False
         self.email = profile.email
@@ -388,7 +388,7 @@ class Account:
         self.signed_in = True
 
     def _clear(self) -> None:
-        """Forget the account; ``signed_in`` first, so nothing reads a half-cleared one."""
+        """Forget the account; `signed_in` first, so nothing reads a half-cleared one."""
         self.signed_in = False
         self._secrets = (None, None)
         self._flags_unsaved = False
@@ -402,14 +402,14 @@ class Account:
 
 
 AccountCtx: ft.ContextProvider[Account | None] = ft.create_context(None)
-"""Provides the session's ``Account``; ``App`` writes the provider out (D-69)."""
+"""Provides the session's `Account`; `App` writes the provider out (D-69)."""
 
 
 def use_account() -> Account:
-    """Return the ``Account`` store and re-render the caller when it changes (F3).
+    """Return the `Account` store and re-render the caller when it changes (F3).
 
     Raises:
-        RuntimeError: No ``AccountCtx`` provider is above the calling component.
+        RuntimeError: No `AccountCtx` provider is above the calling component.
     """
     store = ft.use_context(AccountCtx)
     if store is None:

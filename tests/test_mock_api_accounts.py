@@ -1,7 +1,7 @@
-"""The mock API's account endpoints, called directly and through ``mock_transport``.
+"""The mock API's account endpoints, called directly and through `mock_transport`.
 
-``authenticate``, ``user/check_features`` and ``user/mobile_state`` as
-``tools/mock_api/README.md`` describes them (API-02, API-03, API-04; D-42, D-55).
+`authenticate`, `user/check_features` and `user/mobile_state` as
+`tools/mock_api/README.md` describes them (API-02, API-03, API-04; D-42, D-55).
 """
 
 import json
@@ -21,7 +21,7 @@ BASE = "/2026/api/v1/"
 
 
 def state_at(now: float = NOW) -> MockState:
-    """A fresh seeded state whose clock always reads ``now``."""
+    """A fresh seeded state whose clock always reads `now`."""
     return MockState.from_seed(now=lambda: now)
 
 
@@ -33,7 +33,7 @@ def account(state: MockState, role: str) -> Account:
 def call(
     state: MockState, method: str, endpoint: str, payload: object = None, role: str = ""
 ) -> tuple[int, object]:
-    """Send one request to ``handle``, signed as ``role`` unless it is empty.
+    """Send one request to `handle`, signed as `role` unless it is empty.
 
     Returns:
         The status and the decoded body.
@@ -82,7 +82,7 @@ def test_authenticate_returns_the_account_bare_and_needs_no_signature() -> None:
     ],
 )
 def test_a_wrong_login_gets_ionics_message(login: dict) -> None:
-    """A wrong or missing email or password is 401 with the ``message`` Ionic shows."""
+    """A wrong or missing email or password is 401 with the `message` Ionic shows."""
     assert call(state_at(), "POST", "authenticate/", login) == (
         401,
         {"message": "Invalid email or password."},
@@ -91,7 +91,7 @@ def test_a_wrong_login_gets_ionics_message(login: dict) -> None:
 
 @pytest.mark.parametrize("body", [b"", b"not json", b"[]", b'"x"', b"\xff"])
 def test_a_body_that_is_not_an_object_is_400(body: bytes) -> None:
-    """``authenticate`` refuses a body that is not a UTF-8 JSON object with 400."""
+    """`authenticate` refuses a body that is not a UTF-8 JSON object with 400."""
     status, _, reply = handle(state_at(), "POST", f"{BASE}authenticate/", {}, body)
     assert (status, json.loads(reply)) == (
         400,
@@ -128,7 +128,7 @@ def test_a_body_that_is_not_an_object_is_400(body: bytes) -> None:
 def test_check_features_returns_the_three_flags_absent_ones_left_out(
     role: str, features: dict
 ) -> None:
-    """Each role's flags come back bare, without ``is_speaker`` and without absent ones."""
+    """Each role's flags come back bare, without `is_speaker` and without absent ones."""
     state = state_at()
     assert call(state, "GET", "user/check_features/", role=role) == (
         200,
@@ -213,7 +213,7 @@ def test_each_state_starts_from_the_seed() -> None:
 
 
 async def test_a_plain_httpx_client_signs_in_and_syncs_through_the_transport() -> None:
-    """Sign in, read the flags, then PATCH and GET favourites over ``mock_transport``."""
+    """Sign in, read the flags, then PATCH and GET favourites over `mock_transport`."""
     state = state_at()
     transport = mock_transport(state)
     async with httpx.AsyncClient(

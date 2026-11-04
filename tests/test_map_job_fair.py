@@ -1,10 +1,10 @@
 """Tests for the Map's Job fair pane (#407; MAP-04, SPON-10, D-254, ux.md §6.3).
 
-``JobFairPane`` runs outside a renderer, as ``test_map.py`` runs the Rooms pane: its
+`JobFairPane` runs outside a renderer, as `test_map.py` runs the Rooms pane: its
 hooks are replaced, and a fake page is bound as Flet binds a session's page. The
-tables themselves are ``core.expo.job_fair_tables`` (``test_expo.py``); the pane in
+tables themselves are `core.expo.job_fair_tables` (`test_expo.py`); the pane in
 the Map, its tab, its card's tap and a row's way to the sponsor and back are
-``test_map_tabs.py``'s. How the pane looks and reads is checked on devices (the PR).
+`test_map_tabs.py`'s. How the pane looks and reads is checked on devices (the PR).
 """
 
 import dataclasses
@@ -45,13 +45,13 @@ from tests.trees import descendants, texts
 
 YEAR = load_year(2026)
 STRIP = ft.Text("strip")
-"""What the test's ``StatusStrip`` stands in for."""
+"""What the test's `StatusStrip` stands in for."""
 
 CARD = ft.Text("card")
-"""What the test's ``job_fair_card()`` stands in for: a component needs a renderer."""
+"""What the test's `job_fair_card()` stands in for: a component needs a renderer."""
 
 NOTE = "The printed plan shows some tables with other sponsors."
-"""The start of 2026's note, ``map.toml``'s ``note`` on the ``job-fair`` plan."""
+"""The start of 2026's note, `map.toml`'s `note` on the `job-fair` plan."""
 
 
 @pytest.fixture(scope="module")
@@ -70,7 +70,7 @@ def page() -> Iterator[FakePage]:
 
 @pytest.fixture
 def svc(tmp_path: Path) -> Services:
-    """Return a session's services with the memory fakes, storing under ``tmp_path``."""
+    """Return a session's services with the memory fakes, storing under `tmp_path`."""
     storage = Storage(prefs=MemoryPrefs(), directory=tmp_path, year=2026)
     return Services(
         year=YEAR,
@@ -84,16 +84,16 @@ def svc(tmp_path: Path) -> Services:
 
 
 class FakeConference(SimpleNamespace):
-    """The parts of ``Conference`` the pane reads, and its refresh, recorded."""
+    """The parts of `Conference` the pane reads, and its refresh, recorded."""
 
     def __init__(self, data: ConferenceData | None, problem: str | None = None):
-        """Hold ``data`` and ``problem``, not refreshing, with no refresh counted."""
+        """Hold `data` and `problem`, not refreshing, with no refresh counted."""
         super().__init__(
             data=data, problem=problem, refreshing=False, asked=False, refreshes=0
         )
 
     def status(self, _info: object) -> str:
-        """Say ``refreshing`` only while a refresh the user asked for runs (D-181)."""
+        """Say `refreshing` only while a refresh the user asked for runs (D-181)."""
         return "refreshing" if self.refreshing and self.asked else "fresh"
 
     async def refresh(self, *args: object, **kwargs: object) -> None:
@@ -102,12 +102,12 @@ class FakeConference(SimpleNamespace):
 
 
 type Render = Callable[..., list[ft.Control]]
-"""The ``render`` fixture's function: the pane's rows at a conference."""
+"""The `render` fixture's function: the pane's rows at a conference."""
 
 
 @pytest.fixture
 def render(monkeypatch: pytest.MonkeyPatch, svc: Services, page: FakePage) -> Render:
-    """Render ``JobFairPane`` once and return its rows, checking it is the pane's list.
+    """Render `JobFairPane` once and return its rows, checking it is the pane's list.
 
     The card's stand-in records the map data and identifier it was asked for.
     """
@@ -134,7 +134,7 @@ def render(monkeypatch: pytest.MonkeyPatch, svc: Services, page: FakePage) -> Re
 
 
 def all_texts(rows: list[ft.Control]) -> list[str]:
-    """Return every text under ``rows``, in reading order."""
+    """Return every text under `rows`, in reading order."""
     return [text for row in rows for text in texts(row)]
 
 
@@ -150,12 +150,12 @@ def table_nodes(rows: list[ft.Control]) -> list[ft.Semantics]:
 
 
 def descendants_of(rows: list[ft.Control]) -> list[ft.Control]:
-    """Return every control under ``rows``, the rows included, in reading order."""
+    """Return every control under `rows`, the rows included, in reading order."""
     return [node for row in rows for node in descendants(row)]
 
 
 def state(rows: list[ft.Control], identifier: str) -> ft.Semantics:
-    """Return the one ``Semantics`` node with ``identifier`` under ``rows``."""
+    """Return the one `Semantics` node with `identifier` under `rows`."""
     (found,) = [
         node
         for row in rows
@@ -217,7 +217,7 @@ def test_a_row_s_map_button_shows_its_table_on_the_plan(
 ) -> None:
     """Beside each row, its own stop: "Show table T7 on the plan", a 48 dp map button.
 
-    It pushes ``…/plan/job-fair?table=T7`` on the Map (#464); both of T7's sponsors
+    It pushes `…/plan/job-fair?table=T7` on the Map (#464); both of T7's sponsors
     have one, and the row itself still pushes the sponsor.
     """
     rows = render(FakeConference(data))
@@ -247,7 +247,7 @@ def test_a_year_without_a_note_shows_none(
     data: ConferenceData,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """A ``job-fair`` plan without a note: the card, then the tables' heading."""
+    """A `job-fair` plan without a note: the card, then the tables' heading."""
     plans = tuple(dataclasses.replace(plan, note="") for plan in YEAR.map.plans)
     year = dataclasses.replace(YEAR, map=dataclasses.replace(YEAR.map, plans=plans))
     bare = dataclasses.replace(svc, year=year)

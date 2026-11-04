@@ -1,22 +1,22 @@
 """The one sync loop of the staff outbox: it sends queued rows to the mock (D-56).
 
-``SyncWorker`` sends the signed-in account's due rows in order (``OutboxDb.due_rows()``),
+`SyncWorker` sends the signed-in account's due rows in order (`OutboxDb.due_rows()`),
 each with its own sponsor snapshot (STORE-11), and stores each outcome through
-``core/outbox.py``'s transitions: a ``NetworkError`` ends the pass and is never counted,
-and flags the row when the request may have reached the server (D-410); an ``ApiError``
-is counted and the tenth makes the row ``failed``, and one whose reply could not be read
+`core/outbox.py`'s transitions: a `NetworkError` ends the pass and is never counted,
+and flags the row when the request may have reached the server (D-410); an `ApiError`
+is counted and the tenth makes the row `failed`, and one whose reply could not be read
 flags the row too, since the server may have applied it. A refused key (401) is the
 account's fault, not the row's: the row waits uncounted and the account's flags are asked
-again, which makes it ``expired`` (D-57, D-403). ``run()`` passes at once, then on every
-``kick()`` and every 60 s, only while the app is in the foreground.
+again, which makes it `expired` (D-57, D-403). `run()` passes at once, then on every
+`kick()` and every 60 s, only while the app is in the foreground.
 
-``supervise()``, which ``use_sync_worker()`` runs from an ``App`` effect, keeps exactly
+`supervise()`, which `use_sync_worker()` runs from an `App` effect, keeps exactly
 one worker per session (LEAD-12; Ionic started a loop per page visit): one while a
 client exists (a mock API URL, D-51) and the account is signed in and not expired, none
 otherwise, and none once the session closes (D-147). It trusts transport errors, not
-``ft.Connectivity``, which only kicks it when a connection comes back (D-407).
+`ft.Connectivity`, which only kicks it when a connection comes back (D-407).
 
-Outbox times are real epoch seconds (``time.time()``), as the client's signatures are:
+Outbox times are real epoch seconds (`time.time()`), as the client's signatures are:
 the Developer fake clock moves the schedule, not the queue (D-407).
 """
 
@@ -50,18 +50,18 @@ if TYPE_CHECKING:  # the stores import the services, not the other way round
 logger = logging.getLogger(__name__)
 
 REFUSED_KEY = 401
-"""The status of a key the server no longer knows (the mock's ``revoked``)."""
+"""The status of a key the server no longer knows (the mock's `revoked`)."""
 
 type Ended = tuple[str | None, bool, bool]
 """How a pass ended: the last failure's message (None without one), whether the server
-answered every row tried, and whether it stopped on a ``NetworkError`` (offline)."""
+answered every row tried, and whether it stopped on a `NetworkError` (offline)."""
 
 
 async def send(api: ApiClient, row: Row) -> object:
     """Send one outbox row with its own owner's key and its own sponsor snapshot.
 
-    The payloads are what the enqueue stored: a lead's ``{"badge_validator"}``, a
-    note's ``{"accessCode", "note"}`` and a door check-in's ``redeem`` body as it goes.
+    The payloads are what the enqueue stored: a lead's `{"badge_validator"}`, a
+    note's `{"accessCode", "note"}` and a door check-in's `redeem` body as it goes.
     The sponsor is the row's snapshot, never the one picked now (STORE-11; Ionic sent
     the current one); a sponsor's own account has none, and sends none.
 
@@ -70,7 +70,7 @@ async def send(api: ApiClient, row: Row) -> object:
         row: A due row.
 
     Returns:
-        The server's answer: a lead's ``{first_name}``, a check-in's redeem reply.
+        The server's answer: a lead's `{first_name}`, a check-in's redeem reply.
 
     Raises:
         NetworkError: No answer arrived.
@@ -92,8 +92,8 @@ async def send(api: ApiClient, row: Row) -> object:
 class SyncWorker:
     """Sends the signed-in account's due rows: the only sender of the outbox (§12.3).
 
-    Built by ``supervise()`` for one client and one owner; a new client, a sign-out,
-    another account or ``expired`` ends it and, when one is due, starts another.
+    Built by `supervise()` for one client and one owner; a new client, a sign-out,
+    another account or `expired` ends it and, when one is due, starts another.
     """
 
     def __init__(
@@ -109,19 +109,19 @@ class SyncWorker:
         on_refused: Callable[[], object] = lambda: None,
         now: Callable[[], float] = time.time,
     ) -> None:
-        """Create the worker; nothing runs until ``run()`` or ``drain()``.
+        """Create the worker; nothing runs until `run()` or `drain()`.
 
         Args:
             db: The outbox.
-            api: The client to send with (``Services.api``).
-            account: The ``Account`` store: the owner, and whether it may still send.
-            staff: The ``Staff`` store it reports to.
-            wake: What ``kick()`` sets: ``Services.sync_wake``, which the connectivity
-                handler and ``on_resume()`` set too. A new event by default.
-            foreground: ``Services.foreground``: the loop waits while it is clear.
-            closed: ``Services.closed``: a replaced session sends and writes nothing.
+            api: The client to send with (`Services.api`).
+            account: The `Account` store: the owner, and whether it may still send.
+            staff: The `Staff` store it reports to.
+            wake: What `kick()` sets: `Services.sync_wake`, which the connectivity
+                handler and `on_resume()` set too. A new event by default.
+            foreground: `Services.foreground`: the loop waits while it is clear.
+            closed: `Services.closed`: a replaced session sends and writes nothing.
             on_refused: Called when the server refuses the key: asks the account's
-                flags again (``Account.refresh_flags``), which sets ``expired``.
+                flags again (`Account.refresh_flags`), which sets `expired`.
             now: The clock, epoch seconds; tests move it by hand.
         """
         self._db, self._api, self._account, self._staff = db, api, account, staff
@@ -136,9 +136,9 @@ class SyncWorker:
         self._wake.set()
 
     def _may_send(self, owner: str) -> bool:
-        """Whether rows of ``owner`` may still be sent with this worker's client.
+        """Whether rows of `owner` may still be sent with this worker's client.
 
-        Checked before each row: in the background (``foreground`` clear) a pass stops
+        Checked before each row: in the background (`foreground` clear) a pass stops
         and its rows stay due for the resume's kick (D-407).
         """
         account = self._account
@@ -153,10 +153,10 @@ class SyncWorker:
     async def drain(self) -> None:
         """Send the due rows in order and store each outcome; one pass at a time.
 
-        A pass already under way (``Staff.syncing``) makes this one return at once:
+        A pass already under way (`Staff.syncing`) makes this one return at once:
         that one is the pass. A cancelled pass stores no outcome for the row in flight,
         which stays due, its tries unchanged: each outcome is one transaction
-        (``OutboxDb.save``). The server may have had that send, so the row is flagged
+        (`OutboxDb.save`). The server may have had that send, so the row is flagged
         "may be recorded twice" (D-410).
         """
         staff = self._staff
@@ -172,18 +172,18 @@ class SyncWorker:
                 self._report(owner, *outcome)
 
     async def _send_due(self, owner: str) -> Ended:
-        """Send ``owner``'s due rows until none is left or the pass has to stop.
+        """Send `owner`'s due rows until none is left or the pass has to stop.
 
         The due rows are read again before each send, so a note whose lead synced in
         this pass goes in it too, and so does a row edited while it was sent, and a
         row that Clear staff data deleted meanwhile is never sent (D-414); a row is
         never sent twice at the same revision in one pass, so a save that failed
         cannot loop. Before each row the account is checked again: a sign-out,
-        another account, ``expired`` or a pause stops the pass, so no row is ever
+        another account, `expired` or a pause stops the pass, so no row is ever
         sent with another owner's key, nor in the background.
 
         Returns:
-            How the pass ended (``Ended``).
+            How the pass ended (`Ended`).
         """
         error: str | None = None
         tried: set[tuple[int | None, int]] = set()
@@ -232,7 +232,7 @@ class SyncWorker:
     def _report(
         self, owner: str, error: str | None, reached: bool, offline: bool
     ) -> None:
-        """Write the pass's outcome to ``Staff``: counts, error, time, not syncing."""
+        """Write the pass's outcome to `Staff`: counts, error, time, not syncing."""
         staff = self._staff
         staff.update_counts(self._db.counts(owner))
         staff.last_error = error
@@ -242,9 +242,9 @@ class SyncWorker:
         staff.syncing = False
 
     async def run(self, tick: float = NETWORK_BACKOFF) -> None:
-        """Pass now, then after each ``kick()`` or ``tick`` seconds, until cancelled.
+        """Pass now, then after each `kick()` or `tick` seconds, until cancelled.
 
-        In the background it waits for the resume (``foreground``), and it returns
+        In the background it waits for the resume (`foreground`), and it returns
         when the session closes (D-147). A kick during a pass makes another one right
         after it.
 
@@ -265,8 +265,8 @@ class SyncWorker:
 def sync_target(svc: Services, account: Account) -> tuple[ApiClient, str] | None:
     """Return the client and the owner a worker sends for now, or None for no worker.
 
-    A worker runs while a mock API URL is set (``Services.api``, D-51), the outbox
-    exists, and the account is signed in and not ``expired`` (D-403).
+    A worker runs while a mock API URL is set (`Services.api`, D-51), the outbox
+    exists, and the account is signed in and not `expired` (D-403).
     """
     api = svc.api
     if api is None or svc.outbox is None or not account.signed_in or account.expired:
@@ -296,20 +296,20 @@ async def _stop(task: asyncio.Task[None] | None) -> None:
 async def supervise(
     svc: Services, account: Account, staff: Staff, prefs: Prefs | None = None
 ) -> None:
-    """Keep one ``SyncWorker`` running while ``sync_target()`` names one, until closed.
+    """Keep one `SyncWorker` running while `sync_target()` names one, until closed.
 
     Every change of the account or the settings (where the mock URL is kept) checks
     the target again; a new target stops the old worker before the next starts, so
-    two never send at once. Signed out, ``Staff`` is cleared, whatever the target was
+    two never send at once. Signed out, `Staff` is cleared, whatever the target was
     (an expired account or no client has none either); signed in, it takes the
     owner's counts at once. Returns when the session closes; cancelling it (the
     effect's unmount) stops the worker too.
 
     Args:
         svc: The session's services: the client, the outbox and the events.
-        account: The ``Account`` store.
-        staff: The ``Staff`` store.
-        prefs: The ``Prefs`` store, whose mock URL change rebuilds the client.
+        account: The `Account` store.
+        staff: The `Staff` store.
+        prefs: The `Prefs` store, whose mock URL change rebuilds the client.
     """
     changed = asyncio.Event()
 
@@ -343,7 +343,7 @@ def _start(
     staff: Staff,
     target: tuple[ApiClient, str] | None,
 ) -> asyncio.Task[None] | None:
-    """Start a worker's loop for ``target``, or none without one.
+    """Start a worker's loop for `target`, or none without one.
 
     An expired account keeps its counts: its rows wait for the next sign-in. Every
     other account's synced rows are deleted first, as an account switch does (D-414).
@@ -371,16 +371,16 @@ def _start(
 def use_sync_worker(
     svc: Services, account: Account, staff: Staff, prefs: Prefs
 ) -> None:
-    """Run ``supervise()`` once the start has restored the account (a hook, D-70).
+    """Run `supervise()` once the start has restored the account (a hook, D-70).
 
-    Call it from ``App`` on every render, before any early return: ``App`` never
+    Call it from `App` on every render, before any early return: `App` never
     unmounts, so whatever the navigation there is one loop per session (LEAD-12).
 
     Args:
         svc: The session's services.
-        account: The session's ``Account`` store.
-        staff: The session's ``Staff`` store.
-        prefs: The session's ``Prefs`` store; the loop starts once it is loaded.
+        account: The session's `Account` store.
+        staff: The session's `Staff` store.
+        prefs: The session's `Prefs` store; the loop starts once it is loaded.
     """
 
     @report_errors

@@ -1,10 +1,10 @@
 """Now's "Your next session": the card, or the tile that says why there is none (ux.md §5.1).
 
-``next_session()`` shows ``agenda.next_for_me()``'s answer in a filled card: the
+`next_session()` shows `agenda.next_for_me()`'s answer in a filled card: the
 session's row with its star and, once the row's own time has come, its elapsed bar,
-then session detail's status line and "Show room". ``nothing_next()`` says why there is
+then session detail's status line and "Show room". `nothing_next()` says why there is
 no card and where to look.
-Apart from ``now.py`` so that the screen stays under about 400 lines (D-66, D-190).
+Apart from `now.py` so that the screen stays under about 400 lines (D-66, D-190).
 """
 
 from collections.abc import Callable
@@ -23,13 +23,13 @@ from pycon_us.ui.semantics import named
 from pycon_us.ui.when_where import StatusLine, room_href
 
 NEXT = "now.next"
-"""The identifiers' prefix of the next-session card's row: ``now.next.session.<key>``,
-``now.next.favorite.<key>``."""
+"""The identifiers' prefix of the next-session card's row: `now.next.session.<key>`,
+`now.next.favorite.<key>`."""
 
 HEADING = "Your next session"
 
 type Row = Callable[..., ft.Control]
-"""Builds one session's row: ``row(session, screen=..., elapsed=...)``."""
+"""Builds one session's row: `row(session, screen=..., elapsed=...)`."""
 
 
 def next_session(
@@ -100,7 +100,7 @@ def nothing_next(has_saved: bool, *, tonight: bool) -> list[ft.Control]:
 
     Args:
         has_saved: Whether any saved session is in the feed.
-        tonight: The day is over (phase ``after_day``), when "the next 3 hours" would
+        tonight: The day is over (phase `after_day`), when "the next 3 hours" would
             be true but odd; what is saved is for a later day.
     """
     if has_saved:

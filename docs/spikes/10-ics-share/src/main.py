@@ -3,22 +3,22 @@
 Spike P2-04 (docs/spikes/10-ics-share.md). One screen of buttons, each a route
 from the app to the phone's calendar:
 
-1. **Share file (bytes)**: D-62 as written, ``Share.share_files`` with
-   ``ShareFile.from_bytes(..., mime_type="text/calendar", name=...)``.
+1. **Share file (bytes)**: D-62 as written, `Share.share_files` with
+   `ShareFile.from_bytes(..., mime_type="text/calendar", name=...)`.
 2. **Share file (path)**: the same file written to the temporary directory first
-   and shared with ``ShareFile.from_path``.
-3. **Save to a folder**: ``FilePicker.save_file(src_bytes=...)``, the platform's
+   and shared with `ShareFile.from_path`.
+3. **Save to a folder**: `FilePicker.save_file(src_bytes=...)`, the platform's
    save dialog, where the user picks the folder.
 4. **Open file URL**: the file written to the documents directory and opened
-   with ``UrlLauncher.launch_url("file://...")``.
-5. **Open data URL**: ``UrlLauncher.launch_url("data:text/calendar;base64,...")``.
+   with `UrlLauncher.launch_url("file://...")`.
+5. **Open data URL**: `UrlLauncher.launch_url("data:text/calendar;base64,...")`.
 6. **Serve, in-app browser**: the file served by the app itself on
-   ``http://127.0.0.1:<port>/`` as ``text/calendar`` and opened in the in-app
-   browser (``LaunchMode.IN_APP_BROWSER_VIEW``: SFSafariViewController on iOS,
+   `http://127.0.0.1:<port>/` as `text/calendar` and opened in the in-app
+   browser (`LaunchMode.IN_APP_BROWSER_VIEW`: SFSafariViewController on iOS,
    a Custom Tab on Android), where the app stays in front and keeps serving.
 7. **Serve, browser**: the same URL in the external browser.
 
-Every result prints a line starting with ``ICS `` (logcat tag ``flet.python``
+Every result prints a line starting with `ICS ` (logcat tag `flet.python`
 on Android, the unified log on iOS) and shows under the buttons.
 """
 
@@ -32,7 +32,7 @@ from ics_sample import FILE_NAME, ICS_BYTES, MIME_TYPE
 
 ERRORS = (TimeoutError, RuntimeError, OSError, ValueError)
 """What a call to the Flutter side raises (a timeout, a platform error), a file write
-(``OSError``) or a bad argument (``ValueError``): each is reported, never raised."""
+(`OSError`) or a bad argument (`ValueError`): each is reported, never raised."""
 
 
 class IcsHandler(BaseHTTPRequestHandler):
@@ -48,7 +48,7 @@ class IcsHandler(BaseHTTPRequestHandler):
         self.wfile.write(ICS_BYTES)
 
     def log_message(self, format: str, *args: object) -> None:
-        """Print each request as an ``ICS`` line."""
+        """Print each request as an `ICS` line."""
         print("ICS served", format % args, flush=True)
 
 
@@ -78,7 +78,7 @@ def main(page: ft.Page) -> None:
     results = ft.Column(spacing=4)
 
     def report(step: str, outcome: object) -> None:
-        """Print one ``ICS`` line and show it on the screen."""
+        """Print one `ICS` line and show it on the screen."""
         line = f"ICS {step}: {outcome}"
         print(line, flush=True)
         results.controls.insert(0, ft.Text(line, selectable=True))
@@ -91,7 +91,7 @@ def main(page: ft.Page) -> None:
         return ft.Offset(page.width / 2, page.height / 2)
 
     def write(directory: str) -> str:
-        """Write the file into ``directory`` and return its path."""
+        """Write the file into `directory` and return its path."""
         path = Path(directory, FILE_NAME)
         path.write_bytes(ICS_BYTES)
         return str(path)
@@ -157,7 +157,7 @@ def main(page: ft.Page) -> None:
             report("data url", f"error {type(error).__name__}: {error}")
 
     async def open_served(mode: ft.LaunchMode, step: str) -> None:
-        """Open the served file's URL in ``mode``."""
+        """Open the served file's URL in `mode`."""
         try:
             url = served_url()
             await launcher.launch_url(url, mode=mode)

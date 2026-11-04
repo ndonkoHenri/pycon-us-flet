@@ -1,12 +1,12 @@
 """The feeds a UI flow's app reads from this machine: one that never answers, and a pair.
 
-``laptop_url()`` is the URL the app reaches this machine at. ``SilentFeed`` is a feed
+`laptop_url()` is the URL the app reaches this machine at. `SilentFeed` is a feed
 server that takes each request and hangs up with no answer, for F1 (D-223): the app
-reads that as no answer from the feed (httpx's ``RemoteProtocolError``, a
-``TransportError``, so ``api.NetworkError``), "offline" without airplane mode, which
-would also cut the tester's own socket (testing-and-quality.md §5.2). ``PairFeed``
+reads that as no answer from the feed (httpx's `RemoteProtocolError`, a
+`TransportError`, so `api.NetworkError`), "offline" without airplane mode, which
+would also cut the tester's own socket (testing-and-quality.md §5.2). `PairFeed`
 serves a change-log pair at one URL, the old feed and then, once swapped, the new one,
-for the change log's device check (#460, D-255); ``tools/feed_pair.py`` runs it.
+for the change log's device check (#460, D-255); `tools/feed_pair.py` runs it.
 """
 
 import threading
@@ -18,15 +18,15 @@ from pycon_us.config import YEAR
 from tests.ui.helpers import PLATFORM
 
 HOLD_LIMIT = 30.0
-"""Seconds a held request waits for ``hang_up()`` at most, so a failed flow's teardown
-never waits on it. The app gives up first: its feed timeout is 10 s (``api.FEED_TIMEOUT``),
+"""Seconds a held request waits for `hang_up()` at most, so a failed flow's teardown
+never waits on it. The app gives up first: its feed timeout is 10 s (`api.FEED_TIMEOUT`),
 which the app also reads as no answer."""
 
 
 def laptop_url(port: int) -> str:
-    """Return the URL of the active year's feed on this machine's ``port``, as the app reaches it.
+    """Return the URL of the active year's feed on this machine's `port`, as the app reaches it.
 
-    The Android emulator sees this machine at ``10.0.2.2``; the iOS simulator shares its
+    The Android emulator sees this machine at `10.0.2.2`; the iOS simulator shares its
     network.
     """
     host = "10.0.2.2" if PLATFORM == "android" else "127.0.0.1"
@@ -36,18 +36,18 @@ def laptop_url(port: int) -> str:
 class SilentFeed:
     """A feed server on this machine that takes each request and hangs up, unanswered.
 
-    It counts the requests it has taken, so a flow knows the app asked; ``hold()`` keeps
-    the next ones open until ``hang_up()``, so a flow sees a refresh it asked for run
+    It counts the requests it has taken, so a flow knows the app asked; `hold()` keeps
+    the next ones open until `hang_up()`, so a flow sees a refresh it asked for run
     ("Updating the schedule…") and then end. A refused connection, on a closed port,
     can start and end between two polls, and then a flow cannot tell a refresh that
     ran from a tap that was lost.
 
     Attributes:
-        url: The feed URL the app can reach (``laptop_url()``).
+        url: The feed URL the app can reach (`laptop_url()`).
     """
 
     def __init__(self) -> None:
-        """Create the server on a free port of ``127.0.0.1``; ``serve()`` starts it."""
+        """Create the server on a free port of `127.0.0.1`; `serve()` starts it."""
         self._lock = threading.Lock()
         self._requests = 0
         self._answer_now = threading.Event()  # set: hang up at once; clear: hold
@@ -73,7 +73,7 @@ class SilentFeed:
             return self._requests
 
     def hold(self) -> None:
-        """Keep the next requests open, unanswered, until ``hang_up()``."""
+        """Keep the next requests open, unanswered, until `hang_up()`."""
         self._answer_now.clear()
 
     def hang_up(self) -> None:
@@ -99,25 +99,25 @@ class SilentFeed:
 class PairFeed:
     """A feed server on this machine that serves a pair's old feed, then its new one.
 
-    The active year's feed path (``laptop_url()``'s) answers with ``old`` until
-    ``swap()``, then with ``new``: one feed URL whose feed changes, which is what the
+    The active year's feed path (`laptop_url()`'s) answers with `old` until
+    `swap()`, then with `new`: one feed URL whose feed changes, which is what the
     app diffs (D-255; a feed URL change would delete the cache and the change log). A
-    flow on the laptop calls ``swap()``; Maestro, whose scripts run on the laptop too,
-    posts to ``control_url``: ``POST /swap`` serves the new feed, ``POST /reset`` the
+    flow on the laptop calls `swap()`; Maestro, whose scripts run on the laptop too,
+    posts to `control_url`: `POST /swap` serves the new feed, `POST /reset` the
     old one again, so a flow can start from the old feed on a server left running.
-    ``POST /hold`` keeps the next feed requests open until ``POST /release``, so a flow
+    `POST /hold` keeps the next feed requests open until `POST /release`, so a flow
     sees a refresh run for as long as it needs, up to the app's own feed timeout (D-449);
     a reset releases them too. Any other path is a 404.
 
     Attributes:
-        port: The port it listens on, on ``127.0.0.1``.
-        url: The feed URL the app can reach (``laptop_url()``).
-        feed_path: The path the feed is served at, ``/conference-<year>.json``.
-        control_url: Where the laptop reaches the control paths: ``http://127.0.0.1:<port>``.
+        port: The port it listens on, on `127.0.0.1`.
+        url: The feed URL the app can reach (`laptop_url()`).
+        feed_path: The path the feed is served at, `/conference-<year>.json`.
+        control_url: Where the laptop reaches the control paths: `http://127.0.0.1:<port>`.
     """
 
     def __init__(self, old: bytes, new: bytes, port: int = 0) -> None:
-        """Create the server; ``serve()`` starts it.
+        """Create the server; `serve()` starts it.
 
         Args:
             old: The feed served first.
@@ -200,7 +200,7 @@ class PairFeed:
         self.release()
 
     def hold(self) -> None:
-        """Keep the next feed requests open until ``release()``."""
+        """Keep the next feed requests open until `release()`."""
         self._answer_now.clear()
 
     def release(self) -> None:

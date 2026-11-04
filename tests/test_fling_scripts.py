@@ -1,10 +1,10 @@
-"""Tests for the regression flow's scripts, ``maestro/scripts/record_control.js`` and ``record_fling.js``.
+"""Tests for the regression flow's scripts, `maestro/scripts/record_control.js` and `record_fling.js`.
 
-Maestro runs them with ``runScript`` against the flow's ``output``; here Node runs them
-the same way, in a fresh context whose ``output`` is a test's object, and hands back what
+Maestro runs them with `runScript` against the flow's `output`; here Node runs them
+the same way, in a fresh context whose `output` is a test's object, and hands back what
 they left in it and what they printed. They are skipped where Node is missing.
 
-The rows are phrases as the Schedule's rows carry them (D-190). ``SLOT`` stands for the
+The rows are phrases as the Schedule's rows carry them (D-190). `SLOT` stands for the
 3:00 PM slot, where a full fling ends: many rows deep, so the cases that matter most are
 trials that end in that slot but rows short of the controls (#484's review), and full
 flings that end a row or two either side of them (seen on the emulator).
@@ -38,16 +38,16 @@ SLOT = [f"Open space. Row {n}. 3:00 to 4:00 PM, Room {n}." for n in range(14)]
 """The 3:00 PM slot's rows, in the list's order."""
 
 END = 6
-"""Where the controls end: the index in ``SLOT`` of a control's top row."""
+"""Where the controls end: the index in `SLOT` of a control's top row."""
 
 
 def rows_at(index: int) -> list[str]:
-    """Return the first four rows on screen when ``SLOT[index]`` is the top row."""
+    """Return the first four rows on screen when `SLOT[index]` is the top row."""
     return SLOT[index : index + 4]
 
 
 def run_script(name: str, output: dict[str, Any]) -> tuple[dict[str, Any], list[str]]:
-    """Run ``maestro/scripts/<name>`` on ``output`` and return the output it left and its lines."""
+    """Run `maestro/scripts/<name>` on `output` and return the output it left and its lines."""
     assert NODE is not None
     result = subprocess.run(
         [NODE, "-e", HARNESS, str(SCRIPTS / name), json.dumps(output)],
@@ -62,7 +62,7 @@ def run_script(name: str, output: dict[str, Any]) -> tuple[dict[str, Any], list[
 def control(
     rows: list[str], output: dict[str, Any] | None = None, rest: str = REST
 ) -> dict[str, Any]:
-    """Run ``record_control.js`` for one control that ended with ``rows`` on top, after ``output``."""
+    """Run `record_control.js` for one control that ended with `rows` on top, after `output`."""
     done, _ = run_script(
         "record_control.js", {**(output or {}), "restRow": rest, "topRows": rows}
     )
@@ -70,7 +70,7 @@ def control(
 
 
 def controls(*ends: int) -> dict[str, Any]:
-    """Return the flow's ``output`` once controls that ended at these ``SLOT`` indexes ran."""
+    """Return the flow's `output` once controls that ended at these `SLOT` indexes ran."""
     output: dict[str, Any] = {}
     for end in ends:
         output = control(rows_at(end), output)
@@ -78,7 +78,7 @@ def controls(*ends: int) -> dict[str, Any]:
 
 
 def trial(rows: list[str], **changes: Any) -> dict[str, Any]:
-    """Return the flow's ``output`` for one trial that ended with ``rows`` on top, after three controls."""
+    """Return the flow's `output` for one trial that ended with `rows` on top, after three controls."""
     output = {
         **controls(END, END, END),
         "startSlot": "2:00",
@@ -91,7 +91,7 @@ def trial(rows: list[str], **changes: Any) -> dict[str, Any]:
 
 
 def kind_of(rows: list[str], **changes: Any) -> str:
-    """Return how ``record_fling.js`` judges one trial: the word its line prints."""
+    """Return how `record_fling.js` judges one trial: the word its line prints."""
     _, logged = run_script("record_fling.js", trial(rows, **changes))
     return logged[0].split(": ", 1)[1].split(" ", 1)[0]
 
@@ -137,7 +137,7 @@ def test_a_trial_that_began_off_the_now_slot_is_invalid() -> None:
 
 
 def test_the_trials_add_up_and_count_what_was_lost() -> None:
-    """Each trial adds to the counts, ``lost`` counts every trial that did not move, and the summary says so."""
+    """Each trial adds to the counts, `lost` counts every trial that did not move, and the summary says so."""
     output, _ = run_script("record_fling.js", trial(rows_at(END)))
     output, _ = run_script("record_fling.js", {**output, "topRows": rows_at(0)})
     output, logged = run_script("record_fling.js", {**output, "topRows": [REST]})

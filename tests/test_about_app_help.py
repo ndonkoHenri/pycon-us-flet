@@ -1,6 +1,6 @@
 """Tests for About this app's Help us fix it section (#443; D-297).
 
-The section runs in ``tests/about_page.py``'s stand-ins.
+The section runs in `tests/about_page.py`'s stand-ins.
 """
 
 import inspect
@@ -48,7 +48,7 @@ def help_section(
     page: FakePage,
     tmp_path: Path,
 ) -> Callable[[], list[ft.Control]]:
-    """Render ``HelpUsFixIt`` in a packaged build with a one-line log: its controls."""
+    """Render `HelpUsFixIt` in a packaged build with a one-line log: its controls."""
     log = tmp_path / "console.log"
     log.write_text("12:00:00.000 INFO pycon_us.app: started\n")
     cast(MemoryPaths, svc.paths).console_log = str(log)
@@ -72,7 +72,7 @@ def help_section(
 
 
 def help_tile(controls: list[ft.Control], identifier: str) -> ft.ListTile:
-    """The row under ``identifier``."""
+    """The row under `identifier`."""
     tile = identified(controls)[identifier].content
     assert isinstance(tile, ft.ListTile)
     return tile
@@ -89,7 +89,7 @@ def report_outcome(controls: list[ft.Control]) -> str | None:
 
 
 async def tap_row(render: Callable[[], list[ft.Control]], identifier: str) -> None:
-    """Tap the row under ``identifier`` as Flutter would."""
+    """Tap the row under `identifier` as Flutter would."""
     await cast(Any, help_tile(render(), identifier).on_click)()
 
 
@@ -164,7 +164,7 @@ async def test_once_public_report_opens_a_new_issue_and_share_log_shares(
     svc: Services,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """With ``SOURCE_URL`` set, Report a problem links to a new issue, Share log shares.
+    """With `SOURCE_URL` set, Report a problem links to a new issue, Share log shares.
 
     The link opens in the in-app browser and reads as one (INFO-14, D-182).
     """

@@ -1,10 +1,10 @@
 """Tests for the Sprints page's screen: its cards, filter, menu and states (#106).
 
-EVT-05..08, D-46. The screen runs in a real Flet session (``tests/sessions.py``'s
-``showing()``), as the Speakers list's does (``tests/test_speakers_screen.py``): a
+EVT-05..08, D-46. The screen runs in a real Flet session (`tests/sessions.py`'s
+`showing()`), as the Speakers list's does (`tests/test_speakers_screen.py`): a
 keystroke is the field's value patched in and its change event dispatched, and a test
 sees which card bodies ran (D-153). The harness and lookups are
-``tests/sprints_page.py``'s; the query is ``test_sprints.py``'s. How the cards look,
+`tests/sprints_page.py`'s; the query is `test_sprints.py`'s. How the cards look,
 wrap at 200 % and read to TalkBack and VoiceOver is checked on devices (the PR).
 """
 

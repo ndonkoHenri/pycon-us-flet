@@ -1,15 +1,15 @@
 """The shared scan screen every staff tool renders (LEAD-01, LEAD-09, LEAD-14; D-65).
 
-ux.md §7.2: the app bar's sync chip and ``KEYBOARD`` button, the camera area, the
+ux.md §7.2: the app bar's sync chip and `KEYBOARD` button, the camera area, the
 result panel and manual entry, then the tool's own actions. A tool gives
-``ScanScreen`` its title, a context line (or a control there, as the Lead scanner's
-sponsor chip) and an async ``on_badge(badge) -> ScanResult``, and may add buttons
-for the result shown (``result_actions``, the Lead scanner's "Add note"): the
-screen parses what was entered (``parse_badge``), applies the per-code cooldown,
+`ScanScreen` its title, a context line (or a control there, as the Lead scanner's
+sponsor chip) and an async `on_badge(badge) -> ScanResult`, and may add buttons
+for the result shown (`result_actions`, the Lead scanner's "Add note"): the
+screen parses what was entered (`parse_badge`), applies the per-code cooldown,
 awaits one handler at a time and shows what it returned, so the tools only return
 data.
 
-**Manual entry** takes the full ``code:validator`` payload, which USB and Bluetooth HID
+**Manual entry** takes the full `code:validator` payload, which USB and Bluetooth HID
 scanners also type before Enter. Every submit clears the field and keeps the focus in it,
 so a hardware scanner scans continuously: Android's Enter leaves the focus there and its
 keyboard up, and iOS's takes it out, so the screen puts it back (F274, U254). A code
@@ -26,25 +26,25 @@ result that comes after the screen is left, or while another View is on top of i
 is dropped, so it never buzzes or speaks over another page.
 
 **Beyond the panel** (#724, D-420): each result gives its haptics and, on iOS, an
-announcement (``ui/scan_feedback.py``); the screen stays awake while mounted and in
-the foreground. The **sync chip** (``ui/sync_chip.py``) opens the queue sheet with the
-signed-in account's rows (``use_queue_sheet()``); at large text it heads the body
+announcement (`ui/scan_feedback.py`); the screen stays awake while mounted and in
+the foreground. The **sync chip** (`ui/sync_chip.py`) opens the queue sheet with the
+signed-in account's rows (`use_queue_sheet()`); at large text it heads the body
 rather than the bar, so its words wrap (#752). Scanning **pauses** while the sheet
-is open, or while the tool says why (``paused``, its dialogs and sheets): a submit is
+is open, or while the tool says why (`paused`, its dialogs and sheets): a submit is
 dropped with its text, and the field says why; when the pause ends the focus goes
 back to the field. It goes back there too when Back pops a page pushed over the
 screen (the leads list, a picker), so a HID scanner's next scan lands in it (#775,
 D-438).
 
-**A result from elsewhere** (#761): a tool that gets a result outside ``on_badge``
-(the CoC name search records without a scan) hands it over as ``posted``, a
-``Posted`` (``ui/scan_result.py``, with ``Shown``) whose serial it bumps for each
+**A result from elsewhere** (#761): a tool that gets a result outside `on_badge`
+(the CoC name search records without a scan) hands it over as `posted`, a
+`Posted` (`ui/scan_result.py`, with `Shown`) whose serial it bumps for each
 one; the screen shows it as a scan's, with its haptics and announcement, unless the
 screen has gone or is not on top.
 
-**Clearing** (#762, MASK-05): a tool may have its result cleared ``clear_after`` seconds
-after it shows, and when the app goes to the background (``ui/scan_clear.py``); the
-CoC tool does both. The camera area is ``ui/scan_camera.py`` (E1, #726).
+**Clearing** (#762, MASK-05): a tool may have its result cleared `clear_after` seconds
+after it shows, and when the app goes to the background (`ui/scan_clear.py`); the
+CoC tool does both. The camera area is `ui/scan_camera.py` (E1, #726).
 """
 
 from collections.abc import Awaitable, Callable
@@ -145,7 +145,7 @@ def ScanScreen(
 
     Args:
         title: The tool's name, the app bar's title.
-        source: The tool's ``__name__``, for View source (D-461).
+        source: The tool's `__name__`, for View source (D-461).
         on_badge: Turns a badge into the result to show; awaited one at a time.
         context: A line under the bar, e.g. "Decorators, Wed 9:00 AM", or a control
             in its place: the Lead scanner's "For: Example Corp" chip (LEAD-06). At
@@ -156,15 +156,15 @@ def ScanScreen(
             is open"), while one of the tool's dialogs or sheets is open: submits
             are dropped with their text (D-471). None scans.
         result_actions: The tool's buttons for the result shown, under the field
-            before ``actions``: the Lead scanner's "Add note" (#742). They belong to
+            before `actions`: the Lead scanner's "Add note" (#742). They belong to
             that result, so the next one (even "Not a badge code") replaces them. The
             screen adds "Edit code" before them to that last result (D-473).
         result_note: The tool's line for the result shown, under the panel and
             outside its live region, so it is said only when focused (#762).
-        posted: The latest result the tool got outside ``on_badge`` (the CoC name
+        posted: The latest result the tool got outside `on_badge` (the CoC name
             search's record), shown once per serial as a scan's would be.
         clear_after: Seconds after it shows that a result clears, or None to keep
-            it until the next (``ui/scan_clear.py``).
+            it until the next (`ui/scan_clear.py`).
         clear_in_background: Clear the result when the app goes to the background.
     """
     page = ft.context.page
@@ -199,7 +199,7 @@ def ScanScreen(
 
     @report_errors
     def drop(serial: int | None = None) -> None:
-        """Drop the result shown from state: ``serial``'s only, or any (#762)."""
+        """Drop the result shown from state: `serial`'s only, or any (#762)."""
         set_shown(lambda last: None if last and serial in (None, last.serial) else last)
 
     # A refused entry holds no one's details, and its "Edit code" must outlast the
@@ -366,7 +366,7 @@ def ResultPanel(*, shown: Shown | None, clear_after: float | None = None) -> ft.
     new result; where the platform takes announcements (iOS) the screen announces it
     instead and the panel is no live region, so it is said once (D-420); the age under
     it ticks every second outside it, so only the result is said. Its own component,
-    so the tick re-renders the panel alone. A result dims after ``DIM_AFTER`` s and
+    so the tick re-renders the panel alone. A result dims after `DIM_AFTER` s and
     stays until the next, or until it clears. "Ready to scan" is no live region, so a
     clear is not said (#762).
 
@@ -421,7 +421,7 @@ def use_tool_allowed(tool: ToolKey) -> bool:
     """Say whether a staff tool may open now: each screen's gate (architecture §12.4).
 
     It takes a mock URL (D-51), a signed-in account and the tool's rule; else the
-    screen shows ``NotAvailable``, so a deep link cannot bypass it.
+    screen shows `NotAvailable`, so a deep link cannot bypass it.
 
     Args:
         tool: The tool whose rule applies.
@@ -444,7 +444,7 @@ def NotAvailable(*, title: str, source: str) -> ft.Control:
 
     Args:
         title: The tool's name, the app bar's title.
-        source: The tool's ``__name__``, for View source (D-461).
+        source: The tool's `__name__`, for View source (D-461).
     """
     margin = use_margin(LIST)  # its width class (D-305)
     return AppScaffold(

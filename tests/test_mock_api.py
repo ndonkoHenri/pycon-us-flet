@@ -1,7 +1,7 @@
-"""The mock API's pure ``handle``: routing, envelopes and the signature check (D-50, D-52).
+"""The mock API's pure `handle`: routing, envelopes and the signature check (D-50, D-52).
 
-The contract is ``tools/mock_api/README.md``. The signature check is also run against
-the vectors Ionic's own code produced (``tests/fixtures/ionic/signing.json``, #662).
+The contract is `tools/mock_api/README.md`. The signature check is also run against
+the vectors Ionic's own code produced (`tests/fixtures/ionic/signing.json`, #662).
 """
 
 import builtins
@@ -28,7 +28,7 @@ VECTORS = json.loads(
 
 
 def state_at(now: float = NOW) -> MockState:
-    """A fresh seeded state whose clock always reads ``now``."""
+    """A fresh seeded state whose clock always reads `now`."""
     return MockState.from_seed(now=lambda: now)
 
 
@@ -40,7 +40,7 @@ def account(state: MockState, role: str) -> Account:
 def signed(
     who: Account, method: str, path: str, body: bytes = b"", now: float = NOW
 ) -> dict[str, str]:
-    """The three headers Ionic would send for this request, signed at ``now``."""
+    """The three headers Ionic would send for this request, signed at `now`."""
     headers = auth_headers(who.key, who.secret, now, method, path, body)
     return {name: str(value) for name, value in headers.items()}
 
@@ -75,7 +75,7 @@ def test_the_seed_holds_one_fake_account_per_role() -> None:
 
 
 def test_every_reply_is_json_dated_by_the_mock_clock() -> None:
-    """A reply, error or not, carries JSON and a ``Date`` header from ``state.now``."""
+    """A reply, error or not, carries JSON and a `Date` header from `state.now`."""
     for path in (f"{BASE}user/check_features/", "/nowhere"):
         status, headers, _ = handle(state_at(), "GET", path, {}, b"")
         assert status in (401, 404)
@@ -95,7 +95,7 @@ def test_every_reply_is_json_dated_by_the_mock_clock() -> None:
     ],
 )
 def test_an_unknown_route_is_404_in_the_error_envelope(method: str, path: str) -> None:
-    """Unknown paths, years and methods are 404 ``{code, error}``, even when signed."""
+    """Unknown paths, years and methods are 404 `{code, error}`, even when signed."""
     state = state_at()
     headers = signed(account(state, "attendee"), method, path)
     status, body = reply_json(handle(state, method, path, headers, b""))
@@ -105,7 +105,7 @@ def test_an_unknown_route_is_404_in_the_error_envelope(method: str, path: str) -
 
 
 def test_a_signed_route_without_credentials_is_401() -> None:
-    """A signed route with no ``X-API-Key`` is 401 ``{code, error}``."""
+    """A signed route with no `X-API-Key` is 401 `{code, error}`."""
     reply = handle(state_at(), "GET", f"{BASE}user/check_features/", {}, b"")
     assert reply_json(reply) == (401, {"code": 401, "error": "Unknown API key."})
 
@@ -146,7 +146,7 @@ def test_a_malformed_timestamp_is_403(stamp: str) -> None:
     ids=["past-float", "past-int-limit"],
 )
 def test_a_huge_timestamp_is_403_not_an_error(stamp: str, error: str) -> None:
-    """A timestamp too big for a float, or for ``int()``, still gets the dated 403."""
+    """A timestamp too big for a float, or for `int()`, still gets the dated 403."""
     state = state_at()
     path = f"{BASE}user/check_features/"
     headers = signed(account(state, "attendee"), "GET", path) | {
@@ -171,7 +171,7 @@ def test_the_window_is_600_seconds_either_side(offset: int, status: int) -> None
 
 
 def test_a_wrong_signature_is_403() -> None:
-    """A signature made with another secret is 403 ``{code, error}``."""
+    """A signature made with another secret is 403 `{code, error}`."""
     state = state_at()
     path = f"{BASE}user/mobile_state/"
     who = account(state, "attendee")
@@ -189,7 +189,7 @@ def test_a_non_ascii_signature_is_403_not_an_error() -> None:
 
 
 def test_header_names_are_read_in_any_case() -> None:
-    """Lower-case header names, as ``httpx`` gives them, are read like Ionic's."""
+    """Lower-case header names, as `httpx` gives them, are read like Ionic's."""
     state = state_at()
     path = f"{BASE}user/mobile_state/"
     headers = signed(account(state, "attendee"), "GET", path)
@@ -198,7 +198,7 @@ def test_header_names_are_read_in_any_case() -> None:
 
 
 def test_a_request_signed_for_one_path_is_refused_on_another() -> None:
-    """Headers signed for ``mobile_state`` replayed on ``check_features`` are 403."""
+    """Headers signed for `mobile_state` replayed on `check_features` are 403."""
     state = state_at()
     headers = signed(account(state, "attendee"), "GET", f"{BASE}user/mobile_state/")
     path = f"{BASE}user/check_features/"
@@ -230,7 +230,7 @@ def test_every_ionic_vector_passes_the_signature_check(name: str) -> None:
     "name", ["get-empty-body", "patch-favorites", "round-half-even", "round-half-odd"]
 )
 def test_an_ionic_vector_on_an_account_route_gets_200(name: str) -> None:
-    """``handle`` answers 200 to the vectors whose routes this issue serves."""
+    """`handle` answers 200 to the vectors whose routes this issue serves."""
     assert handle(*vector(name))[0] == 200
 
 
@@ -262,7 +262,7 @@ def test_handle_does_no_io_and_reads_only_the_injected_clock(
     state = state_at()
 
     def blocked(*args: object, **kwargs: object) -> None:
-        """Fail the test: ``handle`` reached for I/O or the system clock."""
+        """Fail the test: `handle` reached for I/O or the system clock."""
         raise AssertionError("handle did I/O or read the system clock")
 
     for name in ("time", "time_ns", "monotonic", "localtime", "gmtime"):

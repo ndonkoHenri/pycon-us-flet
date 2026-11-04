@@ -1,22 +1,22 @@
 """Local reminders: E3's scheduling of the plan (D-59, D-221, D-222; NOTIF-05, NEW-05).
 
-``services/reminder_plan.py``'s ``plan()`` says what to schedule. ``Scheduler.apply()``
+`services/reminder_plan.py`'s `plan()` says what to schedule. `Scheduler.apply()`
 schedules it with E3, cancelling only what is pending, at every start and resume and
-whenever its inputs change (D-222, D-389); ``start()`` builds the session's
-``Scheduler`` when the build has E3, and only this module imports the extension (D-63).
-Without it, as in the companion app, there is no ``Scheduler`` and the interim applies
+whenever its inputs change (D-222, D-389); `start()` builds the session's
+`Scheduler` when the build has E3, and only this module imports the extension (D-63).
+Without it, as in the companion app, there is no `Scheduler` and the interim applies
 (D-60).
 
-A reminder's route is its payload, and a tap opens it (D-21, D-396): the ``Scheduler``
+A reminder's route is its payload, and a tap opens it (D-21, D-396): the `Scheduler`
 holds a tap that comes before the app routes, the one that launched the app included,
-for ``routes.Start``, and navigates to a later one at once. It also knows whether the OS
+for `routes.Start`, and navigates to a later one at once. It also knows whether the OS
 shows the app's notifications, which the in-app Banner's rule reads
-(``ui.reminder_banner``).
+(`ui.reminder_banner`).
 
-``Scheduler.access()`` and ``Scheduler.request_permission()`` are the notification
-permission's status and request, which the primer uses (``ui/reminder_primer.py``;
-D-61, D-395). ``Scheduler.schedule_test()`` schedules Developer's test reminder
-(``screens/developer_reminders.py``; DEV-06, D-402).
+`Scheduler.access()` and `Scheduler.request_permission()` are the notification
+permission's status and request, which the primer uses (`ui/reminder_primer.py`;
+D-61, D-395). `Scheduler.schedule_test()` schedules Developer's test reminder
+(`screens/developer_reminders.py`; DEV-06, D-402).
 """
 
 import asyncio
@@ -49,16 +49,16 @@ _ACCESS: dict[str, Access] = {
     "permanentlyDenied": "blocked",
     "restricted": "blocked",
 }
-"""``flet-permission-handler``'s ``PermissionStatus`` values, mapped (ux.md §4.8)."""
+"""`flet-permission-handler`'s `PermissionStatus` values, mapped (ux.md §4.8)."""
 
 TEST_ID = 8999
 """The Developer test reminder's notification id, outside the plan's ranges (D-59)."""
 
 type TestResult = Literal["exact", "inexact", "failed"]
-"""How ``Scheduler.schedule_test()`` scheduled the test reminder."""
+"""How `Scheduler.schedule_test()` scheduled the test reminder."""
 
 LAUNCH_WAIT = 3.0
-"""Seconds the start waits at most for E3 to answer (``Scheduler.read_enabled()``),
+"""Seconds the start waits at most for E3 to answer (`Scheduler.read_enabled()`),
 which it does only once it has handed over the tap that launched the app (F246)."""
 
 
@@ -66,35 +66,35 @@ which it does only once it has handed over the tap that launched the app (F246).
 class Scheduler:
     """E3's scheduling for one session: one apply at a time, the newest wins (D-389).
 
-    ``request()`` asks for the plan to be applied again; ``keep_applied()``, the loop
-    of ``reminder_schedule.use_reminder_schedule()``'s effect, then reads whether exact
+    `request()` asks for the plan to be applied again; `keep_applied()`, the loop
+    of `reminder_schedule.use_reminder_schedule()`'s effect, then reads whether exact
     alarms are allowed and applies a fresh plan. A request made while an apply runs
     stops that apply before its next call, and the loop applies the newer plan.
 
-    It also takes the taps on the reminders (``on_tap``, D-396): one that comes before
-    the app routes is held in ``tapped`` for ``routes.Start``; once ``navigate`` is
+    It also takes the taps on the reminders (`on_tap`, D-396): one that comes before
+    the app routes is held in `tapped` for `routes.Start`; once `navigate` is
     set, a tap opens its route at once, over whatever is open (D-291).
 
     Attributes:
-        notifications: The session's ``flet_notifications.Notifications``.
-        permissions: ``flet-permission-handler``'s service, for D-220's check that its
+        notifications: The session's `flet_notifications.Notifications`.
+        permissions: `flet-permission-handler`'s service, for D-220's check that its
             exact-alarm status agrees with the plugin's; None without it.
         android: Whether the app runs on Android, the one platform that restricts
             exact alarms.
         tapped: The route of a reminder tapped before the app routed, the one that
-            launched it included; empty once ``take_tap()`` has taken it.
-        navigate: ``page.navigate`` once the boot gate is open and the Router
+            launched it included; empty once `take_tap()` has taken it.
+        navigate: `page.navigate` once the boot gate is open and the Router
             routes; None before, while taps are held.
         enabled: Whether the OS shows the app's notifications, as last read
-            (``read_enabled()``): at the start and before each apply. False until
+            (`read_enabled()`): at the start and before each apply. False until
             read, or when the read fails. A read that changes it calls the
-            listeners of ``watch()``.
-        exact: Whether exact alarms are allowed, as last read (``exact_allowed()``):
-            before each apply and after ``request_exact()``. None until read, or
+            listeners of `watch()`.
+        exact: Whether exact alarms are allowed, as last read (`exact_allowed()`):
+            before each apply and after `request_exact()`. None until read, or
             when the read fails. A read that changes it calls the listeners of
-            ``watch()``: Settings' Alarms & reminders card follows it (D-401).
+            `watch()`: Settings' Alarms & reminders card follows it (D-401).
         refused: Whether Android refused a request after the app had asked before,
-            which ``access()`` reads as "refused" while the status says "denied"
+            which `access()` reads as "refused" while the status says "denied"
             (F259, U239).
     """
 
@@ -110,15 +110,15 @@ class Scheduler:
     _listeners: list[Callable[[], object]] = field(default_factory=list, repr=False)
 
     def on_tap(self, e: NotificationEvent) -> None:
-        """E3's ``on_tap``: open the tapped reminder's route, its payload (D-21)."""
+        """E3's `on_tap`: open the tapped reminder's route, its payload (D-21)."""
         self.open_tapped(e.payload)
 
     def open_tapped(self, route: str | None) -> None:
         """Open a tapped reminder's route now, or hold it until the app routes.
 
         Args:
-            route: The notification's payload: a route from ``plan()``. A payload
-                that is no route (empty, or not from ``/``) opens nothing.
+            route: The notification's payload: a route from `plan()`. A payload
+                that is no route (empty, or not from `/`) opens nothing.
         """
         if not route or not route.startswith("/"):
             logger.warning("Reminders: a tap without a route: %r", route)
@@ -136,18 +136,18 @@ class Scheduler:
         return route
 
     async def read_enabled(self, timeout: float | None = None) -> bool:
-        """Read whether the OS shows the app's notifications into ``enabled``.
+        """Read whether the OS shows the app's notifications into `enabled`.
 
         E3 answers a call only once it has initialized, which hands over the tap that
         launched the app first (F246), so the start awaits this before it opens the
-        boot gate: a launch tap is then held for ``routes.Start``. A failed read, or
-        one slower than ``timeout``, is logged and reads as False.
+        boot gate: a launch tap is then held for `routes.Start`. A failed read, or
+        one slower than `timeout`, is logged and reads as False.
 
         Args:
             timeout: Seconds to wait at most; None waits as long as E3 takes.
 
         Returns:
-            The new ``enabled``.
+            The new `enabled`.
         """
         from flet_notifications import NotificationException
 
@@ -164,14 +164,14 @@ class Scheduler:
         return self.enabled
 
     def watch(self, listener: Callable[[], object]) -> Callable[[], None]:
-        """Call ``listener`` whenever a read changes ``enabled`` or ``exact``.
+        """Call `listener` whenever a read changes `enabled` or `exact`.
 
         A change in system settings is seen at the next read, on resume or before an
         apply, and no store changes with it: the Banner (D-396) and Settings'
         Reminders section (D-401) listen.
 
         Args:
-            listener: Called with no arguments after ``enabled`` changes.
+            listener: Called with no arguments after `enabled` changes.
 
         Returns:
             A function that stops the calls.
@@ -180,7 +180,7 @@ class Scheduler:
         return lambda: self._listeners.remove(listener)
 
     def _changed(self) -> None:
-        """Call every listener of ``watch()``."""
+        """Call every listener of `watch()`."""
         for listener in list(self._listeners):
             listener()
 
@@ -191,16 +191,16 @@ class Scheduler:
     async def keep_applied(
         self, planner: Callable[[], Sequence[Reminder] | None], closed: asyncio.Event
     ) -> None:
-        """Apply ``planner()``'s plan at each request, until the session closes.
+        """Apply `planner()`'s plan at each request, until the session closes.
 
-        ``Services.close()`` makes a request, so a replaced session's loop wakes and
+        `Services.close()` makes a request, so a replaced session's loop wakes and
         returns (D-147).
 
         Args:
             planner: Returns the plan for this moment, called after each request; or
                 None when it could not plan (an error it reported), and then nothing
                 is cancelled.
-            closed: The session's ``Services.closed``.
+            closed: The session's `Services.closed`.
         """
         while True:
             await self._wanted.wait()
@@ -217,9 +217,9 @@ class Scheduler:
         """Return whether Android allows exact alarms now; True elsewhere (D-221).
 
         The plugin's answer counts, since it is the one that schedules. When
-        ``flet-permission-handler``'s ``SCHEDULE_EXACT_ALARM`` status disagrees with it,
+        `flet-permission-handler`'s `SCHEDULE_EXACT_ALARM` status disagrees with it,
         a warning says so (D-220). A failed check is logged and reads as False. The
-        answer is kept in ``exact`` (None when the check failed).
+        answer is kept in `exact` (None when the check failed).
         """
         from flet_notifications import NotificationException
 
@@ -244,7 +244,7 @@ class Scheduler:
         """Open Android's Alarms & reminders page for the app, then read its answer.
 
         Settings' card calls it (D-221, D-401). E3's call returns once the user leaves
-        that page; the new answer is read into ``exact`` and the plan applied again,
+        that page; the new answer is read into `exact` and the plan applied again,
         exact when allowed. A failure is logged, never raised (D-120).
         """
         from flet_notifications import NotificationException
@@ -257,17 +257,17 @@ class Scheduler:
         self.request()
 
     async def apply(self, plan: Sequence[Reminder], *, exact: bool) -> bool:
-        """Cancel every pending reminder, then schedule ``plan`` (D-59, D-222).
+        """Cancel every pending reminder, then schedule `plan` (D-59, D-222).
 
-        ``cancel_all_pending()`` leaves the reminders already shown, which
-        ``cancel_all()`` would clear. Each reminder keeps its id, so a moved session's
+        `cancel_all_pending()` leaves the reminders already shown, which
+        `cancel_all()` would clear. Each reminder keeps its id, so a moved session's
         reminder moves. A failure is logged, never raised (D-120): a failed cancel
         still schedules, a failed reminder still schedules the rest, and an exact
         alarm Android refuses is scheduled inexact, as is the rest of the plan.
 
         Args:
-            plan: The reminders, from ``plan()``: at most ``MAX_PENDING``.
-            exact: Whether Android allows exact alarms (``exact_allowed()``).
+            plan: The reminders, from `plan()`: at most `MAX_PENDING`.
+            exact: Whether Android allows exact alarms (`exact_allowed()`).
 
         Returns:
             Whether the whole plan was handed to the OS: False when a newer request
@@ -304,16 +304,16 @@ class Scheduler:
 
         Outside the apply loop: the next apply's cancel removes it if it is still
         pending, which a developer tool can live with. Whether the OS shows the app's
-        notifications is the caller's check (``access()``).
+        notifications is the caller's check (`access()`).
 
         Args:
-            build: Returns the test reminder, ``TEST_ID``. It is called after the
+            build: Returns the test reminder, `TEST_ID`. It is called after the
                 exact-alarm check, so a slow check can't leave its time in the past,
                 which E3 refuses.
 
         Returns:
-            How it was scheduled: ``"exact"``, ``"inexact"`` (Android refuses exact
-            alarms, so it may come late) or ``"failed"`` (logged).
+            How it was scheduled: `"exact"`, `"inexact"` (Android refuses exact
+            alarms, so it may come late) or `"failed"` (logged).
         """
         from flet_notifications import NotificationException
 
@@ -359,15 +359,15 @@ class Scheduler:
     async def access(self) -> Access:
         """Return whether the OS shows the app's notifications (ux.md §4.8, D-395).
 
-        On Android, ``flet-permission-handler``'s ``NOTIFICATION`` status, mapped by
-        ``_ACCESS``. On iOS that status always reads "denied": Flet's build template
+        On Android, `flet-permission-handler`'s `NOTIFICATION` status, mapped by
+        `_ACCESS`. On iOS that status always reads "denied": Flet's build template
         turns on no permission_handler macro for notifications (F17, F245). So E3's
-        ``are_notifications_enabled()`` answers there, "allowed" or else "askable":
+        `are_notifications_enabled()` answers there, "allowed" or else "askable":
         iOS does not tell "not asked yet" from "refused", and a request after a
         refusal shows nothing and returns False. A failed read is logged and reads as
         "unknown".
 
-        Android's "denied" reads "refused" once it has ``refused`` a request after an
+        Android's "denied" reads "refused" once it has `refused` a request after an
         earlier one: the handler says "permanently denied" only after two refusals of
         its prompt, never when the notifications are off in system settings (F259).
         Not "blocked": the earlier request may have failed before any prompt, so the
@@ -397,11 +397,11 @@ class Scheduler:
         denied". So a refusal after an earlier request that still reads "denied" may be
         Android answering without a prompt, the notifications off in system settings;
         or the first real refusal, when the earlier request failed or was cancelled
-        before a prompt. ``refused`` says so to ``access()`` (F259, U239).
+        before a prompt. `refused` says so to `access()` (F259, U239).
 
         Args:
             asked: Whether the app has asked before in this install (the primer
-                ``accepted``).
+                `accepted`).
         """
         from flet_notifications import NotificationException
 
@@ -433,15 +433,15 @@ class Scheduler:
 
 
 def start(permissions: PermissionHandler | None) -> Scheduler | None:
-    """Return the session's ``Scheduler`` when the build has E3, else None (D-63).
+    """Return the session's `Scheduler` when the build has E3, else None (D-63).
 
-    Call it while rendering, in the page's context: the ``Notifications`` service
+    Call it while rendering, in the page's context: the `Notifications` service
     registers with the page that is current when it is built. The extension is
     imported only here, so the companion app is never sent a control its client may
     lack, and keeps the interim (D-60, F14).
 
     Args:
-        permissions: The session's ``flet-permission-handler`` service, or None.
+        permissions: The session's `flet-permission-handler` service, or None.
     """
     if not capabilities.REMINDERS:
         return None

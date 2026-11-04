@@ -1,20 +1,20 @@
 """A real Flet session with no client, for tests that render components (D-153, D-184).
 
-Flet's own component tests render this way: a ``Session`` on a connection that sends to
-nothing (and, for dialogs, encodes each message as a transport does: ``ENCODE``),
-``page.render(...)`` with the page bound as Flet binds it, and Flet's scheduler
+Flet's own component tests render this way: a `Session` on a connection that sends to
+nothing (and, for dialogs, encodes each message as a transport does: `ENCODE`),
+`page.render(...)` with the page bound as Flet binds it, and Flet's scheduler
 re-rendering what changed.
 
 Two levels, two modules (#204, #253, #286, #623):
 
-- ``rendering(root)``, here, renders any component in a new session, or as the page's
-  Views (``views=True``), as the app renders its Router; ``provide()`` puts the store
-  providers around it and ``memory_services()`` gives the memory fakes' services.
-- ``showing(screen, *modules, ...)``, in ``tests/harness.py``, renders a screen over a
-  feed with them, each in the ``Shown`` of the screen it belongs to.
+- `rendering(root)`, here, renders any component in a new session, or as the page's
+  Views (`views=True`), as the app renders its Router; `provide()` puts the store
+  providers around it and `memory_services()` gives the memory fakes' services.
+- `showing(screen, *modules, ...)`, in `tests/harness.py`, renders a screen over a
+  feed with them, each in the `Shown` of the screen it belongs to.
 
-It reaches into Flet internals (``_context_page``, ``Session.index``, the msgpack
-encoder of ``messaging/protocol.py``), as ``tests/harness.py`` does: a Flet pin bump
+It reaches into Flet internals (`_context_page`, `Session.index`, the msgpack
+encoder of `messaging/protocol.py`), as `tests/harness.py` does: a Flet pin bump
 (D-81) that renames one breaks these two modules, not the components: look here first.
 """
 
@@ -60,15 +60,15 @@ _ENCODE = configure_encode_object_for_msgpack(ft.BaseControl)
 ENCODE = False
 """Encode each message as a transport does. Off by default, since encoding a long list
 costs time a timed test (a jump's wait) may not have on a loaded host; a test of
-``ft.use_dialog`` turns it on (``monkeypatch.setattr(sessions, "ENCODE", True)``)."""
+`ft.use_dialog` turns it on (`monkeypatch.setattr(sessions, "ENCODE", True)`)."""
 
 
 def pack(payload: object) -> None:
-    """Encode ``payload`` as a transport does, and send the bytes nowhere (``ENCODE``).
+    """Encode `payload` as a transport does, and send the bytes nowhere (`ENCODE`).
 
     Encoding is what records the lists and fields a control was last sent with, which
-    the next patch of that control is diffed against (``protocol.py``); a control that
-    is only ever updated in place, such as the page's dialog list (``ft.use_dialog``),
+    the next patch of that control is diffed against (`protocol.py`); a control that
+    is only ever updated in place, such as the page's dialog list (`ft.use_dialog`),
     patches nothing until it has been encoded once.
     """
     if ENCODE:
@@ -76,7 +76,7 @@ def pack(payload: object) -> None:
 
 
 def connection() -> Connection:
-    """Return a connection to no client, encoding each message when ``ENCODE`` is on."""
+    """Return a connection to no client, encoding each message when `ENCODE` is on."""
     conn = Connection()
     conn.pubsubhub = PubSubHub()
 
@@ -100,14 +100,14 @@ async def rendering(
     *,
     views: bool = False,
 ) -> AsyncIterator[Session]:
-    """Render the component ``root`` in a session; close it on the way out.
+    """Render the component `root` in a session; close it on the way out.
 
     Args:
         root: A component taking no arguments, usually the store providers around
             the component under test.
         session: The session to render in, when the caller prepares its page first
-            (``showing()`` records ``page.navigate``); a new one by default.
-        views: Render ``root`` as the page's Views (``page.render_views``), as the
+            (`showing()` records `page.navigate`); a new one by default.
+        views: Render `root` as the page's Views (`page.render_views`), as the
             app renders its Router; else as the page's content.
 
     Yields:
@@ -134,7 +134,7 @@ async def rendering(
 def find[T: ft.BaseControl](
     session: Session, kind: type[T], test: Callable[[T], bool] = lambda _: True
 ) -> list[T]:
-    """Return the mounted controls of a type that pass ``test``, in no set order."""
+    """Return the mounted controls of a type that pass `test`, in no set order."""
     return [c for c in session.index.values() if isinstance(c, kind) and test(c)]
 
 
@@ -144,11 +144,11 @@ def find[T: ft.BaseControl](
 def memory_services(
     year: YearData, directory: Path, memory: ViewMemory | None = None
 ) -> Services:
-    """Return a session's services with the memory fakes of ``tests/fakes.py``.
+    """Return a session's services with the memory fakes of `tests/fakes.py`.
 
     Args:
         year: The year data the services carry.
-        directory: Where the storage writes (a test's ``tmp_path``).
+        directory: Where the storage writes (a test's `tmp_path`).
         memory: The view memory, when a test keeps one across sessions, as the app
             keeps it across a View rebuilt in a new session; a new one by default.
     """
@@ -179,14 +179,14 @@ def provide(
     account: Account | None = None,
     staff: Staff | None = None,
 ) -> ft.Control:
-    """Return ``body`` under the store providers, in ``App``'s order.
+    """Return `body` under the store providers, in `App`'s order.
 
     The change log is an empty one unless the test gives its own, the account a
     signed-out one and the staff outbox's store an empty one.
 
-    The layout is a phone's (``Layout()``: under 600 dp, the bottom bar) unless the
+    The layout is a phone's (`Layout()`: under 600 dp, the bottom bar) unless the
     test gives its own, to turn, and the light tokens' provider comes last, right
-    around ``body``.
+    around `body`.
     """
     return ServicesCtx(
         svc,
@@ -216,17 +216,17 @@ def provide(
 
 
 def text_of(control: object) -> str:
-    """The first ``Text`` value under ``control``, following ``content``."""
+    """The first `Text` value under `control`, following `content`."""
     while control is not None and not isinstance(control, ft.Text):
         control = getattr(control, "content", None)
     return str(control.value) if control is not None else ""
 
 
 def menu_text(item: ft.PopupMenuItem) -> ft.Text:
-    """An overflow item's label: the ``Text`` of ``menu_item()``'s tile (D-233).
+    """An overflow item's label: the `Text` of `menu_item()`'s tile (D-233).
 
-    Under the identifier's ``Semantics``, the tile's title, or the link's
-    ``Semantics`` around it.
+    Under the identifier's `Semantics`, the tile's title, or the link's
+    `Semantics` around it.
     """
     tile = cast(ft.ListTile, cast(ft.Semantics, item.content).content)
     title = tile.title

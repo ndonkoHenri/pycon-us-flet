@@ -1,10 +1,10 @@
-"""Tests for the Job listings page (``screens/jobs.py``; SPON-06, SPON-08, #399).
+"""Tests for the Job listings page (`screens/jobs.py`; SPON-06, SPON-08, #399).
 
-The page runs in ``tests/jobs_view.py``'s harness on the recorded 2026 feed: 13
+The page runs in `tests/jobs_view.py`'s harness on the recorded 2026 feed: 13
 listings, Bloomberg's with 15 roles, SerpApi's and marimo's long form, OpenEDG's a
-placeholder. The roles come from ``core/jobs.py``, tested in ``tests/test_jobs.py``;
+placeholder. The roles come from `core/jobs.py`, tested in `tests/test_jobs.py`;
 these tests read what the page makes of them. The filter (SPON-07, #400) is
-``tests/test_jobs_page_filter.py``'s (#623). How the cards look, wrap at 200 % and
+`tests/test_jobs_page_filter.py`'s (#623). How the cards look, wrap at 200 % and
 read to TalkBack and VoiceOver is checked on devices (the PR).
 """
 
@@ -105,7 +105,7 @@ async def test_a_role_is_a_link_to_the_in_app_browser(show: Any) -> None:
 
 
 async def test_the_header_pushes_the_sponsor_on_this_page(show: Any) -> None:
-    """D-17: ``/more/jobs/sponsor/<slug>``, whose Back returns to the list."""
+    """D-17: `/more/jobs/sponsor/<slug>`, whose Back returns to the list."""
     shown = await show()
     node = shown.node(f"{CARD}{listing('Bloomberg').id}")
     await shown.click(cast(ft.Control, node.parent))
@@ -231,7 +231,7 @@ async def test_a_pull_on_the_list_runs_the_strip_s_refresh_and_ends_offline(
 
 
 def _under(control: ft.BaseControl, ancestor: ft.BaseControl) -> bool:
-    """Return whether ``control`` is mounted under ``ancestor``."""
+    """Return whether `control` is mounted under `ancestor`."""
     node = control.parent
     while node is not None:
         if node is ancestor:

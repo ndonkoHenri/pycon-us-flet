@@ -1,10 +1,10 @@
-"""Tests for the ``ChangeLog`` store: what a refresh that publishes records (D-47, D-255).
+"""Tests for the `ChangeLog` store: what a refresh that publishes records (D-47, D-255).
 
-Each case runs a real ``Conference`` refresh over an ``httpx.MockTransport`` that serves a
-copy of the recorded 2026 feed with named edits (``tests/feeds.py``), with the fixtures
-and helpers of ``tests/change_log_feeds.py``: the log and the cache live in a temporary
+Each case runs a real `Conference` refresh over an `httpx.MockTransport` that serves a
+copy of the recorded 2026 feed with named edits (`tests/feeds.py`), with the fixtures
+and helpers of `tests/change_log_feeds.py`: the log and the cache live in a temporary
 directory, and SharedPreferences is the in-memory fake. Here, over the cache and across
-feed URLs; over the bundled snapshot, and ``recent()``, in ``test_change_log_snapshot.py``.
+feed URLs; over the bundled snapshot, and `recent()`, in `test_change_log_snapshot.py`.
 """
 
 import asyncio

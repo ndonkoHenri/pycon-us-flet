@@ -2,8 +2,8 @@
 
 D-41; DATA-07..11, DATA-15, DATA-16, SCHED-19. Each test asserts a concrete case of the
 recorded 2025 or 2026 feed, or of a copy of it with one record changed, under two machine
-time zones (``machine_tz``). Which slots become sessions, and how they fold, is
-``test_rules.py``'s, as are the helpers shared here.
+time zones (`machine_tz`). Which slots become sessions, and how they fold, is
+`test_rules.py`'s, as are the helpers shared here.
 """
 
 import re
@@ -173,7 +173,7 @@ def test_multi_room_session_appears_in_each_room() -> None:
 def test_rooms_are_indexed_by_slug_in_natural_order() -> None:
     """DATA-16, ROOM-06: Ionic's 28 rooms with sessions in 2026, and their counts.
 
-    The 10 sprint-only rooms seeded from ``map.toml`` join them, empty (MAP-08).
+    The 10 sprint-only rooms seeded from `map.toml` join them, empty (MAP-08).
     """
     rooms = processed(2026).rooms
     assert [(r.name, len(r.session_ids)) for r in rooms.values()][:4] == [

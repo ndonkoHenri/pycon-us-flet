@@ -1,13 +1,13 @@
-"""The ``Prefs`` store: the user's settings and the device facts they depend on (D-69).
+"""The `Prefs` store: the user's settings and the device facts they depend on (D-69).
 
 It holds the app-wide settings of the storage table (decisions §M), checks the three
 settings with fixed values (Appearance, High contrast, Start screen) on load and on save, reads the
 reminder settings as their record (D-275), and keeps what the user chose in memory when
-a write fails (D-120). ``App`` reads it before the first screen (the boot gate), so
+a write fails (D-120). `App` reads it before the first screen (the boot gate), so
 neither the theme nor the filters flash.
 
-The keys of ``Prefs.dev`` and their helpers are ``dev_options``'s, and
-``accessibility.read_accessibility()`` writes the OS's flags in (split at D-66's ~400
+The keys of `Prefs.dev` and their helpers are `dev_options`'s, and
+`accessibility.read_accessibility()` writes the OS's flags in (split at D-66's ~400
 lines, #737).
 """
 
@@ -55,7 +55,7 @@ HIGH_CONTRAST_SETTINGS: tuple[HighContrast, ...] = get_args(HighContrast.__value
 """High contrast's values; the first is the default, as in the storage table."""
 
 type StartScreen = Literal["auto", "now", "lead"]
-"""Where a lead-retrieval account opens the app (D-16): ``auto`` is the Lead scanner
+"""Where a lead-retrieval account opens the app (D-16): `auto` is the Lead scanner
 until the user picks one in Settings."""
 
 START_SCREENS: tuple[StartScreen, ...] = get_args(StartScreen.__value__)
@@ -70,7 +70,7 @@ _PERSISTED: dict[str, Pref[Any]] = {
     "dev": DEV,
     "start_screen": START_SCREEN,
 }
-"""The persisted fields of ``Prefs`` and their keys in the storage table (decisions §M)."""
+"""The persisted fields of `Prefs` and their keys in the storage table (decisions §M)."""
 
 DEVELOPER_ALWAYS = not is_embedded()
 """Developer is always available when not embedded: the companion app and a desktop host
@@ -82,40 +82,40 @@ DEVELOPER_ALWAYS = not is_embedded()
 class Prefs:
     """The user's settings, persisted, and the device facts they resolve against (D-69).
 
-    ``App`` shows the boot view until ``loaded`` (D-69), so no screen ever renders
+    `App` shows the boot view until `loaded` (D-69), so no screen ever renders
     with a default theme or filter before the stored one is read. Replace a value with
-    ``save()``; never mutate a field in place, since only ``save()`` persists.
+    `save()`; never mutate a field in place, since only `save()` persists.
 
     Attributes:
-        theme: The Appearance setting (``pycon.theme``).
-        high_contrast: The High contrast setting (``pycon.high_contrast``);
-            ``high_contrast_on`` resolves it, and the high-contrast schemes show
-            when it is true (``theme.build_theme``). Settings' switch sets it
-            through ``high_contrast_setting()`` (D-286).
-        onboarded: Whether Welcome was seen (``pycon.onboarded``, P2).
-        excluded_tracks: Track keys hidden from the Schedule (``pycon.excluded_tracks``;
+        theme: The Appearance setting (`pycon.theme`).
+        high_contrast: The High contrast setting (`pycon.high_contrast`);
+            `high_contrast_on` resolves it, and the high-contrast schemes show
+            when it is true (`theme.build_theme`). Settings' switch sets it
+            through `high_contrast_setting()` (D-286).
+        onboarded: Whether Welcome was seen (`pycon.onboarded`, P2).
+        excluded_tracks: Track keys hidden from the Schedule (`pycon.excluded_tracks`;
             by default Open Space, D-20).
-        reminders: The reminder settings (``pycon.reminders``, D-275).
-        dev: Developer options (``pycon.dev``, D-73).
+        reminders: The reminder settings (`pycon.reminders`, D-275).
+        dev: Developer options (`pycon.dev`, D-73).
         start_screen: Where a lead-retrieval account opens the app
-            (``pycon.start_screen``, D-16); a sign-out keeps it (#689).
-        os_dark: The OS is in dark mode; not persisted, kept current by ``App``.
+            (`pycon.start_screen`, D-16); a sign-out keeps it (#689).
+        os_dark: The OS is in dark mode; not persisted, kept current by `App`.
         os_high_contrast: The OS asks for high contrast (iOS, Android 34+); not
             persisted, read at start and on resume (F13).
         reduce_motion: The OS asks for less motion (D-34): iOS Reduce Motion or
             Android's Remove animations. Not persisted, read at start and on resume;
-            ask through ``motion_ms()``.
+            ask through `motion_ms()`.
         screen_reader: A screen reader is on (TalkBack, VoiceOver; Flutter's
-            ``accessible_navigation``). Not persisted, read at start and on resume;
+            `accessible_navigation`). Not persisted, read at start and on resume;
             an Undo SnackBar then stays until it is used or replaced (D-184).
-        announcements: The platform takes ``announce_message()`` (F13's
-            ``supports_announcements``: true on iOS, never on Android). Not
-            persisted, read with ``screen_reader``.
+        announcements: The platform takes `announce_message()` (F13's
+            `supports_announcements`: true on iOS, never on Android). Not
+            persisted, read with `screen_reader`.
         time_above: The OS text is so large that a slot's time goes above its rows
             rather than in the gutter beside them (D-216). Not persisted: measured
-            by ``ui.time_gutter.GutterProbe``, since Flet cannot read the text scale
+            by `ui.time_gutter.GutterProbe`, since Flet cannot read the text scale
             (U16).
-        time_measured: ``time_above`` has been measured, or the boot view gave up
+        time_measured: `time_above` has been measured, or the boot view gave up
             waiting for it; the boot gate stays closed until then (D-216).
         loaded: The stored values have been read; it opens the boot gate.
     """
@@ -152,12 +152,12 @@ class Prefs:
         return self.high_contrast == "on"
 
     def high_contrast_setting(self, on: bool) -> HighContrast:
-        """Return the High contrast setting that a switch to ``on`` stores (D-286).
+        """Return the High contrast setting that a switch to `on` stores (D-286).
 
-        The switch shows ``high_contrast_on``. Switched to what the OS asks for, it
-        follows the OS again (``system``), so a later change of the OS flag applies;
-        switched against the OS, it holds (``on`` or ``off``). Where the OS reports no
-        flag (Android before 34), the flag reads as off, so off is ``system`` there.
+        The switch shows `high_contrast_on`. Switched to what the OS asks for, it
+        follows the OS again (`system`), so a later change of the OS flag applies;
+        switched against the OS, it holds (`on` or `off`). Where the OS reports no
+        flag (Android before 34), the flag reads as off, so off is `system` there.
 
         Args:
             on: The switch's new state.
@@ -193,7 +193,7 @@ class Prefs:
 
     @property
     def feed_url(self) -> str | None:
-        """The feed URL set in Developer, or None for the year's (``conference.toml``)."""
+        """The feed URL set in Developer, or None for the year's (`conference.toml`)."""
         value = self.dev.get(DEV_FEED_URL)
         return value if isinstance(value, str) and value else None
 
@@ -209,17 +209,17 @@ class Prefs:
         return self.mock_api_url is not None
 
     def motion_ms(self, ms: int) -> int:
-        """Return how long an animation of ``ms`` milliseconds runs: 0 under reduced motion.
+        """Return how long an animation of `ms` milliseconds runs: 0 under reduced motion.
 
         The one way the app asks about motion (D-34, D-173): pass the result as a
-        ``scroll_to(duration=...)``, an ``animate_*`` or any other duration, so the
+        `scroll_to(duration=...)`, an `animate_*` or any other duration, so the
         motion becomes a jump when the OS asks for less of it.
 
         Args:
             ms: The M3 duration the animation has otherwise (ux.md §3.8).
 
         Returns:
-            ``ms``, or 0 when the OS asks for reduced motion (``reduce_motion``).
+            `ms`, or 0 when the OS asks for reduced motion (`reduce_motion`).
         """
         return 0 if self.reduce_motion else ms
 
@@ -227,7 +227,7 @@ class Prefs:
         """Read every persisted setting; an unreadable or unknown value reads as its default.
 
         Storage logs what it cannot read (D-120); an Appearance or High contrast value
-        that is not one of the settings' values is logged here. ``loaded`` is left to the
+        that is not one of the settings' values is logged here. `loaded` is left to the
         caller, which opens the boot gate once the feed is published too.
 
         Args:
@@ -256,9 +256,9 @@ class Prefs:
     def reset(self) -> None:
         """Return every persisted setting to its default, as after a fresh install.
 
-        Reset app (DEV-05, D-198) calls it once ``Storage.clear_prefs()`` has removed
-        the stored values. The device facts (``os_dark``, the accessibility flags,
-        ``time_above`` and ``time_measured``) and ``loaded`` stay: they describe the
+        Reset app (DEV-05, D-198) calls it once `Storage.clear_prefs()` has removed
+        the stored values. The device facts (`os_dark`, the accessibility flags,
+        `time_above` and `time_measured`) and `loaded` stay: they describe the
         device and the session, not a choice.
         """
         fresh = Prefs()
@@ -288,16 +288,16 @@ class Prefs:
             theme: The new Appearance.
             high_contrast: The new High contrast setting.
             onboarded: Whether Welcome was seen.
-            excluded_tracks: The track keys to hide; ``()`` hides none.
+            excluded_tracks: The track keys to hide; `()` hides none.
             reminders: The new reminder settings.
             dev: The new developer options.
             start_screen: The new Start screen.
 
         Returns:
-            Whether every write succeeded; failures are logged by ``Storage``.
+            Whether every write succeeded; failures are logged by `Storage`.
 
         Raises:
-            ValueError: ``theme``, ``high_contrast`` or ``start_screen`` is not one of
+            ValueError: `theme`, `high_contrast` or `start_screen` is not one of
                 its setting's values.
         """
         if theme is not None and theme not in APPEARANCES:
@@ -333,9 +333,9 @@ class Prefs:
         storage: Storage,
         change: Callable[[ReminderSettings], ReminderSettings],
     ) -> bool:
-        """Save ``change`` of the reminder settings, one change at a time.
+        """Save `change` of the reminder settings, one change at a time.
 
-        Every change of ``reminders`` goes through here. ``save()`` publishes only
+        Every change of `reminders` goes through here. `save()` publishes only
         after its write, so two changes built from the same record would each drop the
         other's (#706's review: a moment switched off came back). The lock makes each
         change read the record the previous one published.
@@ -345,7 +345,7 @@ class Prefs:
             change: Returns the new settings from the current ones.
 
         Returns:
-            Whether the write succeeded (``save()``).
+            Whether the write succeeded (`save()`).
         """
         async with self._reminders_lock:
             return await self.save(storage, reminders=change(self.reminders))
@@ -361,7 +361,7 @@ def _stored(value: object) -> object:
 
 
 def _choice[T: str](pref: Pref[str], value: str, choices: tuple[T, ...]) -> T:
-    """Return ``value`` when it is one of ``choices``, else the first, the default (logged)."""
+    """Return `value` when it is one of `choices`, else the first, the default (logged)."""
     for choice in choices:
         if value == choice:
             return choice
@@ -370,14 +370,14 @@ def _choice[T: str](pref: Pref[str], value: str, choices: tuple[T, ...]) -> T:
 
 
 PrefsCtx: ft.ContextProvider[Prefs | None] = ft.create_context(None)
-"""Provides the session's ``Prefs``; ``App`` writes the provider out (D-69)."""
+"""Provides the session's `Prefs`; `App` writes the provider out (D-69)."""
 
 
 def use_prefs() -> Prefs:
-    """Return the ``Prefs`` store and re-render the caller when it changes (F3).
+    """Return the `Prefs` store and re-render the caller when it changes (F3).
 
     Raises:
-        RuntimeError: No ``PrefsCtx`` provider is above the calling component.
+        RuntimeError: No `PrefsCtx` provider is above the calling component.
     """
     prefs = ft.use_context(PrefsCtx)
     if prefs is None:

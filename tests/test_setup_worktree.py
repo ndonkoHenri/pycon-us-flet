@@ -1,7 +1,7 @@
-"""Tests for ``tools/setup_worktree.sh``: a worktree gets its own Flet clone at the pin (#981).
+"""Tests for `tools/setup_worktree.sh`: a worktree gets its own Flet clone at the pin (#981).
 
-Each test runs the real script in a sandbox: a main checkout with a small ``.flet-src`` git repo,
-a linked worktree of it, its own ``$HOME`` and pub cache, and a stand-in ``uv``.
+Each test runs the real script in a sandbox: a main checkout with a small `.flet-src` git repo,
+a linked worktree of it, its own `$HOME` and pub cache, and a stand-in `uv`.
 """
 
 import os
@@ -15,7 +15,7 @@ SCRIPT = Path(__file__).resolve().parent.parent / "tools" / "setup_worktree.sh"
 
 
 def _git(cwd: Path, *args: str) -> str:
-    """Run git in ``cwd`` and return its output."""
+    """Run git in `cwd` and return its output."""
     done = subprocess.run(
         ["git", "-c", "user.name=T", "-c", "user.email=t@example.com", *args],
         cwd=cwd,
@@ -30,7 +30,7 @@ class Sandbox:
     """A main checkout, its worktree and the environment the script runs in."""
 
     def __init__(self, root: Path) -> None:
-        """Build the checkouts, with ``.flet-src`` at a pin committed in ``.flet-ref``."""
+        """Build the checkouts, with `.flet-src` at a pin committed in `.flet-ref`."""
         root = root.resolve()
         self.main = root / "main"
         self.main.mkdir()
@@ -68,7 +68,7 @@ class Sandbox:
         }
 
     def run(self, cwd: Path | None = None) -> subprocess.CompletedProcess[str]:
-        """Run the script in ``cwd``, by default the worktree."""
+        """Run the script in `cwd`, by default the worktree."""
         return subprocess.run(
             ["tools/setup_worktree.sh"],
             cwd=cwd or self.tree,
@@ -79,7 +79,7 @@ class Sandbox:
         )
 
     def commit_fvmrc(self, flutter: str) -> None:
-        """Make the pin ask for ``flutter``, moving ``.flet-ref`` in both checkouts."""
+        """Make the pin ask for `flutter`, moving `.flet-ref` in both checkouts."""
         flet = self.main / ".flet-src"
         (flet / ".fvmrc").write_text(f'{{\n  "flutter": "{flutter}"\n}}\n')
         _git(flet, "add", ".fvmrc")
@@ -89,7 +89,7 @@ class Sandbox:
         (self.tree / ".flet-ref").write_text(self.pin + "\n")
 
     def head(self) -> str:
-        """Return the HEAD of the worktree's ``.flet-src``."""
+        """Return the HEAD of the worktree's `.flet-src`."""
         return _git(self.tree / ".flet-src", "rev-parse", "HEAD")
 
 
@@ -111,7 +111,7 @@ def test_fresh_worktree_gets_everything(sandbox: Sandbox) -> None:
 
 
 def test_missing_flutter_of_the_pin_is_said(sandbox: Sandbox) -> None:
-    """A pin whose Flutter isn't in ``~/flutter`` gets a warning, and the setup still ends well."""
+    """A pin whose Flutter isn't in `~/flutter` gets a warning, and the setup still ends well."""
     sandbox.commit_fvmrc("3.47.9")
     done = sandbox.run()
     assert done.returncode == 0, done.stderr
@@ -119,7 +119,7 @@ def test_missing_flutter_of_the_pin_is_said(sandbox: Sandbox) -> None:
 
 
 def test_flutter_of_the_pin_in_home_says_nothing(sandbox: Sandbox) -> None:
-    """With the pin's Flutter in ``~/flutter`` there is nothing to warn about."""
+    """With the pin's Flutter in `~/flutter` there is nothing to warn about."""
     sandbox.commit_fvmrc("3.47.9")
     flutter = Path(sandbox.env["HOME"]) / "flutter" / "3.47.9" / "bin" / "flutter"
     flutter.parent.mkdir(parents=True)
@@ -141,7 +141,7 @@ def test_second_run_changes_nothing(sandbox: Sandbox) -> None:
 
 
 def test_link_is_replaced_and_its_target_kept(sandbox: Sandbox) -> None:
-    """A link to the main checkout's ``.flet-src`` goes; the main checkout's stays as it was."""
+    """A link to the main checkout's `.flet-src` goes; the main checkout's stays as it was."""
     (sandbox.tree / ".flet-src").symlink_to(sandbox.main / ".flet-src")
     assert sandbox.run().returncode == 0
     assert not (sandbox.tree / ".flet-src").is_symlink()
@@ -149,7 +149,7 @@ def test_link_is_replaced_and_its_target_kept(sandbox: Sandbox) -> None:
 
 
 def test_git_file_copy_is_replaced(sandbox: Sandbox) -> None:
-    """A pre-D-451 copy, whose ``.git`` is a file, is replaced without running git in it."""
+    """A pre-D-451 copy, whose `.git` is a file, is replaced without running git in it."""
     stale = sandbox.tree / ".flet-src"
     stale.mkdir()
     (stale / ".git").write_text("gitdir: /nowhere\n")
@@ -179,7 +179,7 @@ def test_main_off_the_pin_stops_and_moves_nothing(sandbox: Sandbox) -> None:
 
 
 def test_main_checkout_is_checked_not_replaced(sandbox: Sandbox) -> None:
-    """In the main checkout an off-pin ``.flet-src`` stops the run and stays in place."""
+    """In the main checkout an off-pin `.flet-src` stops the run and stays in place."""
     flet = sandbox.main / ".flet-src"
     (flet / "file").write_text("edited\n")
     done = sandbox.run(sandbox.main)

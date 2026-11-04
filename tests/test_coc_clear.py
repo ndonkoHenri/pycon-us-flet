@@ -1,8 +1,8 @@
 """Tests for the CoC tool's clearing and its hidden email (#762; MASK-05, O-7).
 
 The tool runs in a real Flet session over the mock's transport, as in
-``tests/test_staff_coc.py``, whose fixtures these share, with the clear's timer held
-(``tests/scan_rig.py``). A result clears 15 s after the reply shows it, never counted
+`tests/test_staff_coc.py`, whose fixtures these share, with the clear's timer held
+(`tests/scan_rig.py`). A result clears 15 s after the reply shows it, never counted
 from the request; the background clears it and closes the name search, and a reply
 that lands there shows nothing, while an open review keeps its notes; "Show email" reveals the reply's email outside the live region
 until "Hide email", the next result or the clear; and no log line holds it (D-72).
@@ -94,7 +94,7 @@ async def test_a_record_clears_15_s_after_the_reply_shows_it(
 async def test_the_background_clears_the_result_and_closes_the_search(
     show: Show, mock: Any, timer: Timer, focused: list[int]
 ) -> None:
-    """``pause``: the result and the open search go, the query with it."""
+    """`pause`: the result and the open search go, the query with it."""
     shown = await show()
     await record_margaret(shown)
     assert panel(shown) == MARGARET

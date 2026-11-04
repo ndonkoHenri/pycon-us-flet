@@ -1,17 +1,17 @@
 """The status strip, the zone note and the minute tick.
 
-``StatusStrip`` says when the data is not fresh, with Refresh, the way to what a pull
+`StatusStrip` says when the data is not fresh, with Refresh, the way to what a pull
 on a list does for anyone who cannot pull (D-32, D-146, D-449); the screens that show the feed's state place it under
-their app bar. It is ``use_strip()``, which reads the feed's state and ticks, with
-``strip_view()``, which draws a ``Strip`` value: the Schedule calls the two itself, so
-its memoised day lists get only the value (D-345, F150). ``zone_note_line()`` is the Schedule's line under it, "Times are
+their app bar. It is `use_strip()`, which reads the feed's state and ticks, with
+`strip_view()`, which draws a `Strip` value: the Schedule calls the two itself, so
+its memoised day lists get only the value (D-345, F150). `zone_note_line()` is the Schedule's line under it, "Times are
 Pacific Time (PDT)", while the device's clock differs from the conference's (D-35,
-D-240). The strip ticks every ``TICK_SECONDS`` while it shows (D-40, D-175), and
-``use_minute()`` is that tick as a hook, for any other view that depends on
-``clock.now()``, such as the Map's "Now:" lines (D-188). ``current_minute()`` is the
+D-240). The strip ticks every `TICK_SECONDS` while it shows (D-40, D-175), and
+`use_minute()` is that tick as a hook, for any other view that depends on
+`clock.now()`, such as the Map's "Now:" lines (D-188). `current_minute()` is the
 ticking effects' state (D-200); they need no cleanup, since Flet cancels a running
-``async def`` setup on unmount (F2, D-387).
-``schedule_line()`` says where the schedule on screen came from and its age, for the
+`async def` setup on unmount (F2, D-387).
+`schedule_line()` says where the schedule on screen came from and its age, for the
 pages that say it whether or not it is fresh (D-292).
 """
 
@@ -49,9 +49,9 @@ def strip_line(
     """Return what the status strip says, or None when it is hidden (D-32, D-146).
 
     Args:
-        status: ``Conference.status()``.
+        status: `Conference.status()`.
         fetched_at: When the data on screen was fetched; None without data.
-        now: ``clock.now()``, so the Developer fake clock moves the age too.
+        now: `clock.now()`, so the Developer fake clock moves the age too.
         zone: The conference's zone; times are always conference time (D-35).
         use_24h: The device's 24-hour setting.
 
@@ -83,7 +83,7 @@ SOURCES: dict[Source, str] = {
     "cache": "From the cache",
     "network": "From the feed",
 }
-"""Where the schedule on screen came from, in ``schedule_line()``'s words."""
+"""Where the schedule on screen came from, in `schedule_line()`'s words."""
 
 
 def schedule_line(
@@ -93,13 +93,13 @@ def schedule_line(
 
     Said the same wherever the app tells it (D-292): Developer's Refresh now (D-198)
     and About this app's Schedule row. Unlike the strip's line it is said whether
-    the data is fresh or not; a caller shows it with ``use_minute()``, so its age
+    the data is fresh or not; a caller shows it with `use_minute()`, so its age
     keeps up.
 
     Args:
-        source: ``Conference.source``.
-        fetched_at: ``Conference.fetched_at``; None before anything is published.
-        now: The time to count the age to; ``clock.now()`` when None, so the
+        source: `Conference.source`.
+        fetched_at: `Conference.fetched_at`; None before anything is published.
+        now: The time to count the age to; `clock.now()` when None, so the
             Developer fake clock moves it too.
 
     Returns:
@@ -113,7 +113,7 @@ def schedule_line(
 
 
 ICON_SIZE = 16
-"""The strip's icon at 100 % text, in dp: the height of a ``BODY_SMALL`` line (12/16)."""
+"""The strip's icon at 100 % text, in dp: the height of a `BODY_SMALL` line (12/16)."""
 
 LINE_PAD = 8
 """Space above and below the strip's line, in dp, inside its run."""
@@ -133,7 +133,7 @@ TICK_SECONDS = 60
 
 @dataclass(frozen=True)
 class Strip:
-    """What the status strip shows, from ``use_strip()``: a plain value.
+    """What the status strip shows, from `use_strip()`: a plain value.
 
     Equal from render to render while the strip's words stay the same, so a memoised
     component given it stays skipped (D-153). The Schedule hands it to its day lists
@@ -141,8 +141,8 @@ class Strip:
     a list would lose its contexts (F150).
 
     Attributes:
-        status: ``Conference.status()``.
-        line: ``strip_line()``'s words; None hides the strip (fresh data).
+        status: `Conference.status()`.
+        line: `strip_line()`'s words; None hides the strip (fresh data).
         refreshing: Any refresh runs, a quiet one too (D-181): the bar shows.
         on_refresh: What Refresh does; the same callable for the strip's life.
     """
@@ -157,7 +157,7 @@ def use_refresh() -> Callable[[], Awaitable[None]]:
     """Return the feed's refresh, the same callable for the caller's life.
 
     A hook (D-70): what the strip's Refresh and a pull on a list run, the shared
-    ``Conference.refresh()`` (D-145, D-449).
+    `Conference.refresh()` (D-145, D-449).
     """
     svc = use_services()
     conference = use_conference()
@@ -173,15 +173,15 @@ def use_strip(*, auto_refresh: bool = False) -> Strip:
     """Read what the status strip shows, and keep it up to date (D-32, D-40).
 
     A hook (D-70). While the calling component is mounted and the app is in the
-    foreground, it ticks every ``TICK_SECONDS`` (``Services.run_every``): it
+    foreground, it ticks every `TICK_SECONDS` (`Services.run_every`): it
     re-renders the caller when the minute has changed, so the strip's age keeps up and
-    it appears when the data turns stale, and with ``auto_refresh`` it starts a
+    it appears when the data turns stale, and with `auto_refresh` it starts a
     refresh whenever one is due (D-40). Leaving the screen stops the ticks, and so
     does the background.
 
     Args:
         auto_refresh: True on Now and Schedule, the screens that refresh the feed
-            every 15 min while they show (``Conference.refresh_due()``, D-40).
+            every 15 min while they show (`Conference.refresh_due()`, D-40).
     """
     page = ft.context.page
     svc = use_services()
@@ -213,17 +213,17 @@ def use_strip(*, auto_refresh: bool = False) -> Strip:
 def StatusStrip(*, auto_refresh: bool = False) -> ft.Control:
     """Say when the schedule on screen is not fresh, and offer Refresh (D-32).
 
-    ``use_strip()`` with ``strip_view()``: the strip, its tick and, with
-    ``auto_refresh``, the refreshes that fall due.
+    `use_strip()` with `strip_view()`: the strip, its tick and, with
+    `auto_refresh`, the refreshes that fall due.
 
     Args:
-        auto_refresh: True on Now and Schedule (``use_strip()``, D-40).
+        auto_refresh: True on Now and Schedule (`use_strip()`, D-40).
     """
     return strip_view(use_strip(auto_refresh=auto_refresh), use_tokens())
 
 
 def strip_view(strip: Strip, tokens: Tokens) -> ft.Control:
-    """Return the status strip that ``strip`` describes; no hooks (D-32, D-146).
+    """Return the status strip that `strip` describes; no hooks (D-32, D-146).
 
     Shown while a refresh the user asked for runs, when the data is stale, and after a
     failed refresh; hidden when fresh. A live region, so a screen reader announces each
@@ -232,7 +232,7 @@ def strip_view(strip: Strip, tokens: Tokens) -> ft.Control:
     data and the live region changes only when the outcome does.
 
     Args:
-        strip: What it shows (``use_strip()``).
+        strip: What it shows (`use_strip()`).
         tokens: The scheme's tokens (D-150).
     """
     status = strip.status
@@ -332,7 +332,7 @@ def _band_lines() -> ft.Border:
 def zone_note_line(note: str | None) -> ft.Control:
     """Return the line under the Schedule's strip that names the times' zone (D-240).
 
-    The words are ``core/timefmt.zone_note()``'s, at the minute's ``clock.now()``
+    The words are `core/timefmt.zone_note()`'s, at the minute's `clock.now()`
     and the device's offset then. Without a note (the device is on conference time)
     it is an empty placeholder, so the controls under it keep their places in their
     column and the day pages are never rebuilt (#313).
@@ -373,16 +373,16 @@ def zone_note_line(note: str | None) -> ft.Control:
 
 
 def current_minute() -> int:
-    """Return the minute ``clock.now()`` is in, counted from the epoch: the tick's state."""
+    """Return the minute `clock.now()` is in, counted from the epoch: the tick's state."""
     return int(clock.now().timestamp()) // 60
 
 
 def use_minute() -> int:
-    """Re-render the calling component whenever the minute of ``clock.now()`` changes.
+    """Re-render the calling component whenever the minute of `clock.now()` changes.
 
     A hook for the views that depend on the time, such as the Map's "Now:" lines: they
     recompute every 60 s while they are mounted and the app is in the foreground, on
-    the strip's loop (``Services.run_every``, ``TICK_SECONDS``; D-40, D-175), and catch
+    the strip's loop (`Services.run_every`, `TICK_SECONDS`; D-40, D-175), and catch
     up at once on a resume. Leaving the screen stops the ticks. The Developer fake
     clock moves the minute too.
 

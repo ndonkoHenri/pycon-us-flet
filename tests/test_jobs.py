@@ -1,9 +1,9 @@
-"""Tests for the job listings' roles and sponsors (``core/jobs.py``).
+"""Tests for the job listings' roles and sponsors (`core/jobs.py`).
 
-SPON-05, DATA-24, D-278. ``parse_roles()`` runs on every 2026 listing (2025's feed has
+SPON-05, DATA-24, D-278. `parse_roles()` runs on every 2026 listing (2025's feed has
 none) and on small listings written here, one rule each: anchors, bare URLs and their
 titles, long-form listings, and which links a role keeps. Placeholders, the search text
-and the filter are ``test_jobs_search.py``'s, which imports this module's helpers
+and the filter are `test_jobs_search.py`'s, which imports this module's helpers
 (#623).
 """
 
@@ -26,12 +26,12 @@ DATA = processed(2026)
 
 
 def listing(sponsor: str) -> JobListing:
-    """The 2026 job listing of ``sponsor``, by its exact name."""
+    """The 2026 job listing of `sponsor`, by its exact name."""
     return next(job for job in DATA.job_listings if job.sponsor_name == sponsor)
 
 
 def sponsors_of(data: ConferenceData) -> list[Sponsor]:
-    """Every sponsor of ``data``, level by level."""
+    """Every sponsor of `data`, level by level."""
     return [sponsor for level in data.sponsor_levels for sponsor in level.sponsors]
 
 
@@ -55,7 +55,7 @@ LISTINGS = [
 
 
 def test_the_table_covers_every_2026_listing() -> None:
-    """``LISTINGS`` names each of the 13 listings of 2026 once."""
+    """`LISTINGS` names each of the 13 listings of 2026 once."""
     assert sorted(row[0] for row in LISTINGS) == sorted(
         job.sponsor_name for job in DATA.job_listings
     )
@@ -67,9 +67,9 @@ def test_every_2026_listing_gets_its_roles(
 ) -> None:
     """Each 2026 listing links its roles, titled by its own text where it has one.
 
-    Anchors and ``Title | URL`` items keep their text; a careers page alone in a
+    Anchors and `Title | URL` items keep their text; a careers page alone in a
     paragraph is titled from its URL. Every link is one the listing wrote. Long-form
-    listings have no roles and show their Markdown; OpenEDG's ``N/A`` has neither.
+    listings have no roles and show their Markdown; OpenEDG's `N/A` has neither.
     """
     job = listing(sponsor)
     text = to_text(job.description)
@@ -93,7 +93,7 @@ def test_careers_pages_are_titled_from_their_urls() -> None:
 
 
 def test_title_bar_url_items_are_titled_by_the_text_before_the_url() -> None:
-    """Hudson River Trading's ``Title | URL`` items lose the bar, not the title's dash."""
+    """Hudson River Trading's `Title | URL` items lose the bar, not the title's dash."""
     roles = listing("Hudson River Trading").roles
 
     assert roles[0] == Role(
@@ -116,7 +116,7 @@ def test_anchors_keep_their_text_and_decoded_links() -> None:
 
 
 def test_every_2026_role_links_an_absolute_https_page() -> None:
-    """Every role of 2026 opens an absolute ``https`` address."""
+    """Every role of 2026 opens an absolute `https` address."""
     urls = [role.url for job in DATA.job_listings for role in job.roles]
 
     assert len(urls) == 41
@@ -154,14 +154,14 @@ def test_an_anchors_link_is_joined_as_feed_link_joins_it(href: str, url: str) ->
     ],
 )
 def test_an_anchor_that_opens_no_web_page_is_no_role(href: str) -> None:
-    """Only ``http`` and ``https`` links are roles: other schemes and page-relative links go."""
+    """Only `http` and `https` links are roles: other schemes and page-relative links go."""
     html = f'<p><a href="{href}">Engineer</a></p>'
 
     assert parse_roles(html, SITE) == ()
 
 
 def test_an_anchor_without_href_is_no_role() -> None:
-    """An ``<a>`` without a destination links nothing."""
+    """An `<a>` without a destination links nothing."""
     assert parse_roles("<p><a>Engineer</a></p>", SITE) == ()
 
 
@@ -224,7 +224,7 @@ def test_a_block_with_one_bare_url_is_a_role(html: str, role: Role) -> None:
     ],
 )
 def test_other_bare_urls_make_no_role(html: str, roles: tuple[Role, ...]) -> None:
-    """Two URLs in a block, a URL beside an anchor or outside ``p``/``li``: no role of its own.
+    """Two URLs in a block, a URL beside an anchor or outside `p`/`li`: no role of its own.
 
     The anchor beside a URL is still a role; a scheme followed only by punctuation is
     no URL.
@@ -253,7 +253,7 @@ def test_other_bare_urls_make_no_role(html: str, roles: tuple[Role, ...]) -> Non
 def test_a_line_break_separates_words_and_urls(
     html: str, roles: tuple[Role, ...]
 ) -> None:
-    """A ``br`` or a nested block's edge splits the text, as a browser shows it (D-278).
+    """A `br` or a nested block's edge splits the text, as a browser shows it (D-278).
 
     Two URLs a line apart are two URLs, so the block makes no role, a title split over
     two lines keeps its space, and a nested list's text does not run into the URL before
@@ -264,7 +264,7 @@ def test_a_line_break_separates_words_and_urls(
 
 @pytest.mark.parametrize("tag", ["script", "style"])
 def test_script_and_style_text_makes_no_role(tag: str) -> None:
-    """A URL inside ``script`` or ``style`` is not visible, so it is no role, as html_md drops it."""
+    """A URL inside `script` or `style` is not visible, so it is no role, as html_md drops it."""
     html = f"<p>Engineer <{tag}>https://example.org/fake</{tag}></p>"
 
     assert parse_roles(html, SITE) == ()

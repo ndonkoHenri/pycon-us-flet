@@ -1,6 +1,6 @@
 """Tests for what the staff flows expect of the app (#825).
 
-``maestro/journeys/{lead_capture,door_check,swag_pickup}.yaml`` match the scan screen's
+`maestro/journeys/{lead_capture,door_check,swag_pickup}.yaml` match the scan screen's
 words by regular expression and find its controls by identifier. Those are written into
 the YAML and run only on a device, so a reworded outcome or a renamed identifier would
 fail weeks later, far from the PR that did it. These checks fail here instead: each
@@ -56,14 +56,14 @@ SEED = json.loads((ROOT / "tests/fixtures/mock/seed.json").read_text(encoding="u
 ATTENDEES = {person["access_code"]: person for person in SEED["attendees"]}
 ADA, GRACE, LINUS, MARGARET = "MOCK0001", "MOCK0002", "MOCK0003", "MOCK0004"
 SESSION = 10
-"""The product of ``door.session.10``, the session ``door_check`` chooses."""
+"""The product of `door.session.10`, the session `door_check` chooses."""
 
 SWAG_CATEGORIES = tuple(
     Category(category["id"], category["name"])
     for category in SEED["categories"]
     if category["id"] in (3, 4)
 )
-"""``swag.category.3`` and ``.4``, the categories ``swag_pickup`` chooses."""
+"""`swag.category.3` and `.4`, the categories `swag_pickup` chooses."""
 
 FIELD_TEXT = "not-a-badge"
 """What the flows send as not a badge: the panel shows it as the title (D-473)."""
@@ -75,17 +75,17 @@ LONG_TEXT = (
     "this-is-a-long-text-with-no-colon-a-pasted-sentence-or-a-url-that-goes-on-and-on"
     "-past-the-two-lines-the-panel-gives-it-and-ends-with-THE-END"
 )
-"""What ``door_check`` pastes after it: the panel shows its start and an ellipsis (#965)."""
+"""What `door_check` pastes after it: the panel shows its start and an ellipsis (#965)."""
 
 TEXT = re.compile(r'^[ -]*text: (?:"(.*)"|(.*?))(?:\s+#.*)?$', re.MULTILINE)
-"""A ``text:`` line, quoted or bare, with or without a comment after it."""
+"""A `text:` line, quoted or bare, with or without a comment after it."""
 
 IDENTIFIER = re.compile(r"^[ -]*id: ([\w.]+)", re.MULTILINE)
-"""An ``id:`` line."""
+"""An `id:` line."""
 
 
 def patterns(flow: Path) -> list[str]:
-    """Return the expressions in the flow's ``text:`` lines, as Maestro reads them.
+    """Return the expressions in the flow's `text:` lines, as Maestro reads them.
 
     Args:
         flow: The flow's file; a double-quoted YAML string doubles its backslashes.
@@ -95,7 +95,7 @@ def patterns(flow: Path) -> list[str]:
 
 
 def assert_expects(flow: Path, words: list[str]) -> None:
-    """Assert that the flow's expressions and the app's ``words`` match, both ways.
+    """Assert that the flow's expressions and the app's `words` match, both ways.
 
     So a reworded outcome fails, and so does an expression added to the flow with
     nothing here to tie it to the app.
@@ -116,7 +116,7 @@ def assert_expects(flow: Path, words: list[str]) -> None:
 
 
 def panel(result: ScanResult) -> str:
-    """Return ``scan.result``'s label for a result, which is what the flows match."""
+    """Return `scan.result`'s label for a result, which is what the flows match."""
     return scan_result.spoken(result, 1)
 
 
@@ -137,7 +137,7 @@ def attendee(code: str) -> Attendee:
 
 
 def admitted(code: str) -> tuple[tuple[int, int], ...]:
-    """Return the attendee's product and quantity for ``door_check``'s session.
+    """Return the attendee's product and quantity for `door_check`'s session.
 
     Args:
         code: The attendee's access code.
@@ -203,7 +203,7 @@ def sheet_title(code: str) -> str:
 
 
 def headcount(count: int) -> str:
-    """Return ``door.headcount``'s label for a count, which is what the flow matches.
+    """Return `door.headcount`'s label for a count, which is what the flow matches.
 
     Args:
         count: How many are checked in.
@@ -229,7 +229,7 @@ def is_in_source(identifier: str, source: str) -> bool:
     """Return whether the app's code writes this identifier.
 
     One that ends in an id or a tool's key is built from that value, so its start is what
-    is written: ``f"swag.item.{item.product_id}"``, or a ``PREFIX = "door.session"``.
+    is written: `f"swag.item.{item.product_id}"`, or a `PREFIX = "door.session"`.
 
     Args:
         identifier: The identifier a flow names.
@@ -340,7 +340,7 @@ def test_every_identifier_the_staff_flows_name_is_the_app_s() -> None:
 
 
 def test_a_run_on_a_mock_just_started_can_make_the_hand_out_mandatory() -> None:
-    """SHIRT-02: ``-e HAND_OUT=required`` waits for the sheet before the rerun's way out.
+    """SHIRT-02: `-e HAND_OUT=required` waits for the sheet before the rerun's way out.
 
     Without it the flow also passes on "Already picked up", which is what a wrong lookup
     on a mock just started says too. The README says how to run it.

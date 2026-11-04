@@ -1,7 +1,7 @@
-"""Tests for the year data of About the PSF and Social (D-283, D-284): ``year_links``.
+"""Tests for the year data of About the PSF and Social (D-283, D-284): `year_links`.
 
 Each page's table and its rules; the info pages' load and Help & safety and Wi-Fi
-are ``tests/test_year_info.py``'s.
+are `tests/test_year_info.py`'s.
 """
 
 from dataclasses import replace
@@ -37,14 +37,14 @@ PSF = load_year(2026).content.psf
 
 
 def psf_with(**fields: Any) -> Content:
-    """2026's content with its first link's ``fields`` changed."""
+    """2026's content with its first link's `fields` changed."""
     assert PSF is not None
     first = replace(PSF.links[0], **fields)
     return Content(psf=replace(PSF, links=(first, *PSF.links[1:])))
 
 
 def test_2026_has_the_mission_donate_and_links_in_every_section() -> None:
-    """2026's ``[psf]`` has the mission, the donate page and links in all three sections."""
+    """2026's `[psf]` has the mission, the donate page and links in all three sections."""
     assert PSF is not None
     assert PSF.mission.startswith("The mission of the Python Software Foundation")
     assert PSF.donate_url == "https://www.python.org/psf/donations/"
@@ -52,7 +52,7 @@ def test_2026_has_the_mission_donate_and_links_in_every_section() -> None:
 
 
 def test_2025_has_no_psf_table() -> None:
-    """2025 has no ``[psf]``, so its page shows the feed's block (D-263)."""
+    """2025 has no `[psf]`, so its page shows the feed's block (D-263)."""
     assert load_year(2025).content.psf is None
 
 
@@ -70,7 +70,7 @@ def test_psf_brands_are_bundled_marks_and_icons_are_material_icons(year: int) ->
     """Each year's PSF links have a brand or an icon: a bundled mark, or one Flet knows.
 
     The loader imports no Flet, so this is where a misspelt name in any bundled
-    year's ``[psf]`` fails, before the page would fail to draw its row.
+    year's `[psf]` fails, before the page would fail to draw its row.
     """
     psf = load_year(year).content.psf
     if psf is None:
@@ -165,12 +165,12 @@ def test_a_blank_mission_or_an_http_donate_link_fails_the_check(
 def test_a_broken_psf_table_fails_the_year_s_load(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """The rules run on the load itself: a bad link fails ``load_year()`` (D-263)."""
+    """The rules run on the load itself: a bad link fails `load_year()` (D-263)."""
     broken = psf_with(section="news")
     original = config.build
 
     def build_broken(cls: type, raw: object, file: str, key: str = "") -> object:
-        """Build as the loader does, but hand back the broken content for ``Content``."""
+        """Build as the loader does, but hand back the broken content for `Content`."""
         return broken if cls is Content else original(cls, raw, file, key)
 
     monkeypatch.setattr(config, "build", build_broken)
@@ -192,7 +192,7 @@ def test_a_link_with_an_unknown_key_fails_the_schema() -> None:
 
 
 def test_a_link_without_brand_icon_or_app_is_a_plain_web_link() -> None:
-    """``brand``, ``icon`` and ``app`` are optional: a link may give none of them."""
+    """`brand`, `icon` and `app` are optional: a link may give none of them."""
     raw = {"section": "follow", "label": "Blog", "url": "https://pyfound.blogspot.com/"}
     link = build(PsfLink, raw, FILE, "psf.links[0]")
     assert (link.brand, link.icon, link.app) == (None, None, False)
@@ -204,13 +204,13 @@ SOCIAL = load_year(2026).content.social
 
 
 def social(**changes: object) -> SocialInfo:
-    """2026's ``[social]`` with ``changes`` applied to the table itself."""
+    """2026's `[social]` with `changes` applied to the table itself."""
     assert SOCIAL is not None
     return replace(SOCIAL, **changes)  # pyright: ignore[reportArgumentType]
 
 
 def with_link(**changes: object) -> SocialInfo:
-    """2026's ``[social]`` with ``changes`` applied to its first link."""
+    """2026's `[social]` with `changes` applied to its first link."""
     assert SOCIAL is not None
     first = replace(SOCIAL.links[0], **changes)  # pyright: ignore[reportArgumentType]
     return replace(SOCIAL, links=(first, *SOCIAL.links[1:]))
@@ -225,7 +225,7 @@ def test_2026_has_the_hashtags_and_the_links_of_every_section() -> None:
 
 
 def test_2026_s_linkedin_link_is_the_feed_s_without_its_stray_bracket() -> None:
-    """The feed's ``linkedin.com/company/thepsf]`` is fixed in the data (INFO-10)."""
+    """The feed's `linkedin.com/company/thepsf]` is fixed in the data (INFO-10)."""
     assert SOCIAL is not None
     urls = [link.url for link in SOCIAL.links]
     assert "https://www.linkedin.com/company/thepsf/" in urls
@@ -233,16 +233,16 @@ def test_2026_s_linkedin_link_is_the_feed_s_without_its_stray_bracket() -> None:
 
 
 def test_2025_has_no_social_table() -> None:
-    """2025 has no ``[social]``: its page falls back to the feed's block."""
+    """2025 has no `[social]`: its page falls back to the feed's block."""
     assert load_year(2025).content.social is None
 
 
 @pytest.mark.parametrize("year", YEARS)
 def test_every_brand_names_a_bundled_mark(year: int) -> None:
-    """Each link's brand is a key of ``BRANDS``, so its row draws a mark (D-264).
+    """Each link's brand is a key of `BRANDS`, so its row draws a mark (D-264).
 
     The loader stays free of Flet, so this test, not the loader, holds it, as
-    ``test_config_tracks.py`` holds the track icons.
+    `test_config_tracks.py` holds the track icons.
     """
     table = load_year(year).content.social
     for link in table.links if table is not None else ():
@@ -250,7 +250,7 @@ def test_every_brand_names_a_bundled_mark(year: int) -> None:
 
 
 def test_a_link_s_key_is_its_section_and_its_label_in_snake_case() -> None:
-    """A link's identifier key: ``pycon_mastodon``, ``blogs_pycon_us_blog``."""
+    """A link's identifier key: `pycon_mastodon`, `blogs_pycon_us_blog`."""
     link = SocialLink("blogs", "PyCon US blog", "pycon.blogspot.com", "https://x.org/")
     assert link.key == "blogs_pycon_us_blog"
     assert with_link().links[0].key == "pycon_mastodon"
@@ -292,13 +292,13 @@ def test_a_link_s_key_is_its_section_and_its_label_in_snake_case() -> None:
 def test_a_broken_social_rule_names_the_file_and_the_key(
     table: SocialInfo, message: str
 ) -> None:
-    """Each ``[social]`` rule fails with the file and the key of what breaks it."""
+    """Each `[social]` rule fails with the file and the key of what breaks it."""
     with pytest.raises(YearDataError, match=rf"^2026/content.toml: {message}"):
         check_social(table, "2026/content.toml")
 
 
 def test_two_links_with_one_identifier_are_refused() -> None:
-    """Two rows of a section with one label would share ``social.link.<key>``."""
+    """Two rows of a section with one label would share `social.link.<key>`."""
     assert SOCIAL is not None
     table = replace(SOCIAL, links=(*SOCIAL.links, SOCIAL.links[0]))
     with pytest.raises(YearDataError, match=r"label: 'Mastodon' is already in 'pycon'"):
@@ -306,7 +306,7 @@ def test_two_links_with_one_identifier_are_refused() -> None:
 
 
 def test_the_load_refuses_a_broken_social_table(tmp_path: Path) -> None:
-    """A ``[social]`` with an unknown section fails ``load_year()`` itself."""
+    """A `[social]` with an unknown section fails `load_year()` itself."""
     for name in ("conference.toml", "content.toml"):
         (tmp_path / "2026").mkdir(exist_ok=True)
         text = (config.DATA_DIR / "2026" / name).read_text()

@@ -1,9 +1,9 @@
-"""Tests for ``tools/check_feed.py``, the weekly live-feed check (D-77, D-84; DEV-08).
+"""Tests for `tools/check_feed.py`, the weekly live-feed check (D-77, D-84; DEV-08).
 
-The feeds come from an ``httpx.MockTransport`` serving the active year's recorded feed, a
-broken copy of it or an error, never the network. Each invariant of ``tools/feed_invariants.py``
+The feeds come from an `httpx.MockTransport` serving the active year's recorded feed, a
+broken copy of it or an error, never the network. Each invariant of `tools/feed_invariants.py`
 failing on a broken model, so none can silently always pass, is
-``test_check_feed_breaks.py``'s.
+`test_check_feed_breaks.py`'s.
 """
 
 from typing import Any
@@ -46,12 +46,12 @@ def check(
 
 
 def ok(body: bytes) -> httpx.Response:
-    """A 200 response carrying ``body``."""
+    """A 200 response carrying `body`."""
     return httpx.Response(200, content=body)
 
 
 def first_talk(doc: dict[str, Any]) -> dict[str, Any]:
-    """The first slot of kind ``talk`` in a feed document."""
+    """The first slot of kind `talk` in a feed document."""
     return next(slot for slot in doc["schedule"] if slot["kind"] == "talk")
 
 
@@ -93,7 +93,7 @@ def test_a_feed_that_breaks_an_invariant_fails_and_names_it(
 def test_a_record_the_parser_skips_fails_the_check(
     capsys: pytest.CaptureFixture[str],
 ) -> None:
-    """A talk without a name is skipped, which fails ``no session is lost``."""
+    """A talk without a name is skipped, which fails `no session is lost`."""
     status, out = check(
         capsys, ok(changed(YEAR, lambda doc: first_talk(doc).pop("name")))
     )
@@ -183,7 +183,7 @@ def test_keys_the_recorded_feeds_lack_are_printed_not_failed(
 
 
 def test_new_keys_compares_sections_and_their_records() -> None:
-    """``new_keys`` lists the keys no recorded feed has, top level and per section."""
+    """`new_keys` lists the keys no recorded feed has, top level and per section."""
     grown = document(2026)
     first_talk(grown)["captions_url"] = "https://example.org/captions"
     grown["badges"] = []

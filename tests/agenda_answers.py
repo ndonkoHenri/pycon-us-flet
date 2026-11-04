@@ -1,7 +1,7 @@
-"""Readers of ``core.agenda``'s answers by id, for its three test modules (#312).
+"""Readers of `core.agenda`'s answers by id, for its three test modules (#312).
 
-``test_agenda.py`` (Now and your next session), ``test_agenda_my_schedule.py`` (My
-schedule and its overlaps) and ``test_agenda_fold.py`` (what has ended, and the elapsed
+`test_agenda.py` (Now and your next session), `test_agenda_my_schedule.py` (My
+schedule and its overlaps) and `test_agenda_fold.py` (what has ended, and the elapsed
 share) compare the answers with the ids the feed names.
 """
 
@@ -16,7 +16,7 @@ POSTERS_ROW = "poster-Expo Hall AB-2026-05-17T09:30:00-07:00"
 
 
 def may(year: int, day: int, hour: int, minute: int = 0) -> datetime:
-    """An instant in May of ``year``, in that year's conference zone."""
+    """An instant in May of `year`, in that year's conference zone."""
     zone = load_year(year).conference.zone
     return datetime(year, 5, day, hour, minute, tzinfo=zone)
 
@@ -26,7 +26,7 @@ def may(year: int, day: int, hour: int, minute: int = 0) -> datetime:
 
 
 def ids(sessions: Iterable[Session]) -> tuple[str, ...]:
-    """Return the ids of ``sessions``, in their order."""
+    """Return the ids of `sessions`, in their order."""
     return tuple(session.id for session in sessions)
 
 
@@ -53,7 +53,7 @@ def shown(
 
 
 def next_id(data: ConferenceData, saved: frozenset[str], now: datetime) -> str | None:
-    """Return the id of the next saved session at ``now``, or None."""
+    """Return the id of the next saved session at `now`, or None."""
     session = next_for_me(data, saved, now)
     return None if session is None else session.id
 

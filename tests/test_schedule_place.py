@@ -1,12 +1,12 @@
 """Tests for the Schedule keeping each day's place across a text-size change (D-331, #337).
 
-The Schedule renders in ``tests/schedule_view.py``'s harness: ``ListView.scroll_to`` is
+The Schedule renders in `tests/schedule_view.py`'s harness: `ListView.scroll_to` is
 recorded and a keyed scroll answered with a scroll end at 4,000 dp. The device's
-reports are dispatched by hand: each slot's height (``size_change`` on its column), the
+reports are dispatched by hand: each slot's height (`size_change` on its column), the
 probe's widths, and scroll starts and ends. Whether the rows really stay in view is a
-device check (#337's PR: Android emulator, trials against ``main``). The put-backs'
+device check (#337's PR: Android emulator, trials against `main`). The put-backs'
 turns across two layout changes in a row (D-364) are
-``tests/test_schedule_place_turns.py``'s, which imports this module's helpers.
+`tests/test_schedule_place_turns.py`'s, which imports this module's helpers.
 """
 
 import asyncio
@@ -48,7 +48,7 @@ def _slots(schedule: Shown, day: date) -> list[tuple[str, ft.Column]]:
 
 
 async def _report(schedule: Shown, day: date, height: float) -> None:
-    """Have every slot of the day report ``height``, as Flutter does after a layout."""
+    """Have every slot of the day report `height`, as Flutter does after a layout."""
     for _, column in _slots(schedule, day):
         await schedule.event(column, "size_change", {"w": 400.0, "h": height})
 

@@ -1,8 +1,8 @@
 """Tests for the plain diagnostics text a bug report carries (INFO-04, D-72, D-271).
 
-``diagnostics_text()`` is tested on hand-made ``Facts``; ``gather_facts()`` on a fake
-page and real stores is ``tests/test_diagnostics_gather.py``'s. Both share
-``tests/diagnostics_facts.py``. Time comes from ``clock.set_test_now()``.
+`diagnostics_text()` is tested on hand-made `Facts`; `gather_facts()` on a fake
+page and real stores is `tests/test_diagnostics_gather.py`'s. Both share
+`tests/diagnostics_facts.py`. Time comes from `clock.set_test_now()`.
 """
 
 import dataclasses
@@ -30,7 +30,7 @@ frozen_clock = diagnostics_facts.frozen_clock  # the fixture, under this module'
 
 
 def test_each_line_names_one_fact_in_a_fixed_order() -> None:
-    """The text is 19 ``Name: value`` lines, under the issue's 20, one per fact."""
+    """The text is 19 `Name: value` lines, under the issue's 20, one per fact."""
     text = diagnostics_text(FACTS)
     assert tuple(fields(text)) == NAMES
     assert len(text.splitlines()) == len(NAMES) <= 20
@@ -94,12 +94,12 @@ def test_the_device_offset_is_iso_8601_with_an_ascii_sign(
 
 
 def test_a_companion_run_says_it_is_not_embedded() -> None:
-    """``flet run`` and the companion app are not embedded, and the text says so (F14)."""
+    """`flet run` and the companion app are not embedded, and the text says so (F14)."""
     assert text_of(embedded=False)["Run"] == diagnostics.NOT_EMBEDDED
 
 
 def test_before_any_data_the_schedule_says_none_yet() -> None:
-    """Before ``load_local`` publishes, there is no source, feed or fetch time."""
+    """Before `load_local` publishes, there is no source, feed or fetch time."""
     lines = text_of(source="none", feed_digest=None, fetched_at=None)
     assert lines["Schedule"] == "none yet"
     assert lines["Schedule fetched"] == "never"
@@ -146,7 +146,7 @@ def test_an_unread_saved_list_is_not_counted_as_empty() -> None:
 
 
 def test_facts_has_exactly_the_reviewed_fields() -> None:
-    """``Facts`` holds only the reviewed fields, none of them personal (D-72, D-271).
+    """`Facts` holds only the reviewed fields, none of them personal (D-72, D-271).
 
     Adding a field means first deciding it carries nothing personal (no query, title,
     id, URL or name), then listing it here. The search query has no field by design.

@@ -2,7 +2,7 @@
 
 At iOS's largest text with Bold Text the card grew over half the Concourse plan and
 hid Room 103's pin at fit. Its height is now bound by what the fitted plan leaves
-under the pin (``plan_label.label_room()``), and its words scroll inside it. The viewer
+under the pin (`plan_label.label_room()`), and its words scroll inside it. The viewer
 sizes below are the floor viewer's body on the devices #793 names; that the card
 scrolls and stays one node is checked on them (the PR).
 """
@@ -54,20 +54,20 @@ def test_the_card_at_its_tallest_ends_under_the_pin(viewer: str, pin: Pin) -> No
 
 
 def test_a_pin_low_on_a_short_viewer_still_leaves_the_card_a_line() -> None:
-    """In landscape a low pin leaves less than a line: the card keeps ``LABEL_MIN``."""
+    """In landscape a low pin leaves less than a line: the card keeps `LABEL_MIN`."""
     (pin,) = [p for p in PINS if p.key == "halla"]
     box = (800.0, 300.0)
     assert screen.label_room(box, fitted(box, (1583, 2048)), pin) == screen.LABEL_MIN
 
 
 def test_no_bound_before_the_viewer_is_laid_out() -> None:
-    """Before ``on_size_change`` there is no pin on screen to keep clear."""
+    """Before `on_size_change` there is no pin on screen to keep clear."""
     (pin,) = [p for p in PINS if p.key == "103abc"]
     assert screen.label_room((0.0, 0.0), (0.0, 0.0), pin) is None
 
 
 def card_parts(plan: plan_view.Plan) -> tuple[ft.Card, ft.Column, ft.Column]:
-    """The label card, the ``Column`` that bounds its words and the one that measures them."""
+    """The label card, the `Column` that bounds its words and the one that measures them."""
     card = cast(ft.Card, cast(ft.Semantics, plan.node("plan.label").content).content)
     words = cast(ft.Container, card.content).content
     assert isinstance(words, ft.Column)
@@ -77,10 +77,10 @@ def card_parts(plan: plan_view.Plan) -> tuple[ft.Card, ft.Column, ft.Column]:
 
 
 async def test_a_short_card_keeps_its_own_height(render: Render) -> None:
-    """``?pin=103abc`` at the default size: no bound and no scroll, so no stretch.
+    """`?pin=103abc` at the default size: no bound and no scroll, so no stretch.
 
-    A scrolling ``Column`` takes the whole of its bound in Flet (its content's least
-    height is the bound), so a card that always scrolled stood ``label_room()`` tall
+    A scrolling `Column` takes the whole of its bound in Flet (its content's least
+    height is the bound), so a card that always scrolled stood `label_room()` tall
     with two short lines in it, over the plan (D-444, PR #798's review).
     """
     plan = await render("?pin=103abc")
@@ -92,7 +92,7 @@ async def test_a_short_card_keeps_its_own_height(render: Render) -> None:
 
 
 async def test_a_tall_card_scrolls_in_the_room_under_its_pin(render: Render) -> None:
-    """``?pin=103abc`` at the largest text: the card is ``label_room()`` high and scrolls."""
+    """`?pin=103abc` at the largest text: the card is `label_room()` high and scrolls."""
     plan = await render("?pin=103abc")
     card, words, _ = card_parts(plan)
     assert (card.max_height, words.scroll) == (None, None)  # not before layout
@@ -121,7 +121,7 @@ async def test_the_card_is_one_node_labelled_by_its_words(
 ) -> None:
     """The identifier's node takes the words as its label and leaves their nodes out.
 
-    Merged in, the scrolling ``Column`` made the identifier's node a scrollable one,
+    Merged in, the scrolling `Column` made the identifier's node a scrollable one,
     which iOS shows as a scroll view without the identifier (#800, D-447): so the
     words are a label, the same whether the card scrolls or not.
     """
@@ -140,7 +140,7 @@ async def test_the_card_is_one_node_labelled_by_its_words(
 async def test_the_viewers_app_bar_stays_still(render: Render) -> None:
     """The plan never scrolls under the bar: the card's words do, so it keeps its colour.
 
-    Flutter's ``AppBar`` takes any scroll in the body at depth 0 for the page's; the
+    Flutter's `AppBar` takes any scroll in the body at depth 0 for the page's; the
     card's tinted it on iOS at the largest text (#800, D-447).
     """
     plan = await render("?pin=103abc")

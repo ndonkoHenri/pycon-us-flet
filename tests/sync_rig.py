@@ -1,9 +1,9 @@
-"""The sync worker's rig: a real ``Account`` signed in to the in-process mock (#692).
+"""The sync worker's rig: a real `Account` signed in to the in-process mock (#692).
 
-``Rig`` holds what ``SyncWorker`` works with: the outbox in a temporary directory, the
-``Account`` and ``Staff`` stores, an ``ApiClient`` that signs with the account's key over
-``tools/mock_api/transport.py`` (so the mock checks every signature and counts every
-write), and one clock the mock, the client and the worker share. ``Wire`` records each
+`Rig` holds what `SyncWorker` works with: the outbox in a temporary directory, the
+`Account` and `Staff` stores, an `ApiClient` that signs with the account's key over
+`tools/mock_api/transport.py` (so the mock checks every signature and counts every
+write), and one clock the mock, the client and the worker share. `Wire` records each
 request and lets a test hold one or act right after it.
 """
 
@@ -37,7 +37,7 @@ SENDS = ("lead_retrieval/", "check_in/")
 def outbox_db(tmp_path: Path) -> Iterator[OutboxDb]:
     """Yield an outbox in its own directory (not the storage's), closed afterwards.
 
-    A test module takes it as its ``db`` fixture with ``db = outbox_db``.
+    A test module takes it as its `db` fixture with `db = outbox_db`.
     """
     directory = tmp_path / "outbox"
     directory.mkdir()
@@ -56,14 +56,14 @@ class Wire(Recorder):
     """
 
     def __init__(self, inner: httpx.AsyncBaseTransport) -> None:
-        """Record every request to ``inner``, holding none."""
+        """Record every request to `inner`, holding none."""
         super().__init__(inner)
         self.gate: Awaitable[object] | None = None
         self.then: Callable[[], Awaitable[object]] | None = None
         self.before: Callable[[httpx.Request], None] | None = None
 
     async def handle_async_request(self, request: httpx.Request) -> httpx.Response:
-        """Record the request, wait at the gate, answer it, then run ``then``."""
+        """Record the request, wait at the gate, answer it, then run `then`."""
         self.sent.append(request)
         if self.before is not None:
             self.before(request)
@@ -84,8 +84,8 @@ class Rig:
         clock: The time for the mock, the client's signatures and the worker.
         state: The mock's state: what it recorded.
         wire: Every request sent, sign-ins included.
-        account: The ``Account`` store, signed in by ``sign_in()``.
-        staff: The ``Staff`` store the worker reports to.
+        account: The `Account` store, signed in by `sign_in()`.
+        staff: The `Staff` store the worker reports to.
         api: The client, signing with the account's key.
         refused: How often the worker said the key was refused.
     """
@@ -116,7 +116,7 @@ class Rig:
         self.refused = 0
 
     async def sign_in(self, role: str) -> None:
-        """Sign the account in as the seeded ``role``, through ``authenticate``."""
+        """Sign the account in as the seeded `role`, through `authenticate`."""
         outcome = await self.account.sign_in(
             self.api,
             self._storage,
@@ -131,7 +131,7 @@ class Rig:
         await self.account.sign_out(self._storage, self._credentials)
 
     def worker(self, foreground: asyncio.Event | None = None) -> SyncWorker:
-        """A worker for this rig's client, counting refusals in ``refused``.
+        """A worker for this rig's client, counting refusals in `refused`.
 
         Args:
             foreground: The app's foreground event; None for always in the foreground.
@@ -156,7 +156,7 @@ class Rig:
         validator: str = "v4l1d01",
         sponsor: str | None = None,
     ) -> None:
-        """Queue the signed-in account's lead scan, for ``sponsor`` (None: its own)."""
+        """Queue the signed-in account's lead scan, for `sponsor` (None: its own)."""
         decide = partial(
             outbox_enqueue.scan_lead,
             owner=self.account.owner,
@@ -171,7 +171,7 @@ class Rig:
     def note(
         self, text: str, code: str = "MOCK0001", sponsor: str | None = None
     ) -> None:
-        """Queue the signed-in account's note on ``code``'s lead."""
+        """Queue the signed-in account's note on `code`'s lead."""
         decide = partial(
             outbox_enqueue.save_note,
             owner=self.account.owner,
@@ -186,7 +186,7 @@ class Rig:
     def door(
         self, code: str = "MOCK0001", product: int = 10, validator: str = "v4l1d01"
     ) -> None:
-        """Queue the signed-in account's check-in of ``code`` to ``product``."""
+        """Queue the signed-in account's check-in of `code` to `product`."""
         payload = {
             "attendee_access_code": code,
             "badge_validator": validator,
@@ -208,7 +208,7 @@ class Rig:
         assert self.db.enqueue(code, decide) is not None
 
     def rows(self, owner: str | None = None) -> list[Row]:
-        """Every row of ``owner`` (the signed-in account by default), oldest first."""
+        """Every row of `owner` (the signed-in account by default), oldest first."""
         found = self.db.rows(owner or self.account.owner, list(Status))
         assert found is not None
         return found

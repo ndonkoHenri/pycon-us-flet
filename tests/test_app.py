@@ -1,7 +1,7 @@
 """Tests for the start sequence and the boot gate (DATA-35, SHELL-01; D-69, D-147).
 
-``bootstrap()`` runs against ``tests/app_start.py``'s fakes. The page's handlers are
-``test_app_handlers.py``'s, the theme and services ``test_app_theme.py``'s. The
+`bootstrap()` runs against `tests/app_start.py`'s fakes. The page's handlers are
+`test_app_handlers.py`'s, the theme and services `test_app_theme.py`'s. The
 components themselves are checked on devices (the PR).
 """
 
@@ -337,7 +337,7 @@ class LaunchedByTap(MemoryNotifications):
     """E3 started by a tap on a reminder: it hands the tap over, then answers (F246)."""
 
     def __init__(self, route: str) -> None:
-        """Hand over ``route``'s tap before the first answer, to ``scheduler``."""
+        """Hand over `route`'s tap before the first answer, to `scheduler`."""
         super().__init__()
         self.route = route
         self.scheduler: Scheduler | None = None
@@ -354,7 +354,7 @@ async def test_the_gate_waits_for_e3_so_a_launch_tap_is_held_for_start(
 ) -> None:
     """The start awaits E3's first answer, by which the launch tap is in (D-396).
 
-    So ``Start`` finds it when the gate opens, and the first screen is the session.
+    So `Start` finds it when the gate opens, and the first screen is the session.
     """
     os = LaunchedByTap("/my-schedule/session/142")
     scheduler = Scheduler(cast(Notifications, os))
@@ -371,7 +371,7 @@ async def test_an_e3_that_never_answers_delays_the_gate_by_launch_wait_at_most(
     network: Network,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """E3 stuck in its start holds the gate ``LAUNCH_WAIT`` at most, then reads off."""
+    """E3 stuck in its start holds the gate `LAUNCH_WAIT` at most, then reads off."""
     os = MemoryNotifications()
     os.initialized = asyncio.Event()  # never set
     monkeypatch.setattr(app, "LAUNCH_WAIT", 0.01)

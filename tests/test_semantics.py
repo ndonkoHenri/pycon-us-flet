@@ -1,9 +1,9 @@
 """Tests for the semantics helpers and two scans of every app module.
 
-The helpers are ``ui/semantics.py``'s (D-200). The scans hold every
-``Semantics`` heading to a level (F40, F49, D-211) and every merged identifier to
-``named()`` (D-214); the scan that keeps a bare identifier off a button, chip, field or
-tile (F50, D-230) is ``test_semantics_bare.py``'s (#623).
+The helpers are `ui/semantics.py`'s (D-200). The scans hold every
+`Semantics` heading to a level (F40, F49, D-211) and every merged identifier to
+`named()` (D-214); the scan that keeps a bare identifier off a button, chip, field or
+tile (F50, D-230) is `test_semantics_bare.py`'s (#623).
 """
 
 import ast
@@ -31,9 +31,9 @@ def test_a_semantics_key_is_safe_in_a_selector() -> None:
 
 
 def test_a_named_disabled_button_s_node_says_it_is_disabled() -> None:
-    """F42: Flutter's ``enabled`` comes from the ``Semantics``' own ``disabled``.
+    """F42: Flutter's `enabled` comes from the `Semantics`' own `disabled`.
 
-    ``named()`` reads it from the control, so a caller cannot forget it (D-214).
+    `named()` reads it from the control, so a caller cannot forget it (D-214).
     """
     button = ft.IconButton(ft.Icons.SHARE_OUTLINED, disabled=True)
     merged = named("session.share", button)
@@ -58,11 +58,11 @@ def test_a_named_row_follows_its_tile_s_state() -> None:
 
 
 def test_a_semantics_passed_for_the_button_needs_the_button_s_disabled() -> None:
-    """F42: ``named()`` reads only the control it gets, not the button inside it.
+    """F42: `named()` reads only the control it gets, not the button inside it.
 
-    The open spaces' Propose and a sprint's More pass a ``Semantics`` (a label,
-    ``expanded``) in the button's place: its ``disabled`` is its own, ``False``
-    unless it is given the button's, as ``named()``'s docstring says.
+    The open spaces' Propose and a sprint's More pass a `Semantics` (a label,
+    `expanded`) in the button's place: its `disabled` is its own, `False`
+    unless it is given the button's, as `named()`'s docstring says.
     """
     button = ft.TextButton("More", disabled=True)
     bare = cast(
@@ -77,16 +77,16 @@ def test_a_semantics_passed_for_the_button_needs_the_button_s_disabled() -> None
 # ------------------------------------------------------------------ headings
 
 SOURCES = sorted(Path(pycon_us.__file__).parent.rglob("*.py"))
-"""Every module of the app, where a ``Semantics`` may mark a heading."""
+"""Every module of the app, where a `Semantics` may mark a heading."""
 
 
 def heading_calls(path: Path) -> list[tuple[int, dict[str, ast.expr]]]:
-    """Return each heading call in ``path``: a ``Semantics(...)`` or a ``SectionHeader``.
+    """Return each heading call in `path`: a `Semantics(...)` or a `SectionHeader`.
 
-    Its line and its keywords, for every ``Semantics`` call that passes ``header``
-    or ``heading_level``, whether it is spelled ``ft.Semantics`` or ``Semantics``,
-    or a ``SectionHeader(level=...)`` call, whose ``level`` is its heading's
-    ``heading_level``.
+    Its line and its keywords, for every `Semantics` call that passes `header`
+    or `heading_level`, whether it is spelled `ft.Semantics` or `Semantics`,
+    or a `SectionHeader(level=...)` call, whose `level` is its heading's
+    `heading_level`.
     """
     calls = []
     for node in ast.walk(ast.parse(path.read_text(encoding="utf-8"))):
@@ -106,7 +106,7 @@ def heading_calls(path: Path) -> list[tuple[int, dict[str, ast.expr]]]:
 
 
 def is_unset(value: ast.expr | None) -> bool:
-    """Whether a keyword's value is missing, ``None`` or ``False``."""
+    """Whether a keyword's value is missing, `None` or `False`."""
     return value is None or (
         isinstance(value, ast.Constant) and value.value in (None, False)
     )
@@ -115,8 +115,8 @@ def is_unset(value: ast.expr | None) -> bool:
 def test_the_scan_finds_the_headings_it_checks() -> None:
     """A scan that matched nothing would pass whatever the code says.
 
-    The modules named here define a heading with its own ``Semantics``, rather than
-    tune a ``SectionHeader``'s level, so they match whatever level a screen picks.
+    The modules named here define a heading with its own `Semantics`, rather than
+    tune a `SectionHeader`'s level, so they match whatever level a screen picks.
     """
     found = {path.name for path in SOURCES if heading_calls(path)}
     defining = {
@@ -132,7 +132,7 @@ def test_the_scan_finds_the_headings_it_checks() -> None:
 
 @pytest.mark.parametrize("path", SOURCES, ids=lambda p: p.name)
 def test_every_heading_has_both_the_flag_and_a_level(path: Path) -> None:
-    """F40, F49, D-211: a heading is ``header=True`` with a level from 1 to 6.
+    """F40, F49, D-211: a heading is `header=True` with a level from 1 to 6.
 
     Both of Flutter's bridges make a heading only of a level above 0, so the flag
     alone is none for TalkBack or VoiceOver; the flag goes with it, as Flutter and
@@ -152,20 +152,20 @@ def test_every_heading_has_both_the_flag_and_a_level(path: Path) -> None:
 
 
 def called(node: ast.Call) -> str:
-    """Return the name a call calls: ``Semantics`` for ``ft.Semantics(...)``."""
+    """Return the name a call calls: `Semantics` for `ft.Semantics(...)`."""
     func = node.func
     return func.attr if isinstance(func, ast.Attribute) else getattr(func, "id", "")
 
 
 NAMED_KEYWORDS = {"identifier", "content", "disabled"}
-"""The keywords of the ``Semantics`` that ``named()`` merges."""
+"""The keywords of the `Semantics` that `named()` merges."""
 
 
 def hand_merges(path: Path) -> list[int]:
-    """Return the lines of ``path`` that build ``named()``'s shape by hand.
+    """Return the lines of `path` that build `named()`'s shape by hand.
 
-    A ``MergeSemantics`` straight around a ``Semantics`` that passes ``identifier``
-    and nothing else but ``content`` and ``disabled``: what ``named()`` returns.
+    A `MergeSemantics` straight around a `Semantics` that passes `identifier`
+    and nothing else but `content` and `disabled`: what `named()` returns.
     """
     lines = []
     for node in ast.walk(ast.parse(path.read_text(encoding="utf-8"))):
@@ -190,9 +190,9 @@ def test_the_merge_scan_finds_named_s_own_shape() -> None:
     "path", [p for p in SOURCES if p.name != "semantics.py"], ids=lambda p: p.name
 )
 def test_identifiers_are_merged_through_named(path: Path) -> None:
-    """D-214, ux.md §9: ``named()`` is the one way to merge an identifier.
+    """D-214, ux.md §9: `named()` is the one way to merge an identifier.
 
-    A copy by hand has to pass the control's ``disabled`` itself, which the
+    A copy by hand has to pass the control's `disabled` itself, which the
     Developer rows' didn't (F42). A merge with more keywords (a label, the link
     flag) is another shape, and stays.
     """

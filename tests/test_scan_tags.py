@@ -1,6 +1,6 @@
 """Tests for a scan result's tags: their words, their chips and their contrast (#767).
 
-``ScanResult.tags`` is data (``core/badges.py``); ``ui/scan_result.py`` draws them as
+`ScanResult.tags` is data (`core/badges.py`); `ui/scan_result.py` draws them as
 chips under the name, a warning (an allergy) first and larger, and every chip takes the
 card's own colours, so it reads on every fill: the table's, the dimmed neutral one, in
 light, dark and high contrast (DOOR-05; ux.md §7.2, §9; D-65, D-306).
@@ -20,7 +20,7 @@ VEGETARIAN = Tag("Vegetarian")
 
 
 def chips(row: ft.Control) -> list[ft.Container]:
-    """The chips of ``tag_row()``'s row, in order."""
+    """The chips of `tag_row()`'s row, in order."""
     assert isinstance(row, ft.Container) and isinstance(row.content, ft.Row)
     assert row.content.wrap  # a row that wraps at large text
     found = row.content.controls
@@ -40,7 +40,7 @@ def hex_of(color: ft.ColorValue, *, dark: bool, high_contrast: bool) -> str:
     """A colour as #RRGGBB: a fixed one as is, a scheme role as the theme draws it.
 
     High contrast sets every role by hand; otherwise the surface roles are Flet's
-    neutral ramp (``NEUTRAL_RAMP``), which the scheme leaves unset.
+    neutral ramp (`NEUTRAL_RAMP`), which the scheme leaves unset.
     """
     if not isinstance(color, ft.Colors):
         assert isinstance(color, str) and color.startswith("#")
@@ -64,7 +64,7 @@ def test_the_tags_are_said_after_the_name_before_the_details() -> None:
 
 
 def test_a_warning_comes_first_larger_and_with_its_icon() -> None:
-    """Given after a plain tag, the allergy still leads, with ``WARNING_AMBER``."""
+    """Given after a plain tag, the allergy still leads, with `WARNING_AMBER`."""
     first, second = chips(
         tag_row((VEGETARIAN, ALLERGY), label="#FFFFFF", fill="#146C2E")
     )
@@ -131,7 +131,7 @@ def test_every_tag_reads_on_every_fill(
     label, fill = fill_of(outcome, high_contrast=high_contrast, dimmed=dimmed)
 
     def hex_at(color: ft.ColorValue) -> str:
-        """``color`` in this theme."""
+        """`color` in this theme."""
         return hex_of(color, dark=dark, high_contrast=high_contrast)
 
     card = hex_at(fill)

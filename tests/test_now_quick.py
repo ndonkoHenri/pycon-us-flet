@@ -3,7 +3,7 @@
 What Now makes of them: three tonal buttons in the conference and sprint seasons only,
 after the sessions and the Schedule link, so at peak times they push no session down,
 each pushing its page over Now so Back returns there. The screen runs in a real Flet
-session through ``tests/now_view.py``'s harness. How the row wraps at 200 % and reads to
+session through `tests/now_view.py`'s harness. How the row wraps at 200 % and reads to
 TalkBack and VoiceOver is checked on devices (the PR).
 """
 
@@ -25,7 +25,7 @@ BUTTONS = [f"now.quick.{segment}" for segment in now_quick.PAGES]
 
 @pytest.fixture
 def show(render: Callable[..., Any]) -> Callable[..., Any]:  # noqa: F811
-    """``tests/now_view.py``'s ``render``: Now at a time, in a real Flet session."""
+    """`tests/now_view.py`'s `render`: Now at a time, in a real Flet session."""
     return render
 
 
@@ -73,7 +73,7 @@ async def test_the_buttons_hide_before_and_after_the_conference(
 
 
 async def test_each_button_pushes_its_page_over_now(show: Callable[..., Any]) -> None:
-    """A tap pushes ``/now/<page>``, whose Back returns to Now (D-17)."""
+    """A tap pushes `/now/<page>`, whose Back returns to Now (D-17)."""
     shown = await show(may(15, 11, 10))
     for identifier in BUTTONS:
         button = shown.node(identifier).content

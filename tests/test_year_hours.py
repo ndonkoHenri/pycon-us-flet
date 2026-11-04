@@ -1,6 +1,6 @@
-"""Tests for the venue hours' year data and its rules (``year_info.py``; #412, D-282).
+"""Tests for the venue hours' year data and its rules (`year_info.py`; #412, D-282).
 
-2026's ``[[venue_hours]]`` are transcribed from the bundled feed's ``venues-hours`` block,
+2026's `[[venue_hours]]` are transcribed from the bundled feed's `venues-hours` block,
 so a test reads that block and compares, section by section and line by line; 2025 has
 no table. The loader refuses an overlap, reversed times, a time with seconds and a day
 outside the conference, naming file, entry and field.
@@ -69,7 +69,7 @@ def data_dir(tmp_path: Path) -> Path:
 
 
 def edit(path: Path, old: str, new: str) -> None:
-    """Replace the first ``old`` in ``path`` with ``new``; ``old`` must be there."""
+    """Replace the first `old` in `path` with `new`; `old` must be there."""
     text = path.read_text(encoding="utf-8")
     assert old in text, f"{old!r} not in {path.name}"
     path.write_text(text.replace(old, new, 1), encoding="utf-8")
@@ -84,7 +84,7 @@ def clock(text: str) -> time:
 
 
 def feed_sections() -> dict[str, str]:
-    """The snapshot's ``venues-hours`` block: each ``<h3>`` heading and the HTML under it."""
+    """The snapshot's `venues-hours` block: each `<h3>` heading and the HTML under it."""
     raw = load_year(2026).read_snapshot().raw.decode()
     block = html.unescape(json.loads(raw)["conference"]["content"]["venues-hours"])
     return dict(section.split("</h3>", 1) for section in block.split("<h3>")[1:])
@@ -93,7 +93,7 @@ def feed_sections() -> dict[str, str]:
 def feed_service(
     body: str, *, located: bool
 ) -> tuple[str, tuple[Opening, ...], tuple[str, ...]]:
-    """A feed section's location (its first line when ``located``), openings and other lines."""
+    """A feed section's location (its first line when `located`), openings and other lines."""
     lines = re.findall(r"<(?:p|li)>(.*?)</(?:p|li)>", body)
     location = lines.pop(0) if located else ""
     openings, others = [], []
@@ -147,12 +147,12 @@ def test_2026_s_lost_and_found_and_luggage_check_carry_a_note() -> None:
 
 
 def test_2025_has_no_table_and_loads() -> None:
-    """A year without ``[[venue_hours]]`` loads, with none: its page shows the feed's block."""
+    """A year without `[[venue_hours]]` loads, with none: its page shows the feed's block."""
     assert load_year(2025).content.venue_hours == ()
 
 
 def service(*openings: Opening, name: str = "Desk", **texts: str) -> ServiceHours:
-    """A service with ``openings`` and optional texts, for the rule tests."""
+    """A service with `openings` and optional texts, for the rule tests."""
     return ServiceHours(name, open=openings, **texts)
 
 
@@ -300,7 +300,7 @@ def test_the_rules_accept_touching_openings_and_the_conference_s_edges() -> None
 def test_the_loader_names_the_file_entry_and_field(
     data_dir: Path, old: str, new: str, message: str
 ) -> None:
-    """A broken ``[[venue_hours]]`` entry in a year's file fails its load with the path."""
+    """A broken `[[venue_hours]]` entry in a year's file fails its load with the path."""
     edit(data_dir / "2026" / "content.toml", old, new)
     with pytest.raises(YearDataError) as error:
         load_year(2026, data_dir)

@@ -1,7 +1,7 @@
 """How the mock reads what a request sends: JSON bodies, queries and ids (D-50).
 
-Each endpoint reads its query the way Ionic builds it: ``fetch_products`` raw, the CoC
-and lead captures percent-decoded (``tools/mock_api/README.md``, Endpoints). Anything
+Each endpoint reads its query the way Ionic builds it: `fetch_products` raw, the CoC
+and lead captures percent-decoded (`tools/mock_api/README.md`, Endpoints). Anything
 malformed is a 400 in the error envelope.
 """
 
@@ -34,7 +34,7 @@ def json_object(body: bytes) -> dict[str, object]:
 
 
 def raw_query(query: str) -> dict[str, str]:
-    """Split a query Ionic sends unencoded (``fetch_products``), decoding nothing.
+    """Split a query Ionic sends unencoded (`fetch_products`), decoding nothing.
 
     Args:
         query: The query as sent.
@@ -50,7 +50,7 @@ def raw_query(query: str) -> dict[str, str]:
 
 
 def encoded_query(query: str) -> dict[str, str]:
-    """Decode a query Ionic builds with ``encodeURIComponent`` (CoC, lead capture).
+    """Decode a query Ionic builds with `encodeURIComponent` (CoC, lead capture).
 
     Args:
         query: The query as sent.
@@ -77,7 +77,7 @@ def text(params: Mapping[str, object], name: str) -> str:
 
 
 def ids(value: str, name: str) -> list[int]:
-    """Parse a comma-separated list of ids as Ionic joins them (``a,b``).
+    """Parse a comma-separated list of ids as Ionic joins them (`a,b`).
 
     Raises:
         Refused: 400 unless every item is a decimal id.

@@ -1,14 +1,14 @@
 """Where the expo hall's bottom column goes: the zoom buttons and the booth card (D-370).
 
-``ExpoHall`` (``screens/expo.py``) stacks the zoom buttons over the booth card
-(``screens/booth_card.py``) in one bottom ``Column``, ``EDGE`` in from the pane's
+`ExpoHall` (`screens/expo.py`) stacks the zoom buttons over the booth card
+(`screens/booth_card.py`) in one bottom `Column`, `EDGE` in from the pane's
 edges. This module's pure arithmetic says whether the buttons go in their 160 dp
 column or a 48 dp row, how high the card's body may grow before it scrolls, and how
 much of the pane the column covers, so a booth brought into view lands above it
 (D-377):
 
 - **A row** in a pane too short for the column (landscape), under a card so tall the
-  column would leave less than ``BAND`` of plan, and wherever the column would reach
+  column would leave less than `BAND` of plan, and wherever the column would reach
   over the fitted plan: on a phone in portrait it covered part of booth 709 at 1x
   (#791, D-443).
 - **The body's box** is half the pane, or what the buttons and insets leave.
@@ -27,7 +27,7 @@ BODY_TOP = 8
 """The body's own padding above its measured content, inside the scroll box, in dp."""
 
 COLUMN_DP = 3 * BUTTON_DP + 2 * 8
-"""The zoom buttons' height in their column (``zoom_buttons()``): 160 dp."""
+"""The zoom buttons' height in their column (`zoom_buttons()`): 160 dp."""
 
 ROW_DP = BUTTON_DP
 """The zoom buttons' height in a row: 48 dp."""
@@ -53,13 +53,13 @@ BAND = COLUMN_DP - ROW_DP
 def over_plan(box: Size, shown: Size) -> bool:
     """Return whether the zoom buttons' column, at the fitted plan, reaches over it.
 
-    The column sits at the pane's bottom right, ``EDGE`` in; the plan is centred in
+    The column sits at the pane's bottom right, `EDGE` in; the plan is centred in
     the viewer. On a phone in portrait the column reached over the plan's lower
     right corner: Zoom in covered part of booth 709 at 1x (#791, D-443).
 
     Args:
-        box: The viewer's size; ``(0, 0)`` before its first layout.
-        shown: The plan's fitted size (``ui.zoom_geometry.fitted()``).
+        box: The viewer's size; `(0, 0)` before its first layout.
+        shown: The plan's fitted size (`ui.zoom_geometry.fitted()`).
     """
     if not (box[0] and shown[0]):
         return False  # not laid out yet
@@ -76,17 +76,17 @@ def card_layout(
     The box is half the pane, or less when the buttons, the gap, the card's padding
     and the pane's insets leave less, so the zoom buttons always stay in the pane
     (D-370): a Stack clips what goes past its top. The buttons go in a row in a short
-    pane, when their column would reach over the fitted plan (``crowded``, D-443),
-    and when a tall card under their column would leave less than ``BAND`` of the
+    pane, when their column would reach over the fitted plan (`crowded`, D-443),
+    and when a tall card under their column would leave less than `BAND` of the
     plan above it (D-377).
 
     Args:
         pane: The pane's height (the viewer's measured height); 0 before it is known.
         measured: The body's measured content height; 0 before it is known.
-        crowded: ``over_plan()`` for the viewer: the column would cover the plan.
+        crowded: `over_plan()` for the viewer: the column would cover the plan.
 
     Returns:
-        ``(row, box)``: ``row`` puts the buttons in a row; ``box`` is None while the
+        `(row, box)`: `row` puts the buttons in a row; `box` is None while the
         body, with its own top padding, fits.
     """
     row = (
@@ -104,13 +104,13 @@ def card_layout(
 def covered(pane: float, measured: float, *, crowded: bool = False) -> float:
     """Return how much of the pane, from its bottom, the card and the zoom buttons take.
 
-    The bottom column as ``card_layout()`` lays it out, with an inset above it too:
+    The bottom column as `card_layout()` lays it out, with an inset above it too:
     what lies higher is in sight (D-377).
 
     Args:
         pane: The pane's height (the viewer's measured height).
         measured: The card body's measured content height.
-        crowded: ``over_plan()`` for the viewer, as ``card_layout()`` takes it.
+        crowded: `over_plan()` for the viewer, as `card_layout()` takes it.
     """
     row, _ = card_layout(pane, measured, crowded=crowded)
     return _cover(pane, measured, row=row)

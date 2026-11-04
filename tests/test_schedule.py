@@ -1,9 +1,9 @@
 """Tests for the Schedule screen: day tabs, the now line and no data (#86, #89).
 
-The screen renders in ``tests/schedule_view.py``'s harness, in a real Flet session with
-``ListView.scroll_to`` and the jumps recorded. The day lists are in
-``test_schedule_lists.py``, positions and Jump to now in ``test_schedule_jump.py``, the
-jump's policy and the "Now" button in ``test_schedule_button.py``. How the tabs read at
+The screen renders in `tests/schedule_view.py`'s harness, in a real Flet session with
+`ListView.scroll_to` and the jumps recorded. The day lists are in
+`test_schedule_lists.py`, positions and Jump to now in `test_schedule_jump.py`, the
+jump's policy and the "Now" button in `test_schedule_button.py`. How the tabs read at
 200 % and what TalkBack says are device checks (#86, #89).
 """
 
@@ -112,7 +112,7 @@ async def test_the_first_day_is_selected_outside_the_conference(
 async def test_the_developer_fake_clock_picks_today(
     shown: Callable[[], Awaitable[Shown]], now: list[datetime | None]
 ) -> None:
-    """D-187: the fake clock moves ``clock.now()``, and with it the Schedule's today."""
+    """D-187: the fake clock moves `clock.now()`, and with it the Schedule's today."""
     now[0] = None  # no test override: the fake clock answers
     clock.start_fake_clock(datetime(2026, 5, 16, 23, 30, tzinfo=PACIFIC))
     try:
@@ -155,28 +155,28 @@ async def test_the_zone_note_keeps_its_place_under_the_strip_in_every_zone(
 async def test_a_remembered_day_wins_over_today(
     shown: Callable[[], Awaitable[Shown]], memory: ViewMemory
 ) -> None:
-    """A day remembered in ``ViewMemory`` is selected over today."""
+    """A day remembered in `ViewMemory` is selected over today."""
     memory.schedule_day = SATURDAY
     schedule = await shown()
     assert schedule.tabs.selected_index == DAYS.index(SATURDAY)
 
 
 def _tab_text(schedule: Shown, index: int) -> str:
-    """The visible text of day tab ``index``."""
+    """The visible text of day tab `index`."""
     node = schedule.node(f"schedule.day_tab.{index}")
     (text,) = find(schedule.session, ft.Text, lambda c: inside(c, node))
     return str(text.value)
 
 
 def _has_dot(schedule: Shown, node: ft.Semantics) -> bool:
-    """Whether the tab ``node`` holds today's mark, a dot."""
+    """Whether the tab `node` holds today's mark, a dot."""
     return bool(find(schedule.session, ft.Container, lambda c: inside(c, node)))
 
 
 async def test_a_day_change_is_remembered_and_its_echo_changes_nothing(
     shown: Callable[[], Awaitable[Shown]], memory: ViewMemory
 ) -> None:
-    """A day change is kept in ``ViewMemory``; its echo re-renders no slot or row."""
+    """A day change is kept in `ViewMemory`; its echo re-renders no slot or row."""
     schedule = await shown()
     await schedule.change_day(SATURDAY)
     assert memory.schedule_day == SATURDAY
@@ -191,7 +191,7 @@ async def test_a_day_change_is_remembered_and_its_echo_changes_nothing(
 
 
 def _now_line(schedule: Shown) -> ft.Semantics:
-    """The now line's ``Semantics`` node."""
+    """The now line's `Semantics` node."""
     return schedule.node("schedule.now_line")
 
 
@@ -380,4 +380,4 @@ async def test_try_again_is_disabled_only_while_the_user_s_refresh_runs(
 
 
 async def _told(*_: Any) -> None:
-    """Stand in for ``RefreshIndicator``'s ``finish_refresh``: no Flutter to tell here."""
+    """Stand in for `RefreshIndicator`'s `finish_refresh`: no Flutter to tell here."""

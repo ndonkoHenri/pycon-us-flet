@@ -2,7 +2,7 @@
 
 Under non-idempotent semantics, a reply lost after the mock committed makes the resend
 a second record, which no client can prevent. The outbox flags every row whose send
-may have reached the server (``NetworkError.maybe_sent``, ``ApiError.unreadable``, D-410),
+may have reached the server (`NetworkError.maybe_sent`, `ApiError.unreadable`, D-410),
 so each duplicate the mock records belongs to a flagged row; a failure before the request
 left flags nothing, nor does a refusal. The mock counts what it applied, so "a duplicate"
 is the mock's own count.
@@ -40,10 +40,10 @@ type Act = Callable[[httpx.Request], None]
 """What a test does to one request: arm a mock fault, or raise a transport error."""
 
 LEAD = ("lead", "MOCK0001")
-"""The lead capture of ``MOCK0001``, the first row a pass sends."""
+"""The lead capture of `MOCK0001`, the first row a pass sends."""
 
 DOOR = ("door", "MOCK0003")
-"""``MOCK0003``'s check-in to product 10, of which they bought two: a second
+"""`MOCK0003`'s check-in to product 10, of which they bought two: a second
 redemption fits, so the non-idempotent mock records it."""
 
 
@@ -64,7 +64,7 @@ async def queued(rig: Rig, capture: Capture) -> Rig:
 
 
 def first_send_of(target: tuple[str, str], act: Act) -> Act:
-    """Return a ``Wire.before`` hook that acts on the target row's first send only.
+    """Return a `Wire.before` hook that acts on the target row's first send only.
 
     Args:
         target: The row's kind and access code.
@@ -104,7 +104,7 @@ def flagged(rig: Rig) -> set[tuple[str, str]]:
 
 @pytest.fixture
 def rig(db: OutboxDb, storage: Storage, credentials: CredentialStorage) -> Rig:
-    """A rig over the mock, signed out; ``queued()`` sets its semantics."""
+    """A rig over the mock, signed out; `queued()` sets its semantics."""
     return Rig(db, storage, credentials)
 
 

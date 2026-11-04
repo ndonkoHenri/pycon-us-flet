@@ -1,9 +1,9 @@
 """Fakes for code that runs outside a renderer: the page, its device and the hooks (#623).
 
-``FakePage`` stands in for ``ft.Page`` and ``bound()`` binds it as Flet binds a session's
-page; ``android_device()`` and ``ios_device()`` make the device a page reports; ``Hooks``
-answers the hooks a builder calls, and ``phone_margin()`` stands in for
-``use_margin()``. The services' fakes are ``tests/fakes.py``'s.
+`FakePage` stands in for `ft.Page` and `bound()` binds it as Flet binds a session's
+page; `android_device()` and `ios_device()` make the device a page reports; `Hooks`
+answers the hooks a builder calls, and `phone_margin()` stands in for
+`use_margin()`. The services' fakes are `tests/fakes.py`'s.
 """
 
 import dataclasses
@@ -21,13 +21,13 @@ from pycon_us.theme import LIGHT_TOKENS, Tokens
 
 
 class FakePage:
-    """The few ``ft.Page`` fields the start sequence, the scaffold and ``report_errors`` use.
+    """The few `ft.Page` fields the start sequence, the scaffold and `report_errors` use.
 
-    Tests pass it as ``cast(ft.Page, FakePage())``: a real page needs a session.
+    Tests pass it as `cast(ft.Page, FakePage())`: a real page needs a session.
     """
 
     def __init__(self, brightness: ft.Brightness = ft.Brightness.LIGHT) -> None:
-        """Start at ``/`` on iOS in ``brightness``, with nothing navigated or shown."""
+        """Start at `/` on iOS in `brightness`, with nothing navigated or shown."""
         self.route = "/"
         self.width: float | None = None
         self.height: float | None = None
@@ -53,17 +53,17 @@ class FakePage:
         self.controls: dict[int, ft.BaseControl] = {}
 
     def get_control(self, id: int) -> ft.BaseControl | None:
-        """Return the control mounted under ``id``: ``controls``, which the test fills."""
+        """Return the control mounted under `id`: `controls`, which the test fills."""
         return self.controls.get(id)
 
     async def get_device_info(self) -> ft.DeviceInfo | None:
-        """Return ``device``, or raise ``device_error``, as the Flutter side would."""
+        """Return `device`, or raise `device_error`, as the Flutter side would."""
         if self.device_error is not None:
             raise self.device_error
         return self.device
 
     async def get_package_info(self) -> ft.PackageInfo:
-        """Return ``package``, or raise ``package_error``, counting the reads."""
+        """Return `package`, or raise `package_error`, counting the reads."""
         self.package_reads += 1
         if self.package_error is not None:
             raise self.package_error
@@ -71,18 +71,18 @@ class FakePage:
         return self.package
 
     def show_dialog(self, dialog: ft.DialogControl) -> None:
-        """Record ``dialog`` in ``dialogs`` instead of showing it."""
+        """Record `dialog` in `dialogs` instead of showing it."""
         self.dialogs.append(dialog)
 
     def navigate(self, location: str) -> None:
-        """Go to a location, as ``page.navigate`` does: the route changes at once."""
+        """Go to a location, as `page.navigate` does: the route changes at once."""
         self.navigated.append(location)
         self.route = location
 
 
 @contextmanager
 def bound(page: FakePage) -> Iterator[ft.Page]:
-    """Bind ``page`` to ``ft.context.page``, as Flet does while a handler or effect runs."""
+    """Bind `page` to `ft.context.page`, as Flet does while a handler or effect runs."""
     token = _context_page.set(cast(ft.Page, page))  # pyright: ignore[reportArgumentType]
     try:
         yield cast(ft.Page, page)
@@ -98,7 +98,7 @@ def android_device(
     release: str = "",
     physical: bool = False,
 ) -> ft.AndroidDeviceInfo:
-    """An Android device on API level ``sdk``, with the make, model and release given.
+    """An Android device on API level `sdk`, with the make, model and release given.
 
     Every other field is blank.
     """
@@ -123,7 +123,7 @@ def android_device(
 def ios_device(
     model_name: str, system_version: str, *, physical: bool = False
 ) -> ft.IosDeviceInfo:
-    """An iOS device of ``model_name`` on ``system_version``; every other field is blank."""
+    """An iOS device of `model_name` on `system_version`; every other field is blank."""
     utsname = ft.IosUtsname(
         machine="", node_name="", release="", sys_name="", version=""
     )
@@ -145,9 +145,9 @@ def ios_device(
 
 
 def blank_fields(cls: type, *given: str) -> dict[str, object]:
-    """Return a blank value for each field of ``cls`` with a default-less str, int, bool or list.
+    """Return a blank value for each field of `cls` with a default-less str, int, bool or list.
 
-    The fields named in ``given``, and those with a default, are left out.
+    The fields named in `given`, and those with a default, are left out.
     """
     blank: dict[object, object] = {str: "", int: 0, bool: False}
     return {
@@ -165,14 +165,14 @@ class Hooks:
 
     view_path: str = "/now"
     tokens: Tokens = LIGHT_TOKENS
-    """What ``use_tokens()`` returns: the scheme on screen (D-150)."""
+    """What `use_tokens()` returns: the scheme on screen (D-150)."""
     effects: list[tuple[Callable[[], Any], list[Any] | None]] = dataclasses.field(
         default_factory=list
     )
     cleanups: list[Callable[[], Any] | None] = dataclasses.field(default_factory=list)
     state: Any = None
     wide: bool = False
-    """The window class ``AppScaffold`` sees: True from 600 dp, the rail (D-277)."""
+    """The window class `AppScaffold` sees: True from 600 dp, the rail (D-277)."""
     renders: int = 0
     """How many re-renders a state setter asked for: only for a changed value."""
 
@@ -199,10 +199,10 @@ class Hooks:
         return self.state, set_state
 
     def use_callback(self, fn: Callable[..., Any], dependencies: Any = None) -> Any:
-        """Return ``fn`` itself: one render has nothing to keep it stable across."""
+        """Return `fn` itself: one render has nothing to keep it stable across."""
         return fn
 
 
 def phone_margin(cap: float) -> float:
-    """``use_margin()``'s stand-in: a phone's, no side margin at any width class (D-305)."""
+    """`use_margin()`'s stand-in: a phone's, no side margin at any width class (D-305)."""
     return 0.0

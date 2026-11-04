@@ -1,10 +1,10 @@
-"""The reviewed snapshot's view of a processed feed: ``outline()`` (D-77, D-261).
+"""The reviewed snapshot's view of a processed feed: `outline()` (D-77, D-261).
 
-``tests/test_feed_invariants.py`` compares it with
-``tests/fixtures/snapshots/outline-<year>.json``, and the stable-ids invariant of
-``tools/feed_invariants.py`` compares two of them; a full ``dataclasses.asdict`` dump
+`tests/test_feed_invariants.py` compares it with
+`tests/fixtures/snapshots/outline-<year>.json`, and the stable-ids invariant of
+`tools/feed_invariants.py` compares two of them; a full `dataclasses.asdict` dump
 would be too large to review (testing-and-quality.md §3.3). It moved here from
-``feed_invariants.py`` when that module passed D-66's ~400 lines.
+`feed_invariants.py` when that module passed D-66's ~400 lines.
 """
 
 from datetime import datetime
@@ -16,11 +16,11 @@ from pycon_us.core.models import ConferenceData, Session, Sponsor
 def outline(data: ConferenceData, zone: ZoneInfo) -> dict[str, object]:
     """A compact, reviewable view of the model: one line per session.
 
-    A line reads ``id | name | track | shown location | start-end`` in conference time,
-    then, when they apply: ``shown HH:MM``, ``pre-registration``, ``español``,
-    ``speakers <ids>`` and ``text <names not in the directory>``. ``markdown`` shows
-    the converted fields (D-130): see ``markdown_samples``. ``sponsors`` lists each
-    level in order, one line per sponsor: see ``sponsor_line``.
+    A line reads `id | name | track | shown location | start-end` in conference time,
+    then, when they apply: `shown HH:MM`, `pre-registration`, `español`,
+    `speakers <ids>` and `text <names not in the directory>`. `markdown` shows
+    the converted fields (D-130): see `markdown_samples`. `sponsors` lists each
+    level in order, one line per sponsor: see `sponsor_line`.
     """
 
     def line(session: Session) -> str:
@@ -74,10 +74,10 @@ def outline(data: ConferenceData, zone: ZoneInfo) -> dict[str, object]:
 
 
 def sponsor_line(sponsor: Sponsor) -> str:
-    """One sponsor as ``slug | name``, then what applies (DATA-22).
+    """One sponsor as `slug | name`, then what applies (DATA-22).
 
-    ``booth <booth>``, ``table <table>``, ``banner`` (a spotlight candidate) and
-    ``website <url>``. Logos and descriptions are left out: too long to review.
+    `booth <booth>`, `table <table>`, `banner` (a spotlight candidate) and
+    `website <url>`. Logos and descriptions are left out: too long to review.
     """
     parts = [sponsor.slug, sponsor.name]
     if sponsor.booth:
@@ -119,5 +119,5 @@ def markdown_samples(data: ConferenceData) -> dict[str, list[str]]:
 
 
 def clock(moment: datetime, zone: ZoneInfo) -> str:
-    """The time of ``moment`` in ``zone``, as ``HH:MM``."""
+    """The time of `moment` in `zone`, as `HH:MM`."""
     return moment.astimezone(zone).strftime("%H:%M")

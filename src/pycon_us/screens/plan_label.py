@@ -34,15 +34,15 @@ PAD_Y = 12
 def label_room(box: Size, shown: Size, pin: Pin) -> float | None:
     """Return how tall the label card may grow: down from under the pin at fit.
 
-    The plan is centred in the viewer and the card sits ``EDGE`` above its bottom, so
+    The plan is centred in the viewer and the card sits `EDGE` above its bottom, so
     a card no taller than the space from the pin's ring, at its widest, to there
     leaves the pin in sight at the fitted plan at any text size (#793, D-444). Fixed
     by the fitted plan, never the zoom, so the card does not resize while the user
-    zooms. Never under ``LABEL_MIN``, so the card shows at least its first line.
+    zooms. Never under `LABEL_MIN`, so the card shows at least its first line.
 
     Args:
-        box: The viewer's size; ``(0, 0)`` before its first layout.
-        shown: The plan's fitted size (``ui.zoom_geometry.fitted()``).
+        box: The viewer's size; `(0, 0)` before its first layout.
+        shown: The plan's fitted size (`ui.zoom_geometry.fitted()`).
         pin: The pin on the plan.
 
     Returns:
@@ -55,15 +55,15 @@ def label_room(box: Size, shown: Size, pin: Pin) -> float | None:
 
 
 def scrolls(room: float | None, measured: float) -> bool:
-    """Return whether the card's words, ``measured`` tall, scroll in ``room``.
+    """Return whether the card's words, `measured` tall, scroll in `room`.
 
-    Only past the room: a scrolling ``Column`` takes the whole of its bound (Flet's
-    ``ScrollableControl`` sets the bound as its content's least height), so a short
+    Only past the room: a scrolling `Column` takes the whole of its bound (Flet's
+    `ScrollableControl` sets the bound as its content's least height), so a short
     card that scrolled would stretch to the room and cover the plan (D-444).
 
     Args:
-        room: The card's greatest height (``label_room()``), or None before layout.
-        measured: The words' own height, from ``on_size_change``; 0 before it.
+        room: The card's greatest height (`label_room()`), or None before layout.
+        measured: The words' own height, from `on_size_change`; 0 before it.
     """
     return room is not None and measured + 2 * PAD_Y > room
 
@@ -78,17 +78,17 @@ def label_card(
     """Return the label card: the pin's name over its plan and what happens there.
 
     Outside the zoom layer, so it reads the same at any zoom; one node for screen
-    readers ("Room 104C, Concourse level · Talk track"), ``plan.label``, labelled
+    readers ("Room 104C, Concourse level · Talk track"), `plan.label`, labelled
     with its words rather than merging them, so the node never scrolls (D-447). Its
-    words keep their own height, measured by an inner ``Column``, and scroll in a card
-    ``room`` high (``label_room()``) only when they are taller than that
-    (``scrolls()``), as the booth card's body does (D-370).
+    words keep their own height, measured by an inner `Column`, and scroll in a card
+    `room` high (`label_room()`) only when they are taller than that
+    (`scrolls()`), as the booth card's body does (D-370).
 
     Args:
         plan: The plan shown.
         pin: The pin on it.
         room: The card's greatest height, or None before the viewer is laid out.
-        measured: The words' own height, as ``on_measure`` last reported it.
+        measured: The words' own height, as `on_measure` last reported it.
         on_measure: Called with the words' size whenever it changes.
     """
     where = " · ".join(part for part in (plan.title, pin.sublabel) if part)

@@ -1,7 +1,7 @@
 """The outbox's rules (architecture §12.2): one test per table row, then the due order.
 
 The hypothesis state machine that checks the invariants over any sequence of these
-is ``tests/test_outbox_machine.py`` (D-77).
+is `tests/test_outbox_machine.py` (D-77).
 """
 
 from collections.abc import Iterable
@@ -26,13 +26,13 @@ def stored(row: Row | None, row_id: int) -> Row:
 def lead(
     code: str = "A1", *, status: Status = Status.PENDING, **changes: object
 ) -> Row:
-    """Return a stored lead row for ``code``, scanned at ``NOW`` for sponsor 7."""
+    """Return a stored lead row for `code`, scanned at `NOW` for sponsor 7."""
     row = Row(Kind.LEAD, code, {"code": code}, OWNER, "7", "Acme", NOW, NOW, status)
     return replace(row, **{"id": 1, **changes})
 
 
 def scan(rows: Iterable[Row], code: str = "A1", sponsor: str = "7", now: float = NOW):
-    """Scan ``code`` for ``sponsor`` as ``OWNER``."""
+    """Scan `code` for `sponsor` as `OWNER`."""
     return outbox_enqueue.scan_lead(
         rows,
         owner=OWNER,
@@ -51,7 +51,7 @@ def note(
     now: float = NOW,
     sponsor: tuple[str | None, str | None] = ("7", "Acme"),
 ):
-    """Save ``text`` as ``OWNER``'s note on the lead of ``code`` for ``sponsor``."""
+    """Save `text` as `OWNER`'s note on the lead of `code` for `sponsor`."""
     return outbox_enqueue.save_note(
         rows,
         owner=OWNER,
@@ -64,7 +64,7 @@ def note(
 
 
 def admit(rows: list[Row], products: list[int], session: str = "s1"):
-    """Admit attendee ``A1`` to ``products`` in ``session`` as ``OWNER``."""
+    """Admit attendee `A1` to `products` in `session` as `OWNER`."""
     return outbox_enqueue.admit(
         rows,
         owner=OWNER,
@@ -262,14 +262,14 @@ def test_sent_row_is_synced_with_the_result_merged() -> None:
 
 
 def test_network_error_waits_without_counting() -> None:
-    """A ``NetworkError`` leaves tries alone and makes the row due a minute later."""
+    """A `NetworkError` leaves tries alone and makes the row due a minute later."""
     assert outbox.after_network_error(lead(tries=4), NOW) == lead(
         tries=4, next_at=NOW + outbox.NETWORK_BACKOFF
     )
 
 
 def test_a_lost_answer_flags_the_row_for_good() -> None:
-    """``maybe_sent`` flags the row; no later outcome or retry clears it (D-410)."""
+    """`maybe_sent` flags the row; no later outcome or retry clears it (D-410)."""
     flagged = outbox.after_network_error(lead(), NOW, maybe_sent=True)
     assert flagged == lead(next_at=NOW + outbox.NETWORK_BACKOFF, maybe_sent=True)
     assert outbox.after_network_error(flagged, NOW).maybe_sent  # a refused connection
@@ -279,7 +279,7 @@ def test_a_lost_answer_flags_the_row_for_good() -> None:
 
 
 def test_an_unreadable_answer_counts_and_flags_the_row_for_good() -> None:
-    """An ``ApiError`` that may have been applied is one more try, and flagged (#874)."""
+    """An `ApiError` that may have been applied is one more try, and flagged (#874)."""
     flagged = outbox.after_error(lead(tries=4), "Not JSON", NOW, maybe_sent=True)
     assert flagged == lead(
         tries=5,
@@ -309,7 +309,7 @@ def test_status_text_says_a_flagged_row_may_be_recorded_twice(
 
 
 def test_api_error_counts_and_fails_at_the_cap() -> None:
-    """Each ``ApiError`` counts; the tenth makes the row failed, not before."""
+    """Each `ApiError` counts; the tenth makes the row failed, not before."""
     row = lead()
     for tries in range(1, outbox.RETRY_CAP + 1):
         row = outbox.after_error(row, f"500 #{tries}", NOW)

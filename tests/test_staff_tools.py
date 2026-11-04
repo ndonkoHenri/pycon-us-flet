@@ -1,4 +1,4 @@
-"""Tests for the staff gating, ``core/staff_tools.py`` (SHELL-06, SHELL-11, AUTH-05; D-54).
+"""Tests for the staff gating, `core/staff_tools.py` (SHELL-06, SHELL-11, AUTH-05; D-54).
 
 The truth table runs over every combination of the three role flags, each also absent,
 and compares with architecture §12.4 written out by hand.
@@ -69,7 +69,7 @@ def test_only_a_real_true_opens_a_tool() -> None:
 
 
 def test_the_tools_are_in_o7_order_with_their_routes() -> None:
-    """Lead, door, swag, CoC, each routed at ``/more/staff/<key>`` with a real icon."""
+    """Lead, door, swag, CoC, each routed at `/more/staff/<key>` with a real icon."""
     assert [tool.key for tool in TOOLS] == ["lead", "door", "swag", "coc"]
     for tool in TOOLS:
         assert tool.route == f"/more/staff/{tool.key}"
@@ -85,7 +85,7 @@ def test_the_tools_are_in_o7_order_with_their_routes() -> None:
 
 
 def test_the_flags_are_the_account_stores() -> None:
-    """The gating reads the ``Account`` attributes that the server's flags fill."""
+    """The gating reads the `Account` attributes that the server's flags fill."""
     assert set(FLAGS.values()) >= {"lead_retrieval", "door_check", "mask_violation"}
 
 

@@ -1,11 +1,11 @@
 """Tests for the floor viewer (#388; ROOM-05, MAP-05, INFO-13; ux.md §6.1).
 
-``PlanViewer`` runs in a real Flet session (``tests/sessions.py``) over the 2026
-``map.toml``, with ``tests/plan_view.py``'s harness. No Flutter lays it out or answers its viewer here, so the tests report
-the viewer's size as ``on_size_change`` would, and ``FakeViewer`` stands in for the
-``InteractiveViewer``'s methods with the pin's behaviour (F76: ``zoom()`` keeps the
-translation, ``pan()`` moves in the plan's units). The pin's pulse waits are held until
-a test releases them (``tests/timers.py``). How the plan, the pin and the card look,
+`PlanViewer` runs in a real Flet session (`tests/sessions.py`) over the 2026
+`map.toml`, with `tests/plan_view.py`'s harness. No Flutter lays it out or answers its viewer here, so the tests report
+the viewer's size as `on_size_change` would, and `FakeViewer` stands in for the
+`InteractiveViewer`'s methods with the pin's behaviour (F76: `zoom()` keeps the
+translation, `pan()` moves in the plan's units). The pin's pulse waits are held until
+a test releases them (`tests/timers.py`). How the plan, the pin and the card look,
 and that the pin is on its room on screen, are checked on devices (the PR).
 """
 
@@ -29,7 +29,7 @@ render = plan_view.render
 async def test_a_pin_is_placed_on_its_room_and_named_by_the_plan(
     render: Render,
 ) -> None:
-    """``?pin=104c``: one pin centred on 84 %, 27 % of the fitted plan, and its words."""
+    """`?pin=104c`: one pin centred on 84 %, 27 % of the fitted plan, and its words."""
     plan = await render("?pin=104c")
     assert plan.pins() == []  # not before the plan has a size
     await plan.lay_out()
@@ -70,7 +70,7 @@ async def test_the_pin_stays_one_size_on_screen_at_any_zoom(render: Render) -> N
 
 
 async def test_the_pin_pulses_twice_then_stays_still(render: Render) -> None:
-    """Out and back twice, each half ``PULSE_MS``, then no more waits (D-34)."""
+    """Out and back twice, each half `PULSE_MS`, then no more waits (D-34)."""
     plan = await render("?pin=104c")
     await plan.lay_out()
     rings: list[bool] = []
@@ -141,7 +141,7 @@ async def test_no_pin_without_one_on_this_plan(render: Render, query: str) -> No
 
 
 async def test_an_unknown_plan_offers_the_map(render: Render) -> None:
-    """``plan/nowhere``: the not-found state, "Open the map" going to the Floor plans tab."""
+    """`plan/nowhere`: the not-found state, "Open the map" going to the Floor plans tab."""
     plan = await render(plan_id="nowhere")
     assert plan.titles[-1] == "Not found"
     assert screen.NOT_FOUND in plan.texts()
@@ -177,7 +177,7 @@ async def test_the_zoom_buttons_are_named_and_say_when_they_cannot_act(
 
 
 async def test_zoom_in_keeps_the_centre_of_the_viewer_in_place(render: Render) -> None:
-    """``zoom(1.5)`` scales about the corner (F76): the pan after it re-centres."""
+    """`zoom(1.5)` scales about the corner (F76): the pan after it re-centres."""
     plan = await render()
     await plan.lay_out()
     centre = (BOX[0] / 2, BOX[1] / 2)
@@ -265,7 +265,7 @@ async def test_a_rotation_brings_the_zoom_down_to_the_new_maximum(
 
 
 def assert_in_bounds(viewer: FakeViewer, box: tuple[float, float]) -> None:
-    """Assert no blank shows beyond the box-sized content: ``box (1 - s) <= t <= 0``."""
+    """Assert no blank shows beyond the box-sized content: `box (1 - s) <= t <= 0`."""
     for t, side in ((viewer.x, box[0]), (viewer.y, box[1])):
         assert side * (1 - viewer.scale) - 1e-6 <= t <= 1e-6
 
@@ -301,7 +301,7 @@ async def test_a_resize_in_bounds_pans_nothing(render: Render) -> None:
 async def test_the_card_and_buttons_take_no_gestures_beside_them(
     render: Render, query: str
 ) -> None:
-    """No ``Container`` (always decorated, so hit) around them over the plan."""
+    """No `Container` (always decorated, so hit) around them over the plan."""
     plan = await render(query)
     await plan.lay_out()
     (body,) = [s for s in plan.find(ft.Stack) if s.fit == ft.StackFit.EXPAND]

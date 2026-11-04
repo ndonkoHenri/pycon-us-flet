@@ -1,8 +1,8 @@
 """Session times compare as instants across the end of summer time (D-43, #535).
 
 On 2026-11-01 Pacific time falls back from 2:00 PDT to 1:00 PST, so 1:00 to 2:00 comes
-twice. Two datetimes that share the conference ``ZoneInfo`` compare by wall clock and
-ignore ``fold``, so 1:10 PST would read as before 1:40 PDT. Every case here has a wall
+twice. Two datetimes that share the conference `ZoneInfo` compare by wall clock and
+ignore `fold`, so 1:10 PST would read as before 1:40 PDT. Every case here has a wall
 clock that disagrees with the instants; each passes only when the code compares in UTC.
 Only a shifted feed (#383) can put a session on that night.
 """
@@ -46,7 +46,7 @@ NIGHT = date(2026, 11, 1)
 
 
 def at(hour: int, minute: int) -> datetime:
-    """Return ``hour:minute`` UTC on the night of the change, read in the conference zone."""
+    """Return `hour:minute` UTC on the night of the change, read in the conference zone."""
     return datetime(2026, 11, 1, hour, minute, tzinfo=UTC).astimezone(ZONE)
 
 
@@ -54,7 +54,7 @@ ACROSS = (at(8, 40), at(9, 10))
 """1:40 PDT to 1:10 PST: half an hour across the change, its wall clocks backwards."""
 
 LATE = (at(8, 50), at(9, 30))
-"""1:50 PDT to 1:30 PST: starts while ``ACROSS`` is on, though its wall clock is later."""
+"""1:50 PDT to 1:30 PST: starts while `ACROSS` is on, though its wall clock is later."""
 
 AFTER_THE_CHANGE = (at(9, 5), at(9, 35))
 """1:05 PST to 1:35 PST: a talk that starts in the repeated hour."""
@@ -69,7 +69,7 @@ def data() -> ConferenceData:
 def retimed(
     data: ConferenceData, session_id: str, span: tuple[datetime, ...]
 ) -> Session:
-    """Return a 2026 session moved to ``span`` (start, end) on the night of the change."""
+    """Return a 2026 session moved to `span` (start, end) on the night of the change."""
     start, end = span
     return replace(
         data.sessions[session_id], start=start, display_start=start, end=end, day=NIGHT
@@ -77,14 +77,14 @@ def retimed(
 
 
 def with_sessions(data: ConferenceData, *sessions: Session) -> ConferenceData:
-    """Return ``data`` holding only ``sessions``, by id."""
+    """Return `data` holding only `sessions`, by id."""
     return replace(data, sessions={s.id: s for s in sessions})
 
 
 def night_feed(
     first: tuple[datetime, ...], second: tuple[datetime, ...]
 ) -> ConferenceData:
-    """Return 2026's feed processed with talks 142 and 153 moved to ``first`` and ``second``.
+    """Return 2026's feed processed with talks 142 and 153 moved to `first` and `second`.
 
     The feed's own times are rewritten, so the Schedule's days and time groups are built
     from them as from any feed.
@@ -93,7 +93,7 @@ def night_feed(
 
 
 def feed_moved(spans: dict[int, tuple[datetime, ...]]) -> ConferenceData:
-    """Return 2026's feed processed with each slot (by ``conf_key``) moved to its span.
+    """Return 2026's feed processed with each slot (by `conf_key`) moved to its span.
 
     The feed's own times are rewritten, so everything processing derives from them (days,
     time groups, rooms, collapsed rows, displayed starts) is built as from any feed.
@@ -109,7 +109,7 @@ def feed_moved(spans: dict[int, tuple[datetime, ...]]) -> ConferenceData:
 
 
 def test_instant_is_utc_and_orders_the_repeated_hour() -> None:
-    """``instant`` puts 1:10 PST after 1:40 PDT, which their wall clocks reverse."""
+    """`instant` puts 1:10 PST after 1:40 PDT, which their wall clocks reverse."""
     start, end = ACROSS
     assert end < start  # the wall-clock comparison this module guards against
     assert instant(end) > instant(start)
@@ -118,7 +118,7 @@ def test_instant_is_utc_and_orders_the_repeated_hour() -> None:
 
 
 def test_a_calendar_event_across_the_change_keeps_its_end(data: ConferenceData) -> None:
-    """The exported event has a ``DTEND`` half an hour after its ``DTSTART``."""
+    """The exported event has a `DTEND` half an hour after its `DTSTART`."""
     talk = retimed(data, "142", ACROSS)
     text = calendar_file([talk], year=2026, now=at(7, 0)).decode()
     assert "DTSTART:20261101T084000Z" in text
@@ -245,7 +245,7 @@ def test_the_schedule_lists_the_repeated_hour_after_the_first() -> None:
 def test_schedule_order_puts_sessions_in_the_order_they_happen(
     data: ConferenceData,
 ) -> None:
-    """``schedule_order`` sorts a 1:40 PDT talk before a 1:05 PST one."""
+    """`schedule_order` sorts a 1:40 PDT talk before a 1:05 PST one."""
     first = retimed(data, "153", ACROSS)
     second = retimed(data, "142", AFTER_THE_CHANGE)
     assert sorted([second, first], key=schedule_order) == [first, second]
@@ -254,7 +254,7 @@ def test_schedule_order_puts_sessions_in_the_order_they_happen(
 def test_a_rooms_day_shows_the_same_wall_time_twice_as_two_slots(
     data: ConferenceData,
 ) -> None:
-    """``by_slot`` keeps 1:30 PDT and 1:30 PST apart, in the order they happen."""
+    """`by_slot` keeps 1:30 PDT and 1:30 PST apart, in the order they happen."""
     first = retimed(data, "142", (at(8, 30), at(8, 45)))
     second = retimed(data, "153", (at(9, 30), at(9, 45)))
     views = [session_view(s, ZONE, use_24h=False) for s in (second, first)]

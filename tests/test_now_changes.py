@@ -1,10 +1,10 @@
 """Tests for Now's Schedule changes card (#438; NEW-04, D-255, ux.md §5.1 item 6).
 
-What the card counts is ``core.change_views.now_card_text()``'s (``test_change_views.py``);
+What the card counts is `core.change_views.now_card_text()`'s (`test_change_views.py`);
 here, on the screen at a fixed time of the 2026 feed: the card shows under Your next
 session while an unseen change of the last 24 hours touches a saved session, never for
 an unsaved one, goes once its batch is seen or 24 hours have passed, and pushes the
-list on Now. The screen runs in a real Flet session through ``tests/now_view.py``'s
+list on Now. The screen runs in a real Flet session through `tests/now_view.py`'s
 harness. How the card looks and reads is checked on devices (the PR).
 """
 
@@ -30,12 +30,12 @@ OTHER = "7"
 
 @pytest.fixture
 def show(render: Callable[..., Any]) -> Callable[..., Any]:  # noqa: F811
-    """``tests/now_view.py``'s ``render``: Now at a time, in a real Flet session."""
+    """`tests/now_view.py`'s `render`: Now at a time, in a real Flet session."""
     return render
 
 
 def moved(session: str, at: datetime, *, seen: bool = False) -> Batch:
-    """A batch detected ``at`` that moved ``session`` from Room 104A to Room 103ABC."""
+    """A batch detected `at` that moved `session` from Room 104A to Room 103ABC."""
     start = may(16, 10, 30)
     end = start + timedelta(minutes=30)
     old = Listing("Python for Humans", start, end, "Room 104A")
@@ -78,7 +78,7 @@ async def test_an_unseen_change_to_a_saved_session_shows_the_card_under_your_nex
 async def test_the_card_pushes_schedule_changes_on_now(
     show: Callable[..., Any],
 ) -> None:
-    """A tap pushes ``/now/changes/2026``, so Back returns to Now (D-255)."""
+    """A tap pushes `/now/changes/2026`, so Back returns to Now (D-255)."""
     log = ChangeLog(batches=(moved(TALK, AT - timedelta(hours=1)),))
     shown = await show(AT, saved=(TALK,), change_log=log)
     await shown.click(card_tile(shown))

@@ -1,9 +1,9 @@
 """Tests for the lead note sheet on the Lead scanner (#742; LEAD-07, LEAD-10).
 
-The scanner runs in a real Flet session (``tests/lead_screen.py``) over a real outbox
+The scanner runs in a real Flet session (`tests/lead_screen.py`) over a real outbox
 and no worker, so a scan ends "Saved. Will sync." at once. Taps are what Flutter
-reports: a segment's new selection, a chip's new state, the field's text (``reported()``),
-then the event. The sheet's sends are ``tests/test_lead_note.py``'s.
+reports: a segment's new selection, a chip's new state, the field's text (`reported()`),
+then the event. The sheet's sends are `tests/test_lead_note.py`'s.
 """
 
 import json
@@ -49,7 +49,7 @@ def quick(monkeypatch: pytest.MonkeyPatch) -> list[float]:
 def reported(control: ft.BaseControl, **values: Any) -> None:
     """Set what Flutter reports on a sheet's live control, frozen or not, as Flet does.
 
-    The session's ``apply_patch`` patches only indexed controls, and a dialog's are
+    The session's `apply_patch` patches only indexed controls, and a dialog's are
     not in the test session's index.
     """
     patch_dataclass(control, values)
@@ -64,7 +64,7 @@ def sheet(shown: Shown) -> ft.BottomSheet | None:
 
 
 def in_sheet(shown: Shown, identifier: str) -> Any:
-    """The control under the open sheet's semantics node ``identifier``."""
+    """The control under the open sheet's semantics node `identifier`."""
     current = sheet(shown)
     assert current is not None
     return next(
@@ -92,7 +92,7 @@ def scan_field(shown: Shown) -> ft.TextField:
 
 
 async def scan(shown: Shown, text: str = ADA) -> None:
-    """Type ``text`` in the badge field as Flutter reports it, then press Enter."""
+    """Type `text` in the badge field as Flutter reports it, then press Enter."""
     field = scan_field(shown)
     shown.session.apply_patch(field._i, {"value": text})
     await shown.event(field, "change", text)
@@ -100,7 +100,7 @@ async def scan(shown: Shown, text: str = ADA) -> None:
 
 
 async def tap(shown: Shown, identifier: str) -> None:
-    """Tap the scan screen's button ``identifier``."""
+    """Tap the scan screen's button `identifier`."""
     await shown.click(cast(ft.Control, shown.node(identifier).content))
 
 

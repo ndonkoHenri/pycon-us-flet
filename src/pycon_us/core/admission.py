@@ -1,20 +1,20 @@
 """Door check's attendee list and its admission decision (DOOR-03, DOOR-04, #765, #766).
 
 Before scanning, the door downloads who bought each chosen session
-(``attendees_by_product_with_quantity/<id>/``, API-05), so it can admit offline.
-``merge()`` folds one product's reply into an ``Inventory``, as Ionic's door page did
-(``staff-tools-auth.md`` §4 step 7): quantities are summed per code and product, and an
+(`attendees_by_product_with_quantity/<id>/`, API-05), so it can admit offline.
+`merge()` folds one product's reply into an `Inventory`, as Ionic's door page did
+(`staff-tools-auth.md` §4 step 7): quantities are summed per code and product, and an
 attendee's details are sticky, so a later row without them keeps the earlier ones. A
 malformed row is left out, so one bad row never hides the others; a reply that isn't a
-list is a ``TypeError``, which the fetch turns into a failed product (D-120).
+list is a `TypeError`, which the fetch turns into a failed product (D-120).
 
-``decide()`` is a scan's decision against that list and the account's own door rows
+`decide()` is a scan's decision against that list and the account's own door rows
 (STORE-12): whether the badge is on the list, with what it bought of the session's
-products, and whether one of those products was checked in already. ``admitted()``
-reads the products a door row covers, and ``redeem_errors()`` what the server refused
-in a synced row's reply, which the queue sheet shows (D-441). ``tags()`` turns an
+products, and whether one of those products was checked in already. `admitted()`
+reads the products a door row covers, and `redeem_errors()` what the server refused
+in a synced row's reply, which the queue sheet shows (D-441). `tags()` turns an
 attendee's dietary needs and allergy into the result's chips (DOOR-05), and
-``headcount()`` counts the session's check-ins from the same rows (DOOR-06, D-442).
+`headcount()` counts the session's check-ins from the same rows (DOOR-06, D-442).
 
 The inventory holds names, dietary needs and allergies: it lives in Door check's
 component state only and is never written anywhere (D-56). Everything here is pure.
@@ -29,7 +29,7 @@ from pycon_us.core.check_in import parse_redeem_reply
 from pycon_us.core.outbox import Kind, Row, Status
 
 _PRODUCT_KEY = re.compile(r"product-redeem-(\d+)")
-"""A redeem payload's ``product-redeem-<id>`` key: one per product admitted."""
+"""A redeem payload's `product-redeem-<id>` key: one per product admitted."""
 
 
 @dataclass(frozen=True)
@@ -41,7 +41,7 @@ class Attendee:
         name: The attendee's name, or "".
         dietary: Their dietary needs, or "".
         has_allergy: Whether they have an allergy.
-        allergy: The allergy, or "" (unsaid even when ``has_allergy``).
+        allergy: The allergy, or "" (unsaid even when `has_allergy`).
     """
 
     code: str
@@ -56,7 +56,7 @@ class Inventory:
     """Who bought the chosen sessions, and how many of each.
 
     Attributes:
-        quantities: Each access code's quantity bought per product id (``quantity`` is
+        quantities: Each access code's quantity bought per product id (`quantity` is
             what was bought, not what is left: the door keeps its own record).
         attendees: Each access code's attendee, with their details.
     """
@@ -66,10 +66,10 @@ class Inventory:
 
 
 def merge(inventory: Inventory, product_id: int, reply: object) -> Inventory:
-    """Return ``inventory`` with one product's reply folded in (API-05, DOOR-03).
+    """Return `inventory` with one product's reply folded in (API-05, DOOR-03).
 
-    Each row is ``{id (the access code), quantity, name?, dietary?, has_allergy?,
-    allergy?}``. A repeated code adds its quantity to what the product already holds;
+    Each row is `{id (the access code), quantity, name?, dietary?, has_allergy?,
+    allergy?}`. A repeated code adds its quantity to what the product already holds;
     a detail missing from a row, or empty, keeps the one an earlier row gave. A row
     without a non-empty code or a positive integer quantity is left out.
 
@@ -105,7 +105,7 @@ class Admission:
 
     Attributes:
         known: The code is on the list for one of the session's products.
-        quantities: What it bought of them, ``(product id, quantity)`` in the
+        quantities: What it bought of them, `(product id, quantity)` in the
             session's order; empty when not known.
         already: One of the account's door rows for the code (pending, synced or
             failed) covers one of the session's products: "Already checked in".
@@ -121,7 +121,7 @@ def decide(
 ) -> Admission:
     """Decide a door scan against the list and the account's door rows (DOOR-04).
 
-    "Already" is Ionic's per-product overlap (``staff-tools-auth.md`` §10 item 14),
+    "Already" is Ionic's per-product overlap (`staff-tools-auth.md` §10 item 14),
     read from the kept rows rather than a key of its own (STORE-12): a product of this
     session was checked in before, by this account, in any visit.
 
@@ -155,7 +155,7 @@ def admitted(row: Row) -> frozenset[int]:
 def redeem_errors(row: Row) -> tuple[str, ...]:
     """Return what the server refused in a synced door row's reply, else nothing.
 
-    A 200 reply with ``errors`` (already redeemed, not bought, over quantity) still
+    A 200 reply with `errors` (already redeemed, not bought, over quantity) still
     syncs the row, and its messages are kept for the queue sheet (D-441). A row of
     another kind or status, or a reply that can't be read, has none.
     """
@@ -216,7 +216,7 @@ def _row(row: object) -> tuple[str, int] | None:
 
 
 def _details(known: Attendee, row: dict[str, object]) -> Attendee:
-    """Return ``known`` with the details ``row`` gives; a missing one keeps its own."""
+    """Return `known` with the details `row` gives; a missing one keeps its own."""
     return Attendee(
         known.code,
         _text(row.get("name")) or known.name,

@@ -1,7 +1,7 @@
 """A conference day's tab: the Schedule's, a room's and the open spaces' (D-192, D-194).
 
-``day_tab()`` is a day's one-line tab, read as its full date, today's with a dot;
-``TAB_HEIGHT`` keeps the largest text in it and ``TAB_MS`` is a switch's slide.
+`day_tab()` is a day's one-line tab, read as its full date, today's with a dot;
+`TAB_HEIGHT` keeps the largest text in it and `TAB_MS` is a switch's slide.
 """
 
 from datetime import date
@@ -16,7 +16,7 @@ with the text, and Flet cannot read the text scale (U16), so it is sized for the
 iOS size (about 310 %), where a one-line label's glyphs need about 52 dp."""
 
 TAB_MS = 100
-"""How long a day switch made from Python slides (Flet's default for ``Tabs``); the
+"""How long a day switch made from Python slides (Flet's default for `Tabs`); the
 Schedule's and a room's tabs (D-194)."""
 
 TODAY_DOT = 6
@@ -31,11 +31,11 @@ def day_tab(index: int, day: date, *, is_today: bool, screen: str) -> ft.Tab:
     Friday, May 15, today, selected" (D-192). Room detail's tabs are these too (D-194).
 
     Args:
-        index: The tab's position, in its identifier ``<screen>.day_tab.<index>``.
+        index: The tab's position, in its identifier `<screen>.day_tab.<index>`.
         day: The conference-local date.
         is_today: Mark it as today, with a dot and ", today".
-        screen: The screen's name in the identifier: ``schedule``, ``room`` or
-            ``open_spaces``.
+        screen: The screen's name in the identifier: `schedule`, `room` or
+            `open_spaces`.
     """
     spoken = f"{day_heading(day)}, today" if is_today else day_heading(day)
     label: ft.Control = ft.Text(day_tab_label(day), semantics_label=spoken)

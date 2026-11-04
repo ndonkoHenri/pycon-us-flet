@@ -1,8 +1,8 @@
 """Tests for the More tab: a flat, sectioned list of pages (#77; D-15, ux.md §2.2).
 
-``More`` runs outside a renderer: its hooks and ``AppScaffold`` are replaced, and a fake
+`More` runs outside a renderer: its hooks and `AppScaffold` are replaced, and a fake
 page is bound as Flet binds a session's page. The scaffold itself (the bar, the re-tap,
-Back) is tested in ``test_scaffold.py``; how the list looks and reads is checked on
+Back) is tested in `test_scaffold.py`; how the list looks and reads is checked on
 devices (the PR).
 """
 
@@ -50,7 +50,7 @@ MORE_PAGES = (
 
 @pytest.fixture
 def page() -> Iterator[FakePage]:
-    """A ``FakePage`` bound as Flet binds a session's page."""
+    """A `FakePage` bound as Flet binds a session's page."""
     fake = FakePage()
     with bound(fake):
         yield fake
@@ -58,7 +58,7 @@ def page() -> Iterator[FakePage]:
 
 @pytest.fixture
 def svc(tmp_path: Path) -> Services:
-    """The session's services over in-memory fakes and a 2026 ``Storage``."""
+    """The session's services over in-memory fakes and a 2026 `Storage`."""
     storage = Storage(prefs=MemoryPrefs(), directory=tmp_path, year=2026)
     return Services(
         year=load_year(2026),
@@ -79,18 +79,18 @@ def prefs() -> Prefs:
 
 @pytest.fixture
 def account() -> Account:
-    """A signed-out ``Account`` store, as after a first launch."""
+    """A signed-out `Account` store, as after a first launch."""
     return Account()
 
 
 @pytest.fixture
 def staff() -> Staff:
-    """An empty ``Staff`` store: nothing queued."""
+    """An empty `Staff` store: nothing queued."""
     return Staff()
 
 
 async def retap() -> None:
-    """The root's re-tap action, as ``use_scroll_to_top()`` would return it."""
+    """The root's re-tap action, as `use_scroll_to_top()` would return it."""
 
 
 @pytest.fixture
@@ -102,7 +102,7 @@ def render(
     staff: Staff,
     page: FakePage,
 ) -> Callable[[], dict[str, Any]]:
-    """Render ``More`` once and return what it passed to ``AppScaffold``.
+    """Render `More` once and return what it passed to `AppScaffold`.
 
     The services come first: a service built while a page is bound registers with it.
     """
@@ -123,14 +123,14 @@ def render(
 
 
 def rows_of(scaffold: dict[str, Any]) -> list[ft.Control]:
-    """Return the rows of the scaffold's ``ListView`` body."""
+    """Return the rows of the scaffold's `ListView` body."""
     body = scaffold["body"]
     assert isinstance(body, ft.ListView)
     return list(body.controls)
 
 
 def header_text(control: ft.Control) -> str | None:
-    """A ``SectionHeader``'s text, or None for any other row."""
+    """A `SectionHeader`'s text, or None for any other row."""
     if isinstance(control, ft.Semantics) and control.header:
         assert isinstance(control.content, ft.Container)
         assert isinstance(control.content.content, ft.Text)
@@ -139,7 +139,7 @@ def header_text(control: ft.Control) -> str | None:
 
 
 def tile_of(row: ft.Control) -> ft.ListTile | None:
-    """A ``LinkTile``'s ``ListTile``, or None for any other row."""
+    """A `LinkTile`'s `ListTile`, or None for any other row."""
     if isinstance(row, ft.MergeSemantics) and isinstance(row.content, ft.Semantics):
         tile = row.content.content
         return tile if isinstance(tile, ft.ListTile) else None
@@ -147,7 +147,7 @@ def tile_of(row: ft.Control) -> ft.ListTile | None:
 
 
 def outline(rows: list[ft.Control]) -> list[str]:
-    """The list as headers (``# ``), page titles and the other rows' kinds."""
+    """The list as headers (`# `), page titles and the other rows' kinds."""
     result = []
     for row in rows:
         if (text := header_text(row)) is not None:
@@ -214,7 +214,7 @@ def test_every_row_opens_a_page_of_the_route_table_so_none_is_dead(
         if (tile := tile_of(row)) is not None:
             cast(Callable[[], None], tile.on_click)()
     assert page.navigated == [entry.location for entry in MORE_PAGES]
-    # Every one a page, but the hall: the drill's ``plan/expo`` on More (D-17).
+    # Every one a page, but the hall: the drill's `plan/expo` on More (D-17).
     assert set(page.navigated) - PAGES == {"/more/plan/expo"}
 
 
@@ -247,7 +247,7 @@ def test_each_row_has_its_icon_and_a_more_identifier(
 
 
 def test_identifiers_name_the_page_in_snake_case() -> None:
-    """Each entry's identifier is ``more.`` and its page's name in snake case."""
+    """Each entry's identifier is `more.` and its page's name in snake case."""
     assert [entry.identifier for entry in MORE_PAGES] == [
         "more.speakers",
         "more.tracks",

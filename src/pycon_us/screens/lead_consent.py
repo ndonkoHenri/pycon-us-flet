@@ -3,7 +3,7 @@
 Ionic asked with an alert on every entry and sent a "Cancel" to the Schedule. Here a
 page asks once: an explanation, a checkbox the user ticks ("I'll only scan with
 consent") and Continue, enabled only once it is ticked, which saves
-``SCANNER_CONSENT``; Cancel goes where Back goes and saves nothing. The key is a staff
+`SCANNER_CONSENT`; Cancel goes where Back goes and saves nothing. The key is a staff
 key (D-414), so a sign-out, a sign-in as another account and Clear staff data bring the
 page back; "Sign in again" as the same expired account does not.
 """
@@ -99,8 +99,8 @@ def consent_check(
 ) -> ft.Control:
     """Return the checkbox row: one node read as its label and state, toggled anywhere.
 
-    A ``ListTile`` rather than the checkbox's own ``label``: Flet lays that label out
-    in a ``Row`` with no room to wrap, so at 200 % text it ran off the screen; the
+    A `ListTile` rather than the checkbox's own `label`: Flet lays that label out
+    in a `Row` with no room to wrap, so at 200 % text it ran off the screen; the
     tile's title wraps, and the tile is at least 56 dp tall (ux.md §9).
 
     Args:

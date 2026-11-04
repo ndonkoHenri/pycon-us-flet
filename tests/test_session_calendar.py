@@ -1,8 +1,8 @@
 """Tests for session detail's Add to calendar (SESS-04, SESS-05; ux.md §5.5, D-272).
 
 Which sessions offer it, where it sits in the overflow, and what a tap hands to
-``services.calendar`` (whose own routes ``tests/test_calendar.py`` covers), in
-``SessionDetail`` as ``tests/session_detail.py`` renders it. Android's route is
+`services.calendar` (whose own routes `tests/test_calendar.py` covers), in
+`SessionDetail` as `tests/session_detail.py` renders it. Android's route is
 used here, the save dialog being a fake that can be held open.
 """
 
@@ -30,7 +30,7 @@ OPEN_SPACE = "9119"
 """5K Fun Run: an open space, whose public page is linked in the page itself."""
 
 TALK_FILE = "python-for-humans-designing-python-code.ics"
-"""The talk's file: its title's first words (``ics.file_slug()``)."""
+"""The talk's file: its title's first words (`ics.file_slug()`)."""
 
 
 @pytest.fixture

@@ -1,8 +1,8 @@
-"""Whether the device has a connection, for a button that needs one (``use_online()``).
+"""Whether the device has a connection, for a button that needs one (`use_online()`).
 
 The Account page's Speaker Discord is disabled offline, with the reason (AUTH-10).
-``Services.connectivity``'s one change handler belongs to the staff sync (F257), so
-this hook asks ``get_connectivity()`` every few seconds instead, and only while the
+`Services.connectivity`'s one change handler belongs to the staff sync (F257), so
+this hook asks `get_connectivity()` every few seconds instead, and only while the
 page that calls it needs to know.
 """
 
@@ -20,11 +20,11 @@ ONLINE_POLL = 5.0
 
 
 def use_online(svc: Services, *, watch: bool) -> bool:
-    """Return whether the device has a connection, checked every ``ONLINE_POLL`` s.
+    """Return whether the device has a connection, checked every `ONLINE_POLL` s.
 
-    A hook (D-70): call it on every render. Only while ``watch`` and the app is in
-    front; True when unknown (no ``Connectivity``, or a check that failed), so a
-    button is never disabled for nothing. ``Services.connectivity``'s one change
+    A hook (D-70): call it on every render. Only while `watch` and the app is in
+    front; True when unknown (no `Connectivity`, or a check that failed), so a
+    button is never disabled for nothing. `Services.connectivity`'s one change
     handler belongs to the staff sync (F257), so this asks instead of listening.
 
     Args:

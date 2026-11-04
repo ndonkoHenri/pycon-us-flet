@@ -1,15 +1,15 @@
 """S8 reproducer: does a minimal mobile_scanner extension decode in release builds?
 
 Spike S8 (docs/spikes/08-scanner.md). One screen with the throwaway
-``flet_s8_scanner`` control (the E1 API over mobile_scanner 7.4.2), a pause and a
-torch switch, an "Analyze image" button that decodes the bundled ``qr.png``, and
+`flet_s8_scanner` control (the E1 API over mobile_scanner 7.4.2), a pause and a
+torch switch, an "Analyze image" button that decodes the bundled `qr.png`, and
 the manual entry that always ships (D-65). When the app is not embedded (the
 companion app, D-63) it shows manual entry alone. Every step is printed as a line
-starting with ``S8 `` (logcat tag ``flet.python`` on Android) for the drivers.
+starting with `S8 ` (logcat tag `flet.python` on Android) for the drivers.
 
 Start routes, for what a driver cannot tap:
-``/paused`` mounts the scanner paused; ``/cycles/<n>[/<ms>]`` pauses and resumes it
-n times, ``ms`` apart (default 1500); ``/analyze`` decodes the bundled image.
+`/paused` mounts the scanner paused; `/cycles/<n>[/<ms>]` pauses and resumes it
+n times, `ms` apart (default 1500); `/analyze` decodes the bundled image.
 
 Imperative on purpose: the subject is the camera plumbing, not the UI.
 """
@@ -25,7 +25,7 @@ QR_IMAGE = Path(__file__).with_name("qr.png")
 
 
 def log(event: str, **values: object) -> None:
-    """Print one ``S8`` line with the monotonic time, for the drivers."""
+    """Print one `S8` line with the monotonic time, for the drivers."""
     fields = " ".join(f"{key}={value}" for key, value in values.items())
     print(f"S8 {event} mono={time.monotonic():.3f} {fields}", flush=True)
 

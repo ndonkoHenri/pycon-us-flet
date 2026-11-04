@@ -1,6 +1,6 @@
-"""The reminder settings record: what ``Prefs.reminders`` holds (STORE-10, NOTIF-03; D-275).
+"""The reminder settings record: what `Prefs.reminders` holds (STORE-10, NOTIF-03; D-275).
 
-``pycon.reminders`` is a JSON object merged over the defaults: a key that is missing,
+`pycon.reminders` is a JSON object merged over the defaults: a key that is missing,
 unknown or badly typed never breaks a start, it reads as its default (D-120). Only the
 options that work exist: session reminders and the three kinds of conference moment
 (D-58), and the primer's answer (D-61); no push categories and no master toggle.
@@ -43,9 +43,9 @@ _CHOICES: dict[str, tuple[object, ...]] = {
 
 @dataclass(frozen=True)
 class ReminderSettings:
-    """The reminder settings (``pycon.reminders``), with their defaults (D-275).
+    """The reminder settings (`pycon.reminders`), with their defaults (D-275).
 
-    Change one with ``Prefs.change_reminders()`` and ``dataclasses.replace()``.
+    Change one with `Prefs.change_reminders()` and `dataclasses.replace()`.
 
     Attributes:
         session_lead: Minutes before each session in My schedule that its reminder
@@ -80,7 +80,7 @@ class ReminderSettings:
         line that names the keys, never the values (D-120).
 
         Args:
-            stored: The decoded ``pycon.reminders`` object; ``{}`` when it is absent.
+            stored: The decoded `pycon.reminders` object; `{}` when it is absent.
         """
         values: dict[str, Any] = {}
         defaulted: list[str] = []
@@ -102,14 +102,14 @@ class ReminderSettings:
         return cls(**values)
 
     def wants(self, category: str) -> bool:
-        """Return whether the conference moments of ``category`` are on.
+        """Return whether the conference moments of `category` are on.
 
         Args:
-            category: ``"lightning"``, ``"open_space"`` or ``"keynote"``, as
-                ``year_moments.EventReminder.category``.
+            category: `"lightning"`, `"open_space"` or `"keynote"`, as
+                `year_moments.EventReminder.category`.
 
         Raises:
-            KeyError: ``category`` is not one of them.
+            KeyError: `category` is not one of them.
         """
         return {
             "lightning": self.lightning,
@@ -122,15 +122,15 @@ class ReminderSettings:
         """How long before a session a calendar export's alarm goes off (D-401).
 
         The session reminders' lead while they are on, so the calendar and the app
-        agree; ``core.ics.ALARM``, 10 minutes, while they are off (SESS-05).
+        agree; `core.ics.ALARM`, 10 minutes, while they are off (SESS-05).
         """
         return timedelta(minutes=self.session_lead) if self.session_lead else ALARM
 
     def to_stored(self) -> dict[str, Any]:
-        """Return the record as ``pycon.reminders`` keeps it: every field, by name."""
+        """Return the record as `pycon.reminders` keeps it: every field, by name."""
         return asdict(self)
 
 
 def _allowed(value: object, choices: tuple[object, ...]) -> bool:
-    """Return whether ``value`` is one of ``choices``, of the same type (True is no 1)."""
+    """Return whether `value` is one of `choices`, of the same type (True is no 1)."""
     return any(type(value) is type(choice) and value == choice for choice in choices)

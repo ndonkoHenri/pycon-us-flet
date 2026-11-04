@@ -1,14 +1,14 @@
 """F150's harness (#601): nothing under a skipped memoised component re-renders alone.
 
-A component under an ``ft.memo`` component finds its contexts through a weak reference
+A component under an `ft.memo` component finds its contexts through a weak reference
 to the instance that first rendered it. Once a render above has skipped that memoised
 component and Python's cycle collector has freed the instance, a component inside that
-re-renders by itself (its own ``use_state``, a store it subscribed to) finds no
-provider: ``use_services()`` and the other store hooks raise, and Flet's updates
+re-renders by itself (its own `use_state`, a store it subscribed to) finds no
+provider: `use_services()` and the other store hooks raise, and Flet's updates
 scheduler, which does not catch an update's error, stops for the rest of the session
 (F150, U111 #597).
 
-Each test opens the app (``tests/links.py``'s ``open_at``: the real Router and screens
+Each test opens the app (`tests/links.py`'s `open_at`: the real Router and screens
 over the 2026 feed, with saved sessions and a change log) at a location with memoised
 parts, before, during and after the conference, at the default and the largest text.
 It lists every component under a memoised one that could re-render on its own (one
@@ -82,7 +82,7 @@ LOCATIONS = [
     "/schedule/changes/2026",
     "/search",
 ]
-"""Every location with a memoised part: each ``ft.memo`` component in ``src/`` is
+"""Every location with a memoised part: each `ft.memo` component in `src/` is
 under one of them (the audit in #601's PR). The Map's Expo pane is opened on its List
 (#404), whose rows are memoised; the plan's booths need a layout the harness never
 reports. The Map's other panes, Tracks, a track, Wi-Fi and a floor plan have none."""
@@ -121,7 +121,7 @@ def mounted(session: Session) -> list[Component]:
 
 
 def memo_above(component: Component) -> Component | None:
-    """The nearest memoised component above ``component``, by the render links."""
+    """The nearest memoised component above `component`, by the render links."""
     ref = component._parent_component
     while ref is not None and (parent := ref()) is not None:
         if parent.memoized:
@@ -131,7 +131,7 @@ def memo_above(component: Component) -> Component | None:
 
 
 def own_updates(component: Component) -> list[str]:
-    """What could re-render ``component`` on its own: its state, effects, stores."""
+    """What could re-render `component` on its own: its state, effects, stores."""
     hooks = component._state.hooks
     found = [f"state {h.value!r}"[:50] for h in hooks if isinstance(h, StateHook)]
     found += ["effect" for h in hooks if isinstance(h, EffectHook)]
@@ -157,7 +157,7 @@ def self_updaters(session: Session) -> list[tuple[Component, str]]:
 
 
 def scheduler(session: Session) -> Any:
-    """The session's updates scheduler task (``Session.__updates_task``, at the pin)."""
+    """The session's updates scheduler task (`Session.__updates_task`, at the pin)."""
     return session._Session__updates_task  # pyright: ignore[reportAttributeAccessIssue]
 
 
@@ -186,7 +186,7 @@ async def skip_memos(session: Session) -> None:
 
 
 async def stopped_by(session: Session, found: list[tuple[Component, str]]) -> list[str]:
-    """Re-render each component of ``found`` by itself; return those that stopped Flet.
+    """Re-render each component of `found` by itself; return those that stopped Flet.
 
     Each that stops the updates scheduler is named with its error, and the scheduler is
     started again for the next.
@@ -204,7 +204,7 @@ async def stopped_by(session: Session, found: list[tuple[Component, str]]) -> li
 
 
 async def search(shown: Shown, query: str) -> None:
-    """Submit ``query`` in the search field, as Flutter reports it: value, then event."""
+    """Submit `query` in the search field, as Flutter reports it: value, then event."""
     (field,) = shown.find(ft.TextField)
     shown.session.apply_patch(field._i, {"value": query})
     await shown.event(field, "submit", query)
@@ -247,7 +247,7 @@ async def test_the_harness_catches_a_ticking_component_under_a_skipped_memo() ->
 
     #597's repro: a component with its own state that reads a context, in a memoised
     component's output. After a skip and a collection, its own re-render finds no
-    provider and the scheduler stops; ``stopped_by()`` names it.
+    provider and the scheduler stops; `stopped_by()` names it.
     """
 
     @ft.component

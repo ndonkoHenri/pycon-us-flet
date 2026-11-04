@@ -1,16 +1,16 @@
-"""Welcome (``/welcome``): the first-run screen, shown once before Now (SHELL-02, STORE-07).
+"""Welcome (`/welcome`): the first-run screen, shown once before Now (SHELL-02, STORE-07).
 
 One honest screen where the Ionic app had a tutorial of slides with a hard-coded year
 and a permission prompt over it (ux.md §6.8): "Welcome to PyCon US 2026", the city and
-the dates from ``conference.toml`` (D-35), what the app does in three rows, Get started,
+the dates from `conference.toml` (D-35), what the app does in three rows, Get started,
 and who built it: "Built with Python and Flet by the community · Not an official PSF
 app" (D-36). No permission prompt (D-61), and no icon, though D-452 gave the app one.
 
 It is a root without a bar, in the splash's purple in every scheme, one of D-28's
-identity moments. Get started saves ``pycon.onboarded`` and replaces the route with
+identity moments. Get started saves `pycon.onboarded` and replaces the route with
 Now, so Back on Now leaves the app rather than returning here. Back on Welcome goes to
 Now, as on the other non-Now roots, whether a plain start or a link opened it (D-321).
-The start route sends a plain start here until then (``locations.start_target()``,
+The start route sends a plain start here until then (`locations.start_target()`,
 D-287).
 """
 
@@ -44,7 +44,7 @@ REMINDERS_ROW = (
     ft.Icons.NOTIFICATIONS_OUTLINED,
     "Get reminders before the talks you saved",
 )
-"""The third row, only when the build has reminders (``capabilities.REMINDERS``)."""
+"""The third row, only when the build has reminders (`capabilities.REMINDERS`)."""
 
 THANKS = "Thanks for coming. See you next year."
 """The line under the dates once the conference's last day is over."""
@@ -60,7 +60,7 @@ class WelcomeCopy:
     Attributes:
         title: The page's level-1 heading, "Welcome to PyCon US 2026".
         place: "Long Beach, CA · May 13–19".
-        thanks: ``THANKS`` after the conference, else None.
+        thanks: `THANKS` after the conference, else None.
         rows: The value rows, each an icon and its phrase.
     """
 
@@ -75,10 +75,10 @@ def welcome_copy(info: ConferenceInfo, day: date, *, reminders: bool) -> Welcome
 
     Args:
         info: The year's facts: its name, city and dates (D-35).
-        day: Today in the conference's zone (``timefmt.today()``); after
-            ``info.last_day``, the last sprint day, the page thanks the reader, as
+        day: Today in the conference's zone (`timefmt.today()`); after
+            `info.last_day`, the last sprint day, the page thanks the reader, as
             Now's header does then.
-        reminders: The build has reminders (``capabilities.REMINDERS``);
+        reminders: The build has reminders (`capabilities.REMINDERS`);
             without them, the page does not promise any.
     """
     return WelcomeCopy(
@@ -155,9 +155,9 @@ STATUS_BAR_STYLE = ft.SystemOverlayStyle(
 def status_bar() -> ft.Control:
     """Return the strip under the status bar that gives it white icons (U85 interim).
 
-    A View without an ``AppBar`` gives the status bar the theme's style (F105),
+    A View without an `AppBar` gives the status bar the theme's style (F105),
     whose icons are dark in a light scheme: 1.9:1 on the purple. Flet has no style
-    of a View's own (U85, #509), so this is an ``AppBar`` with no toolbar, the status bar's
+    of a View's own (U85, #509), so this is an `AppBar` with no toolbar, the status bar's
     height, under a theme that holds only the white style, in light and dark alike.
     Flutter takes the status bar's style from the frontmost region at its middle, so
     this one wins over the View's. The navigation bar keeps the theme's (D-151).
@@ -188,7 +188,7 @@ def body(copy: WelcomeCopy) -> list[ft.Control]:
     is decorative (D-33).
 
     Args:
-        copy: ``welcome_copy()``'s words.
+        copy: `welcome_copy()`'s words.
     """
     lines: list[ft.Control] = [
         # No bar, so the page's own title is its level-1 heading (D-211).
@@ -229,7 +229,7 @@ def gap(height: int) -> ft.Container:
 
 
 def spoken(text: str) -> str:
-    """Return ``text`` as a screen reader should say it: a " · " is a full stop.
+    """Return `text` as a screen reader should say it: a " · " is a full stop.
 
     "Long Beach, CA. May 13 to 19": the range's dash is "to", as Now's header says it.
 
@@ -267,7 +267,7 @@ def value_row(icon: ft.IconData, phrase: str) -> ft.Control:
 
 
 def start_button(on_click: ft.ControlEventHandler[ft.Button]) -> ft.Control:
-    """Return Get started, pinned under what scrolls, the full width (``welcome.start``).
+    """Return Get started, pinned under what scrolls, the full width (`welcome.start`).
 
     White with the purple's ink (11.1:1), since the theme's filled button is the
     scheme's indigo, which barely stands out on the purple. Its padding makes it 48

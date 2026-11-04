@@ -1,7 +1,7 @@
-"""The session detail harness: ``SessionDetail`` in a real Flet session (ux.md §5.5).
+"""The session detail harness: `SessionDetail` in a real Flet session (ux.md §5.5).
 
-``tests/test_session.py``, its parts and ``tests/test_session_extras.py`` share it. The session is
-``tests/harness.py``'s ``showing()``, under a component that can re-render the detail
+`tests/test_session.py`, its parts and `tests/test_session_extras.py` share it. The session is
+`tests/harness.py`'s `showing()`, under a component that can re-render the detail
 in place with another id, or without it. The sessions are the recorded 2026 feed's.
 """
 
@@ -43,14 +43,14 @@ BREAK = (
 
 @dataclass
 class Detail(Shown):
-    """A Flet session showing one ``SessionDetail``."""
+    """A Flet session showing one `SessionDetail`."""
 
     opened: list[Callable[[str | None], None]] = field(default_factory=list)
     """The shown id's setter, once the detail's first render has run."""
 
     @property
     def pushed(self) -> list[str]:
-        """The View paths the detail asked ``page.navigate`` for, in order."""
+        """The View paths the detail asked `page.navigate` for, in order."""
         return self.went
 
     @property
@@ -59,11 +59,11 @@ class Detail(Shown):
         return cast(MemoryShare, self.services.share)
 
     def text(self, identifier: str) -> list[str]:
-        """The visible text under the node ``identifier``, in reading order."""
+        """The visible text under the node `identifier`, in reading order."""
         return words(self.node(identifier))
 
     async def show(self, session_id: str | None) -> None:
-        """Re-render the detail in place with another id, or leave it (``None``)."""
+        """Re-render the detail in place with another id, or leave it (`None`)."""
         self.opened[0](session_id)
         await self.settle()
 
@@ -75,11 +75,11 @@ type Render = Callable[..., Awaitable[Detail]]
 async def rendering(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> AsyncIterator[Render]:
-    """Yield render(session_id, year=YEAR): that session's detail at ``VIEW``.
+    """Yield render(session_id, year=YEAR): that session's detail at `VIEW`.
 
-    Each test module's ``render`` fixture enters it with its own ``tmp_path`` and
-    ``monkeypatch``; leaving it closes every session it rendered. The location card's
-    pulse waits on its own ``HeldSleeps``, never released here.
+    Each test module's `render` fixture enters it with its own `tmp_path` and
+    `monkeypatch`; leaving it closes every session it rendered. The location card's
+    pulse waits on its own `HeldSleeps`, never released here.
     """
     monkeypatch.setattr(location_card, "asyncio", HeldSleeps())
     try:
@@ -119,9 +119,9 @@ async def rendering(
 
 
 def words(control: ft.Control) -> list[str]:
-    """The visible text under ``control`` in reading order, components and tiles included.
+    """The visible text under `control` in reading order, components and tiles included.
 
-    Unlike ``trees.texts``, it reads a ``ListTile``'s string title and what a component
+    Unlike `trees.texts`, it reads a `ListTile`'s string title and what a component
     (the status line) rendered.
     """
     found: list[str] = []
@@ -159,7 +159,7 @@ def headings(detail: Detail) -> list[tuple[str, int | None]]:
 
 
 def at(text: str) -> datetime:
-    """An instant in conference time, e.g. ``at("2026-05-16 10:05")``."""
+    """An instant in conference time, e.g. `at("2026-05-16 10:05")`."""
     return datetime.fromisoformat(text).replace(tzinfo=PACIFIC)
 
 
@@ -182,13 +182,13 @@ PANEL = "110"
 """Beyond the Hype: six speakers, five of them without a photo in the feed."""
 
 OPEN_SPACE = "9086"
-"""pytest for system tests: its Markdown links ``[pytest](pytest.org)`` (D-140)."""
+"""pytest for system tests: its Markdown links `[pytest](pytest.org)` (D-140)."""
 
 
 @pytest.fixture
 async def render(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> AsyncIterator[Render]:
-    """Provide an async function that renders a session's detail at ``VIEW`` by id."""
+    """Provide an async function that renders a session's detail at `VIEW` by id."""
     async with rendering(tmp_path, monkeypatch) as show:
         yield show

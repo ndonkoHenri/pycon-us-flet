@@ -1,8 +1,8 @@
 """Tests for About this app: its build, its sections and the 7-tap unlock.
 
-#88 (D-73, D-187). The page runs in ``tests/about_page.py``'s stand-ins. The links and
-the Conference data section are ``test_about_app_links.py``'s, Help us fix it
-``test_about_app_help.py``'s. How the page looks and reads is checked on devices (the
+#88 (D-73, D-187). The page runs in `tests/about_page.py`'s stand-ins. The links and
+the Conference data section are `test_about_app_links.py`'s, Help us fix it
+`test_about_app_help.py`'s. How the page looks and reads is checked on devices (the
 PRs).
 """
 
@@ -108,7 +108,7 @@ def test_the_page_names_the_app_and_says_it_is_not_the_psf_s(
 def test_the_version_row_carries_its_identifier_for_ui_flows(
     render: Callable[[], dict[str, Any]],
 ) -> None:
-    """The Version row's merged node carries the ``about_app.version`` id."""
+    """The Version row's merged node carries the `about_app.version` id."""
     rows = [c for c in body_of(render()) if isinstance(c, ft.MergeSemantics)]
     identifiers = [cast(ft.Semantics, row.content).identifier for row in rows]
     assert identifiers == ["about_app.version", "about_app.licences", "about_app.flet"]
@@ -117,7 +117,7 @@ def test_the_version_row_carries_its_identifier_for_ui_flows(
 def test_licences_opens_its_page_under_about_this_app(
     render: Callable[[], dict[str, Any]], page: FakePage
 ) -> None:
-    """The Licences row opens ``/more/app/licences``, so Back returns here (D-296)."""
+    """The Licences row opens `/more/app/licences`, so Back returns here (D-296)."""
     tile = tiles(render())["Licences"]
     cast(Callable[[], None], tile.on_click)()
     assert page.navigated == ["/more/app/licences"]
@@ -187,7 +187,7 @@ async def test_the_seventh_tap_unlocks_developer_and_keeps_it_unlocked(
 async def test_the_unlock_keeps_the_other_developer_options(
     render: Callable[[], dict[str, Any]], prefs: Prefs
 ) -> None:
-    """The unlock adds ``unlocked`` to the stored options and keeps the rest."""
+    """The unlock adds `unlocked` to the stored options and keeps the rest."""
     prefs.dev = {"feed_url": "http://127.0.0.1:8000/conference-2026.json"}
     await tap_version(render, 7)
     assert prefs.dev == {

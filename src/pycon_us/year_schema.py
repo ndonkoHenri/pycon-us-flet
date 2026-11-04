@@ -1,10 +1,10 @@
 """The schema half of the year-data loader: TOML tables into frozen dataclasses (D-45).
 
-``read_table()`` reads one file with ``tomllib``; ``build()`` turns a table into a
+`read_table()` reads one file with `tomllib`; `build()` turns a table into a
 dataclass, recursively, checking key names and value types against the dataclass's own
-fields, so the dataclasses in ``config`` are the schema (architecture §8.2). Nothing here
+fields, so the dataclasses in `config` are the schema (architecture §8.2). Nothing here
 knows about conferences: the rules a year's entries must follow, and the dataclasses
-themselves, are ``config``'s. Every failure is a ``YearDataError`` that names the file,
+themselves, are `config`'s. Every failure is a `YearDataError` that names the file,
 the key and the problem.
 """
 
@@ -35,11 +35,11 @@ class YearDataError(ValueError):
 
 
 def read_table(path: Path, file: str) -> dict[str, object]:
-    """Read the TOML file at ``path`` into its top-level table.
+    """Read the TOML file at `path` into its top-level table.
 
     Args:
         path: The file to read.
-        file: Its name in error messages (``2026/conference.toml``).
+        file: Its name in error messages (`2026/conference.toml`).
 
     Returns:
         The file's top-level table.
@@ -59,15 +59,15 @@ def read_table(path: Path, file: str) -> dict[str, object]:
 def build[T: DataclassInstance](
     cls: type[T], raw: object, file: str, key: str = ""
 ) -> T:
-    """Build dataclass ``cls`` from a TOML table, checking key names and value types.
+    """Build dataclass `cls` from a TOML table, checking key names and value types.
 
     Args:
         cls: The dataclass; its fields name the keys, their annotations the types. A
-            table is a dataclass, and an array of tables a ``tuple`` of one, each
+            table is a dataclass, and an array of tables a `tuple` of one, each
             built in turn.
         raw: The table.
         file: The file's name in error messages.
-        key: Where the table is in the file (``tracks[8]``); empty for the top level.
+        key: Where the table is in the file (`tracks[8]`); empty for the top level.
 
     Returns:
         The dataclass.

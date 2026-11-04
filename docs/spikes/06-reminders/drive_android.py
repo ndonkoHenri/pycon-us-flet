@@ -1,25 +1,25 @@
 """Drive the S6 reproducer on an Android emulator with adb, one step at a time.
 
 The checks that combine these steps and time each reminder are in
-``android_checks.py``. Run from this folder with the release APK installed::
+`android_checks.py`. Run from this folder with the release APK installed:
 
     uv run python drive_android.py <step> [<arg> ...]
 
-Steps (each prints ``S6-DRIVE`` lines; screenshots go to ``$S6_OUT``):
+Steps (each prints `S6-DRIVE` lines; screenshots go to `$S6_OUT`):
 
-- ``launch [route]``: start the app (cold if it isn't running) on route.
-- ``swipe``: Home, then swipe the app away in Recents (the process dies, the
-  package is not stopped). ``force-stop``: Settings' Force stop.
-- ``lock`` / ``unlock``: the power key, then wake and swipe up.
-- ``reboot``: reboot the emulator and wait for boot.
-- ``exact allow|deny`` and ``notif allow|deny``: the two permissions.
-- ``doze`` / ``undoze``: force deep idle (screen off, unplugged) and leave it.
-- ``wait <id> <due epoch> [timeout s]``: poll the notification list until
-  reminder ``id`` is posted; print the delay after ``due``.
-- ``alarms``: the app's alarms in ``dumpsys alarm`` (when and window).
-- ``shade`` / ``tap <text>``: open the notification shade; tap a node.
-- ``shot <name>``: a screenshot.
-- ``log``: the app's ``S6`` lines.
+- `launch [route]`: start the app (cold if it isn't running) on route.
+- `swipe`: Home, then swipe the app away in Recents (the process dies, the
+  package is not stopped). `force-stop`: Settings' Force stop.
+- `lock` / `unlock`: the power key, then wake and swipe up.
+- `reboot`: reboot the emulator and wait for boot.
+- `exact allow|deny` and `notif allow|deny`: the two permissions.
+- `doze` / `undoze`: force deep idle (screen off, unplugged) and leave it.
+- `wait <id> <due epoch> [timeout s]`: poll the notification list until
+  reminder `id` is posted; print the delay after `due`.
+- `alarms`: the app's alarms in `dumpsys alarm` (when and window).
+- `shade` / `tap <text>`: open the notification shade; tap a node.
+- `shot <name>`: a screenshot.
+- `log`: the app's `S6` lines.
 """
 
 import os
@@ -67,7 +67,7 @@ def stopped() -> bool:
 
 
 def posted(rid: int) -> float | None:
-    """When reminder rid was posted (its ``when``, epoch seconds), or None."""
+    """When reminder rid was posted (its `when`, epoch seconds), or None."""
     out = adb("shell", "dumpsys", "notification", "--noredact")
     match = re.search(
         rf"pkg={re.escape(PKG)} user=\S+ id={rid} .*?\n\s+when=(\d+)", out, re.DOTALL
@@ -78,7 +78,7 @@ def posted(rid: int) -> float | None:
 def wait_for(rid: int, due: float, timeout: float) -> None:
     """Poll for reminder rid every 2 s; print its delay after due, or a miss.
 
-    The delay is the notification's own ``when`` (set as the plugin posts it)
+    The delay is the notification's own `when` (set as the plugin posts it)
     minus due, so a late poll does not inflate it.
     """
     end = time.time() + timeout
@@ -139,7 +139,7 @@ def wait_boot() -> None:
 
 
 def app_lines() -> list[str]:
-    """The app's ``S6`` log lines."""
+    """The app's `S6` log lines."""
     out = adb("logcat", "-d", "-s", "flet.python:I")
     return [line for line in out.splitlines() if " S6 " in line]
 

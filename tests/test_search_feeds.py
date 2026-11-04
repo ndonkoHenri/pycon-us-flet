@@ -1,8 +1,8 @@
 """Tests for global search over the recorded feeds, and the cut to the first rows.
 
 Markup that never matches, every name found, places and sponsors, the schedule's order
-(D-46, D-178, D-180) and ``first_results()``'s cut to each type's first rows (D-218).
-The index, matching and results over small built feeds are in ``test_search.py``.
+(D-46, D-178, D-180) and `first_results()`'s cut to each type's first rows (D-218).
+The index, matching and results over small built feeds are in `test_search.py`.
 """
 
 from collections.abc import Sequence
@@ -58,7 +58,7 @@ def test_no_markup_matches_in_either_feed(year: int, query: str) -> None:
 
 
 def test_an_open_space_link_destination_does_not_match() -> None:
-    """2026's pytest open space links ``[pytest](pytest.org)`` (D-140)."""
+    """2026's pytest open space links `[pytest](pytest.org)` (D-140)."""
     data = processed(2026)
     assert "(pytest.org)" in data.sessions["9086"].description
     index = search_index(data)
@@ -148,7 +148,7 @@ def test_every_sponsor_is_in_the_index_in_level_order() -> None:
 
 
 def test_sponsors_are_cut_on_their_own_limit() -> None:
-    """``first_results()`` cuts sponsors to their limit; None leaves them whole."""
+    """`first_results()` cuts sponsors to their limit; None leaves them whole."""
     broad = search(search_index(processed(2026)), "a")
     assert len(broad.sponsors) > 5
     cut = first_results(broad, sessions=None, speakers=None, sponsors=5)
@@ -161,7 +161,7 @@ def test_sponsors_are_cut_on_their_own_limit() -> None:
 
 
 def test_a_cut_keeps_every_venue_spot() -> None:
-    """``first_results()`` cuts sessions and speakers, never the venue spots."""
+    """`first_results()` cuts sessions and speakers, never the venue spots."""
     index = search_index(processed(2026), load_year(2026).map.venue_spots())
     found = search(index, "a")
     assert found.spots and found.session_count > 1
@@ -243,7 +243,7 @@ def test_a_pseudo_speaker_is_found_through_its_sessions_only() -> None:
 
 
 def _ids(results: SearchResults) -> list[str]:
-    """The ids of the sessions in ``results``, in the order shown."""
+    """The ids of the sessions in `results`, in the order shown."""
     return [s.id for day in results.sessions for s in day.sessions]
 
 

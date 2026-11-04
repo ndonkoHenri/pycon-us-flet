@@ -1,9 +1,9 @@
-"""Tests for the Job listings page's filter (``screens/jobs.py``; SPON-07, #400).
+"""Tests for the Job listings page's filter (`screens/jobs.py`; SPON-07, #400).
 
-The page runs in ``tests/jobs_view.py``'s harness on the recorded 2026 feed, the
-filter's debounce held by ``tests/timers.py``; the matching itself is ``core/jobs.py``'s,
-tested in ``tests/test_jobs_search.py``. The cards and the states are
-``tests/test_jobs_page.py``'s (#623).
+The page runs in `tests/jobs_view.py`'s harness on the recorded 2026 feed, the
+filter's debounce held by `tests/timers.py`; the matching itself is `core/jobs.py`'s,
+tested in `tests/test_jobs_search.py`. The cards and the states are
+`tests/test_jobs_page.py`'s (#623).
 """
 
 import asyncio
@@ -41,7 +41,7 @@ async def test_the_filter_keeps_the_listings_with_every_word_once_typing_pauses(
 async def test_markup_finds_nothing_and_offers_to_clear_the_filter(
     show: Any, sleeps: HeldSleeps, focused: list[ft.TextField]
 ) -> None:
-    """``nofollow`` is in Bloomberg's HTML, not its text: a miss, and Clear filter.
+    """`nofollow` is in Bloomberg's HTML, not its text: a miss, and Clear filter.
 
     The button empties the field and the list at once, and puts the focus back in the
     field, since the button goes with the miss (D-182).
@@ -84,7 +84,7 @@ async def test_the_count_is_a_live_region_only_while_the_filter_finds_some(
 
 
 def in_list(control: ft.BaseControl) -> bool:
-    """Return whether ``control`` is mounted inside a ``ListView``: it scrolls."""
+    """Return whether `control` is mounted inside a `ListView`: it scrolls."""
     node = control.parent
     while node is not None and not isinstance(node, ft.ListView):
         node = node.parent

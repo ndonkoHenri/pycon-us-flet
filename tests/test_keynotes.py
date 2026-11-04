@@ -1,7 +1,7 @@
-"""Tests for the Keynotes page and its cards (``screens/keynotes.py``, ``keynote_card.py``).
+"""Tests for the Keynotes page and its cards (`screens/keynotes.py`, `keynote_card.py`).
 
 SPKR-04, #104, D-217. The page runs in a real Flet session over the recorded feeds
-(``tests/sessions.py``). How it looks, wraps at 200 % and reads to screen readers is
+(`tests/sessions.py`). How it looks, wraps at 200 % and reads to screen readers is
 checked on devices (the PR).
 """
 

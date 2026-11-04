@@ -1,11 +1,11 @@
-"""Tests for the check-in API's payloads: ``core/check_in.py`` and ``check_in_api.py``.
+"""Tests for the check-in API's payloads: `core/check_in.py` and `check_in_api.py`.
 
 The parsers read every reply the mock sends and leave out bad entries (API-05..API-07);
 the door and swag splits of the seeded catalog (DOOR-01, SHIRT-01); the chronological
 sort in the conference year (DOOR-02); both redeem bodies byte for byte, signed and
 accepted by the mock under both capture semantics (D-57). The fetches run against the
 mock's real transport, signed in as the seeded staff account, or a fixed
-``httpx.MockTransport`` reply.
+`httpx.MockTransport` reply.
 """
 
 import json
@@ -42,7 +42,7 @@ SCANNED_AT = 1_780_000_000.5
 
 
 def seeded_catalog() -> Catalog:
-    """Return the mock's catalog, read by ``parse_catalog`` from its own reply."""
+    """Return the mock's catalog, read by `parse_catalog` from its own reply."""
     status, reply = call(state_at(), "GET", "check_in/redeemable/", "staff")
     assert status == 200
     return parse_catalog(reply)
@@ -99,7 +99,7 @@ def test_a_malformed_catalog_entry_is_left_out(product: object) -> None:
     ],
 )
 def test_a_catalog_without_its_two_lists_is_refused(reply: object) -> None:
-    """Not both lists: a ``TypeError``, which the fetch makes an ``ApiError``."""
+    """Not both lists: a `TypeError`, which the fetch makes an `ApiError`."""
     with pytest.raises(TypeError):
         parse_catalog(reply)
 
@@ -121,7 +121,7 @@ def test_the_door_and_swag_splits_are_disjoint_and_cover_the_catalog() -> None:
     [("T-Shirt", True), ("SWAG bag", True), ("Tshirts", True), ("Summits", False)],
 )
 def test_is_swag_is_ionic_s_case_insensitive_pattern(name: str, swag: bool) -> None:
-    """``/shirt|swag/i``: anywhere in the name, any case."""
+    """`/shirt|swag/i`: anywhere in the name, any case."""
     assert is_swag(name) is swag
 
 
@@ -193,7 +193,7 @@ def test_session_parts_split_the_title_from_the_day_and_time(
 
 
 def door_lookup(code: str, product_ids: str = "10,11") -> tuple[int, object]:
-    """Return the mock's door ``fetch_products`` status and reply for ``code``."""
+    """Return the mock's door `fetch_products` status and reply for `code`."""
     query = (
         f"attendee_access_code={code}&product_pk_list={product_ids}"
         "&mode=door_check_mode"
@@ -216,7 +216,7 @@ def test_a_door_lookup_reads_the_attendee_and_the_door_fields() -> None:
 
 
 def test_a_swag_lookup_has_no_door_fields_and_sorts_its_categories() -> None:
-    """Swag mode: categories by name, as Ionic's ``keyvalue`` showed them; no dietary."""
+    """Swag mode: categories by name, as Ionic's `keyvalue` showed them; no dietary."""
     query = "attendee_access_code=MOCK0001&category_pk_list=4,3&mode=redemption_mode"
     status, reply = call(
         state_at(), "GET", f"check_in/fetch_products/?{query}", "staff"
@@ -256,7 +256,7 @@ def test_a_malformed_item_or_empty_category_is_left_out() -> None:
     ],
 )
 def test_a_lookup_without_code_or_items_is_refused(reply: object) -> None:
-    """No access code or no items object: a ``TypeError``."""
+    """No access code or no items object: a `TypeError`."""
     with pytest.raises(TypeError):
         parse_attendee_products(reply)
 
@@ -267,7 +267,7 @@ DOOR_BODY = (
     b'"product-redeem-10":10,"product-10-quantity":2,'
     b'"product-redeem-20":20,"product-20-quantity":1}'
 )
-"""The door's body: ids as numbers (``door-check.page.ts`` 177-188)."""
+"""The door's body: ids as numbers (`door-check.page.ts` 177-188)."""
 
 SWAG_BODY = (
     b'{"attendee_access_code":"MOCK0001","badge_validator":"",'
@@ -275,7 +275,7 @@ SWAG_BODY = (
     b'"product-redeem-30":"30","product-30-quantity":2,'
     b'"product-redeem-40":"40","product-40-quantity":1}'
 )
-"""Swag's body: ids as strings, ``""`` for a missing validator (153-165)."""
+"""Swag's body: ids as strings, `""` for a missing validator (153-165)."""
 
 
 def test_the_door_body_is_ionic_s_byte_for_byte() -> None:
@@ -287,13 +287,13 @@ def test_the_door_body_is_ionic_s_byte_for_byte() -> None:
 
 
 def test_the_swag_body_is_ionic_s_byte_for_byte() -> None:
-    """Ids as strings and a missing validator sent as ``""``."""
+    """Ids as strings and a missing validator sent as `""`."""
     payload = redeem_payload("MOCK0001", None, SCANNED_AT, {30: 2, 40: 1}, swag=True)
     assert canonical_body(payload) == SWAG_BODY
 
 
 def test_the_door_leaves_out_a_missing_validator_and_keeps_an_empty_one() -> None:
-    """None (a badge without ``:``) is omitted, as ``JSON.stringify`` drops undefined."""
+    """None (a badge without `:`) is omitted, as `JSON.stringify` drops undefined."""
     missing = redeem_payload("MOCK0003", None, SCANNED_AT, {10: 1}, swag=False)
     empty = redeem_payload("MOCK0003", "", SCANNED_AT, {10: 1}, swag=False)
     assert list(missing)[:2] == ["attendee_access_code", "scanned_at"]
@@ -302,7 +302,7 @@ def test_the_door_leaves_out_a_missing_validator_and_keeps_an_empty_one() -> Non
 
 @pytest.mark.parametrize("quantity", [0, -1, True, 1.0])
 def test_a_quantity_that_is_not_positive_is_refused(quantity: object) -> None:
-    """The server refuses it, so building one is a ``ValueError``."""
+    """The server refuses it, so building one is a `ValueError`."""
     with pytest.raises(ValueError, match="quantity"):
         redeem_payload("MOCK0001", "", SCANNED_AT, {30: quantity}, swag=True)  # pyright: ignore[reportArgumentType]
 
@@ -354,7 +354,7 @@ def test_a_malformed_redeem_entry_is_left_out() -> None:
     [None, {"errors": []}, {"errors": {}, "redeemable_products_by_category": {}}],
 )
 def test_a_redeem_reply_without_its_two_members_is_refused(reply: object) -> None:
-    """Not ``errors`` and the redeemed object: a ``TypeError``."""
+    """Not `errors` and the redeemed object: a `TypeError`."""
     with pytest.raises(TypeError):
         parse_redeem_reply(reply)
 
@@ -383,7 +383,7 @@ async def test_the_fetches_and_redeem_read_the_mock_signed_in_as_staff() -> None
 
 
 async def test_a_door_lookup_of_an_unknown_attendee_is_a_404() -> None:
-    """The mock answers 404 for a code it doesn't know: an ``ApiError``."""
+    """The mock answers 404 for a code it doesn't know: an `ApiError`."""
     client, _, _ = await signed_in("staff")
     with pytest.raises(ApiError) as caught:
         await fetch_attendee_products(client, "NOBODY", [10], door=True)
@@ -393,7 +393,7 @@ async def test_a_door_lookup_of_an_unknown_attendee_is_a_404() -> None:
 
 @pytest.mark.parametrize("fetch", ["catalog", "lookup", "redeem"])
 async def test_an_unreadable_reply_is_an_api_error(fetch: str) -> None:
-    """A 200 that isn't the documented object is an ``ApiError`` (D-120)."""
+    """A 200 that isn't the documented object is an `ApiError` (D-120)."""
     client = client_for(replying(200, b'{"data": []}'))
     with pytest.raises(ApiError):
         if fetch == "catalog":

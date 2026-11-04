@@ -1,10 +1,10 @@
 """The chip and the buttons on a staff tool's scan screen (ux.md §7.2; D-425, D-433).
 
 A tool's choice (the Lead scanner's sponsor, Door check's session) heads its scan screen
-as an outlined chip that reopens the picker (``context_chip()``), which the sync chip
+as an outlined chip that reopens the picker (`context_chip()`), which the sync chip
 also wears at large text (#752); the tool's own buttons under the field, and the one
-that opens the picker while none is chosen, are tonal (``tool_button()``). The pickers
-are ``ui/staff_picker.py``'s.
+that opens the picker while none is chosen, are tonal (`tool_button()`). The pickers
+are `ui/staff_picker.py`'s.
 """
 
 import flet as ft
@@ -23,19 +23,19 @@ def context_chip(
 ) -> ft.Control:
     """Return the chip that heads a tool's scan screen and reopens its picker.
 
-    One node, a button read as ``spoken``. Drawn as M3's outlined assist chip (8 dp
-    corners, an ``outline_variant`` edge, a leading icon) but built from a
-    ``Container``: Flutter's ``Chip`` keeps its label on one line, which at the
+    One node, a button read as `spoken`. Drawn as M3's outlined assist chip (8 dp
+    corners, an `outline_variant` edge, a leading icon) but built from a
+    `Container`: Flutter's `Chip` keeps its label on one line, which at the
     largest text cut "Example Corp" to "Example". Its text takes only the room it
-    needs (``expand_loose``) and wraps past the width; the chip is at least 48 dp tall,
+    needs (`expand_loose`) and wraps past the width; the chip is at least 48 dp tall,
     its own target (ux.md §9).
 
     Args:
         text: What it shows, "For: Example Corp".
         spoken: What a screen reader says, "Scanning for Example Corp, change sponsor".
-        icon: Its leading icon, drawn in ``primary``; or a control in its place (the
+        icon: Its leading icon, drawn in `primary`; or a control in its place (the
             sync chip's own icon or ring at large text, #752).
-        identifier: For UI flows, ``lead.sponsor_chip``.
+        identifier: For UI flows, `lead.sponsor_chip`.
         on_click: Opens the picker.
     """
     return ft.Container(
@@ -83,10 +83,10 @@ def tool_button(
 ) -> ft.Control:
     """Return one of a tool's tonal buttons under the field, as wide as its words.
 
-    ``ScanScreen`` lays the tool's buttons in one wrapping row, so two share a line.
+    `ScanScreen` lays the tool's buttons in one wrapping row, so two share a line.
 
     Args:
-        identifier: For UI flows, e.g. ``lead.add_note``.
+        identifier: For UI flows, e.g. `lead.add_note`.
         label: Its words.
         icon: Its leading icon.
         on_click: What it does.

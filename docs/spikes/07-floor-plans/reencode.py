@@ -1,10 +1,10 @@
 """Re-encode the year's floor plans to 2048 px or less (#361, docs/spikes/07-floor-plans.md).
 
-Keep this for next year: point ``--source`` at the new plans and run it again. It
-writes the formats the spike compared into ``--compare`` (when given) and, into
-``--out``, the chosen one (lossy WebP, quality 80, D-312) next to a JPEG (quality 85,
-4:4:4) for comparison, plus the expo plan's source as ``expo-source.jpg``: the
-reproducer's ``src/assets/plans/``. The app's ``assets/plans/`` takes the ``.webp`` files.
+Keep this for next year: point `--source` at the new plans and run it again. It
+writes the formats the spike compared into `--compare` (when given) and, into
+`--out`, the chosen one (lossy WebP, quality 80, D-312) next to a JPEG (quality 85,
+4:4:4) for comparison, plus the expo plan's source as `expo-source.jpg`: the
+reproducer's `src/assets/plans/`. The app's `assets/plans/` takes the `.webp` files.
 
     uv run --with pillow==12.0.0 python reencode.py \
         --source ../../../excluded/pycon-us-mobile/src/assets/img \
@@ -32,7 +32,7 @@ PLANS = {
 
 
 def fit(image: Image.Image, max_side: int = MAX_SIDE) -> Image.Image:
-    """Return ``image`` in RGB, scaled down (never up) so its longer side is ``max_side``.
+    """Return `image` in RGB, scaled down (never up) so its longer side is `max_side`.
 
     Args:
         image: The decoded plan.
@@ -50,14 +50,14 @@ def fit(image: Image.Image, max_side: int = MAX_SIDE) -> Image.Image:
 
 
 def encodings(image: Image.Image) -> dict[str, bytes]:
-    """Encode ``image`` in every format the spike compared.
+    """Encode `image` in every format the spike compared.
 
     Args:
         image: The fitted RGB plan.
 
     Returns:
-        Bytes by variant name (``jpeg70``, ``jpeg85``, ``jpeg92``, ``png``, ``webp80``,
-        ``webp-lossless``).
+        Bytes by variant name (`jpeg70`, `jpeg85`, `jpeg92`, `png`, `webp80`,
+        `webp-lossless`).
     """
     variants = {
         "jpeg70": ("JPEG", {"quality": 70, "subsampling": 0}),

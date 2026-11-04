@@ -1,8 +1,8 @@
 """Tests for the storage service: the key table, preferences and clearing them (STORE-01).
 
 The service runs over the in-memory SharedPreferences and a temporary directory, from
-``tests/memory_storage.py``; the data directory and the feed cache are
-``test_storage_cache.py``'s.
+`tests/memory_storage.py`; the data directory and the feed cache are
+`test_storage_cache.py`'s.
 """
 
 import logging
@@ -35,7 +35,7 @@ ALL_PREFS = [
 
 
 def test_every_key_is_prefixed_and_listed_once() -> None:
-    """Every preference key starts with ``pycon.`` and is in the table once."""
+    """Every preference key starts with `pycon.` and is in the table once."""
     keys = [pref.key for pref in ALL_PREFS]
     assert all(key.startswith("pycon.") for key in keys)
     assert len(keys) == len(set(keys))
@@ -53,7 +53,7 @@ async def test_every_default_round_trips_through_shared_preferences(
 
 
 def test_only_the_key_table_builds_a_pref() -> None:
-    """A ``Pref`` built elsewhere fails here, as the checks that walk the table miss it."""
+    """A `Pref` built elsewhere fails here, as the checks that walk the table miss it."""
     package = Path(pycon_us.__file__).parent
     builds_a_pref = re.compile(r"\bPref(\[[^\]]*\])?\(")
     strays = [
@@ -80,7 +80,7 @@ def test_favorites_are_kept_per_year() -> None:
     ],
 )
 def test_the_staff_choices_are_kept_per_year_under_the_staff_prefix(key: Any) -> None:
-    """Each names its year, and a sign-out's ``STAFF_PREFIX`` still finds it (D-466)."""
+    """Each names its year, and a sign-out's `STAFF_PREFIX` still finds it (D-466)."""
     assert key(2027).key != key(2026).key
     assert key(2026).key.startswith(pref_keys.STAFF_PREFIX)
 
@@ -103,7 +103,7 @@ async def test_an_explicit_empty_list_is_kept_rather_than_the_default(
 
 
 async def test_a_returned_default_is_a_copy(store: Storage) -> None:
-    """Changing a returned list or dict default leaves the ``Pref``'s own as it was."""
+    """Changing a returned list or dict default leaves the `Pref`'s own as it was."""
     (await store.get(pref_keys.EXCLUDED_TRACKS)).append("Tutorials")
     (await store.get(pref_keys.DEV))["fake_now"] = "2026-05-15T09:00"
     assert pref_keys.EXCLUDED_TRACKS.default == ["Open Space"]
@@ -188,7 +188,7 @@ async def test_read_raises_a_failing_call_that_get_turns_into_the_default(
 async def test_read_gives_the_default_for_an_absent_or_unreadable_value(
     store: Storage, prefs: MemoryPrefs
 ) -> None:
-    """``read`` gives the default for an absent key or a value of the wrong type."""
+    """`read` gives the default for an absent key or a value of the wrong type."""
     assert await store.read(pref_keys.favorites(2026)) == []
     prefs.values["pycon.2026.favorites"] = "42"
     assert await store.read(pref_keys.favorites(2026)) == []
@@ -200,7 +200,7 @@ async def test_read_gives_the_default_for_an_absent_or_unreadable_value(
 async def test_clearing_removes_every_key_of_the_app_and_only_those(
     store: Storage, prefs: MemoryPrefs
 ) -> None:
-    """``clear_prefs`` removes every ``pycon.`` key, of every year, and no other."""
+    """`clear_prefs` removes every `pycon.` key, of every year, and no other."""
     prefs.values.update(
         {
             "pycon.theme": "dark",
@@ -229,7 +229,7 @@ async def test_a_key_that_cannot_be_removed_is_reported_by_name_only(
 async def test_preferences_that_cannot_be_listed_are_not_cleared(
     store: Storage, prefs: MemoryPrefs
 ) -> None:
-    """When the keys cannot be listed, ``clear_prefs`` returns False."""
+    """When the keys cannot be listed, `clear_prefs` returns False."""
     prefs.values["pycon.theme"] = "dark"
     prefs.error = TimeoutError("get_keys")
     assert await store.clear_prefs() is False
@@ -238,7 +238,7 @@ async def test_preferences_that_cannot_be_listed_are_not_cleared(
 async def test_remove_takes_one_key_and_counts_an_absent_one_as_gone(
     store: Storage, prefs: MemoryPrefs
 ) -> None:
-    """``remove`` deletes its key only; one that isn't there is already gone (#684)."""
+    """`remove` deletes its key only; one that isn't there is already gone (#684)."""
     prefs.values.update({"pycon.account": "{}", "pycon.theme": "dark"})
     assert await store.remove(pref_keys.ACCOUNT) is True
     assert prefs.values == {"pycon.theme": "dark"}

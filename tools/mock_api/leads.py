@@ -1,9 +1,9 @@
 """The mock's lead-retrieval endpoints: sponsors, capture and notes (API-09, API-10).
 
-A sponsor's account (``lead_retrieval``) captures leads for its own sponsor and sends
-no ``sponsor_id``; a door-staff account (``door_check_in``) scans on behalf of the
-sponsor it names. Leads and notes are recorded in ``MockState.leads`` and
-``MockState.notes``; a repeated capture follows ``capture`` (D-57).
+A sponsor's account (`lead_retrieval`) captures leads for its own sponsor and sends
+no `sponsor_id`; a door-staff account (`door_check_in`) scans on behalf of the
+sponsor it names. Leads and notes are recorded in `MockState.leads` and
+`MockState.notes`; a repeated capture follows `capture` (D-57).
 """
 
 from urllib.parse import unquote
@@ -12,14 +12,14 @@ from tools.mock_api.parse import encoded_query, json_object, text
 from tools.mock_api.state import Call, Lead, LeadNote, Refused, Sponsor
 
 LEADS = ("lead_retrieval", "door_check_in")
-"""Either flag reaches the lead endpoints, as Ionic's menu does (``map.ts`` 308-320)."""
+"""Either flag reaches the lead endpoints, as Ionic's menu does (`map.ts` 308-320)."""
 
 
 def lead_sponsors(call: Call) -> tuple[int, object]:
-    """The sponsors staff can scan for (``pycon-api.ts`` 254-263; ``map.ts`` 367-419).
+    """The sponsors staff can scan for (`pycon-api.ts` 254-263; `map.ts` 367-419).
 
     Returns:
-        200 ``{"sponsors": [{id, name, booth_number?, logo_url?}]}``, bare; a missing
+        200 `{"sponsors": [{id, name, booth_number?, logo_url?}]}`, bare; a missing
         booth or logo is left out.
     """
     call.require(*LEADS)
@@ -37,14 +37,14 @@ def sponsor_for(call: Call, given: object) -> Sponsor:
 
     Args:
         call: The request.
-        given: The ``sponsor_id`` sent (a string, as Ionic stores it), or None.
+        given: The `sponsor_id` sent (a string, as Ionic stores it), or None.
 
     Returns:
         The sponsor.
 
     Raises:
         Refused: 400 when no sponsor is named and the account has none, or the id
-            isn't a decimal id; 403 when an account without ``door_check_in`` names
+            isn't a decimal id; 403 when an account without `door_check_in` names
             another sponsor than its own; 404 for an unknown sponsor.
     """
     account = call.account
@@ -72,13 +72,13 @@ def sponsor_for(call: Call, given: object) -> Sponsor:
 def lead_capture(call: Call) -> tuple[int, object]:
     """Capture a lead from a badge: GET with an encoded query (273-335).
 
-    The query carries ``attendee_access_code``, ``badge_validator`` (always checked)
-    and, for staff, ``sponsor_id``. Under ``idempotent`` capture a sponsor gets one
-    lead per attendee and a repeat answers the same; under ``non_idempotent`` every
+    The query carries `attendee_access_code`, `badge_validator` (always checked)
+    and, for staff, `sponsor_id`. Under `idempotent` capture a sponsor gets one
+    lead per attendee and a repeat answers the same; under `non_idempotent` every
     request adds a lead row (D-57).
 
     Returns:
-        200 ``{code, data: {first_name}}``.
+        200 `{code, data: {first_name}}`.
 
     Raises:
         Refused: 400 for a missing parameter; 404 for an unknown attendee or sponsor,
@@ -99,19 +99,19 @@ def lead_capture(call: Call) -> tuple[int, object]:
 
 
 def lead_note(call: Call) -> tuple[int, object]:
-    """Note a captured lead: POST ``lead_retrieval/<code>/note/`` (337-371).
+    """Note a captured lead: POST `lead_retrieval/<code>/note/` (337-371).
 
     Ionic puts the access code in the path unencoded; the app encodes it (API-11), so
-    the mock decodes that one segment. The body is ``{"accessCode", "note"[,
-    "sponsor_id"]}``. Under ``idempotent`` capture a note that repeats the sponsor's
-    last note for the lead records nothing; under ``non_idempotent`` every request
+    the mock decodes that one segment. The body is `{"accessCode", "note"[,
+    "sponsor_id"]}`. Under `idempotent` capture a note that repeats the sponsor's
+    last note for the lead records nothing; under `non_idempotent` every request
     adds a note row (D-57).
 
     Returns:
-        200 ``{code, data: {}}``; Ionic ignores it.
+        200 `{code, data: {}}`; Ionic ignores it.
 
     Raises:
-        Refused: 400 for a malformed body, or an ``accessCode`` that isn't the path's;
+        Refused: 400 for a malformed body, or an `accessCode` that isn't the path's;
             404 for an unknown attendee or sponsor, or a lead this sponsor hasn't
             captured.
     """

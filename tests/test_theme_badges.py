@@ -1,7 +1,7 @@
 """Tests for the tokens and the badge colours: contrast, distinctness and roles.
 
-D-22..D-26, D-33, D-255, D-315. The contrast helpers and ``badges()`` are
-``tests/test_theme.py``'s; the high-contrast badges have tests/test_high_contrast.py.
+D-22..D-26, D-33, D-255, D-315. The contrast helpers and `badges()` are
+`tests/test_theme.py`'s; the high-contrast badges have tests/test_high_contrast.py.
 """
 
 import dataclasses
@@ -58,14 +58,14 @@ BOOTH_SCHEMES = {
     "hc light": (theme.HC_LIGHT_TOKENS, str(theme.HC_LIGHT.surface)),
     "hc dark": (theme.HC_DARK_TOKENS, str(theme.HC_DARK.surface)),
 }
-"""Each scheme's tokens and its ``surface``, which the expo plan sits on."""
+"""Each scheme's tokens and its `surface`, which the expo plan sits on."""
 
 
 @pytest.mark.parametrize("name", BOOTH_SCHEMES)
 def test_a_selected_booths_outline_passes_3_to_1(name: str) -> None:
-    """The outline reads at 3:1 on white, on ``surface`` and on the amber fill.
+    """The outline reads at 3:1 on white, on `surface` and on the amber fill.
 
-    The booths are white tiles on the plan, the plan sits on ``surface``, and the
+    The booths are white tiles on the plan, the plan sits on `surface`, and the
     fill is inside the outline: WCAG 1.4.11's 3:1 for a component's boundary, in
     every scheme (ux.md §6.2; Ionic's selection was 1.7:1).
     """
@@ -182,11 +182,11 @@ def test_new_track_badge_is_outlined_in_the_primary_role(dark: bool) -> None:
 
 @pytest.mark.parametrize("dark", [False, True], ids=["light", "dark"])
 def test_changed_badge_is_outlined_in_the_warning_token(dark: bool) -> None:
-    """The Changed badge is outlined in ``warning``, never En Español's tonal fill.
+    """The Changed badge is outlined in `warning`, never En Español's tonal fill.
 
-    D-315: ``tertiary_container``, ux.md §3.4's first choice, is the pink of En Español;
-    an outline in ``warning`` reads as a status mark, as Registration required does.
-    ``test_every_badge_reads_at_aa`` checks its label on every surface.
+    D-315: `tertiary_container`, ux.md §3.4's first choice, is the pink of En Español;
+    an outline in `warning` reads as a status mark, as Registration required does.
+    `test_every_badge_reads_at_aa` checks its label on every surface.
     """
     tokens = theme.build_tokens(dark=dark, high_contrast=False)
     assert tokens.changed == BadgeColors(text=tokens.warning)

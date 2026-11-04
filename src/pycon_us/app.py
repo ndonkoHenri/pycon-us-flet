@@ -1,8 +1,8 @@
 """The root component: services and stores, the boot gate, providers and the Router.
 
-``App`` builds the session's ``Services`` and stores once, shows ``BootView`` until the
+`App` builds the session's `Services` and stores once, shows `BootView` until the
 settings are read and the cached or bundled feed is published (the boot gate, SHELL-01),
-then writes out one provider per store around the Router (D-69). ``bootstrap()`` is the
+then writes out one provider per store around the Router (D-69). `bootstrap()` is the
 start sequence (DATA-35, architecture §4.3): nothing in it waits on the network.
 """
 
@@ -45,7 +45,7 @@ RING_DELAY = 1.0
 """Seconds before the boot view shows a progress ring; most starts end sooner (ux.md §2.6)."""
 
 NO_THEME_ANIMATION = ft.AnimationStyle(duration=0)
-"""``page.theme_animation_style`` until the boot gate opens: every theme change before it
+"""`page.theme_animation_style` until the boot gate opens: every theme change before it
 lands at once. Flutter crossfades theme changes over 200 ms, and a gate that opens sooner
 showed the first screen mid-fade (iOS simulator, #72)."""
 
@@ -54,14 +54,14 @@ showed the first screen mid-fade (iOS simulator, #72)."""
 def App(memory: ViewMemory):
     """Build services and stores once, wait for the settings and the feed, then route.
 
-    ``App`` subscribes to ``Prefs`` only (``use_state``), so it re-renders when a setting
+    `App` subscribes to `Prefs` only (`use_state`), so it re-renders when a setting
     or a device fact changes, never on a feed refresh; and when the reminder Banner
     changes, at most once a minute while a saved session is about to start. It provides
-    ``Layout`` without reading it: a rotation that crosses 600 dp re-renders the
-    screens, not ``App``.
+    `Layout` without reading it: a rotation that crosses 600 dp re-renders the
+    screens, not `App`.
 
     Args:
-        memory: The process's one ``ViewMemory`` (D-143).
+        memory: The process's one `ViewMemory` (D-143).
     """
     page = ft.context.page
     # An explicit empty list: without one, use_memo recomputes on every render (D-69).
@@ -147,14 +147,14 @@ def App(memory: ViewMemory):
 
 @ft.component
 def BootView() -> ft.View:
-    """The boot gate's view: the splash's purple, and a ring only after ``RING_DELAY``.
+    """The boot gate's view: the splash's purple, and a ring only after `RING_DELAY`.
 
-    It holds ``GutterProbe`` too, and the gate waits for its answer, so whether a
+    It holds `GutterProbe` too, and the gate waits for its answer, so whether a
     slot's time goes above its rows is known before the first screen: a Schedule
     that opened with the gutter and switched a moment later lost its jump to the
     current slot, which ran against the first layout (D-216). Flutter reports the
     probe's size with its first frame (F51); should no answer come, the gate stops
-    waiting with the ring, after ``RING_DELAY``, and the lists keep the gutter until
+    waiting with the ring, after `RING_DELAY`, and the lists keep the gutter until
     the screens' own probes answer.
     """
     prefs = use_prefs()
@@ -200,9 +200,9 @@ async def bootstrap(
 ) -> None:
     """Start in the order that avoids flashes and never waits on the network (DATA-35).
 
-    0. ``page.on_close``, before anything is awaited (D-147).
+    0. `page.on_close`, before anything is awaited (D-147).
     1. Settings, the OS's accessibility flags and brightness, then the theme they ask
-       for, all while the boot view shows. ``main.prepare_first_page()`` has turned
+       for, all while the boot view shows. `main.prepare_first_page()` has turned
        the theme animation off, so the theme lands at once. The Developer options
        take effect with the settings: the fake clock runs from its stored start, the
        feed URL serves the refreshes, and an unlock shows error details (D-187).
@@ -211,17 +211,17 @@ async def bootstrap(
        mock account, from local reads only (STORE-03), whether or not a mock URL is
        set (D-398), and its role flags' refresh, in the background (D-54).
     3. The feed cache, else the bundled snapshot (D-38, D-145). Then E3's first
-       answer, ``Scheduler.read_enabled()``, at most ``LAUNCH_WAIT``: E3 answers only
-       once it has handed over the tap that launched the app (F246), so ``Start``
+       answer, `Scheduler.read_enabled()`, at most `LAUNCH_WAIT`: E3 answers only
+       once it has handed over the tap that launched the app (F246), so `Start`
        opens that tap's session, with no flash of Now or Welcome first (D-396).
-    4. ``prefs.loaded`` ends the start. The boot gate opens once ``BootView``'s probe
-       has also measured the time's place (``prefs.time_measured``), or after
-       ``RING_DELAY`` without an answer (D-216); the first screen shows that data.
+    4. `prefs.loaded` ends the start. The boot gate opens once `BootView`'s probe
+       has also measured the time's place (`prefs.time_measured`), or after
+       `RING_DELAY` without an answer (D-216); the first screen shows that data.
        Theme changes crossfade again from here on, also under reduced motion: a
        crossfade changes colour, not position (D-173).
     5. A refresh in the background, not awaited (single flight, D-145).
     6. The page handlers, which only write stores (D-147); a resume runs
-       ``on_resume()``.
+       `on_resume()`.
 
     An unexpected error in steps 1-3 is logged and the gate opens anyway, with whatever
     loaded: a start never hangs on the boot view. A session replaced during steps 1-3
@@ -230,11 +230,11 @@ async def bootstrap(
     Args:
         page: The session's page.
         svc: The session's services.
-        conference: The session's ``Conference`` store.
-        prefs: The session's ``Prefs`` store.
-        favorites: The session's ``Favorites`` store.
-        change_log: The session's ``ChangeLog`` store.
-        account: The session's ``Account`` store.
+        conference: The session's `Conference` store.
+        prefs: The session's `Prefs` store.
+        favorites: The session's `Favorites` store.
+        change_log: The session's `ChangeLog` store.
+        account: The session's `Account` store.
     """
     # First, so a session replaced while the start awaits gets `closed` too (D-147).
     page.on_close = svc.close
@@ -289,12 +289,12 @@ async def start_developer_options(
 
     The fake clock runs from its stored start again, so each start of the app begins
     at the same simulated moment; the feed URL serves the refreshes; a mock API URL
-    builds ``Services.api`` (D-51); and an unlock shows the exception text in
-    ``report_errors``' message.
+    builds `Services.api` (D-51); and an unlock shows the exception text in
+    `report_errors`' message.
 
     Args:
         prefs: The loaded settings.
-        conference: The session's ``Conference`` store.
+        conference: The session's `Conference` store.
         svc: The session's services: the feed cache's storage and the API client.
     """
     clock.start_fake_clock(prefs.fake_now)
@@ -312,11 +312,11 @@ async def on_resume(
 
     Each step is one consumer of the resume; a new one joins here.
 
-    1. The 60 s ticks run again (``Services.run_every``), and catch up at once when
+    1. The 60 s ticks run again (`Services.run_every`), and catch up at once when
        one fell due in the background (D-40), and the scan screen takes its wake lock
-       again (``Services.background``, #724); ``Services.presence`` notes the
+       again (`Services.background`, #724); `Services.presence` notes the
        return, so a button that opened another app's window gets the focus back
-       (``ui.focus_back``, D-372).
+       (`ui.focus_back`, D-372).
     2. The feed refreshes when the last refresh began 15 min ago or more (D-40).
     3. E3's reminders are applied again, which brings back what the OS dropped
        meanwhile (D-222, D-389); without E3 there is nothing to apply. Asked before
@@ -325,18 +325,18 @@ async def on_resume(
        given or taken away while the app was away shows, and a revoked key asks
        for a sign-in (D-54, D-57); signed out or with no mock URL, nothing is sent.
        The favourites sync pulls, and sends an edit that failed before (D-406).
-    5. The staff sync loop passes at once (``Services.kick_sync``, D-56).
+    5. The staff sync loop passes at once (`Services.kick_sync`, D-56).
     6. The OS's accessibility flags are read again. The OS reports them as a snapshot,
        with no change event (F13, U17), so a setting changed while the app was away
        applies without a restart (D-23, D-34, D-173). On Android such a change can
        reach Flutter only after this read, and then applies at the next resume:
-       accepted until U17 (D-183). Components follow ``Prefs`` by themselves.
+       accepted until U17 (D-183). Components follow `Prefs` by themselves.
 
     Args:
         svc: The session's services.
-        conference: The session's ``Conference`` store.
-        prefs: The session's ``Prefs`` store.
-        account: The session's ``Account`` store.
+        conference: The session's `Conference` store.
+        prefs: The session's `Prefs` store.
+        account: The session's `Account` store.
     """
     svc.background.clear()
     svc.foreground.set()
@@ -353,7 +353,7 @@ async def on_resume(
 def apply_theme(page: ft.Page, prefs: Prefs) -> None:
     """Show the schemes and the theme mode the settings ask for (architecture §15).
 
-    The page re-renders by itself in components mode; no ``page.update()`` (D-147).
+    The page re-renders by itself in components mode; no `page.update()` (D-147).
 
     Args:
         page: The session's page.

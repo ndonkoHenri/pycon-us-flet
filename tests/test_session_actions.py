@@ -1,10 +1,10 @@
 """Tests for session detail's registration, app bar, states and changes (SESS-03).
 
 The registration card, the star and the overflow, an unknown or dropped id, and the
-change badges (NEW-04). The header and When and where are ``test_session.py``'s.
+change badges (NEW-04). The header and When and where are `test_session.py`'s.
 
-``SessionDetail`` runs in a real Flet session (``tests/session_detail.py``), as the
-rows do in ``test_session_rows.py``. How the screen looks, at 200 % text and in dark
+`SessionDetail` runs in a real Flet session (`tests/session_detail.py`), as the
+rows do in `test_session_rows.py`. How the screen looks, at 200 % text and in dark
 mode, is checked on devices (the PR); here, what it says and what a tap does.
 """
 
@@ -46,7 +46,7 @@ render = session_detail.render
 
 
 def assert_line_icon(node: ft.Control, name: ft.IconData) -> None:
-    """Assert the icon topping ``node``'s TITLE_SMALL line is one line tall at any size.
+    """Assert the icon topping `node`'s TITLE_SMALL line is one line tall at any size.
 
     D-373: 20 dp, scaled with the text, so it stays beside the first line.
     """
@@ -203,7 +203,7 @@ async def test_a_session_a_refresh_drops_keeps_its_content_under_a_note(
 
 
 async def record_changes(detail: Detail, *kinds: ChangeKind) -> None:
-    """Record one batch changing TALK by ``kinds``, an hour before the frozen now.
+    """Record one batch changing TALK by `kinds`, an hour before the frozen now.
 
     Its old sides: Room 102A, Friday 10:30 AM and the title "Python for People".
     """

@@ -1,20 +1,20 @@
 """The Developer screen's Data section: refresh, clear the cache, share the log, reset.
 
-``DataActions`` is the section's rows (DEV-04, DEV-05, STORE-13; D-198): **Refresh now**,
+`DataActions` is the section's rows (DEV-04, DEV-05, STORE-13; D-198): **Refresh now**,
 a refresh the user asked for (D-181), with what the schedule on screen is; **Clear cached
 feed**, after which the next start shows the bundled snapshot; **Share log**, the
-packaged app's ``console.log`` and the diagnostics on the share sheet (``ui/share.py``'s
-``share_console_log()``, D-72, D-297); **Show welcome again**, which clears
-``pycon.onboarded`` and opens Welcome, keeping everything else (SHELL-02, D-73); and
+packaged app's `console.log` and the diagnostics on the share sheet (`ui/share.py`'s
+`share_console_log()`, D-72, D-297); **Show welcome again**, which clears
+`pycon.onboarded` and opens Welcome, keeping everything else (SHELL-02, D-73); and
 **Reset app**, which deletes
 what the app keeps, staff data included (D-414), and resets every store in memory, so
 the app is as after a fresh install without a restart. The two that delete are confirmed first by an
-``AlertDialog`` that lists what is lost (D-29); every outcome is said in place, under the
+`AlertDialog` that lists what is lost (D-29); every outcome is said in place, under the
 rows (D-29, D-210). This module is what the actions do and say; how the screen draws
-them is ``ui/actions.py``'s (the rows, the outcome line) and ``developer_ui.py``'s (the
+them is `ui/actions.py`'s (the rows, the outcome line) and `developer_ui.py`'s (the
 confirmations). Apart from
-``developer.py`` so that the screen stays under about 400 lines (D-66), as the pickers
-are in ``developer_clock.py``.
+`developer.py` so that the screen stays under about 400 lines (D-66), as the pickers
+are in `developer_clock.py`.
 """
 
 import logging
@@ -54,7 +54,7 @@ WELCOME_NOT_SAVED: Outcome = (
     "Couldn't save the change, so Welcome didn't open. Try again.",
     False,
 )
-"""Show welcome again's line when ``pycon.onboarded`` could not be cleared (D-120)."""
+"""Show welcome again's line when `pycon.onboarded` could not be cleared (D-120)."""
 
 RESET_INCOMPLETE = (
     "App reset, but some saved data couldn't be deleted: it returns when you reopen "
@@ -242,24 +242,24 @@ async def reset_app(
 ) -> bool:
     """Delete what the app keeps and reset every store, as after a fresh install.
 
-    DEV-05, D-198. On the device: every ``pycon.`` preference (the settings, every
+    DEV-05, D-198. On the device: every `pycon.` preference (the settings, every
     year's favourites, the Developer options and their unlock, the mock account), the
     mock account's key and secret, every year's feed cache and change log (D-255,
-    D-466) and this year's staff outbox rows, every account's (``clear_staff_data()``,
+    D-466) and this year's staff outbox rows, every account's (`clear_staff_data()`,
     D-414). In memory, without a restart: real time and no error details, as Developer's own
     Reset sets them before the stores change (D-187), and no private-API client
     (D-51); the bundled snapshot, from the year's feed, with a running refresh
-    cancelled and an empty change log (``Conference.reset()``, D-301); the settings,
+    cancelled and an empty change log (`Conference.reset()`, D-301); the settings,
     the saved sessions and the view memory at their defaults, and signed out. Then a
     refresh starts, as at a start (D-181: quiet).
 
     Args:
         svc: The session's services.
-        conference: The session's ``Conference`` store.
-        prefs: The session's ``Prefs`` store.
-        favorites: The session's ``Favorites`` store.
-        account: The session's ``Account`` store.
-        staff: The session's ``Staff`` store.
+        conference: The session's `Conference` store.
+        prefs: The session's `Prefs` store.
+        favorites: The session's `Favorites` store.
+        account: The session's `Account` store.
+        staff: The session's `Staff` store.
         keep_rows: Keep the staff outbox's rows: the confirmation couldn't read them.
 
     Returns:

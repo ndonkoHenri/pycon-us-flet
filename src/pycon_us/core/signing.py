@@ -1,10 +1,10 @@
-"""Request signing, byte-compatible with Ionic's ``buildRequestAuthHeaders`` (D-52).
+"""Request signing, byte-compatible with Ionic's `buildRequestAuthHeaders` (D-52).
 
 Ionic signs a request with the hex SHA-1 (not an HMAC) of
-``secret + timestamp + METHOD + path_with_query + body`` joined with no separator, where
-the timestamp is ``Math.round(Date.now() / 1000)`` and the body is ``JSON.stringify`` of
+`secret + timestamp + METHOD + path_with_query + body` joined with no separator, where
+the timestamp is `Math.round(Date.now() / 1000)` and the body is `JSON.stringify` of
 the payload. The client and the mock server share this module, so vectors produced by
-Ionic's own code (``tests/fixtures/ionic/signing.json``) are what keeps both honest.
+Ionic's own code (`tests/fixtures/ionic/signing.json`) are what keeps both honest.
 """
 
 import hashlib
@@ -13,11 +13,11 @@ import math
 from urllib.parse import quote
 
 JS_COMPONENT_SAFE = "!*'()~"
-"""What ``encodeURIComponent`` keeps besides letters, digits and ``-_.``."""
+"""What `encodeURIComponent` keeps besides letters, digits and `-_.`."""
 
 
 def canonical_body(payload: object) -> bytes:
-    """Serialise a payload as ``JSON.stringify`` does, as UTF-8.
+    """Serialise a payload as `JSON.stringify` does, as UTF-8.
 
     Compact, in insertion order, non-ASCII kept as it is. Serialise once and send
     exactly these bytes: the signature covers them.
@@ -33,11 +33,11 @@ def canonical_body(payload: object) -> bytes:
 
 
 def js_round(x: float) -> int:
-    """Round as JavaScript's ``Math.round`` does: halves go up, never to even.
+    """Round as JavaScript's `Math.round` does: halves go up, never to even.
 
-    Python's ``round`` rounds 0.5 to the nearest even integer, so ``round(2.5)`` is 2
-    where ``Math.round(2.5)`` is 3. ``x - floor(x)`` is exact for any finite float, so
-    this avoids the error ``floor(x + 0.5)`` makes just below a half.
+    Python's `round` rounds 0.5 to the nearest even integer, so `round(2.5)` is 2
+    where `Math.round(2.5)` is 3. `x - floor(x)` is exact for any finite float, so
+    this avoids the error `floor(x + 0.5)` makes just below a half.
 
     Args:
         x: A finite number.
@@ -60,7 +60,7 @@ def sign(
 
     Args:
         secret: The account's API secret, or None when signed out. Ionic's
-            ``join("")`` renders null as ``""``, so None signs as the empty string.
+            `join("")` renders null as `""`, so None signs as the empty string.
         timestamp: Seconds since the epoch, from `js_round`.
         method: The HTTP method, upper case as Ionic sends it.
         path_with_query: The path and query exactly as requested, encoded or not as
@@ -82,19 +82,19 @@ def auth_headers(
     path_with_query: str,
     body: bytes = b"",
 ) -> dict[str, str | None]:
-    """Build the three headers of a signed request, as ``buildRequestAuthHeaders`` does.
+    """Build the three headers of a signed request, as `buildRequestAuthHeaders` does.
 
     Args:
         key: The account's API key, or None when signed out (passed through, as
             Ionic does).
         secret: The account's API secret, or None when signed out.
-        now: The current time in seconds since the epoch (``time.time()``).
+        now: The current time in seconds since the epoch (`time.time()`).
         method: The HTTP method, upper case.
         path_with_query: The path and query exactly as requested.
         body: The body bytes as sent; empty for a GET.
 
     Returns:
-        ``X-API-Key``, ``X-API-Signature`` and ``X-API-Timestamp``.
+        `X-API-Key`, `X-API-Signature` and `X-API-Timestamp`.
     """
     timestamp = js_round(now)
     return {
@@ -105,12 +105,12 @@ def auth_headers(
 
 
 def enc(value: str) -> str:
-    """Percent-encode a query value as JavaScript's ``encodeURIComponent`` does.
+    """Percent-encode a query value as JavaScript's `encodeURIComponent` does.
 
     Args:
         value: The raw value.
 
     Returns:
-        The value as UTF-8 percent-escapes, except letters, digits and ``-_.!~*'()``.
+        The value as UTF-8 percent-escapes, except letters, digits and `-_.!~*'()`.
     """
     return quote(value, safe=JS_COMPONENT_SAFE)

@@ -17,7 +17,7 @@ from pycon_us.core.slugs import room_sort_key, slugify_room, sponsor_slug
     ],
 )
 def test_slugify_room_matches_ionic(name: str, slug: str) -> None:
-    """A slug is Ionic's: lower-case, each run of other characters a ``-``, trimmed."""
+    """A slug is Ionic's: lower-case, each run of other characters a `-`, trimmed."""
     assert slugify_room(name) == slug
 
 
@@ -36,9 +36,9 @@ def test_slugify_room_matches_ionic(name: str, slug: str) -> None:
     ],
 )
 def test_sponsor_slug_matches_ionic(name: str, slug: str) -> None:
-    """A sponsor slug is Ionic's: whitespace runs to ``-``, then non-``[a-z0-9-]`` dropped.
+    """A sponsor slug is Ionic's: whitespace runs to `-`, then non-`[a-z0-9-]` dropped.
 
-    Its double dashes, from a ``&`` or a dash between spaces, are Ionic's routes (SPON-02).
+    Its double dashes, from a `&` or a dash between spaces, are Ionic's routes (SPON-02).
     """
     assert sponsor_slug(name) == slug
 

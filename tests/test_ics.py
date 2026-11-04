@@ -1,4 +1,4 @@
-"""Tests for the calendar files of a session or a whole agenda (``core/ics.py``; D-62, D-268).
+"""Tests for the calendar files of a session or a whole agenda (`core/ics.py`; D-62, D-268).
 
 Every test runs under both machine zones (D-43): the file's times are UTC whatever the
 device's zone.
@@ -52,7 +52,7 @@ def unfolded(data: bytes) -> list[str]:
 
 
 def values(data: bytes, name: str) -> list[str]:
-    """Return the value of every unfolded ``name:`` line, in the file's order."""
+    """Return the value of every unfolded `name:` line, in the file's order."""
     prefix = f"{name}:"
     return [
         line.removeprefix(prefix) for line in unfolded(data) if line.startswith(prefix)
@@ -60,7 +60,7 @@ def values(data: bytes, name: str) -> list[str]:
 
 
 def one(data: ConferenceData, session_id: str, alarm: timedelta = ALARM) -> bytes:
-    """Return the 2026 calendar file of one session of ``data``, made at ``NOW``."""
+    """Return the 2026 calendar file of one session of `data`, made at `NOW`."""
     return calendar_file([data.sessions[session_id]], year=2026, now=NOW, alarm=alarm)
 
 
@@ -94,14 +94,14 @@ def test_one_sessions_file_is_pinned_byte_for_byte() -> None:
 
 
 def test_prodid_names_the_app_and_no_psf_mark() -> None:
-    """``PRODID`` comes from the app's display name, never from the conference's."""
+    """`PRODID` comes from the app's display name, never from the conference's."""
     data = one(processed(2026), "142")
     assert values(data, "PRODID") == [f"-//{APP_NAME}//EN"]
     assert "PyCon" not in values(data, "PRODID")[0]
 
 
 def test_prodid_escapes_the_app_name(monkeypatch: pytest.MonkeyPatch) -> None:
-    """``PRODID`` is TEXT: a semicolon or comma in the app's name is escaped."""
+    """`PRODID` is TEXT: a semicolon or comma in the app's name is escaped."""
     monkeypatch.setattr("pycon_us.core.ics.APP_NAME", ODD_NAME)
     assert lines(one(processed(2026), "142"))[2] == "PRODID:-//Foo\\; Bar\\, 2027//EN"
 
@@ -155,7 +155,7 @@ def test_times_are_utc_from_the_start_the_app_shows() -> None:
 
 
 def test_a_notice_has_no_end() -> None:
-    """A notice, which ends when it starts, gets no ``DTEND`` (RFC 5545 wants it later)."""
+    """A notice, which ends when it starts, gets no `DTEND` (RFC 5545 wants it later)."""
     data = processed(2026)
     notice = data.sessions["196"]
     assert notice.end == notice.start
@@ -166,7 +166,7 @@ def test_a_notice_has_no_end() -> None:
 
 @pytest.mark.parametrize("year", YEARS)
 def test_uids_are_the_same_across_two_loads_and_unique(year: int) -> None:
-    """Two loads of the same feed give the same ``UID``s, one per session."""
+    """Two loads of the same feed give the same `UID`s, one per session."""
     sessions = processed(year).sessions
     first = calendar_file(sessions.values(), year=year, now=NOW)
     later = NOW + timedelta(days=3)
@@ -178,7 +178,7 @@ def test_uids_are_the_same_across_two_loads_and_unique(year: int) -> None:
 
 
 def test_a_uid_names_the_year_and_keeps_out_spaces_and_commas() -> None:
-    """A ``UID`` is ``<year>-<id>@<domain>``, a synthetic id percent-encoded."""
+    """A `UID` is `<year>-<id>@<domain>`, a synthetic id percent-encoded."""
     data = processed(2026)
     assert values(one(data, "142"), "UID") == [
         "2026-142@confcompanion.ndonkohenri.github.io"
@@ -192,7 +192,7 @@ def test_a_uid_names_the_year_and_keeps_out_spaces_and_commas() -> None:
 
 @pytest.mark.parametrize("session_id", [COLLAPSED, "poster-detail-60"])
 def test_synthetic_ids_get_no_url(session_id: str) -> None:
-    """A collapsed break and a poster detail have no page: no ``URL``, none in the text."""
+    """A collapsed break and a poster detail have no page: no `URL`, none in the text."""
     file = one(processed(2026), session_id)
     assert values(file, "URL") == []
     assert "https://" not in file.decode()
@@ -205,7 +205,7 @@ def test_a_poster_lists_its_authors_without_a_page() -> None:
 
 
 def test_a_generic_break_has_no_location_and_no_description() -> None:
-    """A break that is everywhere has no ``LOCATION``, and nothing to describe."""
+    """A break that is everywhere has no `LOCATION`, and nothing to describe."""
     file = one(processed(2026), COLLAPSED)
     assert values(file, "LOCATION") == []
     assert values(file, "DESCRIPTION") == ["Break"]  # the alarm's, alone
@@ -227,7 +227,7 @@ def test_text_is_escaped_and_control_characters_dropped() -> None:
 
 @pytest.mark.parametrize("year", YEARS)
 def test_a_whole_agenda_is_one_calendar_in_start_order(year: int) -> None:
-    """Every session, given backwards, is one ``VCALENDAR`` of events by start."""
+    """Every session, given backwards, is one `VCALENDAR` of events by start."""
     data = processed(year)
     file = calendar_file(reversed(list(data.sessions.values())), year=year, now=NOW)
     content = unfolded(file)
@@ -271,7 +271,7 @@ def test_the_alarm_lead_is_a_parameter(alarm: timedelta, trigger: str) -> None:
 
 
 def test_bad_arguments_are_refused() -> None:
-    """No session, a naive ``now`` or a negative lead raises ``ValueError``."""
+    """No session, a naive `now` or a negative lead raises `ValueError`."""
     session = processed(2026).sessions["142"]
     with pytest.raises(ValueError, match="at least one session"):
         calendar_file([], year=2026, now=NOW)
@@ -284,9 +284,9 @@ def test_bad_arguments_are_refused() -> None:
 
 
 def shown(session: Session) -> tuple[object, ...]:
-    """Return what a calendar should read back for ``session``.
+    """Return what a calendar should read back for `session`.
 
-    Its name, place, description, start and end, each ``None`` when the file leaves the
+    Its name, place, description, start and end, each `None` when the file leaves the
     property out: no place for a generic break, no end for a notice.
     """
     details = "\n".join(d for d in (", ".join(session.speaker_names), session.url) if d)
@@ -300,7 +300,7 @@ def shown(session: Session) -> tuple[object, ...]:
 
 
 def agenda(year: int, monkeypatch: pytest.MonkeyPatch) -> tuple[bytes, list[tuple]]:
-    """Return a year's whole-agenda file under ``ODD_NAME`` and what each event holds."""
+    """Return a year's whole-agenda file under `ODD_NAME` and what each event holds."""
     monkeypatch.setattr("pycon_us.core.ics.APP_NAME", ODD_NAME)
     sessions = sorted(processed(year).sessions.values(), key=schedule_order)
     return calendar_file(sessions, year=year, now=NOW), [shown(s) for s in sessions]
@@ -314,7 +314,7 @@ def agenda(year: int, monkeypatch: pytest.MonkeyPatch) -> tuple[bytes, list[tupl
 def test_icalendar_reads_every_session_back(
     year: int, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """``icalendar`` parses a whole agenda: each event and alarm reads back unchanged."""
+    """`icalendar` parses a whole agenda: each event and alarm reads back unchanged."""
     file, expected = agenda(year, monkeypatch)
     calendar = icalendar.Calendar.from_ical(file)
     events = calendar.walk("VEVENT")
@@ -322,7 +322,7 @@ def test_icalendar_reads_every_session_back(
     assert [e.errors for e in events if e.errors] == []
 
     def text(event, name: str) -> str | None:
-        """Return the event's ``name`` property as a string, ``None`` when absent."""
+        """Return the event's `name` property as a string, `None` when absent."""
         return str(event[name]) if name in event else None
 
     read = [
@@ -343,7 +343,7 @@ def test_icalendar_reads_every_session_back(
 def test_ical_reads_every_session_back(
     year: int, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """The stricter ``ical`` parses a whole agenda: each event reads back unchanged."""
+    """The stricter `ical` parses a whole agenda: each event reads back unchanged."""
     file, expected = agenda(year, monkeypatch)
     calendar = IcsCalendarStream.calendar_from_ics(file.decode())
     assert calendar.prodid == f"-//{ODD_NAME}//EN"
@@ -372,12 +372,12 @@ def test_ical_reads_every_session_back(
     ],
 )
 def test_a_file_s_name_is_its_title_s_first_words(name: str, slug: str) -> None:
-    """Lower-case ASCII words joined by ``-``, cut after a word; none gives ``session``."""
+    """Lower-case ASCII words joined by `-`, cut after a word; none gives `session`."""
     assert file_slug(name) == slug
 
 
 def test_a_file_s_name_is_never_longer_than_its_limit() -> None:
-    """A title of one long word is cut inside it; a cut never leaves a trailing ``-``."""
+    """A title of one long word is cut inside it; a cut never leaves a trailing `-`."""
     assert file_slug("a" * 50) == "a" * FILE_SLUG_CHARS
     long_title = "talk " * 20
     assert len(file_slug(long_title)) <= FILE_SLUG_CHARS

@@ -1,6 +1,6 @@
 """Tests for the Now tab's next-session card, the minute tick, the resume and no data.
 
-The screen runs in ``tests/now_view.py``'s harness, with the clock held by the test.
+The screen runs in `tests/now_view.py`'s harness, with the clock held by the test.
 """
 
 import asyncio
@@ -222,7 +222,7 @@ async def test_a_resume_recomputes_at_once(
 async def test_the_strip_refreshes_the_feed_while_now_shows(
     render: Callable[..., Any], monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """Now builds its status strip with ``auto_refresh`` on, so it refreshes the feed.
+    """Now builds its status strip with `auto_refresh` on, so it refreshes the feed.
 
     That flag is what makes the strip refresh every 15 min while Now shows (D-175);
     the refresh itself is pinned in test_status_strip_ticks.py.

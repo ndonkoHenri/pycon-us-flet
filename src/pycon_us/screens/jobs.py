@@ -1,4 +1,4 @@
-"""Job listings (``/more/jobs``): a card per sponsor's listing, its roles linked (SPON-06).
+"""Job listings (`/more/jobs`): a card per sponsor's listing, its roles linked (SPON-06).
 
 Ionic showed each listing's HTML under two styles of level badge, linked almost none of
 its roles, had no empty, loading or failed state, and its pull-to-refresh deleted the
@@ -6,38 +6,38 @@ app's schedule cache, so a refresh offline lost the offline schedule (SPON-08). 
 page (ux.md §6.6), under the status strip, holds one outlined card per listing, in feed
 order:
 
-- **The header**: the sponsor's logo on a 48 dp white plate (``logo_tile()``, D-262),
+- **The header**: the sponsor's logo on a 48 dp white plate (`logo_tile()`, D-262),
   its name and its level as sponsor detail says it, "Visionary sponsor", and a chevron.
   One node, a level-2 heading and a button read "Bloomberg, Visionary sponsor"
-  (``jobs.listing.<id>``, D-33, D-211); a tap pushes the sponsor's detail,
-  ``/more/jobs/sponsor/<slug>`` (D-17). A listing whose sponsor is not in the feed's
+  (`jobs.listing.<id>`, D-33, D-211); a tap pushes the sponsor's detail,
+  `/more/jobs/sponsor/<slug>` (D-17). A listing whose sponsor is not in the feed's
   levels has no link and no chevron.
-- **Its roles** (``core/jobs.py``, D-278): the first five as ``LinkTile``s with
-  ``WORK_OUTLINE`` that open the in-app browser (``jobs.role.<id>.<n>``), then "Show
+- **Its roles** (`core/jobs.py`, D-278): the first five as `LinkTile`s with
+  `WORK_OUTLINE` that open the in-app browser (`jobs.role.<id>.<n>`), then "Show
   all 15 roles", which shows the rest in place and becomes "Show fewer roles".
 - **A long-form listing** (SerpApi, marimo) instead shows its text cut at four lines
   with "More", which shows the whole Markdown and its links, as a sprint card does
-  (``core.sprints.needs_more()``, D-202). A placeholder (OpenEDG's "N/A") says "No
+  (`core.sprints.needs_more()`, D-202). A placeholder (OpenEDG's "N/A") says "No
   roles listed".
 
-The refresh is the ``Conference`` store's (D-145): the status strip's Refresh, or a
-pull on the list (``pullable()``, U1, D-449); it never deletes the cache, so a failed
+The refresh is the `Conference` store's (D-145): the status strip's Refresh, or a
+pull on the list (`pullable()`, U1, D-449); it never deletes the cache, so a failed
 one keeps the listings and the schedule. Without data the page loads and fails as the
 Sponsors list does (ux.md §4.1); a feed without listings says "No job listings yet"
 (2025), and has no filter. Each card is a memoised component keyed by its listing id
 (D-153), so a keystroke re-renders no card that stays. Above the cards, the job fair
-plan's card (``job_fair_card()``, SPON-10, D-254) pushes the floor viewer at
-``/more/jobs/plan/job-fair``: the tables where the listings' sponsors meet people.
+plan's card (`job_fair_card()`, SPON-10, D-254) pushes the floor viewer at
+`/more/jobs/plan/job-fair`: the tables where the listings' sponsors meet people.
 
-**The filter** (SPON-07): the pinned ``SearchField`` "Filter jobs" the Speakers and
+**The filter** (SPON-07): the pinned `SearchField` "Filter jobs" the Speakers and
 Sprints lists use (D-189), under the strip, keeps the listings whose text holds every
 word, in the sponsor's name, the role titles or the visible text, never the markup
-(``core.jobs.filter_listings()``, D-46), where Ionic's matched raw HTML: ``nofollow``
+(`core.jobs.filter_listings()`, D-46), where Ionic's matched raw HTML: `nofollow`
 found Bloomberg. The field follows every keystroke (D-243), and the list follows once
 the typing pauses for 250 ms, as search does; a Clear empties both at once. The live
 count line says "3 listings" (D-226); a miss says "No roles match “rust”" with Clear
 filter, which puts the focus back in the field (D-182). The page stays mounted under a
-sponsor's detail, so Back finds the filter as it was. At large text (``Prefs.time_above``,
+sponsor's detail, so Back finds the filter as it was. At large text (`Prefs.time_above`,
 D-216) the strip, the field and the count head the list and scroll away with it, as the
 Schedule's head does (D-345): pinned, they took half the screen at the largest sizes
 (#649).
@@ -229,7 +229,7 @@ def ListingCard(listing: JobListing, slug: str | None) -> ft.Control:
 @ft.memo
 @ft.component
 def _ListingCard(listing: JobListing, slug: str | None) -> ft.Control:
-    """The body of ``ListingCard``; it runs when its listing or a toggle changes."""
+    """The body of `ListingCard`; it runs when its listing or a toggle changes."""
     svc = use_services()
     view_path = ft.use_view_path()
     page = ft.context.page
@@ -312,7 +312,7 @@ def header(listing: JobListing, on_click: ft.ControlEventHandler | None) -> ft.C
 
     One node, a level-2 heading so a screen reader goes card by card (D-211), and a
     button when it links to the sponsor; its phrase replaces the texts', and the
-    plate says nothing (``logo_tile()``).
+    plate says nothing (`logo_tile()`).
 
     Args:
         listing: The listing, which carries its sponsor's name, logo and level.

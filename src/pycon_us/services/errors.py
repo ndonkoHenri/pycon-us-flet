@@ -1,17 +1,17 @@
 """The last-resort error net for handlers and effects, and the app's logging setup.
 
 Expected failures are handled where they happen and become visible state (D-71,
-architecture §16.1). ``report_errors`` is for the rest: an exception that escapes an
+architecture §16.1). `report_errors` is for the rest: an exception that escapes an
 event handler ends the session, and one that escapes an async effect is seen by nobody
 (F4, F37). Delete it once Flet makes handler errors non-fatal (U15).
 
-``say()`` is the app's plain message: a floating SnackBar with no action.
+`say()` is the app's plain message: a floating SnackBar with no action.
 
-``setup_logging()`` sends stdlib ``logging`` to stderr, which a packaged app tees to
-logcat or the unified log and to ``console.log`` (F14, D-72), the file testers share from
+`setup_logging()` sends stdlib `logging` to stderr, which a packaged app tees to
+logcat or the unified log and to `console.log` (F14, D-72), the file testers share from
 the Developer screen. Never log secrets, keys, signatures, emails or badge codes; as a
 net under that rule, the handler writes every email address in the lines it formats as
-``<email>`` (D-196).
+`<email>` (D-196).
 """
 
 import functools
@@ -28,22 +28,22 @@ from flet.utils import is_embedded
 logger = logging.getLogger(__name__)
 
 MESSAGE = "Something went wrong"
-"""What the user reads when ``report_errors`` catches an exception (ux.md §4.5)."""
+"""What the user reads when `report_errors` catches an exception (ux.md §4.5)."""
 
 LOG_FORMAT = "%(asctime)s.%(msecs)03d %(levelname)s %(name)s: %(message)s"
-"""Device time first: logcat and the unified log stamp lines, ``console.log`` does not."""
+"""Device time first: logcat and the unified log stamp lines, `console.log` does not."""
 
 LOG_DATE_FORMAT = "%H:%M:%S"
 
 HANDLER_NAME = "pycon_us.console"
-"""Names the handler ``setup_logging()`` adds, so a second call finds it."""
+"""Names the handler `setup_logging()` adds, so a second call finds it."""
 
 EMAIL = re.compile(r"[\w.%+-]+(?:@|%40)[\w-]+(?:\.[\w-]+)*\.[A-Za-z]{2,}")
-"""An email address as a log line can hold one: ``name@host.tld``, or with the ``@``
-percent-encoded, as in a ``mailto:`` URL."""
+"""An email address as a log line can hold one: `name@host.tld`, or with the `@`
+percent-encoded, as in a `mailto:` URL."""
 
 REDACTED_EMAIL = "<email>"
-"""What ``RedactingFormatter`` writes in an address's place."""
+"""What `RedactingFormatter` writes in an address's place."""
 
 QUIET_LOGGERS = ("httpx", "httpcore")
 """Kept at WARNING: httpx logs every request's URL at INFO, query string included, and
@@ -54,7 +54,7 @@ _details = False
 
 
 def say(page: ft.Page, text: str) -> None:
-    """Show ``text`` in a floating SnackBar, for Flet's default 4 s (ux.md §4.5).
+    """Show `text` in a floating SnackBar, for Flet's default 4 s (ux.md §4.5).
 
     On the View the user is on (D-210). A SnackBar with an action is built where it is
     used: it has more to decide.
@@ -70,10 +70,10 @@ def show_details(on: bool) -> None:
     """Show the exception text in packaged builds too, or stop showing it (D-73, D-187).
 
     Without it, only an app that is not embedded (the companion app) shows the text.
-    ``bootstrap()`` sets it from the stored unlock, and About this app when it unlocks.
+    `bootstrap()` sets it from the stored unlock, and About this app when it unlocks.
 
     Args:
-        on: Whether Developer is unlocked (``Prefs.developer_unlocked``).
+        on: Whether Developer is unlocked (`Prefs.developer_unlocked`).
     """
     global _details
     _details = on
@@ -95,14 +95,14 @@ def report_errors(fn: Callable[..., Any]) -> Callable[..., Any]:
     The wrapper logs the exception with its traceback and the wrapped function's name,
     shows a floating "Something went wrong" SnackBar (with the exception when not
     embedded or once Developer is unlocked, D-73) and returns None; the session goes
-    on. ``CancelledError`` and other ``BaseException``s propagate, so cancelling an
+    on. `CancelledError` and other `BaseException`s propagate, so cancelling an
     effect still cancels it. The log
     holds the exception's message verbatim, so code that can raise must keep URLs,
     tokens and badge codes out of its messages (D-72).
 
-    A coroutine function gets an ``async def`` wrapper and anything else a plain one,
-    both made with ``functools.wraps``: Flet checks ``inspect.iscoroutinefunction``
-    and counts parameters through ``__wrapped__`` to decide how to call a handler.
+    A coroutine function gets an `async def` wrapper and anything else a plain one,
+    both made with `functools.wraps`: Flet checks `inspect.iscoroutinefunction`
+    and counts parameters through `__wrapped__` to decide how to call a handler.
 
     Args:
         fn: The handler or effect to wrap.
@@ -111,7 +111,7 @@ def report_errors(fn: Callable[..., Any]) -> Callable[..., Any]:
         The wrapper.
 
     Raises:
-        TypeError: ``fn`` is a generator or async generator function. Flet iterates a
+        TypeError: `fn` is a generator or async generator function. Flet iterates a
             generator handler only when the handler itself is one, which a wrapper is
             not, so it would silently never run.
     """
@@ -156,17 +156,17 @@ def _tell_user(error: Exception) -> None:
 
 
 class RedactingFormatter(logging.Formatter):
-    """The log's line format, with every email address written as ``<email>`` (D-196).
+    """The log's line format, with every email address written as `<email>` (D-196).
 
     Our own lines never hold one (D-72), but a line can quote what the app does not
     control: an exception's message, which can repeat a platform call's arguments
-    (Android's ``ACTIVITY_NOT_FOUND`` names the ``mailto:`` intent, D-182), or a feed
+    (Android's `ACTIVITY_NOT_FOUND` names the `mailto:` intent, D-182), or a feed
     record that a skipped-record line quotes. The whole formatted line is redacted,
-    traceback included. It covers what goes through ``logging`` only: text written to
-    ``sys.stderr`` directly, such as ``sys.excepthook``'s report of an exception that
-    escapes everything, or a warning (``warnings`` is not routed to ``logging``),
-    reaches ``console.log`` as it is. The app never writes there itself, and
-    ``report_errors`` keeps handlers and effects inside ``logging`` (D-163).
+    traceback included. It covers what goes through `logging` only: text written to
+    `sys.stderr` directly, such as `sys.excepthook`'s report of an exception that
+    escapes everything, or a warning (`warnings` is not routed to `logging`),
+    reaches `console.log` as it is. The app never writes there itself, and
+    `report_errors` keeps handlers and effects inside `logging` (D-163).
     """
 
     def format(self, record: logging.LogRecord) -> str:
@@ -177,11 +177,11 @@ class RedactingFormatter(logging.Formatter):
 def setup_logging() -> None:
     """Send the app's log records to stderr, once per process.
 
-    One handler on the root logger, at INFO, or at the level ``FLET_LOG_LEVEL`` names
-    (``flet run -vv`` sets ``debug``; Flet's own handling of it does nothing once a
-    handler exists). ``QUIET_LOGGERS`` stay at WARNING. A packaged app replaces
-    ``sys.stderr`` with a tee to the platform log and ``console.log`` before the app is
-    imported (F14), so the handler writes to both, through ``RedactingFormatter``. Once
+    One handler on the root logger, at INFO, or at the level `FLET_LOG_LEVEL` names
+    (`flet run -vv` sets `debug`; Flet's own handling of it does nothing once a
+    handler exists). `QUIET_LOGGERS` stay at WARNING. A packaged app replaces
+    `sys.stderr` with a tee to the platform log and `console.log` before the app is
+    imported (F14), so the handler writes to both, through `RedactingFormatter`. Once
     the handler is there, a second call returns at once: it neither adds a handler nor
     resets a level set since.
     """

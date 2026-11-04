@@ -1,12 +1,12 @@
 """The row views lists hand their rows: each session's text, formatted once (D-153, D-184).
 
-Pure functions of the processed feed, like ``queries`` (architecture §7.5): a list owner
-builds one ``SessionView`` per session once per feed version (``ui.session_rows.use_session_views``)
-and hands the same object to its row on every render. ``by_day`` groups them for a list
-that spans days, and ``by_slot`` one day's into time slots. ``places`` gives session
-detail its room tiles (SESS-02), ``people`` its Speakers section (SESS-07), and
-``share_text`` what its Share sends (NEW-06). ``spoken_phrase()``,
-``notice_phrase()`` and ``elapsed_phrase()`` are what a row says to a screen reader,
+Pure functions of the processed feed, like `queries` (architecture §7.5): a list owner
+builds one `SessionView` per session once per feed version (`ui.session_rows.use_session_views`)
+and hands the same object to its row on every render. `by_day` groups them for a list
+that spans days, and `by_slot` one day's into time slots. `places` gives session
+detail its room tiles (SESS-02), `people` its Speakers section (SESS-07), and
+`share_text` what its Share sends (NEW-06). `spoken_phrase()`,
+`notice_phrase()` and `elapsed_phrase()` are what a row says to a screen reader,
 as one phrase (D-33, D-200).
 """
 
@@ -20,7 +20,7 @@ from pycon_us.core.slugs import slugify_room
 from pycon_us.core.timefmt import day_heading, instant, local_date, time_range_label
 
 _DASH = "–"
-"""The en dash of ``timefmt`` ranges, which a screen reader may skip or call a dash."""
+"""The en dash of `timefmt` ranges, which a screen reader may skip or call a dash."""
 
 
 @dataclass(frozen=True, eq=False)
@@ -29,7 +29,7 @@ class SessionView:
 
     Rows never format times themselves (ux.md §3.9): a list builds one view per session
     once per feed version and hands the same object to its row on every render. Frozen
-    with identity equality (D-70 rule 6), so ``ft.memo`` compares it by identity first
+    with identity equality (D-70 rule 6), so `ft.memo` compares it by identity first
     and a row whose view and star are unchanged skips its body (F34).
 
     Attributes:
@@ -63,12 +63,12 @@ def session_view(
         session: The session.
         zone: The conference's zone; every time shows in it (D-35, D-43).
         use_24h: Whether the device uses the 24-hour clock
-            (``page.media.always_use_24_hour_format``).
-        in_room: On a room's page, that room's slug (``Room.slug``): a place that is
+            (`page.media.always_use_24_hour_format`).
+        in_room: On a room's page, that room's slug (`Room.slug`): a place that is
             the room itself is left out, so the row shows its time alone and its
             phrase says no place, while another place stays (the lightning talks'
             Arena on a room they are streamed to). None on every other list.
-        of_speaker: On a speaker's page, that speaker's name (``Speaker.name``): the
+        of_speaker: On a speaker's page, that speaker's name (`Speaker.name`): the
             speakers line names only the others, "With Ana Lima", and is empty when
             the speaker is alone, so neither the row nor its phrase repeats the page's
             subject. None on every other list.
@@ -113,8 +113,8 @@ def session_views(
         session_ids: The sessions; ids that are not in the feed are left out.
         zone: The conference's zone.
         use_24h: Whether the device uses the 24-hour clock.
-        in_room: On a room's page, the room's slug (``session_view()``).
-        of_speaker: On a speaker's page, the speaker's name (``session_view()``).
+        in_room: On a room's page, the room's slug (`session_view()`).
+        of_speaker: On a speaker's page, the speaker's name (`session_view()`).
     """
     sessions = data.sessions
     return tuple(
@@ -148,14 +148,14 @@ def by_day(
 def by_slot(views: Iterable[SessionView]) -> list[tuple[datetime, list[SessionView]]]:
     """Return one day's row views grouped into time slots, as the Schedule's are (D-31).
 
-    A slot is the sessions of one time group: they share ``Session.start``, so the Job
+    A slot is the sessions of one time group: they share `Session.start`, so the Job
     Fair sits in the 10:00 slot while its row says 9:30 (DATA-11, D-41). For a list
     of gutter slots that is not the Schedule's: a room's day (ROOM-02) and the open
     spaces' (EVT-01).
 
     Args:
         views: One day's views; within a start, in the order to show. They may come by
-            the start a row shows (``timeline.schedule_order``, as the open spaces'
+            the start a row shows (`timeline.schedule_order`, as the open spaces'
             do), which a display-time override can put before an earlier slot.
 
     Returns:
@@ -175,9 +175,9 @@ class Places:
     """Where a session is, as session detail's room tiles show it (SESS-02).
 
     Attributes:
-        label: The one place its row shows (``Session.display_location``, DATA-16);
+        label: The one place its row shows (`Session.display_location`, DATA-16);
             empty for a break held in many rooms, or a notice.
-        room: The room ``label`` names, when the feed has one by that name (the
+        room: The room `label` names, when the feed has one by that name (the
             lightning talks' Arena is one, D-124); its tile pushes room detail.
         others: Its other rooms that the feed has, each once, in the feed's order.
     """
@@ -199,7 +199,7 @@ def places(session: Session, rooms: Mapping[str, Room]) -> Places:
 
     Args:
         session: The session.
-        rooms: ``ConferenceData.rooms``, by slug (``slugs.slugify_room``).
+        rooms: `ConferenceData.rooms`, by slug (`slugs.slugify_room`).
     """
     label = session.display_location
     room = rooms.get(slugify_room(label)) if label else None
@@ -217,7 +217,7 @@ def people(
 ) -> tuple[Speaker | str, ...]:
     """Return who a session's Speakers section lists, in the feed's author order (SESS-07).
 
-    A directory speaker the session links is a ``Speaker``, whose row opens their page;
+    A directory speaker the session links is a `Speaker`, whose row opens their page;
     a name the directory has no one for is the name itself, shown as text: the lightning
     talks' "Hosted by …" (a pseudo-speaker, D-125, DATA-15) is the one in both recorded
     feeds. Each person and each name comes once; a linked speaker whose name the authors
@@ -225,7 +225,7 @@ def people(
 
     Args:
         session: The session.
-        speakers: ``ConferenceData.speakers``, by id.
+        speakers: `ConferenceData.speakers`, by id.
     """
     linked = [speakers[sid] for sid in session.speaker_ids if sid in speakers]
     by_name: dict[str, Speaker] = {}
@@ -250,7 +250,7 @@ def share_text(
     conference time, as everywhere (D-35), and names its zone, since the person who
     reads it may be anywhere; it starts where the session detail's does (the Job
     Fair's 9:30, DATA-11). The conference's name says what the day belongs to, also
-    when there is no page. The page is the feed's own link (``Session.url``, the one
+    when there is no page. The page is the feed's own link (`Session.url`, the one
     "Open on us.pycon.org" opens): a synthetic id (a collapsed break, the Posters row,
     a poster detail) and a session the site has no page for (a keynote, a notice)
     have none, so their text ends with when and where.
@@ -290,7 +290,7 @@ def spoken_phrase(
     clash is heard, not only seen, even where the row counts the rest (ux.md §5.6).
 
     Args:
-        labels: The badges' labels, in order (``badge_specs()``).
+        labels: The badges' labels, in order (`badge_specs()`).
         view: The session's row view.
         overlaps: The names of the saved sessions the row overlaps, if any.
         show_time: False when the page above says the row's time (the Posters
@@ -323,7 +323,7 @@ def notice_phrase(label: str, view: SessionView) -> str:
 
 
 def _sentence(text: str) -> str:
-    """End ``text`` with a full stop unless it already ends a sentence."""
+    """End `text` with a full stop unless it already ends a sentence."""
     return text if text.endswith((".", "?", "!", "…")) else f"{text}."
 
 
@@ -331,8 +331,8 @@ def elapsed_phrase(elapsed: int) -> str:
     """Return the sentence that ends the phrase of a row that is on.
 
     "60 percent elapsed." In the phrase, not on the bar: merged into the row, the bar's
-    value would be read as a bare "60". Flet sent ``semantics_value`` as a number, "60.0",
-    until the pin ``22a6dcb16`` (#210); the phrase still says what the number means.
+    value would be read as a bare "60". Flet sent `semantics_value` as a number, "60.0",
+    until the pin `22a6dcb16` (#210); the phrase still says what the number means.
 
     Args:
         elapsed: The share of the session that has passed, in whole percent.

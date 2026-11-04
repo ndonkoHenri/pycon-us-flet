@@ -1,17 +1,17 @@
 """Developer › Data's staff rows: Staff queue (#694, D-412) and Clear staff data (D-414).
 
 Until the scan screen (#37) mounts the sync chip in its app bar, Developer › Data hosts
-the queue sheet: a **Staff queue** row (``developer.staff_queue``) whose second line is
-the sync chip, showing the signed-in account's rows as ``Staff`` counts them, and how
+the queue sheet: a **Staff queue** row (`developer.staff_queue`) whose second line is
+the sync chip, showing the signed-in account's rows as `Staff` counts them, and how
 many rows of other accounts wait; a tap opens the sheet, which lists those too
 (architecture §12.1: a previous owner's unsynced rows are "visible in Developer"). The
 row shows only while a mock API URL is set, as every staff feature (D-51), so an
 install whose staff tools never run never opens its file.
 
-**Clear staff data** (``developer.clear_staff_data``, DEV-03) under it, shown with it,
-deletes every account's rows and the staff keys (``staff_data.clear_staff_data()``)
+**Clear staff data** (`developer.clear_staff_data`, DEV-03) under it, shown with it,
+deletes every account's rows and the staff keys (`staff_data.clear_staff_data()`)
 after a confirmation that names how many rows have not synced
-(``developer_ui.staff_confirmation()``), then says how it went in place (D-29).
+(`developer_ui.staff_confirmation()`), then says how it went in place (D-29).
 """
 
 import flet as ft
@@ -40,7 +40,7 @@ STAFF_NOT_CLEARED: Outcome = (
 
 
 def others_waiting(db: OutboxDb, owner: str | None) -> int | None:
-    """Return how many pending or failed rows other accounts than ``owner`` have.
+    """Return how many pending or failed rows other accounts than `owner` have.
 
     Args:
         db: The outbox.
@@ -79,7 +79,7 @@ def others_line(count: int | None) -> str | None:
 def StaffQueue() -> ft.Control:
     """The Staff queue row, or nothing without a mock API URL (D-51).
 
-    One node with its identifier (``named()``): "Staff queue, 3 pending · 1 failed,
+    One node with its identifier (`named()`): "Staff queue, 3 pending · 1 failed,
     2 rows of other accounts waiting". Signed out, the second line says so instead of
     the chip, which would say "All synced" of nobody's rows.
     """

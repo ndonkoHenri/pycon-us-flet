@@ -1,10 +1,10 @@
-"""Licences (``/more/app/licences``): what each build ships, under whose licence (INFO-03).
+"""Licences (`/more/app/licences`): what each build ships, under whose licence (INFO-03).
 
-The list opens with the app's own licence and its ``NOTICE``, then one row per bundled
+The list opens with the app's own licence and its `NOTICE`, then one row per bundled
 component by section, each saying its licence and copyright; a row opens the full text
-at ``/more/app/licences/<key>``, read from the files bundled with the app, so every
-text opens offline (``pycon_us.licences``, D-296). Ionic showed none. The texts are
-selectable and reflow to the screen at any text size (``paragraphs()``).
+at `/more/app/licences/<key>`, read from the files bundled with the app, so every
+text opens offline (`pycon_us.licences`, D-296). Ionic showed none. The texts are
+selectable and reflow to the screen at any text size (`paragraphs()`).
 """
 
 from urllib.parse import unquote
@@ -19,10 +19,10 @@ from pycon_us.ui.states import not_found
 from pycon_us.ui.widths import LIST, READING, sides, use_margin
 
 SCREEN = "licences"
-"""The list's name in its semantics identifiers: ``licences.<key>`` (decisions §M)."""
+"""The list's name in its semantics identifiers: `licences.<key>` (decisions §M)."""
 
 TEXT_SCREEN = "licence"
-"""The text page's name in its semantics identifiers: ``licence.header``."""
+"""The text page's name in its semantics identifiers: `licence.header`."""
 
 TITLE = "Licences"
 """The list's title, and its row on About this app."""
@@ -70,11 +70,11 @@ def Licences() -> ft.View:
 
 @ft.component
 def LicencePage() -> ft.View:
-    """``/more/app/licences/<key>``: the route's screen, ``LicenceText`` for its key.
+    """`/more/app/licences/<key>`: the route's screen, `LicenceText` for its key.
 
     Route params arrive quoted, as a link wrote them, and are unquoted here (D-42).
     """
-    # Not ``key=``: a component's ``key`` keyword is its identity, which Flet keeps.
+    # Not `key=`: a component's `key` keyword is its identity, which Flet keeps.
     return LicenceText(licence=unquote(ft.use_route_params().get("licence", "")))
 
 
@@ -83,7 +83,7 @@ def LicenceText(licence: str) -> ft.View:
     """One component's licence: its licence and copyright, then its full text.
 
     Args:
-        licence: The component's key from the route (``Component.key``), unquoted.
+        licence: The component's key from the route (`Component.key`), unquoted.
     """
     margin = use_margin(READING)  # its width class (D-305)
     component = COMPONENTS.get(licence)
@@ -154,7 +154,7 @@ def paragraph(text: str, *, fixed: bool) -> ft.Control:
     80 columns wide, and wrapped on a phone its columns no longer line up.
 
     Args:
-        text: The block, as ``paragraphs()`` gives it.
+        text: The block, as `paragraphs()` gives it.
         fixed: Shown line for line in a monospace font (columns, rules).
     """
     block = ft.Text(

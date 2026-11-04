@@ -1,6 +1,6 @@
 """Tests for how a Conference store refresh ends: the same feed again, a closed session, a bug.
 
-The feeds, transports and fixtures are ``tests/feed_store.py``'s.
+The feeds, transports and fixtures are `tests/feed_store.py`'s.
 """
 
 import asyncio
@@ -201,7 +201,7 @@ async def test_a_refresh_that_fails_after_its_session_closed_writes_nothing(
 async def test_an_open_session_refreshes_as_before(
     storage: Storage, year: YearData
 ) -> None:
-    """With ``closed`` given but not set, a refresh publishes and caches as usual."""
+    """With `closed` given but not set, a refresh publishes and caches as usual."""
     conference = await loaded(storage, year)
     await conference.refresh(
         storage, year, transport=serving(NETWORK_FEED), closed=asyncio.Event()
@@ -242,7 +242,7 @@ async def test_an_unexpected_refresh_error_is_logged_at_once(
 async def test_an_unexpected_refresh_error_reaches_refresh_callers(
     storage: Storage, year: YearData, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """A bug in a refresh raises to the caller that awaits ``refresh()``."""
+    """A bug in a refresh raises to the caller that awaits `refresh()`."""
 
     async def broken(
         url: str, *, transport: httpx.AsyncBaseTransport | None = None

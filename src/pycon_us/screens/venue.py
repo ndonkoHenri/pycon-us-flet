@@ -1,29 +1,29 @@
-"""Venue & hours (``/more/venue``): is it open now, and how do I get there (MAP-09, MAP-11).
+"""Venue & hours (`/more/venue`): is it open now, and how do I get there (MAP-09, MAP-11).
 
 Ionic split the site's HTML into cards and never said what was open. This page renders
 at once from bundled year data (D-45, INFO-05), offline, and answers both questions
 (D-313):
 
-- **The address card:** the venue's name and address (``conference.toml``'s
-  ``address``), with **Directions**, which opens Apple Maps on iOS and the ``geo:``
-  handler on Android at the venue's point (``[directions]``, ``directions_url()``),
-  and **Copy address** (``copy_text()``, D-263). A launch that fails says "Couldn't
+- **The address card:** the venue's name and address (`conference.toml`'s
+  `address`), with **Directions**, which opens Apple Maps on iOS and the `geo:`
+  handler on Android at the venue's point (`[directions]`, `directions_url()`),
+  and **Copy address** (`copy_text()`, D-263). A launch that fails says "Couldn't
   open the link" (D-182).
-- **A card per service** from ``[[venue_hours]]`` (D-282): its name as a level-2
-  heading, a status label from ``core/hours.py``'s ``hours_status()`` ("Open now ·
-  until 6:00 PM" in ``live``, "Opens 7:30 AM", "Closed today"), an icon and words that
+- **A card per service** from `[[venue_hours]]` (D-282): its name as a level-2
+  heading, a status label from `core/hours.py`'s `hours_status()` ("Open now ·
+  until 6:00 PM" in `live`, "Opens 7:30 AM", "Closed today"), an icon and words that
   are read as words and never a chip, since a tap does nothing (ux.md §6.7); where it
   is, its days with today's in bold, and its note. The page re-renders on the minute
-  (``use_minute()``), so the labels follow the clock, the Developer fake clock too;
-  off-season there are none (``hours_status()`` is None). A service with a ``pin``
-  ends with its ``LocationCard`` (``spot_card()``), which pushes the floor viewer at
+  (`use_minute()`), so the labels follow the clock, the Developer fake clock too;
+  off-season there are none (`hours_status()` is None). A service with a `pin`
+  ends with its `LocationCard` (`spot_card()`), which pushes the floor viewer at
   it. The Quiet room's card ends with the sponsor who provides it, a row that pushes
   its detail (D-337).
 
 Hours are conference time; while the device's zone differs a line says so (D-35,
-D-240). A year without ``[[venue_hours]]`` shows the feed's ``venues-hours`` block, and
-without that the empty state (``InfoBody``). The cards' parts are
-``screens/venue_cards.py``.
+D-240). A year without `[[venue_hours]]` shows the feed's `venues-hours` block, and
+without that the empty state (`InfoBody`). The cards' parts are
+`screens/venue_cards.py`.
 """
 
 import re
@@ -99,13 +99,13 @@ def venue_blocks(
     *,
     use_24h: bool,
 ) -> list[ft.Control]:
-    """Return the page's blocks at ``now``, in reading order; none without hours.
+    """Return the page's blocks at `now`, in reading order; none without hours.
 
     Args:
         svc: The session's services: the year's facts, the launcher, the clipboard.
-        tokens: The theme's tokens, for ``live``.
-        hours: The year's ``[[venue_hours]]``; empty shows the feed's block instead.
-        now: The current instant (``clock.now()``).
+        tokens: The theme's tokens, for `live`.
+        hours: The year's `[[venue_hours]]`; empty shows the feed's block instead.
+        now: The current instant (`clock.now()`).
         use_24h: Whether the device shows 24-hour times (D-35).
     """
     if not hours:
@@ -153,11 +153,11 @@ def directions_url(directions: Directions, *, ios: bool) -> str:
     """Return the link that opens a maps app at the venue (D-313).
 
     Ionic's two forms (MAP-11): Apple Maps' web address on iOS, which the system hands
-    to Maps, a pin named for the entrance with walking directions (``dirflg=w``); a
-    ``geo:`` link on Android, which any maps app answers, with the pin named the same.
+    to Maps, a pin named for the entrance with walking directions (`dirflg=w`); a
+    `geo:` link on Android, which any maps app answers, with the pin named the same.
 
     Args:
-        directions: The year's ``[directions]``.
+        directions: The year's `[directions]`.
         ios: Whether the device is an iPhone or an iPad.
     """
     point = f"{directions.latitude},{directions.longitude}"
@@ -168,7 +168,7 @@ def directions_url(directions: Directions, *, ios: bool) -> str:
 
 
 def service_key(service: str) -> str:
-    """Return a service's identifier key: "Lost & found" is ``lost_found``.
+    """Return a service's identifier key: "Lost & found" is `lost_found`.
 
     Args:
         service: The service's name, as the year data writes it.
@@ -179,7 +179,7 @@ def service_key(service: str) -> str:
 def address_card(svc: Services, info: ConferenceInfo) -> ft.Control:
     """Return the card with the venue's name and address, Directions and Copy address.
 
-    Directions shows only when the year has ``[directions]``. It leaves the app, so
+    Directions shows only when the year has `[directions]`. It leaves the app, so
     it is a link whose name ends with "Opens in another app" (D-182, D-186).
 
     Args:
@@ -238,7 +238,7 @@ def zone_line(note: str) -> ft.Control:
     """Return the line that says the hours are conference time (D-35, D-240).
 
     Args:
-        note: ``zone_note()``'s words: "Times are Pacific Time (PDT)".
+        note: `zone_note()`'s words: "Times are Pacific Time (PDT)".
     """
     return ft.Container(
         ft.Row(

@@ -1,14 +1,14 @@
 """The Map's Rooms pane: the rooms by floor, then the other locations (ROOM-01, D-188).
 
-Every room of the feed under its floor's heading (``map.toml``'s plans, in the Map's
+Every room of the feed under its floor's heading (`map.toml`'s plans, in the Map's
 order), in natural order on each, with its session count ("Sprints" for a sprint-only
 room, MAP-08) and, while something is on in it, "Now: <title>"
-(``core.rooms.room_list``); then the places that are not rooms, under "Other
+(`core.rooms.room_list`); then the places that are not rooms, under "Other
 locations". A row pushes the room's detail, one drill level. The list recomputes on
-the minute tick (``use_minute()``, D-175), from ``clock.now()``, so the Developer fake
+the minute tick (`use_minute()`, D-175), from `clock.now()`, so the Developer fake
 clock drives it. Without data it shows the skeleton until the first fetch has failed,
 then "Can't load the rooms" with Try again (D-32, ux.md §4.1). The Map
-(``screens/map.py``) shows it under its tab bar.
+(`screens/map.py`) shows it under its tab bar.
 """
 
 import flet as ft
@@ -31,7 +31,7 @@ SCREEN = "map"
 """The screen's name in its semantics identifiers (decisions §M)."""
 
 ROOMS = "rooms"
-"""The pane's slug: its ``?tab=`` value, its list's key and its tab's identifier."""
+"""The pane's slug: its `?tab=` value, its list's key and its tab's identifier."""
 
 
 @ft.component
@@ -105,9 +105,9 @@ def room_rows(listing: RoomList, view_path: str, *, live: str) -> list[ft.Contro
     The floors come in the Map's order of the plans, the other locations last.
 
     Args:
-        listing: The rooms by floor and the other locations (``room_list()``).
+        listing: The rooms by floor and the other locations (`room_list()`).
         view_path: This View's path, so a row's detail is pushed on top of it.
-        live: The "happening now" colour (``Tokens.live``).
+        live: The "happening now" colour (`Tokens.live`).
     """
     rows: list[ft.Control] = []
     for heading, entries in (
@@ -123,10 +123,10 @@ def room_rows(listing: RoomList, view_path: str, *, live: str) -> list[ft.Contro
 def room_row(entry: RoomEntry, view_path: str, *, live: str) -> ft.Control:
     """Return one room's row: its name, its session count and what is on in it now.
 
-    A ``LinkTile``, so it is one node for screen readers, read as one phrase ("Room
+    A `LinkTile`, so it is one node for screen readers, read as one phrase ("Room
     103ABC, 26 sessions, Now: Building X"), and a tap pushes the room. The count keeps
     its place under the name in every row; the "Now:" lines, when there are any, come
-    under it in the ``live`` colour, and their words say the same, so colour is never
+    under it in the `live` colour, and their words say the same, so colour is never
     the only signal (D-33).
 
     The count is every session listed under the room, poster details included, as the
@@ -141,7 +141,7 @@ def room_row(entry: RoomEntry, view_path: str, *, live: str) -> ft.Control:
     Args:
         entry: The room and the sessions on in it.
         view_path: This View's path.
-        live: The "happening now" colour (``Tokens.live``).
+        live: The "happening now" colour (`Tokens.live`).
     """
     room = entry.room
     count = ft.Text(count_line(room))

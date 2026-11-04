@@ -1,4 +1,4 @@
-"""Tests for ``ViewMemory``, the process memory of where the user left the app (D-143)."""
+"""Tests for `ViewMemory`, the process memory of where the user left the app (D-143)."""
 
 from datetime import date
 
@@ -6,7 +6,7 @@ from pycon_us.memory import ViewMemory
 
 
 def test_view_memory_reset_forgets_every_place() -> None:
-    """``reset()`` puts every field back to its default, with a fresh offsets dict."""
+    """`reset()` puts every field back to its default, with a fresh offsets dict."""
     memory = ViewMemory(
         last_location="/more/developer",
         search_base="/schedule",

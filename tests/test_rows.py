@@ -1,9 +1,9 @@
-"""Tests for the shared rows: in-app ``LinkTile`` and ``SpeakerTile`` (#77; ux.md §3.9).
+"""Tests for the shared rows: in-app `LinkTile` and `SpeakerTile` (#77; ux.md §3.9).
 
-The link rule itself is tested in ``test_links.py``, the external rows in
-``test_rows_external.py`` (#83, #623).
+The link rule itself is tested in `test_links.py`, the external rows in
+`test_rows_external.py` (#83, #623).
 
-The builders run outside a renderer, with ``tests/row_tiles.py``'s fake page bound as
+The builders run outside a renderer, with `tests/row_tiles.py`'s fake page bound as
 Flet binds a session's page. How tall a row is on screen and what TalkBack and
 VoiceOver read are checked on devices (the PR).
 """
@@ -27,7 +27,7 @@ svc, page = row_tiles.svc, row_tiles.page  # the fixtures, under this module's n
 def test_a_link_tile_is_one_merged_list_tile_with_a_trailing_chevron(
     page: FakePage,
 ) -> None:
-    """A link tile is a merged ``ListTile`` with its title, its icon and a chevron."""
+    """A link tile is a merged `ListTile` with its title, its icon and a chevron."""
     tile = tile_of(LinkTile("Speakers", "/more/speakers", icon=ft.Icons.PEOPLE_OUTLINE))
     assert tile.title == "Speakers"
     assert isinstance(tile.trailing, ft.Icon)
@@ -81,7 +81,7 @@ def test_a_row_with_a_subtitle_tops_its_icons_level_with_the_title(
 ) -> None:
     """Icons and the title line share a centre at every height, so none moves (D-188).
 
-    ``TOP`` puts the icons ``min_vertical_padding`` down, and so is the title: 14 dp is
+    `TOP` puts the icons `min_vertical_padding` down, and so is the title: 14 dp is
     more than Flutter's own two-line title offset, so the tile lays out from it.
     """
     tile = tile_of(LinkTile("Room 103ABC", "/map/room/x", subtitle=subtitle))
@@ -121,7 +121,7 @@ def test_a_link_tile_s_identifier_tags_the_merged_node(page: FakePage) -> None:
 def test_a_link_tile_without_an_identifier_adds_no_semantics_node(
     page: FakePage,
 ) -> None:
-    """A link tile with no identifier has no ``Semantics`` inside its merge."""
+    """A link tile with no identifier has no `Semantics` inside its merge."""
     assert node_of(LinkTile("Sprints", "/more/sprints")) is None
 
 

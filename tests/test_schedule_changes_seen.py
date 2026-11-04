@@ -1,8 +1,8 @@
-"""Tests for Schedule changes' seen marks (``screens/schedule_changes_seen.py``; #436).
+"""Tests for Schedule changes' seen marks (`screens/schedule_changes_seen.py`; #436).
 
-The screen runs in ``tests/changes_view.py``'s harness, with the clock held at 10:42 AM
+The screen runs in `tests/changes_view.py`'s harness, with the clock held at 10:42 AM
 on Saturday, May 16 in Long Beach. The seen marks' 2 s wait is held until the test
-releases it (``tests/timers.py``), and the list can be left in the same session; under
+releases it (`tests/timers.py`), and the list can be left in the same session; under
 the Router, the list is left for a session pushed on it.
 """
 
@@ -161,10 +161,10 @@ async def test_a_closed_session_marks_nothing_and_writes_nothing(show: Show) -> 
 def routed(
     open_at: Open, monkeypatch: pytest.MonkeyPatch
 ) -> Callable[..., Awaitable[links.Shown]]:
-    """Return ``open(location, prefs=...)``: the app's Views at a location (D-141).
+    """Return `open(location, prefs=...)`: the app's Views at a location (D-141).
 
-    The log holds ``NEWEST`` (unseen) and ``OLDER``; the seen marks' wait is held, its
-    ``HeldSleeps`` in the result's ``sleeps``.
+    The log holds `NEWEST` (unseen) and `OLDER`; the seen marks' wait is held, its
+    `HeldSleeps` in the result's `sleeps`.
     """
     monkeypatch.setattr(screen, "now", lambda: NOW)
     sleeps = HeldSleeps()
@@ -200,7 +200,7 @@ async def test_a_session_pushed_on_the_list_stops_the_wait(
 async def test_a_deep_link_to_a_session_beneath_the_list_starts_no_wait(
     routed: Callable[..., Awaitable[links.Shown]],
 ) -> None:
-    """A cold link to ``…/changes/2026/session/7`` builds the list unseen: no wait."""
+    """A cold link to `…/changes/2026/session/7` builds the list unseen: no wait."""
     page = await routed(f"{VIEW}/session/7")
     sleeps: HeldSleeps = page.sleeps  # pyright: ignore[reportAttributeAccessIssue]
     assert VIEW in page.routes()

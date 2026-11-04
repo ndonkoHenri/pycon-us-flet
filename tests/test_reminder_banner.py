@@ -1,11 +1,11 @@
-"""Tests for the in-app reminder Banner (``ui/reminder_banner.py``; #428, D-60, NEW-05).
+"""Tests for the in-app reminder Banner (`ui/reminder_banner.py`; #428, D-60, NEW-05).
 
-The hook renders in a real Flet session (``tests/sessions.py``) under a stand-in for
-``App``, with ``ft.use_dialog`` recorded, the clock held and ``page.navigate``
-recorded, and E3's ``Scheduler`` over ``tests/fakes.py``'s ``MemoryNotifications``,
+The hook renders in a real Flet session (`tests/sessions.py`) under a stand-in for
+`App`, with `ft.use_dialog` recorded, the clock held and `page.navigate`
+recorded, and E3's `Scheduler` over `tests/fakes.py`'s `MemoryNotifications`,
 its notifications not shown until a test says so. When the Banner shows is
-``due_session()``'s, tested in ``test_reminders.py``; here, what the hook does with
-it: when it asks, what it shows, what Open and Dismiss do, and ``os_reminds()``'s
+`due_session()`'s, tested in `test_reminders.py`; here, what the hook does with
+it: when it asks, what it shows, what Open and Dismiss do, and `os_reminds()`'s
 rule, which hides it while the OS reminds (D-396).
 """
 
@@ -40,12 +40,12 @@ TALK = "142"
 """A 2026 talk: Saturday 16 May at 10:30 AM in Grand Ballroom A."""
 
 TALK_START = datetime(2026, 5, 16, 10, 30, tzinfo=ZONE)
-"""When ``TALK`` starts, as the app shows it."""
+"""When `TALK` starts, as the app shows it."""
 
 
 @dataclass
 class Shown:
-    """The stand-in ``App`` rendering the hook, and what it did."""
+    """The stand-in `App` rendering the hook, and what it did."""
 
     svc: Services
     conference: Conference
@@ -56,13 +56,13 @@ class Shown:
 
     @property
     def scheduler(self) -> Scheduler:
-        """E3's ``Scheduler``, whose ``read_enabled()`` reads the fake OS's answer."""
+        """E3's `Scheduler`, whose `read_enabled()` reads the fake OS's answer."""
         assert self.svc.reminders is not None
         return self.svc.reminders
 
     @property
     def banner(self) -> ft.Banner | None:
-        """The Banner the last render asked ``ft.use_dialog`` for, or None."""
+        """The Banner the last render asked `ft.use_dialog` for, or None."""
         last = self.dialogs[-1] if self.dialogs else None
         assert last is None or isinstance(last, ft.Banner)
         return last
@@ -70,7 +70,7 @@ class Shown:
 
 @pytest.fixture
 def held() -> Iterator[Callable[[datetime], None]]:
-    """Hold ``clock.now()`` where a test puts it; real time again afterwards."""
+    """Hold `clock.now()` where a test puts it; real time again afterwards."""
     yield clock.set_test_now
     clock.set_test_now(None)
 
@@ -81,7 +81,7 @@ async def shown(
     tmp_path: Path,
     held: Callable[[datetime], None],
 ) -> AsyncIterator[Shown]:
-    """The hook under a stand-in ``App``, 9 min before ``TALK``, which is saved."""
+    """The hook under a stand-in `App`, 9 min before `TALK`, which is saved."""
     held(TALK_START - timedelta(minutes=9))
     conference = Conference()
     conference.data = processed(2026)
@@ -96,7 +96,7 @@ async def shown(
 
     @ft.component
     def Host() -> ft.Control:
-        """``App``'s part: the hook, with the boot gate open."""
+        """`App`'s part: the hook, with the boot gate open."""
         use_reminder_banner(state.svc, conference, favorites, prefs, ready=True)
         return ft.Column()
 
@@ -115,7 +115,7 @@ def words(banner: ft.Banner) -> str:
 
 
 def button(banner: ft.Banner, identifier: str) -> ft.TextButton:
-    """The action ``identifier`` names, from its ``named()`` wrapping."""
+    """The action `identifier` names, from its `named()` wrapping."""
     for action in banner.actions:
         assert isinstance(action, ft.MergeSemantics)
         node = action.content
@@ -227,7 +227,7 @@ async def test_nothing_changes_in_the_background(
 def test_the_banner_gives_way_only_to_a_reminder_the_os_shows(
     e3: bool, enabled: bool, lead: SessionLead, reminds: bool
 ) -> None:
-    """``os_reminds()``: E3 schedules, notifications show and session reminders are on."""
+    """`os_reminds()`: E3 schedules, notifications show and session reminders are on."""
     scheduler = (
         Scheduler(cast(Notifications, MemoryNotifications()), enabled=enabled)
         if e3
@@ -253,7 +253,7 @@ async def test_no_banner_while_the_os_reminds_and_back_once_it_does_not(
 
 
 async def test_a_permission_read_alone_moves_the_banner_both_ways(shown: Shown) -> None:
-    """A read that changes ``Scheduler.enabled`` asks again at once, no store changing.
+    """A read that changes `Scheduler.enabled` asks again at once, no store changing.
 
     Back from system settings, the read on resume hides the Banner when notifications
     are allowed and brings it back when they are denied, without the minute tick.

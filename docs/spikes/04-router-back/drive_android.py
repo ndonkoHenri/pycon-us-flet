@@ -1,16 +1,16 @@
 """Drive the S4 reproducer on an Android emulator with adb and check each step.
 
-Run from this folder with the APK installed (``flet build apk``, then
-``adb install -r``)::
+Run from this folder with the APK installed (`flet build apk`, then
+`adb install -r`):
 
     uv run python drive_android.py <journey> [<journey> ...]
 
-Journeys: ``drill``, ``roots``, ``retap``, ``retap_top``, ``search``, ``predictive``, ``memory``,
-``lifecycle``, ``deep``, ``recreate``. Each step does one thing (a tap found in
+Journeys: `drill`, `roots`, `retap`, `retap_top`, `search`, `predictive`, `memory`,
+`lifecycle`, `deep`, `recreate`. Each step does one thing (a tap found in
 the accessibility tree, the Back key, an edge swipe, an adb setting) and waits
-for the app's ``S4 top ... route=<path>`` log line. Results print as ``PASS`` or
-``FAIL`` lines; screenshots go to ``$S4_OUT`` (default ``./out``). The serial
-comes from ``$S4_SERIAL`` (default ``emulator-5580``).
+for the app's `S4 top ... route=<path>` log line. Results print as `PASS` or
+`FAIL` lines; screenshots go to `$S4_OUT` (default `./out`). The serial
+comes from `$S4_SERIAL` (default `emulator-5580`).
 """
 
 import os
@@ -38,7 +38,7 @@ def adb(*args: str, check: bool = True) -> str:
 
 
 def lines_since(since: float) -> list[tuple[float, str]]:
-    """The app's ``S4`` log lines newer than since (device epoch seconds)."""
+    """The app's `S4` log lines newer than since (device epoch seconds)."""
     out = adb("logcat", "-d", "-v", "epoch", "-s", "flet.python:I")
     found = []
     for raw in out.splitlines():
@@ -57,7 +57,7 @@ def mark() -> float:
 
 
 def wait(pattern: str, since: float, timeout: float = 8.0) -> str | None:
-    """Wait for an ``S4`` line matching pattern after since; return it or None."""
+    """Wait for an `S4` line matching pattern after since; return it or None."""
     end = time.time() + timeout
     while time.time() < end:
         for _, text in lines_since(since):

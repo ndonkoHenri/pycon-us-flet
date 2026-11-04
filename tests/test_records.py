@@ -1,7 +1,7 @@
-"""Properties of decoding single feed records (``core/records.py``; #150).
+"""Properties of decoding single feed records (`core/records.py`; #150).
 
-The decoding of whole feeds, with named edge cases, is tested in ``test_feed.py``. These
-properties call the decoders directly, without the ``machine_tz`` fixture: hypothesis
+The decoding of whole feeds, with named edge cases, is tested in `test_feed.py`. These
+properties call the decoders directly, without the `machine_tz` fixture: hypothesis
 cannot rerun a function-scoped fixture per example, and the decoders take the zone as an
 argument. The end of summer time is checked here too, on the decoders' own (#513).
 """
@@ -24,7 +24,7 @@ PAIR = re.compile(r"([\ud800-\udbff])([\udc00-\udfff])")
 
 
 def expected(text: str) -> str:
-    """Return ``text`` as UTF-16 reads it: a high-low pair joined, other surrogates U+FFFD.
+    """Return `text` as UTF-16 reads it: a high-low pair joined, other surrogates U+FFFD.
 
     Written with regexes, independently of the helper under test.
     """
@@ -46,7 +46,7 @@ _ID = st.integers(min_value=0) | _TEXT.filter(bool)
 
 
 def strings_in(value: object) -> Iterator[str]:
-    """Yield every string in ``value``, through tuples and the fields of records."""
+    """Yield every string in `value`, through tuples and the fields of records."""
     if isinstance(value, str):
         yield value
     elif isinstance(value, tuple | list):
@@ -120,7 +120,7 @@ BACKWARDS = ("2026-11-01T01:40:00-07:00", "2026-11-01T01:10:00-07:00")
 
 
 def timed_slot(start: str, end: str) -> dict[str, object]:
-    """Return a minimal ``schedule`` record that runs from ``start`` to ``end``."""
+    """Return a minimal `schedule` record that runs from `start` to `end`."""
     return {
         "conf_key": 142,
         "name": "Talk",
@@ -132,7 +132,7 @@ def timed_slot(start: str, end: str) -> dict[str, object]:
 
 
 def timed_open_space(start: str, end: str) -> dict[str, object]:
-    """Return a minimal ``open-spaces`` record that runs from ``start`` to ``end``."""
+    """Return a minimal `open-spaces` record that runs from `start` to `end`."""
     return {"conf_key": 1, "title": "Open space", "start": start, "end": end}
 
 

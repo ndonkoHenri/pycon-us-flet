@@ -1,8 +1,8 @@
 """Tests for Door check's tags and headcount (#767; DOOR-05, DOOR-06; D-442).
 
-``core/admission.tags()`` turns an attendee's allergy and dietary needs into the
-result's chips, and ``headcount()`` counts the account's distinct check-ins for the
-session from its door rows. On the screen (``tests/door_rig.py``: a real Flet session
+`core/admission.tags()` turns an attendee's allergy and dietary needs into the
+result's chips, and `headcount()` counts the account's distinct check-ins for the
+session from its door rows. On the screen (`tests/door_rig.py`: a real Flet session
 over the mock, one outbox per test, so a second render is a relaunch), each seed
 attendee's result carries their chips, and "1 checked in" under the session chip
 follows the admissions, ignores a duplicate, survives a relaunch and comes back with

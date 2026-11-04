@@ -1,7 +1,7 @@
-"""Tests for ``tools/merge.sh``: a merge happens only on the gate's own success (#974).
+"""Tests for `tools/merge.sh`: a merge happens only on the gate's own success (#974).
 
-Each test runs the real script in a sandbox, a git repo with an ``origin``, beside a stand-in
-``gate.sh``, with a stand-in ``gh`` first on ``PATH`` that records its calls.
+Each test runs the real script in a sandbox, a git repo with an `origin`, beside a stand-in
+`gate.sh`, with a stand-in `gh` first on `PATH` that records its calls.
 """
 
 import os
@@ -15,7 +15,7 @@ MERGE = Path(__file__).resolve().parent.parent / "tools" / "merge.sh"
 
 
 def _git(cwd: Path, *args: str) -> str:
-    """Run git in ``cwd`` and return its output."""
+    """Run git in `cwd` and return its output."""
     done = subprocess.run(
         ["git", *args], cwd=cwd, check=True, capture_output=True, text=True
     )
@@ -23,10 +23,10 @@ def _git(cwd: Path, *args: str) -> str:
 
 
 class Sandbox:
-    """A clone with the script beside a stand-in gate, and a stand-in ``gh``."""
+    """A clone with the script beside a stand-in gate, and a stand-in `gh`."""
 
     def __init__(self, root: Path) -> None:
-        """Make the origin, the clone and the folder ``gh`` and its call log live in."""
+        """Make the origin, the clone and the folder `gh` and its call log live in."""
         self.root = root
         self.calls = root / "gh-calls"
         self.lock = root / "lock"
@@ -66,7 +66,7 @@ class Sandbox:
         }
 
     def gate(self, status: int, tree: str = "") -> None:
-        """Write the stand-in gate: it prints ``tree`` and exits with ``status``."""
+        """Write the stand-in gate: it prints `tree` and exits with `status`."""
         path = self.repo / "tools" / "gate.sh"
         path.write_text(f"#!/bin/sh\necho {tree}\nexit {status}\n")
         path.chmod(0o755)
@@ -79,7 +79,7 @@ class Sandbox:
     def run(
         self, *prs: str, timeout: float = 30, **env: str
     ) -> subprocess.CompletedProcess[str]:
-        """Run the script on ``prs``, with ``env`` over the sandbox's environment."""
+        """Run the script on `prs`, with `env` over the sandbox's environment."""
         return subprocess.run(
             ["tools/merge.sh", *prs],
             check=False,
@@ -91,7 +91,7 @@ class Sandbox:
         )
 
     def merges(self) -> list[str]:
-        """Return the PRs ``gh pr merge`` was called on, in order."""
+        """Return the PRs `gh pr merge` was called on, in order."""
         if not self.calls.exists():
             return []
         return [
@@ -108,7 +108,7 @@ def sandbox(tmp_path: Path) -> Sandbox:
 
 
 def test_failed_gate_merges_nothing(sandbox: Sandbox) -> None:
-    """A gate that exits 1 ends the run with 1, and ``gh pr merge`` is never called."""
+    """A gate that exits 1 ends the run with 1, and `gh pr merge` is never called."""
     sandbox.gate(1)
     done = sandbox.run("7")
     assert done.returncode == 1
@@ -125,7 +125,7 @@ def test_passed_gate_merges_in_order(sandbox: Sandbox) -> None:
 
 
 def test_state_decides_when_gh_fails_after_merging(sandbox: Sandbox) -> None:
-    """``gh`` failing on the local branch isn't a failure when the PR's state is MERGED."""
+    """`gh` failing on the local branch isn't a failure when the PR's state is MERGED."""
     sandbox.gate(0, sandbox.main_tree())
     done = sandbox.run("7", GH_MERGE_STATUS="1")
     assert done.returncode == 0, done.stderr
@@ -141,7 +141,7 @@ def test_unmerged_pr_stops_the_rest(sandbox: Sandbox) -> None:
 
 
 def test_other_tree_says_to_check_main(sandbox: Sandbox) -> None:
-    """Main's tree differing from the gated tree exits 3 and names ``tools/check.sh``."""
+    """Main's tree differing from the gated tree exits 3 and names `tools/check.sh`."""
     sandbox.gate(0, "0" * 40)
     done = sandbox.run("7")
     assert done.returncode == 3

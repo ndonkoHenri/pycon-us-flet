@@ -1,7 +1,7 @@
-"""Tests for the Developer screen's test reminders (``screens/developer_reminders.py``; DEV-06).
+"""Tests for the Developer screen's test reminders (`screens/developer_reminders.py`; DEV-06).
 
-``TestReminders`` is rendered by hand over a real ``Scheduler`` on ``tests/fakes.py``'s
-``MemoryNotifications`` and ``MemoryPermissions``: each outcome for its state (scheduled
+`TestReminders` is rendered by hand over a real `Scheduler` on `tests/fakes.py`'s
+`MemoryNotifications` and `MemoryPermissions`: each outcome for its state (scheduled
 exact or inexact, refused, muted, denied, not available), what is handed to the OS, and
 the rows' identifiers (#451, D-402). How the section looks is checked on devices.
 """
@@ -55,7 +55,7 @@ def prefs() -> Prefs:
 
 @pytest.fixture
 def scheduler(os: MemoryNotifications, permissions: MemoryPermissions) -> Scheduler:
-    """An Android ``Scheduler`` over the fakes, typed as over the real services."""
+    """An Android `Scheduler` over the fakes, typed as over the real services."""
     return Scheduler(
         cast(Notifications, os),
         cast(PermissionHandler, permissions),
@@ -66,7 +66,7 @@ def scheduler(os: MemoryNotifications, permissions: MemoryPermissions) -> Schedu
 def renderer(
     monkeypatch: pytest.MonkeyPatch, scheduler: Scheduler | None, prefs: Prefs
 ) -> Callable[[], ft.Column]:
-    """Return a function that renders ``TestReminders`` by hand and returns its column."""
+    """Return a function that renders `TestReminders` by hand and returns its column."""
     rendered = Rendered()
     svc = SimpleNamespace(reminders=scheduler)
     monkeypatch.setattr(ft, "use_state", rendered.use_state)
@@ -193,7 +193,7 @@ async def test_a_slow_exact_alarm_check_still_leaves_it_5_s_ahead(
     now = [datetime(2026, 5, 15, 9, 0, tzinfo=UTC)]
 
     class RealClock(datetime):
-        """``datetime`` whose ``now()`` is the controlled time."""
+        """`datetime` whose `now()` is the controlled time."""
 
         @classmethod
         def now(cls, tz: Any = None) -> RealClock:  # type: ignore[override]

@@ -1,16 +1,16 @@
-r"""S3 prototype: convert the feed's HTML fields to Markdown for ``ft.Markdown``.
+r"""S3 prototype: convert the feed's HTML fields to Markdown for `ft.Markdown`.
 
-A spike reproducer, not app code: P0-15 (#67) writes ``pycon_us/core/html_md.py``
-from the verdict in ``docs/spikes/03-html-markdown.md``. Stdlib only.
+A spike reproducer, not app code: P0-15 (#67) writes `pycon_us/core/html_md.py`
+from the verdict in `docs/spikes/03-html-markdown.md`. Stdlib only.
 
 The design follows architecture §7.7 with what S3 found:
 - the HTML is parsed into a small tree, then rendered; unknown tags are
   unwrapped, so their text survives;
 - text is escaped with numeric character references, because Flet's Markdown
-  always enables LaTeX (``$...$``, ``( ... )``, ``[ ... ]``) on top of the
-  extension set, backslash escapes collide with ``\(`` and ``\[``, and GFM
-  turns ``:name:`` into emoji;
-- bare ``http(s)`` URLs in text become explicit links, so nothing is left raw;
+  always enables LaTeX (`$...$`, `( ... )`, `[ ... ]`) on top of the
+  extension set, backslash escapes collide with `\(` and `\[`, and GFM
+  turns `:name:` into emoji;
+- bare `http(s)` URLs in text become explicit links, so nothing is left raw;
 - a field with no tags is plain text (entities decoded): blank lines make
   paragraphs and single newlines make line breaks.
 """
@@ -62,7 +62,7 @@ class Node:
 
 
 class _TreeBuilder(HTMLParser):
-    """Builds a ``Node`` tree; tolerates unclosed and stray end tags."""
+    """Builds a `Node` tree; tolerates unclosed and stray end tags."""
 
     def __init__(self) -> None:
         super().__init__(convert_charrefs=True)
@@ -86,7 +86,7 @@ class _TreeBuilder(HTMLParser):
 
 
 def escape(text: str, linkify: bool = True) -> str:
-    """Escape text for Markdown; with ``linkify``, bare URLs become links."""
+    """Escape text for Markdown; with `linkify`, bare URLs become links."""
     if not linkify:
         return _escape_chars(text)
     parts = []
@@ -117,7 +117,7 @@ def _escape_line_start(line: str) -> str:
 
 
 def _inline(node: Node | str, base_url: str, in_link: bool = False) -> str:
-    r"""Render inline content; ``\n`` marks a hard line break."""
+    r"""Render inline content; `\n` marks a hard line break."""
     if isinstance(node, str):
         return escape(_HTML_SPACE.sub(" ", node), linkify=not in_link)
     if node.tag in DROPPED_TAGS:
@@ -283,7 +283,7 @@ def to_markdown(html: str, base_url: str) -> str:
         base_url: the site URL relative links resolve against.
 
     Returns:
-        Markdown for ``ft.Markdown(extension_set=GITHUB_WEB)``.
+        Markdown for `ft.Markdown(extension_set=GITHUB_WEB)`.
     """
     if not _HAS_TAG.search(html):
         return _plain(html)

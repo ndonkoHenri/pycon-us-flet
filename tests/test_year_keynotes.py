@@ -1,9 +1,9 @@
-"""Tests for the keynotes' year data and its checks (``year_keynotes.py``; #104, D-217).
+"""Tests for the keynotes' year data and its checks (`year_keynotes.py`; #104, D-217).
 
-SESS-08, SPKR-04: the keynotes and panels are ``content.toml`` entries keyed by the
+SESS-08, SPKR-04: the keynotes and panels are `content.toml` entries keyed by the
 feed's session id, and the loader refuses one the year's snapshot lacks. The other
-loader rules are in ``tests/test_config.py``; the snapshot tool's check in
-``tests/test_update_snapshot.py``.
+loader rules are in `tests/test_config.py`; the snapshot tool's check in
+`tests/test_update_snapshot.py`.
 """
 
 import re
@@ -34,7 +34,7 @@ def data_dir(tmp_path: Path) -> Path:
 
 
 def edit(path: Path, old: str, new: str) -> None:
-    """Replace the first ``old`` in ``path`` with ``new``; ``old`` must be there."""
+    """Replace the first `old` in `path` with `new`; `old` must be there."""
     text = path.read_text(encoding="utf-8")
     assert old in text, f"{old!r} not in {path.name}"
     path.write_text(text.replace(old, new, 1), encoding="utf-8")

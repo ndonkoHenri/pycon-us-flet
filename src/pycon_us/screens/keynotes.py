@@ -1,12 +1,12 @@
-"""Keynotes (``/more/keynotes``): the conference's keynotes and panels, a card each.
+"""Keynotes (`/more/keynotes`): the conference's keynotes and panels, a card each.
 
-The Tracks hub opens the same page as its child, ``/more/tracks/keynotes``, so Back
+The Tracks hub opens the same page as its child, `/more/tracks/keynotes`, so Back
 returns to the hub (D-207); More keeps its own entry.
 
 One card per session, in the order they happen (SPKR-04, ux.md §5.11): each keynote of
 the feed, and each panel the year data names, with the people and words from
-``content.toml`` (D-217) and a time-and-room tile with the star
-(``screens.keynote_card``). The feed has no keynote speaker in its directory, so these
+`content.toml` (D-217) and a time-and-room tile with the star
+(`screens.keynote_card`). The feed has no keynote speaker in its directory, so these
 cards are where the app says who is on stage. Without data the sessions load and fail
 as the Schedule's do (ux.md §4.1).
 """
@@ -28,7 +28,7 @@ from pycon_us.year_keynotes import keynote_of
 
 TRACK = "Keynote"
 """The keynotes' track key, as feed processing names the feed's kind (DATA-14); the
-hub's Keynotes row is this track's (``year_tracks.HUB_PAGES``)."""
+hub's Keynotes row is this track's (`year_tracks.HUB_PAGES`)."""
 
 TITLE = "Keynotes"
 """The page's name: its app bar's title and its More row."""

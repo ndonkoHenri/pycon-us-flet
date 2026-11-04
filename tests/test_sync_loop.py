@@ -1,7 +1,7 @@
-"""The sync loop's life: ``SyncWorker.run()``, ``supervise()`` and its triggers (#692).
+"""The sync loop's life: `SyncWorker.run()`, `supervise()` and its triggers (#692).
 
-``run()`` is tested with a counting ``drain``, so only the loop's timing is under test;
-``supervise()`` runs over real ``Services`` whose client reaches the in-process mock,
+`run()` is tested with a counting `drain`, so only the loop's timing is under test;
+`supervise()` runs over real `Services` whose client reaches the in-process mock,
 and checks that exactly one worker sends while one should, and none otherwise.
 """
 
@@ -61,14 +61,14 @@ def svc(rig: Rig, storage: Storage, credentials: CredentialStorage) -> Services:
 
 
 async def until(condition: Callable[[], bool]) -> None:
-    """Let the loop run until ``condition`` holds, failing after a second."""
+    """Let the loop run until `condition` holds, failing after a second."""
     async with asyncio.timeout(1):
         while not condition():
             await asyncio.sleep(0.001)
 
 
 def workers() -> list[asyncio.Task[object]]:
-    """Every running ``SyncWorker.run()`` task."""
+    """Every running `SyncWorker.run()` task."""
     return [
         task
         for task in asyncio.all_tasks()
@@ -78,7 +78,7 @@ def workers() -> list[asyncio.Task[object]]:
 
 
 class Counted:
-    """A worker whose ``drain`` only counts, so the loop's timing is what is tested."""
+    """A worker whose `drain` only counts, so the loop's timing is what is tested."""
 
     def __init__(
         self,
@@ -140,7 +140,7 @@ async def test_run_waits_in_the_background_and_returns_when_closed(rig: Rig) -> 
 async def test_one_worker_sends_while_signed_in_and_none_after_sign_out(
     rig: Rig, svc: Services
 ) -> None:
-    """The supervisor starts one worker, stops it on sign-out and clears ``Staff``."""
+    """The supervisor starts one worker, stops it on sign-out and clears `Staff`."""
     await svc.private_api.connect(BASE_URL, 2026)
     await rig.sign_in("sponsor")
     rig.lead()
@@ -210,9 +210,9 @@ async def test_no_worker_without_a_client_or_while_expired(
 async def test_a_sign_out_without_a_worker_still_clears_staff(
     rig: Rig, svc: Services, connected: bool
 ) -> None:
-    """Expired or without a mock URL, ``Staff`` keeps its state until the sign-out.
+    """Expired or without a mock URL, `Staff` keeps its state until the sign-out.
 
-    Neither has a worker, so the sign-out changes no target; it clears ``Staff`` all
+    Neither has a worker, so the sign-out changes no target; it clears `Staff` all
     the same (D-407).
     """
     if connected:
@@ -234,7 +234,7 @@ async def test_a_sign_out_without_a_worker_still_clears_staff(
 
 
 def test_a_reconnection_wakes_the_loop_and_no_connection_does_not() -> None:
-    """Any connectivity but ``NONE`` sets the wake; ``NONE`` alone leaves it."""
+    """Any connectivity but `NONE` sets the wake; `NONE` alone leaves it."""
     wake = asyncio.Event()
     on_change = kick_on_reconnect(wake)
 
@@ -249,6 +249,6 @@ def test_a_reconnection_wakes_the_loop_and_no_connection_does_not() -> None:
 
 
 def test_closing_the_session_wakes_the_sync_loop(svc: Services) -> None:
-    """``Services.close()`` sets the wake, so a waiting loop sees ``closed`` (D-147)."""
+    """`Services.close()` sets the wake, so a waiting loop sees `closed` (D-147)."""
     svc.close()
     assert svc.sync_wake.is_set() and svc.closed.is_set()

@@ -1,10 +1,10 @@
-"""Tests for the Sprints query (``core/sprints.py``) and the Tracks hub's row (#106).
+"""Tests for the Sprints query (`core/sprints.py`) and the Tracks hub's row (#106).
 
 EVT-05..08, D-46. The query is pure and runs on the recorded 2026 feed (2025's has no
 sprint projects) and on projects built from it: the page's order, the all-words filter
 over text that never holds markup, and when a card cuts its description. The screen is
-``test_sprints_page.py``'s; both take the harness and lookups from
-``tests/sprints_page.py``.
+`test_sprints_page.py`'s; both take the harness and lookups from
+`tests/sprints_page.py`.
 """
 
 from dataclasses import replace

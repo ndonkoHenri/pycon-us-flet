@@ -5,8 +5,8 @@ key lands, and a check-in is decided against that session's list. Flet cancels a
 still running when the location changes, so out and back the state still holds the read
 from before the picker, made at the very location the screen is back at: only a token
 of the arrival tells it from the new one. Each test holds the reads at a gate in a real
-Flet session over the mock's own transport (``tests/door_rig.py``). The location and
-the route are set by hand, as ``tests/test_door_preload.py``'s Back tests do.
+Flet session over the mock's own transport (`tests/door_rig.py`). The location and
+the route are set by hand, as `tests/test_door_preload.py`'s Back tests do.
 """
 
 import asyncio
