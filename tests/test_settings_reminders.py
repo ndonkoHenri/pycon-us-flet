@@ -448,23 +448,50 @@ async def test_overlapping_switches_each_keep_the_others_change(
 ) -> None:
     """Two moments switched off before the first write ends both stay off (#706's review).
 
-    Each write is slow, so the second tap's handler starts while the first still
-    awaits storage: built from the same record, the later save restored the first.
+    The first write is held until the second tap's handler has started, so the two
+    overlap by construction: built from the same record, the later save restored the
+    first.
     """
     shown = await open_section(ReminderSettings(primer="accepted"))
     write = Storage.set
+    change = Prefs.change_reminders
+    first_write_begun, both_taps_begun, written = (asyncio.Event() for _ in range(3))
+    started = ended = 0
 
-    async def slow_set(self: Storage, pref: Pref[Any], value: Any) -> bool:
-        await asyncio.sleep(0.02)
-        return await write(self, pref, value)
+    async def counted(
+        self: Prefs,
+        storage: Storage,
+        change_to: Callable[[ReminderSettings], ReminderSettings],
+    ) -> bool:
+        nonlocal started
+        started += 1
+        if started == 2:
+            both_taps_begun.set()
+        return await change(self, storage, change_to)
 
-    monkeypatch.setattr(Storage, "set", slow_set)
-    await asyncio.gather(
-        toggle(shown, "settings.reminders.keynote"),
-        toggle(shown, "settings.reminders.lightning"),
-    )
-    await asyncio.sleep(0.1)  # both writes done
+    async def held_set(self: Storage, pref: Pref[Any], value: Any) -> bool:
+        nonlocal ended
+        if pref is REMINDERS:
+            first_write_begun.set()
+            await both_taps_begun.wait()  # neither write ends before both taps began
+        saved = await write(self, pref, value)
+        if pref is REMINDERS:
+            ended += 1
+            if ended == 2:
+                written.set()
+        return saved
+
+    monkeypatch.setattr(Prefs, "change_reminders", counted)
+    monkeypatch.setattr(Storage, "set", held_set)
+    first = asyncio.create_task(toggle(shown, "settings.reminders.keynote"))
+    await asyncio.wait_for(first_write_begun.wait(), 5)
+    assert not both_taps_begun.is_set()  # the first write is in flight, alone
+    second = asyncio.create_task(toggle(shown, "settings.reminders.lightning"))
+    await asyncio.wait_for(asyncio.gather(first, second, written.wait()), 5)
     await shown.settle()
+    assert (
+        started == 2
+    )  # the second tap's change began while the first's write was held
     expected = ReminderSettings(keynote=False, lightning=False, primer="accepted")
     assert await stored(shown) == expected
     assert shown.prefs.reminders == expected

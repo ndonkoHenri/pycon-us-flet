@@ -149,11 +149,14 @@ async def test_back_from_the_share_sheet_share_has_the_focus_again(
 
     monkeypatch.setattr(ft.IconButton, "focus", focus)
     detail = await render(TALK)
+    detail.share.gate = asyncio.Event()
     tapped = share_button(detail)
     click = asyncio.create_task(detail.click(tapped))
-    await asyncio.sleep(0.05)  # the sheet is up
-    detail.services.presence.leave()
-    await asyncio.sleep(0.05)
+    await detail.settle()
+    assert detail.share.texts and share_button(detail).disabled  # the sheet is up
+    detail.services.presence.leave()  # Android: the app goes under the sheet
+    detail.share.gate.set()  # the sheet closes
+    await detail.settle()
     detail.services.presence.come_back()
     await click
     current = share_button(detail)
