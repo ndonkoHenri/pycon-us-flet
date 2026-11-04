@@ -29,6 +29,7 @@ from pycon_us.state import use_conference
 from pycon_us.theme import use_tokens
 from pycon_us.ui.actions import action_row
 from pycon_us.ui.link_tile import LinkTile
+from pycon_us.ui.page_title import PAGE_TITLE_AT_LARGE_TEXT
 from pycon_us.ui.scaffold import AppScaffold, SectionHeader
 from pycon_us.ui.semantics import named
 from pycon_us.ui.share import (
@@ -70,7 +71,7 @@ def AboutApp() -> ft.View:
 
     info = svc.year.conference
     rows: list[ft.Control] = [
-        header(info.name),
+        header(info.name, large_text=prefs.time_above),
         ConferenceData(),
         SectionHeader("This build"),
         named(
@@ -262,11 +263,13 @@ def developer_row(unsaved: bool) -> ft.Control:
     )
 
 
-def header(conference: str) -> ft.Control:
+def header(conference: str, *, large_text: bool = False) -> ft.Control:
     """Return the page's opening: the app's name, what it is, and that it is not the PSF's.
 
     Args:
         conference: The conference's name, from the year data (D-35).
+        large_text: The text is large for the width (`Prefs.time_above`): the name
+            steps down (D-328).
     """
     return ft.Container(
         padding=ft.Padding.only(left=16, top=24, right=16, bottom=8),
@@ -283,7 +286,10 @@ def header(conference: str) -> ft.Control:
                     container=True,
                     content=ft.Text(
                         APP_NAME,
-                        theme_style=ft.TextThemeStyle.HEADLINE_SMALL,
+                        # "Companion" broke inside itself at iOS's largest text (#1095).
+                        theme_style=PAGE_TITLE_AT_LARGE_TEXT
+                        if large_text
+                        else ft.TextThemeStyle.HEADLINE_SMALL,
                         color=ft.Colors.ON_SURFACE,
                     ),
                 ),

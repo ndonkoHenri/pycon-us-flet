@@ -19,9 +19,11 @@ import pycon_us
 from pycon_us import prefs as prefs_module
 from pycon_us.prefs import Prefs
 from pycon_us.screens.about_app import UNLOCK_TAPS
+from pycon_us.screens.about_app import header as about_header
 from pycon_us.services import Services, errors
 from pycon_us.services import build as build_module
 from pycon_us.services.build import Build
+from pycon_us.ui.page_title import PAGE_TITLE_AT_LARGE_TEXT
 from tests import about_page
 from tests.about_page import (
     CONFERENCE_DATA,
@@ -230,3 +232,17 @@ async def test_an_unlock_that_cannot_be_saved_holds_for_the_session_and_says_so(
     row = developer_row(render())
     assert row is not None
     assert row.subtitle == "On until you close the app"
+
+
+def test_the_name_steps_down_at_large_text() -> None:
+    """Too wide at iOS's largest text, "Companion" broke inside itself (#1095, D-328)."""
+
+    def style(built: Any) -> Any:
+        """The name's type in a built header."""
+        return built.content.controls[0].content.theme_style
+
+    assert style(about_header("PyCon US 2026", large_text=True)) is (
+        PAGE_TITLE_AT_LARGE_TEXT
+    )
+    plain = about_header("PyCon US 2026")
+    assert style(plain) is ft.TextThemeStyle.HEADLINE_SMALL
