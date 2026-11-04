@@ -249,7 +249,7 @@ network doesn't.
 
 - **Sign in:** "Connected to the local mock server" over the form, then "Signed in as Dana Door". More now starts with
   Dana Door and Staff tools: Lead scanner, Door check, Swag pickup.
-- **Door check:** "Camera scanning isn't available in this build.", the chip "All about decorators · Wed 9:00 AM",
+- **Door check:** "This app can't scan with the camera yet. Type the badge code, or use a Bluetooth or USB scanner.", the chip "All about decorators · Wed 9:00 AM",
   "0 checked in" and "Ready, works offline · 2 attendees". The count reaches "2 checked in".
 - **T1:** a line per request, among them `GET /2026/api/v1/check_in/attendees_by_product_with_quantity/10/ 200`, then the
   redeem POSTs as the queue syncs. It never logs a key, a query or a body.

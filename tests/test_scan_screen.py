@@ -66,6 +66,14 @@ async def test_the_interim_camera_text_shows_while_the_build_has_no_scanner(
     assert shown.nodes("scan.entry") and shown.nodes("scan.keyboard")
 
 
+def test_the_camera_note_says_how_to_go_on_and_blames_no_build() -> None:
+    """The note names the two ways to scan and never a build's excuse (#1013)."""
+    assert "camera" in CAMERA_UNAVAILABLE
+    assert "Type the badge code" in CAMERA_UNAVAILABLE
+    assert "Bluetooth or USB scanner" in CAMERA_UNAVAILABLE
+    assert "build" not in CAMERA_UNAVAILABLE
+
+
 async def test_with_a_scanner_the_interim_text_is_gone(
     show: Show, monkeypatch: pytest.MonkeyPatch
 ) -> None:
