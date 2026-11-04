@@ -333,7 +333,7 @@ The workflow is written down in [`AGENTS.md`](AGENTS.md), the operating manual f
 
 | Risk | Signal | Mitigation |
 |---|---|---|
-| Flet 1.1.0 stays unreleased and `main` churns | Builds break after a pin bump | Pin one prerelease, every Flet package at that version, and bump it deliberately in its own PR (D-81, D-479). The owner fixes issues upstream, and S5 documents the setup. |
+| Flet 1.1.0 stays unreleased and `main` churns | Builds break after a pin bump | Pin one prerelease, every Flet package at that version, and bump it deliberately in its own PR (D-81, D-481). The owner fixes issues upstream, and S5 documents the setup. |
 | Packaged performance (cold start, list rendering in components mode) | S1 or S2 misses the targets | Measure first; then lazy imports, `.pyc`, rendering from cache first, memoised rows, simpler rows, and upstream fixes. |
 | Scheduled notifications are harder than expected (receivers, exact alarms, iOS limits) | S6 fails a case | An honest interim (D-60), a bounded plan, inexact alarms by default. Ship E3 only when it is solid. |
 | The scanner extension is unreliable (camera, permissions, `material_ui`) | S8 shows decode or permission issues | Manual and HID entry are first-class, so the staff tools never depend on E1. |

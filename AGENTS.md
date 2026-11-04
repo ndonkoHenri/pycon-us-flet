@@ -59,13 +59,14 @@ that date motivates us but never justifies cutting corners.
 - Docs live next to the code they describe and change in the **same PR** as the behaviour.
 - `docs/feature-matrix.md` is the source of truth for feature dispositions; edit it directly.
 - Code documentation: every module starts with a docstring saying what it is for; every public function and class
-  has a docstring (Google style); comments explain **why**, not what. Tests too: every test function's docstring says
+  has a docstring (Google style); comments explain **why**, not what. Markdown inline code in docstrings and comments is a
+  **single** backtick, never reST's double one (a pre-commit hook rejects it, D-480). Tests too: every test function's docstring says
   the behaviour it pins, and fixtures and test helpers have docstrings (D-253; `ruff` checks `tests/`).
 
 ## Working with Flet
 
 - The owner maintains Flet. Every Flet package comes from PyPI at one exact version, a prerelease until 1.1.0 is out
-  (D-479, `docs/development.md` §2.2), and no checkout of Flet is needed. The installed packages, by source or by
+  (D-481, `docs/development.md` §2.2), and no checkout of Flet is needed. The installed packages, by source or by
   introspection, are the source of truth for Flet APIs, instead of memory or old docs; the Dart is in the pub cache
   after a build, and §2.2 says how to clone the rest for reading. A second worktree of this repo gets its own pub
   cache: run `tools/setup_worktree.sh`, then `docs/development.md` §5.0 is the way to a device (D-176). Never edit
@@ -126,7 +127,7 @@ that date motivates us but never justifies cutting corners.
   docs and decision updates) and follow-ups. `gh pr create --body` doesn't fill it in: use its sections.
 - Add every PR to the Project: `gh pr create ... --project "PyCon US Flet"`.
 - **Checks run locally while the repo is private** (D-273): GitHub Actions run only by hand. The pre-push hook runs
-  `tools/check.sh --fast` on every push that changes more than Markdown; run the full `tools/check.sh` before you
+  `tools/check.sh --fast` (ruff, the pre-commit hooks, pyright) on every push that changes more than Markdown; run the full `tools/check.sh` before you
   mark a PR ready and list it in the PR; the merge gate runs before every merge (`tools/merge.sh`, below).
 - **Screenshots** (D-162): `gh` can't upload images, so they go to the orphan branch `pr-assets`, one folder per PR,
   and the PR embeds them. Look at every image first: no tokens, personal data, notifications or real badges (it all

@@ -68,7 +68,7 @@ The project file is the one in [`development.md`](development.md) §3; these are
 ```toml
 # pyproject.toml (excerpt)
 [dependency-groups]
-dev = [                      # host only; every flet-* pinned to one version (development.md §2.2, D-479)
+dev = [                      # host only; every flet-* pinned to one version (development.md §2.2, D-481)
     "flet-cli==1.1.0.dev4",  # flet run / build / test; without it the `flet` script pip-installs a PyPI flet-cli at runtime
     "flet-web==1.1.0.dev4",
     "flet-desktop==1.1.0.dev4",
@@ -77,6 +77,7 @@ dev = [                      # host only; every flet-* pinned to one version (de
     "pytest",
     "hypothesis",
     "ruff",
+    "pre-commit",                     # the hooks of .pre-commit-config.yaml (D-480); tools/check.sh runs them
     "pyright",
     "segno",                 # the mock-badge sheet's QR codes (D-391); never bundled
     "icalendar",             # reads core/ics.py's files back (D-268); never bundled
@@ -950,7 +951,7 @@ Testing gates per phase, from PLAN §7's exit criteria (the milestone descriptio
 ## 12. Checks and CI wiring (D-84, D-273)
 
 - **Local checks while the repo is private** (D-273; development.md §7): `tools/check.sh` runs `ci.yml`'s steps on the Mac, `--fast` all but pytest. The pre-push hook runs the fast checks on every push that changes more than Markdown; the author runs the full checks before marking a PR ready; the merge gate (`tools/gate.sh <pr> [<pr>...]`) runs them on the PRs merged onto the latest `main` before every merge and posts the result on each PR. Nothing runs them on Linux until P4. The three workflows below run only by hand (`gh workflow run <file> --ref <branch>`) until the PR that makes the repo public brings their triggers back.
-- **`ci.yml`** (by hand while the repo is private; every PR and push to `main` once it is public; Linux): `uv sync --locked`, `ruff check`, `ruff format --check`, `pyright`, `pytest --hypothesis-profile=ci` (hypothesis's built-in profile, extended in `tests/conftest.py`, §3.1). Target under 2 minutes. UI flows are excluded by `addopts = ["--ignore=tests/ui"]` (§2).
+- **`ci.yml`** (by hand while the repo is private; every PR and push to `main` once it is public; Linux): `uv sync --locked`, `ruff check`, `ruff format --check`, the pre-commit hooks (D-480), `pyright`, `pytest --hypothesis-profile=ci` (hypothesis's built-in profile, extended in `tests/conftest.py`, §3.1). Target under 2 minutes. UI flows are excluded by `addopts = ["--ignore=tests/ui"]` (§2).
 - **`feed-check.yml`** (by hand while the repo is private, with `uv run python -m tools.check_feed` locally; weekly once it is public): `tools/check_feed.py` runs our parser and the invariants on the current year's public feed, and says whether next year's feed answers yet (a 404 is "not published yet", never a failure). Keys the recorded feeds lack are printed, not failed. Its tests serve the recorded feed, broken copies of it and HTTP errors through `httpx.MockTransport` (`tests/test_check_feed.py`).
 - **`build-android.yml`** (manual; `v*` tags too once the repo is public): a debug-signed APK artifact; while the repo is private the quick-look APK is usually built locally. iOS builds and all device work stay local.
 - **Not in CI:** flows, goldens, device checks, performance. Spike S9 (PLAN §8; #363, label `test`, P2 at the earliest; it needs GitHub's Linux runners, so it waits until the repo is public, D-273) tries `flet test linux` on `ubuntu-latest` under `xvfb-run` with a phone-sized window. Once it has run green for two weeks, it is proposed as a separate workflow through a `needs-decision` issue, since D-84 fixes three workflows and keeps `ci.yml` under 2 minutes; it never goes into `ci.yml` (D-78).
