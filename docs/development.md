@@ -876,7 +876,7 @@ Conventions in every workflow:
 
 **Triggers and concurrency.** While the repo is private it runs only by hand (`workflow_dispatch`, D-273): Actions › CI › Run workflow, or `gh workflow run ci.yml --ref <branch>`; each run has a concurrency group of its own (the run id). The PR that makes the repo public brings back its triggers, every `pull_request` and every push to `main`. Then the concurrency group is the PR number, so a new push to a PR cancels that PR's older run. A push to `main` gets a group of its own (the run id): in a shared group a newer run would replace a pending one, even with `cancel-in-progress: false`. So every commit on `main` keeps its own result.
 
-The target is under 5 minutes on the private repo's 2-vCPU runner (D-483). The test step is 90% of the job and no test is slow, so it runs in parallel (`-n auto`). The time-zone tests run under two machine time zones through a pytest fixture, not a CI matrix (D-43). UI flows never join this job (D-78). Spike S9 said no to `flet test linux` (D-492, [`spikes/09-flet-test-linux.md`](spikes/09-flet-test-linux.md)); the road it found is `flet test android` on a KVM emulator, a separate workflow to try after the flip (#1075).
+The target is under 5 minutes (D-483). On the private repo's 2-vCPU runner a job took 4 min 31 s and 7 min 14 s, the same steps on a runner that happened to be slower; the first number to compare is the public repo's 4-vCPU runner, after the flip. The test step is 90% of the job and no test is slow, so it runs in parallel (`-n auto`). The time-zone tests run under two machine time zones through a pytest fixture, not a CI matrix (D-43). UI flows never join this job (D-78). Spike S9 said no to `flet test linux` (D-492, [`spikes/09-flet-test-linux.md`](spikes/09-flet-test-linux.md)); the road it found is `flet test android` on a KVM emulator, a separate workflow to try after the flip (#1075).
 
 ### 7.3 `.github/workflows/feed-check.yml`: by hand while the repo is private
 
@@ -938,12 +938,13 @@ When 1.1.0 is on PyPI and the Flet checkout goes, the action is worth another lo
 - Installing over an earlier CI build, or over a local build, therefore fails with `INSTALL_FAILED_UPDATE_INCOMPATIBLE`. Run `adb uninstall io.github.ndonkohenri.confcompanion` first, which loses the app's data.
 - Builds you want to keep updating come from §8.1 instead.
 
-### 7.5 Not in CI: iOS
+### 7.5 iOS: a simulator build by hand, and builds for people on the Mac
 
-iOS builds run on the owner's Mac (D-84). Signing material never enters CI (D-86).
+[`.github/workflows/build-ios-simulator.yml`](../.github/workflows/build-ios-simulator.yml) (`gh workflow run build-ios-simulator.yml --ref <branch>`) runs `flet build ios-simulator` on `macos-latest` with no signing (D-490): a check that the native config and the pins still build, not an app anyone installs. It isn't a required check (§7.2). While the repo is private it runs only by hand, since macOS minutes count ten times; the PR that makes the repo public runs it on PRs that touch native config or a pin. **It hasn't run on Actions yet:** five tries on 2026-11-04 (four on `macos-latest`, one on `macos-15-intel`) waited 15 minutes each and ended with "The job was not acquired by Runner of type hosted", beside GitHub's note that macOS arm64 runners are short of capacity. No minutes were spent. The same commands passed on the Mac, with this repo's pub cache, in 1 min 53 s (Xcode 27.2); a runner's Xcode is the part still untested.
 
-**If that ever changes** (open a `needs-decision` issue that supersedes D-84 and D-86):
-- **The cheap step** is a manual `ios-simulator` job on `macos-latest`. It needs no signing, so it is a compile check only. Each run uses a sizeable slice of the month's macOS allowance.
+Builds for people run on the owner's Mac (D-84). Signing material never enters CI (D-86).
+
+**If signing in CI is ever wanted** (open a `needs-decision` issue that supersedes D-86):
 - **A TestFlight job** follows `DOCS/publish/ios.md` "Building and signing in CI":
   - repository secrets `IOS_CERTIFICATE_P12` and `IOS_CERTIFICATE_PASSWORD` (the owner's Apple Distribution certificate);
   - `APPLE_API_ISSUER`, `APPLE_API_KEY_ID` and `APPLE_API_KEY_P8` (an App Store Connect API key with the App Manager role, used to download the profile and to upload);
@@ -1037,6 +1038,10 @@ The OSV database covers few Dart packages, so "no issues found" there says less 
 **Not covered:** the Android and iOS native dependencies (Gradle, CocoaPods) of a build; commits that a force-push left unreachable from any ref (GitHub keeps them for a while, and no one can list them); old versions of edited comments; and the logs of past Actions runs, which hold no repository secrets since there are none (D-86).
 
 ---
+
+### 7.7 `.github/workflows/maestro-android.yml`: the smoke flows on an emulator
+
+[`.github/workflows/maestro-android.yml`](../.github/workflows/maestro-android.yml) (`gh workflow run maestro-android.yml --ref <branch>`) builds a release APK for x86_64, boots an API 34 emulator with KVM through `reactivecircus/android-emulator-runner`, and runs the `smoke` flows and `coc_capture` with the local mock (D-252, D-490). Local Maestro only, pinned by version and checksum: never Maestro Cloud or a login. It isn't a required check (§7.2). **Measured** on the private repo's 2 vCPUs and 7.9 GB, two green runs (41853214463, 41869169965): 34 and 27 minutes in all; the build 15 and 11 minutes, the emulator's boot 70 and 50 s with `/dev/kvm`, `drill_back` 4 min 33 s and 3 min 52 s, `star_undo` 4 min 58 s and 3 min 58 s, where a quiet Mac takes 1 to 2 minutes each. The build leaves 5.6 GB free and the emulator wants 7.4 GB for its data, so the job stops Gradle's daemons and drops the build's folders first (a daemon still writing failed `rm` once). That's too slow for every PR, and two runs say nothing about flakiness, so it runs on pushes to `main` and by hand: a running one is never cancelled, and a newer push replaces only a pending one. It's the first check that runs a release build at all in CI, so a failure here is worth a look even when `ci.yml` is green.
 
 ## 8. Signing and distribution (D-85, prov. O-5)
 

@@ -1,0 +1,111 @@
+# The Maestro smoke flows on an Android emulator: a release APK, the repo's own flows and the local mock (D-252, D-490,
+# docs/development.md §7.7). Local Maestro only: never Maestro Cloud or a login. It isn't a required check (§7.2).
+# While the repo is private it runs only by hand (D-273): `gh workflow run maestro-android.yml --ref <branch>`.
+name: Maestro Android
+
+on:
+  workflow_dispatch:        # manual runs only while the repo is private (D-273)
+
+permissions:
+  contents: read
+
+# One run at a time per ref, and a running one is never cancelled: a new one replaces only a pending one, so on a busy
+# main each run still finishes and the latest push gets one.
+concurrency:
+  group: maestro-android-${{ github.ref }}
+  cancel-in-progress: false
+
+env:
+  UV_LOCKED: "1"            # every uv command fails if uv.lock does not match pyproject.toml
+  MAESTRO_VERSION: "2.11.0"
+  MAESTRO_SHA256: "5384593cb4e7a106489e75a821d157dd43f4e438df6bc308b72e82c685e1283a"
+  MAESTRO_CLI_NO_ANALYTICS: "1"
+
+jobs:
+  smoke:
+    name: Smoke flows on an emulator
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - name: Check out the app
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Set up uv
+        uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2 # v10.3.3
+        with:
+          version: "0.12.x"         # the uv_build line in pyproject.toml; bump both together
+          enable-cache: true
+      - name: Install
+        run: uv sync --locked
+
+      # The build fills about 11 GB and the emulator's image and data several more (§7.4).
+      - name: Free disk space
+        run: sudo rm -rf /usr/share/dotnet /usr/local/.ghcup /opt/hostedtoolcache/CodeQL
+
+      # x86_64, the emulator's ABI here, where a build for people is arm64-v8a (D-106).
+      - name: Build the release APK
+        env:
+          FLET_CLI_NO_RICH_OUTPUT: "1"
+        run: uv run flet build apk --arch x86_64 --yes -v
+
+      # The emulator wants 7.4 GB for its data, and the build leaves 5.6 GB free. Only the APK is needed from here on.
+      # Gradle's daemons go first: one still writing made `rm` fail with "Directory not empty".
+      - name: Drop what the build left
+        run: |
+          pkill -f 'GradleDaemon|KotlinCompileDaemon' || true
+          while pgrep -f 'GradleDaemon|KotlinCompileDaemon' > /dev/null; do sleep 1; done
+          rm -rf build/flutter build/flutter-packages* build/site-packages ~/.gradle ~/flutter ~/.pub-cache
+
+      - name: Install Maestro
+        run: |
+          curl -fsSL -o "$RUNNER_TEMP/maestro.zip" \
+            "https://github.com/mobile-dev-inc/Maestro/releases/download/cli-$MAESTRO_VERSION/maestro.zip"
+          echo "$MAESTRO_SHA256  $RUNNER_TEMP/maestro.zip" | sha256sum -c -
+          unzip -q "$RUNNER_TEMP/maestro.zip" -d "$HOME"
+          echo "$HOME/maestro/bin" >> "$GITHUB_PATH"
+
+      # It keeps running until the job ends. Fake data only: the mock's seed (docs/development.md §6).
+      - name: Start the local mock
+        id: mock
+        run: |
+          uv run python -m tools.mock_api.own start
+          echo "url=$(uv run python -m tools.mock_api.own url android)" >> "$GITHUB_OUTPUT"
+
+      - name: Let the emulator use KVM
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' \
+            | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+          ls -l /dev/kvm
+
+      # Animations stay on: Maestro waits for them (maestro/README.md). The action runs each line on its own and stops
+      # at the first that fails.
+      - name: Run the flows
+        uses: reactivecircus/android-emulator-runner@a421e43855164a8197daf9d8d40fe71c6996bb0d # v2.38.0
+        env:
+          MOCK_URL: ${{ steps.mock.outputs.url }}
+        with:
+          api-level: 34
+          target: google_apis
+          arch: x86_64
+          profile: pixel_7
+          ram-size: 4096M
+          disable-animations: false
+          emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -no-snapshot-save
+          script: |
+            adb shell settings put secure show_ime_with_hard_keyboard 0
+            adb install -r build/apk/pycon-us.apk
+            maestro test --include-tags=smoke --debug-output build/maestro/smoke --flatten-debug-output maestro
+            maestro test -e MOCK_URL="$MOCK_URL" --debug-output build/maestro/staff --flatten-debug-output maestro/journeys/coc_capture.yaml
+
+      - name: Upload what Maestro saw
+        if: failure()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: maestro-debug
+          path: build/maestro
+          retention-days: 7         # artifact storage is small on a private Free repo (§7.1)
+          if-no-files-found: ignore
