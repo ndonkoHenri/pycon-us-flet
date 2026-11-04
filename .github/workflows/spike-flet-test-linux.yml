@@ -2,8 +2,6 @@
 name: Spike flet test linux
 
 on:
-  push:
-    branches: [test/363-flet-test-linux]
   workflow_dispatch:
 
 permissions:
