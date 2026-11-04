@@ -114,7 +114,27 @@ target-version = "py314"              # ruff also skips git-ignored paths (exclu
 extend-exclude = ["*.md"]             # code sketches in the docs are illustrations, not our code
 
 [tool.ruff.lint]
-extend-select = ["I", "UP", "B", "SIM", "D", "DTZ"]   # D: docstrings (D-74); DTZ: no naive datetimes (D-43)
+# ruff 0.17's own default set already holds F (pyflakes), the dangerous B, S and BLE rules, ASYNC and PLE; extend-select
+# adds to it. One comment per family says why it is on (D-480, #1028); the rules left off are listed under `ignore`.
+extend-select = [
+    "I",      # isort: imports in one order
+    "UP",     # pyupgrade: the syntax of Python 3.14
+    "B",      # bugbear: likely bugs
+    "SIM",    # simplify
+    "D",      # docstrings (D-74)
+    "DTZ",    # no naive datetimes (D-43)
+    "W",      # pycodestyle warnings
+    "PIE",    # misc. clutter: unneeded pass, range start, dict spread
+    "RET",    # return statements: no else after return, no unneeded variable
+    "LOG",    # logging: use of the logging module itself
+    "G",      # logging calls: lazy %-formatting, no f-strings in the message
+    "TID",    # tidy imports: no relative imports from a parent
+    "ICN",    # import conventions: `import flet as ft`
+    "ISC",    # implicit string concatenation: no accidental joins in a list
+    "RSE",    # raise: no parentheses on a bare class
+    "FURB",   # refurb: modern idioms of the standard library
+    "FLY",    # flynt: no `"".join` of constants where an f-string reads better
+]
 
 [tool.ruff.lint.pydocstyle]
 convention = "google"
