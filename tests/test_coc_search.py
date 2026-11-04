@@ -344,12 +344,14 @@ async def test_the_rows_wait_for_typing_to_pause(
     show: Show, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """D-46's debounce: the rows follow the text only once typing has paused."""
-    monkeypatch.setattr(coc_search, "DEBOUNCE_SECONDS", 0.05)
+    # Long enough that a busy machine doesn't reach it before the first look: at 0.05 s, one
+    # parallel run in five saw the rows already there.
+    monkeypatch.setattr(coc_search, "DEBOUNCE_SECONDS", 1.0)
     shown = await show()
     await open_find(shown)
     await search_for(shown, "linus")
     assert rows(shown) == [] and BEFORE in sheet_texts(shown)  # still typing
-    await asyncio.sleep(0.1)
+    await asyncio.sleep(1.1)
     await shown.settle()
     assert rows(shown) == ["Linus Placeholder, badge Linus, 3 incidents on record"]
 
