@@ -23,7 +23,6 @@ tags:
     element:
       id: now.spotlight
     direction: DOWN
-    timeout: 120000
     centerElement: true
     timeout: 120000  # every row is two or three times as tall
 - takeScreenshot: large-text-now-spotlight

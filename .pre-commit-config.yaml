@@ -1,0 +1,57 @@
+# Pre-commit hooks (D-480). One config, two uses:
+#   - stage `manual`: the hook set that `tools/check.sh` runs (so the pre-push hook, the merge gate and, with the repo
+#     public, ci.yml all run the same hooks): `uv run pre-commit run --all-files --hook-stage manual`.
+#   - stage `pre-commit`: the same hooks plus the ones that only make sense at commit time (ruff, which check.sh runs
+#     as steps of its own; gitleaks, which scans the staged diff; no commits on main). Opt in with
+#     `git config hooks.precommit true` (docs/development.md §7); `pre-commit install` refuses while core.hooksPath is set.
+default_stages: [pre-commit, manual]
+# Files that are data and are kept byte for byte: icons, licence texts, feed fixtures, the quoted raw research.
+exclude: ^(src/assets/|src/pycon_us/licence_texts/|tests/fixtures/|docs/icon-options/|docs/research/)
+repos:
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v6.0.0
+    hooks:
+      - id: trailing-whitespace
+        args: [--markdown-linebreak-ext=md]   # two trailing spaces are a hard break there
+      - id: end-of-file-fixer
+      - id: check-yaml
+        args: [--allow-multiple-documents]   # Maestro flows are a config document, ---, then the steps
+      - id: check-toml
+      - id: check-merge-conflict
+      - id: check-added-large-files
+        args: [--maxkb=1000]
+      - id: no-commit-to-branch
+        args: [--branch, main]
+        stages: [pre-commit]
+
+  - repo: https://github.com/rhysd/actionlint
+    rev: v1.7.12
+    hooks:
+      - id: actionlint
+
+  - repo: https://github.com/gitleaks/gitleaks
+    rev: v8.30.0
+    hooks:
+      - id: gitleaks   # reads .gitleaks.toml
+        stages: [pre-commit]
+
+  - repo: local
+    hooks:
+      # ruff comes from uv.lock (D-75), not from a `rev` here: one pin to bump, and the version CI and check.sh use.
+      - id: ruff-check
+        name: ruff check
+        entry: uv run ruff check
+        language: system
+        types: [python]
+        stages: [pre-commit]
+      - id: ruff-format
+        name: ruff format
+        entry: uv run ruff format
+        language: system
+        types: [python]
+        stages: [pre-commit]
+      - id: no-double-backticks
+        name: no reST double backticks in comments and docstrings
+        entry: uv run python -m tools.check_backticks
+        language: system
+        types: [python]

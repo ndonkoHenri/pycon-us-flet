@@ -96,8 +96,10 @@ tools/check.sh --fast
 uv run pytest tests/test_about.py
 ```
 
-The pre-push hook is the `git config core.hooksPath .githooks` line in §5.1. Run the full checks before you ask for
-a review. [`docs/development.md` §7](docs/development.md#7-checks-and-github-actions-d-84-d-273) has the details.
+The pre-push hook is the `git config core.hooksPath .githooks` line in §5.1. `tools/check.sh` also runs the pre-commit
+hooks of `.pre-commit-config.yaml` (file hygiene, `actionlint`, and a check that Python comments and docstrings use single
+backticks, not reST's double ones). To run them on every commit too, `git config hooks.precommit true` (D-480). Run the full
+checks before you ask for a review. [`docs/development.md` §7](docs/development.md#7-checks-and-github-actions-d-84-d-273) has the details.
 
 ## Branches and commits
 

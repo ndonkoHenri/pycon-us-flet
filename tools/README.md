@@ -7,7 +7,8 @@ What's here, and when you'd reach for it. Run from the repo's root; each script'
 | Tool | When |
 |---|---|
 | `setup_worktree.sh` | A fresh worktree: Flet clone, venv, pub cache, hook (`docs/development.md` §5.8) |
-| `check.sh` | The checks: `--fast` before a push, in full before a PR is ready |
+| `check.sh` | The checks: `--fast` before a push, in full before a PR is ready; it runs the `.pre-commit-config.yaml` hooks too |
+| `check_backticks.py` | Reject reST double backticks in Python comments and docstrings (a pre-commit hook; D-480) |
 | `merge.sh` | Gate a PR and merge it. Don't pipe the gate yourself (AGENTS.md) |
 | `gate.sh` | The gate alone: what `merge.sh` runs |
 | `pr_shots.sh` | Upload a PR's screenshots to `pr-assets` and print the Markdown |

@@ -37,7 +37,7 @@ if [ ! -d .flet-src ]; then
     exit 1
 fi
 
-if [ "$fast" = 1 ]; then total=4; else total=5; fi
+if [ "$fast" = 1 ]; then total=5; else total=6; fi
 n=0
 
 step() {
@@ -53,6 +53,9 @@ step() {
 step uv sync --locked -q
 step uv run ruff check
 step uv run ruff format --check
+# The hooks of .pre-commit-config.yaml that are not commit-time only (stage `manual`, D-480): file hygiene, YAML and
+# TOML syntax, actionlint and the double-backtick guard. A fixer that changes a file fails the step.
+step uv run pre-commit run --all-files --hook-stage manual --show-diff-on-failure
 step uv run pyright
 if [ "$fast" = 0 ]; then
     step uv run pytest -q --hypothesis-profile=ci  # hypothesis's built-in profile, 200 examples via tests/conftest.py

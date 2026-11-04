@@ -180,7 +180,7 @@ D-80's targets are unchanged: the emulator numbers are a regression signal (D-10
   - the feed cache is rebuilt from the bundled snapshot on the next start (D-39);
   - `changes-<year>.json` loses only the change history;
   - `outbox.db` (P3) can hold unsynced staff actions (D-56).
-  
+
   So a pin bump that moves the directory needs a migration that finds the old location and moves the outbox before anything writes the new one. The bump's smoke test (development.md §2.2) installs over the previous build and checks that the launch counter, the cache and the outbox survive.
 
 ---
