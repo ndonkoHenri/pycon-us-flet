@@ -101,8 +101,9 @@ These rules apply to every screen, and every UI change goes through the
 - **Motion:** the app honours the OS's reduced-motion setting.
 - **Colour:** it is never the only signal; badges have text, and outcomes have an icon and a word.
 
-Every screen has been audited on an Android emulator with TalkBack's output read by a machine, at 200 % text and in the
-four colour schemes, and on an iOS simulator at the largest text: the results and what they leave out are in
+The app's screens have been audited on an Android emulator with TalkBack's output read by a machine, and nearly all of
+them photographed at 200 % text and in the four colour schemes, and on an iOS simulator at the largest text. The
+results, and the few screens and modes they leave out, are in
 [`docs/testing-and-quality.md`](docs/testing-and-quality.md#74-the-p4-audits-results-837). No person has listened to it
 yet, and VoiceOver needs a real iPhone, so those checks are still to come. Limits that come from Flet are listed in
 [`docs/flet-gaps-and-extensions.md`](docs/flet-gaps-and-extensions.md).
