@@ -1,0 +1,7 @@
+# gitleaks (D-479): the default rules, plus the one place that is made of fake secrets on purpose.
+[extend]
+useDefault = true
+
+[[allowlists]]
+description = "Ionic's recorded request signatures: the test key `test-key-0001` and secret `s3cr3t`, not real ones"
+paths = ['''tests/fixtures/ionic/signing\.json''']

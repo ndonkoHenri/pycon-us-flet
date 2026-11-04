@@ -1,0 +1,16 @@
+#!/bin/sh
+# Git's pre-commit hook (D-479), off unless you turn it on: `git config hooks.precommit true` (this clone, every
+# worktree of it). It runs the hooks of .pre-commit-config.yaml on the staged files, the ones `tools/check.sh` runs
+# plus ruff, the secret scan and the no-commits-on-main guard. `pre-commit install` refuses to run while
+# core.hooksPath is set (D-273), so this file stands in for the hook it would write.
+# Skip it for one commit with `git commit --no-verify`.
+set -eu
+
+[ "$(git config --type=bool --get hooks.precommit || echo false)" = true ] || exit 0
+
+cd "$(git rev-parse --show-toplevel)"
+if [ ! -f .pre-commit-config.yaml ]; then  # a branch from before D-479 has no hooks to run
+    exit 0
+fi
+export UV_LOCKED=1  # as in tools/check.sh
+exec uv run pre-commit run --hook-stage pre-commit

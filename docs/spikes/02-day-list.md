@@ -16,7 +16,7 @@ Can the busiest day of the 2026 schedule render, and react to a star tap, a keys
   - each day switch drops about two frames as the new page builds every slot: the worst frame of a switch was a median 49 ms (up to 50 ms with a `ListView`, 70 ms with a `Column`), against at most 24 ms for a lazy list;
   - a filter keystroke's list change shows 0-82 ms after the key, against 0-16 ms lazy (Python's share is the same 3 ms);
   - a `Column` also stalls for about 220 ms when a fling hits either end of the day (Android's stretch overscroll on one huge child); the fully built `ListView` does not.
-  
+
   So day lists stay lazy `ListView`s, and only today's list, the one the jump targets, gets a `cache_extent` that builds the whole day (D-154). Measured that way (`tree/today/deferred`, Friday standing in for today): the jump on the shown list landed 3 of 3 at both sizes, only switches to today dropped frames (worst 33-50 ms; 18-20 ms to the other days), and flings stayed smooth (worst frame 29 ms).
 - **Cold start** (D-156): rendering all five days in the first render costs **150 ms** more than the shown day alone: the cached content appeared at 970 ms against 815 ms (log proxy, D-112), and Python's first render took 245 ms against 105 ms. Rendering the other days in a second pass after the first one has been applied keeps the short start (815 ms, 865 at 200 %) and leaves no empty page when swiping to another day. The adopted design (`tree/today/deferred`) read 886 ms in a later window; the difference is the window, not the list (see the reading below).
 - **Scrolling** (D-80): flinging through the day showed no jank in any lazy or fully built `ListView`: 0-4 of about 890 frames over 25 ms, none over 36 ms.
