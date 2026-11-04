@@ -53,7 +53,7 @@ step() {
 step uv sync --locked -q
 step uv run ruff check
 step uv run ruff format --check
-# The hooks of .pre-commit-config.yaml that are not commit-time only (stage `manual`, D-479): file hygiene, YAML and
+# The hooks of .pre-commit-config.yaml that are not commit-time only (stage `manual`, D-480): file hygiene, YAML and
 # TOML syntax, actionlint and the double-backtick guard. A fixer that changes a file fails the step.
 step uv run pre-commit run --all-files --hook-stage manual --show-diff-on-failure
 step uv run pyright

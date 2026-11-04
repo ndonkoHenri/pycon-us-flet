@@ -1,4 +1,4 @@
-# gitleaks (D-479): the default rules, plus the one place that is made of fake secrets on purpose.
+# gitleaks (D-480): the default rules, plus the one place that is made of fake secrets on purpose.
 [extend]
 useDefault = true
 

@@ -1,4 +1,4 @@
-# Pre-commit hooks (D-479). One config, two uses:
+# Pre-commit hooks (D-480). One config, two uses:
 #   - stage `manual`: the hook set that `tools/check.sh` runs (so the pre-push hook, the merge gate and, with the repo
 #     public, ci.yml all run the same hooks): `uv run pre-commit run --all-files --hook-stage manual`.
 #   - stage `pre-commit`: the same hooks plus the ones that only make sense at commit time (ruff, which check.sh runs

@@ -60,7 +60,7 @@ that date motivates us but never justifies cutting corners.
 - `docs/feature-matrix.md` is the source of truth for feature dispositions; edit it directly.
 - Code documentation: every module starts with a docstring saying what it is for; every public function and class
   has a docstring (Google style); comments explain **why**, not what. Markdown inline code in docstrings and comments is a
-  **single** backtick, never reST's double one (a pre-commit hook rejects it, D-479). Tests too: every test function's docstring says
+  **single** backtick, never reST's double one (a pre-commit hook rejects it, D-480). Tests too: every test function's docstring says
   the behaviour it pins, and fixtures and test helpers have docstrings (D-253; `ruff` checks `tests/`).
 
 ## Working with Flet

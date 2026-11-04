@@ -1,4 +1,4 @@
-"""Tests for `tools/check_backticks.py`, the guard against reST double backticks (D-479, #1028).
+"""Tests for `tools/check_backticks.py`, the guard against reST double backticks (D-480, #1028).
 
 The last test runs the check on the repo's own Python files, so the local checks fail on a
 span that slips back in; the others pin what is flagged and what is deliberately left alone.

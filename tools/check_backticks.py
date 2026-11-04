@@ -1,4 +1,4 @@
-"""Reject reST double-backtick spans in Python comments and docstrings (D-479, #1028).
+"""Reject reST double-backtick spans in Python comments and docstrings (D-480, #1028).
 
 The house style is Markdown's single backtick, so a span written as two backticks, a
 word and two backticks is a slip from reST. From the repo root:
