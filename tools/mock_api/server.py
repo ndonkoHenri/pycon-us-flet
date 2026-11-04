@@ -100,7 +100,7 @@ class MockRequestHandler(BaseHTTPRequestHandler):
         path = loggable(getattr(self, "path", "") or "-")
         self.log_message("%s %s %s", method, path, code)
 
-    def log_error(self, format: str, *args: object) -> None:
+    def log_error(self, format: str, *args: object) -> None:  # noqa: A002 (the stdlib handler's own signature)
         """Log nothing: the error's response logs its own line (`log_request`).
 
         Args:

@@ -128,6 +128,11 @@ extend-select = [
     "C4",     # comprehensions: no needless list() or dict() around one
     "PTH",    # pathlib over os.path and open()
     "PERF",   # performance: a loop that is one extend() or comprehension
+    "T20",    # no print() in the app (tools print by design)
+    "A",      # builtins: a name that shadows one
+    "N",      # PEP 8 naming
+    "ARG",    # unused arguments
+    "ASYNC",  # async functions: blocking calls and busy waits
     "RUF",    # ruff's own: unused noqa, a task nobody holds, regex patterns that are not raw
     "PIE",    # misc. clutter: unneeded pass, range start, dict spread
     "RET",    # return statements: no else after return, no unneeded variable
@@ -142,6 +147,8 @@ extend-select = [
 ]
 
 ignore = [
+    "ASYNC109", # an async helper that takes a `timeout` budget as its API; asyncio.timeout() inside would hide it from callers
+    "N802",   # the Flet idiom: an `@ft.component` function is named like the control it returns, in CamelCase
     "RUF001", # ambiguous Unicode in strings, docstrings and comments: the text is deliberately typographic (… – × ’)
     "RUF002",
     "RUF003",
@@ -152,7 +159,12 @@ ignore = [
 max-line-length = 120             # code is formatted at ruff's 88; docstrings and comments run to 120
 
 [tool.ruff.lint.per-file-ignores]
-"docs/spikes/**" = ["E402", "E501", "PTH", "PERF"]   # frozen spike scripts: sys.path set up before their imports; one long line
+"docs/spikes/**" = ["E402", "E501", "PTH", "PERF", "T20", "A", "N", "ARG", "ASYNC"]   # frozen spike scripts
+"tools/**" = ["T20", "ARG"]                      # command-line scripts print by design; ARG: handler signatures
+"tools/mock_api/server.py" = ["N815"]            # BaseHTTPRequestHandler wants do_GET, do_POST ...
+"tools/mock_api/state.py" = ["N818"]             # `Refused` is the mock's vocabulary: 59 uses, docstrings read "Refused: 404 ..."
+"tests/**" = ["A002", "ARG", "ASYNC110", "ASYNC240"]   # fakes copy the signatures they stand in for (id, format); fixtures; polling helpers, tmp_path
+"tests/ui/**" = ["T20"]                          # device flows report on stdout   # frozen spike scripts: sys.path set up before their imports; one long line
 
 [tool.ruff.lint.pydocstyle]
 convention = "google"

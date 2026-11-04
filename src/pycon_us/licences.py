@@ -71,9 +71,9 @@ NOTICE = Component(
 """The repository's `NOTICE`, which Apache 2.0 asks a build to carry (D-87)."""
 
 
-def _package(key: str, name: str, licence: str, copyright: str) -> Component:
+def _package(key: str, name: str, licence: str, notice: str) -> Component:
     """Return a Python package's entry: its `uv.lock` name is `key`."""
-    return Component(key, name, licence, copyright, f"{key}.txt", package=key)
+    return Component(key, name, licence, notice, f"{key}.txt", package=key)
 
 
 GROUPS = (

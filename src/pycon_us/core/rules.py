@@ -201,7 +201,7 @@ def _collapsed_row(slots: Sequence[Slot], settings: FeedSettings) -> Session:
         room = _hall(next((r for r in later if r), ""), settings.hall_prefix)
     start = min((slot.start for slot in slots), key=instant)  # #535
     return _session(
-        id=f"{first.kind}-{room}-{start.astimezone(zone).isoformat()}",
+        session_id=f"{first.kind}-{room}-{start.astimezone(zone).isoformat()}",
         name=name,
         kind=first.kind,
         location=room,
@@ -250,7 +250,7 @@ def slot_session(
     )
     linked = (speaker_ids_by_name.get(name) for name in slot.authors)
     return _session(
-        id=slot.id,
+        session_id=slot.id,
         name=title.name,
         kind=slot.kind,
         location=location,
@@ -278,7 +278,7 @@ def open_space_session(space: OpenSpace, settings: FeedSettings) -> Session | No
         return None
     site_url = settings.site_url
     return _session(
-        id=space.session_id,
+        session_id=space.session_id,
         name=space.title,
         kind=OPEN_SPACE,
         location=space.room,
@@ -316,7 +316,7 @@ def poster_details(
         return []
     return [
         _session(
-            id=f"poster-detail-{poster.id}",
+            session_id=f"poster-detail-{poster.id}",
             name=poster.title,
             kind="poster",
             location=row.location,
@@ -371,7 +371,7 @@ def _room_names(location: str) -> tuple[str, ...]:
 
 def _session(
     *,
-    id: str,
+    session_id: str,
     name: str,
     kind: str,
     location: str,
@@ -401,7 +401,7 @@ def _session(
     elif not display_location:
         display_location = room_names[0] if room_names else location
     return Session(
-        id=id,
+        id=session_id,
         name=name,
         kind=kind,
         track="Open Space" if kind == OPEN_SPACE else track(kind),

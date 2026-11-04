@@ -211,7 +211,7 @@ def _simctl(*args: str) -> str:
     return _run("xcrun", "simctl", *args)
 
 
-class FlowFailed(Exception):
+class FlowFailedError(Exception):
     """A flow failed; the message holds the end of its output."""
 
 
@@ -260,7 +260,7 @@ class Stage:
             command, check=False, text=True, env=env, capture_output=True
         )
         if done.returncode:
-            raise FlowFailed(f"{name}:\n{done.stdout[-1500:]}")
+            raise FlowFailedError(f"{name}:\n{done.stdout[-1500:]}")
 
     def launch(self, clip: Clip | None) -> None:
         """Start the app afresh on the clip's scene; never records."""
@@ -574,7 +574,7 @@ def record(out: Path, names: list[str] | None, build: bool, model: str) -> None:
                 final = out / f"{clip.name}.mp4"
                 seconds = render(raw, final)
             except (
-                FlowFailed,
+                FlowFailedError,
                 subprocess.CalledProcessError,
                 OSError,
                 ValueError,
