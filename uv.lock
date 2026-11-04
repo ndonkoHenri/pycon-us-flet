@@ -225,13 +225,17 @@ wheels = [
 
 [[package]]
 name = "flet"
-version = "0.1.0"
-source = { editable = ".flet-src/sdk/python/packages/flet" }
+version = "1.1.0.dev4"
+source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "httpx", marker = "sys_platform != 'emscripten'" },
     { name = "msgpack" },
     { name = "oauthlib", marker = "sys_platform != 'emscripten'" },
     { name = "repath" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/0a/c0/56deca835cf310858c5a4fdc344bbc15d620a39041c6cd38a5c693e55d76/flet-1.1.0.dev4.tar.gz", hash = "sha256:7c00567d0709654681655506f912383015453d1354bca0862b38fc8ffa3fd94e", size = 607870, upload-time = "2026-11-03T02:37:56.228Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/00/e7/59b2a848f50a66fbd89bb971a247b7c711f91d0a79b5a4aed2ed3b54cbf7/flet-1.1.0.dev4-py3-none-any.whl", hash = "sha256:ccac2f8005fbebc927d6648b802b676e04f152da246ed4291efd9702fab2312d", size = 655641, upload-time = "2026-11-03T02:37:54.561Z" },
 ]
 
 [package.optional-dependencies]
@@ -243,133 +247,10 @@ test = [
     { name = "scikit-image" },
 ]
 
-[package.metadata]
-requires-dist = [
-    { name = "flet-cli", marker = "extra == 'all'", editable = ".flet-src/sdk/python/packages/flet-cli" },
-    { name = "flet-cli", marker = "extra == 'cli'", editable = ".flet-src/sdk/python/packages/flet-cli" },
-    { name = "flet-desktop", marker = "extra == 'all'", editable = ".flet-src/sdk/python/packages/flet-desktop" },
-    { name = "flet-desktop", marker = "extra == 'desktop'", editable = ".flet-src/sdk/python/packages/flet-desktop" },
-    { name = "flet-web", marker = "extra == 'all'", editable = ".flet-src/sdk/python/packages/flet-web" },
-    { name = "flet-web", marker = "extra == 'web'", editable = ".flet-src/sdk/python/packages/flet-web" },
-    { name = "httpx", marker = "sys_platform != 'emscripten'", specifier = ">=0.28.1" },
-    { name = "msgpack", specifier = ">=1.1.0" },
-    { name = "numpy", marker = "extra == 'test'", specifier = ">=2.2.0" },
-    { name = "oauthlib", marker = "sys_platform != 'emscripten'", specifier = ">=3.2.2" },
-    { name = "pillow", marker = "extra == 'test'", specifier = ">=10.3.0" },
-    { name = "pytest", marker = "extra == 'test'", specifier = ">=7.2.0" },
-    { name = "pytest-asyncio", marker = "extra == 'test'", specifier = ">=1.1.0" },
-    { name = "repath", specifier = ">=0.9.0" },
-    { name = "scikit-image", marker = "extra == 'test'", specifier = ">=0.25.2" },
-    { name = "typing-extensions", marker = "python_full_version < '3.11'" },
-]
-provides-extras = ["all", "cli", "desktop", "web", "test"]
-
-[package.metadata.requires-dev]
-all = [
-    { name = "cryptography", specifier = ">=39.0.0" },
-    { name = "docstr-coverage", specifier = ">=2.3.2" },
-    { name = "flet-ads", editable = ".flet-src/sdk/python/packages/flet-ads" },
-    { name = "flet-audio", editable = ".flet-src/sdk/python/packages/flet-audio" },
-    { name = "flet-audio-recorder", editable = ".flet-src/sdk/python/packages/flet-audio-recorder" },
-    { name = "flet-camera", editable = ".flet-src/sdk/python/packages/flet-camera" },
-    { name = "flet-charts", editable = ".flet-src/sdk/python/packages/flet-charts" },
-    { name = "flet-code-editor", editable = ".flet-src/sdk/python/packages/flet-code-editor" },
-    { name = "flet-color-pickers", editable = ".flet-src/sdk/python/packages/flet-color-pickers" },
-    { name = "flet-datatable2", editable = ".flet-src/sdk/python/packages/flet-datatable2" },
-    { name = "flet-flashlight", editable = ".flet-src/sdk/python/packages/flet-flashlight" },
-    { name = "flet-geolocator", editable = ".flet-src/sdk/python/packages/flet-geolocator" },
-    { name = "flet-local-auth", editable = ".flet-src/sdk/python/packages/flet-local-auth" },
-    { name = "flet-lottie", editable = ".flet-src/sdk/python/packages/flet-lottie" },
-    { name = "flet-map", editable = ".flet-src/sdk/python/packages/flet-map" },
-    { name = "flet-notifications", editable = ".flet-src/sdk/python/packages/flet-notifications" },
-    { name = "flet-permission-handler", editable = ".flet-src/sdk/python/packages/flet-permission-handler" },
-    { name = "flet-rive", editable = ".flet-src/sdk/python/packages/flet-rive" },
-    { name = "flet-secure-storage", editable = ".flet-src/sdk/python/packages/flet-secure-storage" },
-    { name = "flet-shadcn-ui", editable = ".flet-src/sdk/python/packages/flet-shadcn-ui" },
-    { name = "flet-spinkit", editable = ".flet-src/sdk/python/packages/flet-spinkit" },
-    { name = "flet-video", editable = ".flet-src/sdk/python/packages/flet-video" },
-    { name = "flet-webview", editable = ".flet-src/sdk/python/packages/flet-webview" },
-    { name = "numpy", specifier = ">=2.2.0" },
-    { name = "pandas", specifier = ">=2.2.3" },
-    { name = "pillow", specifier = ">=10.3.0" },
-    { name = "pre-commit", specifier = ">=2.21.0" },
-    { name = "pypi-cleanup", specifier = "==0.1.4" },
-    { name = "pytest", specifier = ">=7.2.0" },
-    { name = "pytest-asyncio", specifier = ">=1.1.0" },
-    { name = "ruff", specifier = ">=0.13.1" },
-    { name = "scikit-image", specifier = ">=0.25.2" },
-    { name = "tomlkit", specifier = ">=0.11.6" },
-]
-dev = [
-    { name = "cryptography", specifier = ">=39.0.0" },
-    { name = "numpy", specifier = ">=2.2.0" },
-    { name = "pandas", specifier = ">=2.2.3" },
-    { name = "pillow", specifier = ">=10.3.0" },
-    { name = "pre-commit", specifier = ">=2.21.0" },
-    { name = "pypi-cleanup", specifier = "==0.1.4" },
-    { name = "pytest", specifier = ">=7.2.0" },
-    { name = "pytest-asyncio", specifier = ">=1.1.0" },
-    { name = "ruff", specifier = ">=0.13.1" },
-    { name = "scikit-image", specifier = ">=0.25.2" },
-    { name = "tomlkit", specifier = ">=0.11.6" },
-]
-docs = [
-    { name = "docstr-coverage", specifier = ">=2.3.2" },
-    { name = "flet-ads", editable = ".flet-src/sdk/python/packages/flet-ads" },
-    { name = "flet-audio", editable = ".flet-src/sdk/python/packages/flet-audio" },
-    { name = "flet-audio-recorder", editable = ".flet-src/sdk/python/packages/flet-audio-recorder" },
-    { name = "flet-camera", editable = ".flet-src/sdk/python/packages/flet-camera" },
-    { name = "flet-charts", editable = ".flet-src/sdk/python/packages/flet-charts" },
-    { name = "flet-code-editor", editable = ".flet-src/sdk/python/packages/flet-code-editor" },
-    { name = "flet-color-pickers", editable = ".flet-src/sdk/python/packages/flet-color-pickers" },
-    { name = "flet-datatable2", editable = ".flet-src/sdk/python/packages/flet-datatable2" },
-    { name = "flet-flashlight", editable = ".flet-src/sdk/python/packages/flet-flashlight" },
-    { name = "flet-geolocator", editable = ".flet-src/sdk/python/packages/flet-geolocator" },
-    { name = "flet-local-auth", editable = ".flet-src/sdk/python/packages/flet-local-auth" },
-    { name = "flet-lottie", editable = ".flet-src/sdk/python/packages/flet-lottie" },
-    { name = "flet-map", editable = ".flet-src/sdk/python/packages/flet-map" },
-    { name = "flet-notifications", editable = ".flet-src/sdk/python/packages/flet-notifications" },
-    { name = "flet-permission-handler", editable = ".flet-src/sdk/python/packages/flet-permission-handler" },
-    { name = "flet-rive", editable = ".flet-src/sdk/python/packages/flet-rive" },
-    { name = "flet-secure-storage", editable = ".flet-src/sdk/python/packages/flet-secure-storage" },
-    { name = "flet-shadcn-ui", editable = ".flet-src/sdk/python/packages/flet-shadcn-ui" },
-    { name = "flet-spinkit", editable = ".flet-src/sdk/python/packages/flet-spinkit" },
-    { name = "flet-video", editable = ".flet-src/sdk/python/packages/flet-video" },
-    { name = "flet-webview", editable = ".flet-src/sdk/python/packages/flet-webview" },
-]
-docs-coverage = [{ name = "docstr-coverage", specifier = ">=2.3.2" }]
-extensions = [
-    { name = "flet-ads", editable = ".flet-src/sdk/python/packages/flet-ads" },
-    { name = "flet-audio", editable = ".flet-src/sdk/python/packages/flet-audio" },
-    { name = "flet-audio-recorder", editable = ".flet-src/sdk/python/packages/flet-audio-recorder" },
-    { name = "flet-camera", editable = ".flet-src/sdk/python/packages/flet-camera" },
-    { name = "flet-charts", editable = ".flet-src/sdk/python/packages/flet-charts" },
-    { name = "flet-code-editor", editable = ".flet-src/sdk/python/packages/flet-code-editor" },
-    { name = "flet-color-pickers", editable = ".flet-src/sdk/python/packages/flet-color-pickers" },
-    { name = "flet-datatable2", editable = ".flet-src/sdk/python/packages/flet-datatable2" },
-    { name = "flet-flashlight", editable = ".flet-src/sdk/python/packages/flet-flashlight" },
-    { name = "flet-geolocator", editable = ".flet-src/sdk/python/packages/flet-geolocator" },
-    { name = "flet-local-auth", editable = ".flet-src/sdk/python/packages/flet-local-auth" },
-    { name = "flet-lottie", editable = ".flet-src/sdk/python/packages/flet-lottie" },
-    { name = "flet-map", editable = ".flet-src/sdk/python/packages/flet-map" },
-    { name = "flet-notifications", editable = ".flet-src/sdk/python/packages/flet-notifications" },
-    { name = "flet-permission-handler", editable = ".flet-src/sdk/python/packages/flet-permission-handler" },
-    { name = "flet-rive", editable = ".flet-src/sdk/python/packages/flet-rive" },
-    { name = "flet-secure-storage", editable = ".flet-src/sdk/python/packages/flet-secure-storage" },
-    { name = "flet-shadcn-ui", editable = ".flet-src/sdk/python/packages/flet-shadcn-ui" },
-    { name = "flet-spinkit", editable = ".flet-src/sdk/python/packages/flet-spinkit" },
-    { name = "flet-video", editable = ".flet-src/sdk/python/packages/flet-video" },
-    { name = "flet-webview", editable = ".flet-src/sdk/python/packages/flet-webview" },
-]
-test = [
-    { name = "pytest", specifier = ">=7.2.0" },
-    { name = "pytest-asyncio", specifier = ">=1.1.0" },
-]
-
 [[package]]
 name = "flet-cli"
-version = "0.1.0"
-source = { editable = ".flet-src/sdk/python/packages/flet-cli" }
+version = "1.1.0.dev4"
+source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "binaryornot" },
     { name = "chardet" },
@@ -381,94 +262,78 @@ dependencies = [
     { name = "rich" },
     { name = "watchdog" },
 ]
-
-[package.metadata]
-requires-dist = [
-    { name = "binaryornot", specifier = "<0.5" },
-    { name = "chardet", specifier = "<6" },
-    { name = "cookiecutter", specifier = ">=2.6.0" },
-    { name = "flet", editable = ".flet-src/sdk/python/packages/flet" },
-    { name = "flet-mcp", marker = "extra == 'mcp'", editable = ".flet-src/sdk/python/packages/flet-mcp" },
-    { name = "flet-platform-assets", editable = ".flet-src/sdk/python/packages/flet-platform-assets" },
-    { name = "packaging", specifier = ">=25.0" },
-    { name = "qrcode", specifier = ">=7.4.2" },
-    { name = "rich", specifier = ">=13.0.0" },
-    { name = "tomli", marker = "python_full_version < '3.11'", specifier = ">=1.1.0" },
-    { name = "watchdog", specifier = ">=4.0.0" },
+sdist = { url = "https://files.pythonhosted.org/packages/41/8e/b6a42bb99265789b2daf0183285841cfb4a320b2f1fb8549c92b541976b6/flet_cli-1.1.0.dev4.tar.gz", hash = "sha256:e8cac1f7d750b490b99c1cbf1272db49cdc15e9651af528f4e9fba1918043091", size = 262017, upload-time = "2026-11-03T02:37:59.339Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/ef/fc/df643389c51736ae5b39d9c14dd99fc774829b329d32104e83ad9f1e8681/flet_cli-1.1.0.dev4-py3-none-any.whl", hash = "sha256:82ad43835fb514eb84427fe52157f7a3ab494c476f6477ce293ba920b8e5d0cc", size = 177290, upload-time = "2026-11-03T02:37:58.011Z" },
 ]
-provides-extras = ["mcp"]
 
 [[package]]
 name = "flet-desktop"
-version = "0.1.0"
-source = { editable = ".flet-src/sdk/python/packages/flet-desktop" }
+version = "1.1.0.dev4"
+source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "flet" },
     { name = "rich" },
 ]
-
-[package.metadata]
-requires-dist = [
-    { name = "flet", editable = ".flet-src/sdk/python/packages/flet" },
-    { name = "rich", specifier = ">=13.0.0" },
+sdist = { url = "https://files.pythonhosted.org/packages/0f/ec/1e3140d81b5f3a6abfead23e311a3a5cf9e4073882b4fcc7f27d73425d35/flet_desktop-1.1.0.dev4.tar.gz", hash = "sha256:5b45332557529cbcc17b78e0674d24076ef8f3421e4d8afa0c558828a10a962f", size = 19350, upload-time = "2026-11-03T02:38:01.995Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/f3/d3/d3e2d5f6a5433e21847b4dcfc9a768d5b8524d2d1b2be1baee8bfa4880b8/flet_desktop-1.1.0.dev4-py3-none-any.whl", hash = "sha256:6ebe9d100ec6c992af00b80164ce2d582269ada00f89801656353a7b61f7ee8a", size = 18597, upload-time = "2026-11-03T02:38:00.868Z" },
 ]
 
 [[package]]
 name = "flet-notifications"
-version = "0.1.0"
-source = { editable = ".flet-src/sdk/python/packages/flet-notifications" }
+version = "1.1.0.dev4"
+source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "flet" },
     { name = "tzdata" },
 ]
-
-[package.metadata]
-requires-dist = [
-    { name = "flet", editable = ".flet-src/sdk/python/packages/flet" },
-    { name = "tzdata" },
+sdist = { url = "https://files.pythonhosted.org/packages/05/d7/82f4ca30e952dfb91262a8fd9699cbfe7e6f1b3cd2dfeeb3e0d5c36de79b/flet_notifications-1.1.0.dev4.tar.gz", hash = "sha256:6e7c3e173beb6076e9183a6137d145dcb5a3a4e2630061857b425dd2927f9c72", size = 69655, upload-time = "2026-11-03T02:38:42.885Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/8c/9b/9ba755d7e6f994c3c4d8ffe095a1a9e9737bc1a8ec20fcaffd9298b6ead6/flet_notifications-1.1.0.dev4-py3-none-any.whl", hash = "sha256:04748d4d6918247d344066951a8c8fb938508b01644ff632fbd5e04bbb4e5bc5", size = 85275, upload-time = "2026-11-03T02:38:41.938Z" },
 ]
 
 [[package]]
 name = "flet-permission-handler"
-version = "0.1.0"
-source = { editable = ".flet-src/sdk/python/packages/flet-permission-handler" }
+version = "1.1.0.dev4"
+source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "flet" },
 ]
-
-[package.metadata]
-requires-dist = [{ name = "flet", editable = ".flet-src/sdk/python/packages/flet" }]
+sdist = { url = "https://files.pythonhosted.org/packages/b0/85/5dae3cd9d78521887c896018192935669f9134a1ac36f77485e976a038f2/flet_permission_handler-1.1.0.dev4.tar.gz", hash = "sha256:134fe9e27ca109322b5435eca4ac592187008fa93f37b6280959ccebc31f0fbd", size = 12591, upload-time = "2026-11-03T02:38:45.303Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/cc/2d/536804ddba36445867acb09042f0e667d597e17c871cf8df2a3875367bde/flet_permission_handler-1.1.0.dev4-py3-none-any.whl", hash = "sha256:b224f0e254cfb77b26cf626e0a7c61da475c0920367e68423b4028a4a754c8f8", size = 13732, upload-time = "2026-11-03T02:38:44.423Z" },
+]
 
 [[package]]
 name = "flet-platform-assets"
-version = "0.1.0"
-source = { editable = ".flet-src/sdk/python/packages/flet-platform-assets" }
+version = "1.1.0.dev4"
+source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "pillow" },
     { name = "resvg-py" },
 ]
-
-[package.metadata]
-requires-dist = [
-    { name = "pillow", specifier = ">=11.3.0" },
-    { name = "resvg-py", specifier = ">=0.5.0,<0.6" },
+sdist = { url = "https://files.pythonhosted.org/packages/e6/76/ddab1155704d00e20811efa5a961d986bd94a8730c9a6b990962a937e53f/flet_platform_assets-1.1.0.dev4.tar.gz", hash = "sha256:f9d6525ba3754b87a038f199795d8bb82dbd0eed0970d9e038ab5d72eb95b003", size = 39362, upload-time = "2026-11-03T02:38:04.778Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/b1/95/8b0f1197bff05e184e70dfc42bb33c0f164f0b9ea2c72621c8812d72c2f8/flet_platform_assets-1.1.0.dev4-py3-none-any.whl", hash = "sha256:8e6ff5aceb5ff4b964326fc8119811e7dd5f9f24f2893c6f5fcac554fd3cac88", size = 27988, upload-time = "2026-11-03T02:38:03.397Z" },
 ]
 
 [[package]]
 name = "flet-secure-storage"
-version = "0.1.0"
-source = { editable = ".flet-src/sdk/python/packages/flet-secure-storage" }
+version = "1.1.0.dev4"
+source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "flet" },
 ]
-
-[package.metadata]
-requires-dist = [{ name = "flet", editable = ".flet-src/sdk/python/packages/flet" }]
+sdist = { url = "https://files.pythonhosted.org/packages/29/bb/76d7162aea6d98809641cf7039c88413a92ff7f9d7abcfe7180de18f64d5/flet_secure_storage-1.1.0.dev4.tar.gz", hash = "sha256:8e10c37b1491748382f6ac0b6f857e50a0f277077977a15cb107b54e9bc3e4dc", size = 15954, upload-time = "2026-11-03T02:38:49.846Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/78/72/0bb4b8a0039cc424e8fcb4c328ed61b82082a30783cbaeb1b84b84e9b460/flet_secure_storage-1.1.0.dev4-py3-none-any.whl", hash = "sha256:cbd669c96c862c41fdbb3907edd41fc2a6e9505968276f1d9a87b659c08fe0ec", size = 16726, upload-time = "2026-11-03T02:38:48.783Z" },
+]
 
 [[package]]
 name = "flet-web"
-version = "0.1.0"
-source = { editable = ".flet-src/sdk/python/packages/flet-web" }
+version = "1.1.0.dev4"
+source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "fastapi" },
     { name = "flet" },
@@ -476,15 +341,9 @@ dependencies = [
     { name = "uvicorn", extra = ["standard"] },
     { name = "websockets" },
 ]
-
-[package.metadata]
-requires-dist = [
-    { name = "fastapi", specifier = ">=0.115.12" },
-    { name = "flet", editable = ".flet-src/sdk/python/packages/flet" },
-    { name = "httptools", marker = "python_full_version >= '3.12' and platform_machine == 'ARM64' and sys_platform == 'win32'", specifier = ">=0.9.0" },
-    { name = "uvicorn", specifier = ">=0.35.0" },
-    { name = "uvicorn", extras = ["standard"], marker = "python_full_version >= '3.12' or platform_machine != 'ARM64' or sys_platform != 'win32'", specifier = ">=0.35.0" },
-    { name = "websockets", specifier = ">=13.0" },
+sdist = { url = "https://files.pythonhosted.org/packages/8f/bf/1e9bf3e4f476c332573bfb95ab9a909c98ada1079285e4dcbe51250f13cd/flet_web-1.1.0.dev4.tar.gz", hash = "sha256:0cb9f11f82593ae408e40881109f4c48f4f87cc0b02d92afc9b044a8d69ca0b7", size = 29335, upload-time = "2026-11-03T02:38:09.887Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/55/20/3139eeace035d1c0a26ba950629602ac39c91ae92e7aa6ed69e9a7119c74/flet_web-1.1.0.dev4-py3-none-any.whl", hash = "sha256:848fa2a30f170c5379f18128b507639f8e1481fa7d12d8455af00048a93cfa3e", size = 29744702, upload-time = "2026-11-03T02:38:06.958Z" },
 ]
 
 [[package]]
@@ -978,21 +837,21 @@ dev = [
 
 [package.metadata]
 requires-dist = [
-    { name = "flet", editable = ".flet-src/sdk/python/packages/flet" },
-    { name = "flet-notifications", editable = ".flet-src/sdk/python/packages/flet-notifications" },
-    { name = "flet-permission-handler", editable = ".flet-src/sdk/python/packages/flet-permission-handler" },
-    { name = "flet-secure-storage", editable = ".flet-src/sdk/python/packages/flet-secure-storage" },
+    { name = "flet", specifier = "==1.1.0.dev4" },
+    { name = "flet-notifications", specifier = "==1.1.0.dev4" },
+    { name = "flet-permission-handler", specifier = "==1.1.0.dev4" },
+    { name = "flet-secure-storage", specifier = "==1.1.0.dev4" },
     { name = "httpx", specifier = "==0.28.1" },
     { name = "tzdata", specifier = "==2026.5" },
 ]
 
 [package.metadata.requires-dev]
 dev = [
-    { name = "flet", extras = ["test"], editable = ".flet-src/sdk/python/packages/flet" },
-    { name = "flet-cli", editable = ".flet-src/sdk/python/packages/flet-cli" },
-    { name = "flet-desktop", editable = ".flet-src/sdk/python/packages/flet-desktop" },
-    { name = "flet-platform-assets", editable = ".flet-src/sdk/python/packages/flet-platform-assets" },
-    { name = "flet-web", editable = ".flet-src/sdk/python/packages/flet-web" },
+    { name = "flet", extras = ["test"], specifier = "==1.1.0.dev4" },
+    { name = "flet-cli", specifier = "==1.1.0.dev4" },
+    { name = "flet-desktop", specifier = "==1.1.0.dev4" },
+    { name = "flet-platform-assets", specifier = "==1.1.0.dev4" },
+    { name = "flet-web", specifier = "==1.1.0.dev4" },
     { name = "hypothesis" },
     { name = "ical" },
     { name = "icalendar" },

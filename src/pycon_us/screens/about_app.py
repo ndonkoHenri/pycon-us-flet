@@ -16,8 +16,9 @@ import platform
 from urllib.parse import urlsplit
 
 import flet as ft
+from flet.version import flet_version
 
-from pycon_us import APP_NAME, FLET_VERSION, SOURCE_URL
+from pycon_us import APP_NAME, SOURCE_URL
 from pycon_us.dev_options import DEV_UNLOCKED
 from pycon_us.prefs import use_prefs
 from pycon_us.screens import licences
@@ -77,7 +78,7 @@ def AboutApp() -> ft.View:
             ft.ListTile(title="Version", subtitle=build.label, on_click=count_tap),
         ),
         ft.ListTile(title="Python", subtitle=platform.python_version()),
-        ft.ListTile(title="Flet", subtitle=FLET_VERSION),
+        ft.ListTile(title="Flet", subtitle=flet_version),
     ]
     if prefs.developer:
         rows.append(developer_row(unsaved))

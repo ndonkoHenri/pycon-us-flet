@@ -81,7 +81,7 @@ say so in your PR, and a maintainer checks iOS.
 - To change a decision, a UX flow or the architecture, open an issue with the options and your recommendation
   before you write code. Maintainers settle it and record it.
 - If Flet lacks something, open an `upstream` issue here ([Upstream Flet work](AGENTS.md#upstream-flet-work)). Don't
-  edit `.flet-src`, and don't work around the gap with a hack.
+  edit Flet's files, and don't work around the gap with a hack.
 
 ## Run the checks
 
@@ -139,7 +139,7 @@ maintainers, not for you:
 | [Reviews and merging](AGENTS.md#reviews-and-merging): the merge gate, second opinions, agents merging their own PRs | Maintainers do this. You get a review and a merge, or a reason. |
 | [Project board](AGENTS.md#project-board), and settling decisions in `docs/decisions.md` | Maintainers do this. |
 | [Screenshots](AGENTS.md#pull-requests) on the `pr-assets` branch | It needs write access. Use the PR instead. |
-| [`.flet-src` per worktree](AGENTS.md#working-with-flet) and a pub cache of your own | Only for parallel builds. One clone needs just the `.flet-src` that §5.1 sets up, and no pub cache of its own. |
+| [A pub cache per worktree](AGENTS.md#working-with-flet) | Only for parallel builds. One clone needs no pub cache of its own. |
 
 The rest applies to everyone.
 

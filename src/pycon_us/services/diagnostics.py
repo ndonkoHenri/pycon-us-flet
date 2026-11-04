@@ -22,8 +22,9 @@ from zoneinfo import ZoneInfo
 
 import flet as ft
 from flet.utils import is_embedded
+from flet.version import flet_version
 
-from pycon_us import FLET_VERSION, capabilities, clock
+from pycon_us import capabilities, clock
 from pycon_us.config import ConferenceInfo
 from pycon_us.core.timefmt import ago_label
 from pycon_us.favorites import Favorites
@@ -68,7 +69,7 @@ class Facts:
             packaged build's own (D-386).
         build_number: A packaged build's number, or None (D-386).
         python: The Python version, e.g. `3.14.0`.
-        flet: The Flet version, `FLET_VERSION` while the app builds from source.
+        flet: The Flet version, e.g. `1.1.0.dev4`.
         platform: The page's platform, e.g. `android`.
         device: The device's make and model, and whether it is an emulator or a
             simulator; None when the platform did not say.
@@ -197,7 +198,7 @@ async def gather_facts(
         app_version=build.version,
         build_number=build.number,
         python=platform.python_version(),
-        flet=FLET_VERSION,
+        flet=flet_version,
         platform=page.platform.value if page.platform else "unknown",
         device=device,
         os=os_name,

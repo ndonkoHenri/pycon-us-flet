@@ -68,12 +68,12 @@ The project file is the one in [`development.md`](development.md) §3; these are
 ```toml
 # pyproject.toml (excerpt)
 [dependency-groups]
-dev = [                      # host only; flet-* come from .flet-src via [tool.uv.sources] (D-81)
-    "flet-cli",              # flet run / build / test; without it the `flet` script pip-installs a PyPI flet-cli at runtime
-    "flet-web",
-    "flet-desktop",
-    "flet-platform-assets",
-    "flet[test]",            # pytest-asyncio, numpy, Pillow, scikit-image
+dev = [                      # host only; every flet-* pinned to one version (development.md §2.2, D-481)
+    "flet-cli==1.1.0.dev4",  # flet run / build / test; without it the `flet` script pip-installs a PyPI flet-cli at runtime
+    "flet-web==1.1.0.dev4",
+    "flet-desktop==1.1.0.dev4",
+    "flet-platform-assets==1.1.0.dev4",
+    "flet[test]==1.1.0.dev4", # pytest-asyncio, numpy, Pillow, scikit-image
     "pytest",
     "hypothesis",
     "ruff",
@@ -94,7 +94,7 @@ addopts = ["--ignore=tests/ui"]  # UI flows run only through flet test (see belo
 extend-select = ["I", "UP", "B", "SIM", "D", "DTZ"]  # DTZ: no naive datetime.now()/utcnow() (D-43)
 ```
 
-`flet[test]` brings `pytest-asyncio`, numpy, Pillow and scikit-image (screenshot comparison). It is needed by `flet test`, and `pytest-asyncio` runs our async client tests. Flet's pytest plugin defines the `flet_app` fixture only when `pytest_asyncio` imports, so `flet[test]` stays in `dev`, not in a separate group that `uv sync` skips. This is D-75's dev list: the Flet host tooling is listed by name so uv takes it from `.flet-src` at the pin. `pycon_us` itself is importable because the project has a `[build-system]` (`uv_build`), so `uv sync` installs it editable from `src/` (D-82; development.md §3.1).
+`flet[test]` brings `pytest-asyncio`, numpy, Pillow and scikit-image (screenshot comparison). It is needed by `flet test`, and `pytest-asyncio` runs our async client tests. Flet's pytest plugin defines the `flet_app` fixture only when `pytest_asyncio` imports, so `flet[test]` stays in `dev`, not in a separate group that `uv sync` skips. This is D-75's dev list: the Flet host tooling is listed by name, at the family's one version. `pycon_us` itself is importable because the project has a `[build-system]` (`uv_build`), so `uv sync` installs it editable from `src/` (D-82; development.md §3.1).
 
 `flet` registers a pytest plugin (`pytest11` entry point) that would provision a Flutter test host whenever a test asks for `flet_app`. So plain `uv run pytest` must never collect the UI flows. `addopts = ["--ignore=tests/ui"]` is the one gate: `flet test` passes `tests/ui` to pytest explicitly, and an explicit path overrides `--ignore` (checked with pytest), so the flows still run there.
 
@@ -107,7 +107,7 @@ extend-select = ["I", "UP", "B", "SIM", "D", "DTZ"]  # DTZ: no naive datetime.no
 | UI flows on the Android emulator (development.md §5.7) | `uv run flet test android -d <emulator-id> --tests-dir tests/ui -v` |
 | UI flows on the iOS simulator | `uv run flet test ios -d <simulator-udid> --tests-dir tests/ui -v` |
 | One flow | add `-k shell` |
-| UI flows while another build may run (parallel agents) | from a worktree with its own Flet clone, prefix with its own pub cache, `PUB_CACHE=$PWD/build/pub-cache` (development.md §5.8, D-219, D-176) |
+| UI flows while another build may run (parallel agents) | from a worktree, prefix with its own pub cache, `PUB_CACHE=$PWD/build/pub-cache` (development.md §5.8, D-219, D-176) |
 | Record or update goldens (P4) | add `-k goldens -u`, or `--update-failed-goldens` |
 | Public feed check | `uv run python -m tools.check_feed` (add years to check others, e.g. `2025 2026`) |
 | Feature matrix check (after editing `docs/feature-matrix.md`; `tests/test_check_matrix.py` runs it in pytest) | `uv run python -m tools.check_matrix` (add `--breakdown` for the fuller counts) |
@@ -710,13 +710,15 @@ uv run --no-project --with av --with numpy --with pillow python -m tools.frames 
 
 **Calibrate every emulator run in its own window (D-453).** Fixed numbers can't say whether the emulator is slow or the app grew: on a quiet host in 2026-11, S2's reproducer itself read 1.9× D-112's `TotalTime` and 1.7× S2's cold start. So the reproducer runs beside the app, at the same pin and on the same boot:
 
-1. Build first, then boot. Build the app's release APK, and the reproducer in a throwaway copy under `build/` (the app's pub cache and `.flet-src`, development.md §5.8). The copy needs `src/assets` as well as `src/pycon_us`, since `config.load_year()` checks the map plans' images; the spike's own notes predate that.
+1. Build first, then boot. Build the app's release APK, and the reproducer in a throwaway copy under `build/` (the app's pub cache, development.md §5.8). The copy needs `src/assets` as well as `src/pycon_us`, since `config.load_year()` checks the map plans' images; the spike's own notes predate that.
 
    ```bash
    rm -rf build/s2 && mkdir -p build/s2
    cp -R docs/spikes/02-day-list/pyproject.toml docs/spikes/02-day-list/src build/s2/
-   # The copy is one folder less deep than the spike.
-   sed -i '' -e 's#\.\./\.\./\.\./\.flet-src#../../.flet-src#' \
+   # The spike's file names a Flet checkout, as the app did then: the copy takes our Flet from PyPI.
+   # The copy is also one folder less deep than the spike.
+   flet=$(uv run python -c 'from flet.version import flet_version as v; print(v)')
+   sed -i '' -e '/^# The same pin as the app/,$d' -e "s/^    \"flet\(-[a-z-]*\)\{0,1\}\",/    \"flet\1==$flet\",/" \
      -e 's#\.\./\.\./\.\./\.\./\.\./flutter_packages#../../../../flutter_packages#' build/s2/pyproject.toml
    rsync -a --delete --exclude __pycache__ src/pycon_us build/s2/src/
    cp -R src/assets build/s2/src/assets

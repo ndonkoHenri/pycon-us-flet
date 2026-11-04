@@ -41,14 +41,13 @@ def caches(env: dict[str, str]) -> Path:
 
 @pytest.fixture
 def repo(tmp_path: Path, env: dict[str, str]) -> Path:
-    """Return a clone with one commit on `main`, its origin, and a `.flet-src` to copy."""
+    """Return a clone with one commit on `main` and its origin."""
     origin = tmp_path / "origin.git"
     path = tmp_path / "repo"
     git(tmp_path, env, "init", "-q", "--bare", "-b", "main", str(origin))
     git(tmp_path, env, "clone", "-q", str(origin), str(path))
     git(path, env, "commit", "-q", "--allow-empty", "-m", "First")
     git(path, env, "push", "-q", "origin", "HEAD:main")
-    (path / ".flet-src").mkdir()
     return path
 
 

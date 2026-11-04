@@ -76,7 +76,7 @@ chore, area:build
 
 Create the Python 3.14 project with uv, the flat layout of decisions §M, `__version__`, ruff, pyright, pytest, `LICENSE` and `NOTICE`.
 
-- After the documented Flet checkout (`git clone ... .flet-src`, then `git -C .flet-src checkout --detach "$(cat .flet-ref)"`), `uv sync --locked` works; ruff, pyright and pytest pass.
+- `uv sync --locked` works; ruff, pyright and pytest pass.
 - A test asserts `__version__` equals `[project].version`.
 - A test fails on any `flet` import under `pycon_us/core/`.
 
@@ -107,7 +107,7 @@ Turn the S5 verdict into the repo setup on top of P0-01's Flet pin: the `[tool.f
 
 - `flet build apk` and `flet build ipa` succeed from a clean checkout with the documented commands.
 - The device shows the placeholder name and icon, `__version__` and the build number; no PSF marks.
-- Bumping the pin is a one-line change to `.flet-ref` plus `uv lock`.
+- Bumping Flet is one version on the family's lines in `pyproject.toml` plus `uv lock`.
 
 #### P0-05 · Complete docs/development.md from the S5 verdict
 
