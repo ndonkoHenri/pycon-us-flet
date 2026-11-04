@@ -36,11 +36,6 @@ for pr in "$@"; do
 done
 
 root=$(git rev-parse --show-toplevel)
-flet_src=$root/.flet-src
-if [[ ! -d $flet_src ]]; then
-    say "$flet_src is missing: the checks need the Flet checkout at the pin (docs/development.md §2.2, §5.8)"
-    exit 1
-fi
 
 say "fetching origin/main"
 git -C "$root" fetch -q origin main
@@ -71,14 +66,6 @@ trap 'exit 1' INT TERM  # so an interrupted run still removes the scratch worktr
 
 git -C "$root" worktree add -q --detach "$scratch" "$base"
 
-# Its own Flet checkout, an APFS clone where cp supports it, without the wheel build folder (D-219).
-say "copying .flet-src"
-if ! cp -cRH "$flet_src" "$scratch/.flet-src" 2> /dev/null; then
-    rm -rf "$scratch/.flet-src"
-    cp -RH "$flet_src" "$scratch/.flet-src"
-fi
-rm -rf "$scratch/.flet-src/sdk/python/packages/flet/build"
-
 landing="\`main\` $(git -C "$root" rev-parse --short "$base")"
 for pr in "$@"; do
     say "merging #$pr"
@@ -94,13 +81,6 @@ for pr in "$@"; do
     landing+=" + #$pr@$head"
 done
 tree=$(git -C "$scratch" rev-parse "HEAD^{tree}")
-
-# The checks run against the Flet copied above; say so when it isn't the pin of the tree that lands.
-pin=$(cat "$scratch/.flet-ref")
-flet_head=$(git -C "$scratch/.flet-src" rev-parse HEAD 2> /dev/null || echo unknown)
-if [[ $flet_head != "$pin" ]]; then
-    say "warning: .flet-src is at $flet_head, but the merged .flet-ref is $pin (docs/development.md §2.2)"
-fi
 
 if [[ ! -f $scratch/tools/check.sh ]]; then
     say "the merged tree has no tools/check.sh"

@@ -57,7 +57,7 @@ About 40 modules at the P1 exit (D-67), most of them screens.
 | Module | Responsibility | Phase |
 |---|---|---|
 | `src/main.py` | `ft.run(main, before_main=prepare_first_page)` (the default View in the boot purple and no theme animation until the gate opens, F35, D-161): `setup_logging()` at import and one `ViewMemory` per process (D-163, D-143); `page.on_view_pop` (navigates to `parent_of(e.route)`, D-19) set **before** `page.render_views(App, memory)` | P0 |
-| `pycon_us/__init__.py` | `__version__`, tested equal to `[project].version` (D-83); `APP_NAME`; `FLET_VERSION` (D-271); `SOURCE_URL`, None until the repo is public (D-292) | P0 |
+| `pycon_us/__init__.py` | `__version__`, tested equal to `[project].version` (D-83); `APP_NAME`; `SOURCE_URL`, None until the repo is public (D-292) | P0 |
 | `app.py` | `App`, `bootstrap()`, lifecycle handler, theme effect, boot View (§4) | P0 |
 | `routes.py` | `ROUTES`, `Drill`, `Start`, `NotFound`, `UNKNOWN` (§5) | P0 |
 | `locations.py` | `drill_href()`, `parent_of()`, `start_target()`, `query_of()`, `is_top_view()`, `use_query()`, `TAB_ROOTS`, `DRILL_KINDS`, `PAGES`: what screens import to link and go back, without the table (§5.3, D-164) | P0 |

@@ -13,7 +13,7 @@
 
 **Feature ids** implemented here: DEV-08, NATIVE-01, NATIVE-02, NATIVE-03, NATIVE-06 (declarations), NEW-03 (snapshot step), NEW-07 (configuration) and NEW-08 (workflow). Not built: DEV-07, LIVE-01..04, NATIVE-04/05/07/09/10 and NOTIF-12 ([`feature-matrix.md`](feature-matrix.md)).
 
-**Path aliases.** All are inside `.flet-src`, the Flet checkout at the pin (`a9ef26fdb`, §2.2), unless stated. Line numbers are at the pin, and re-checked when it moves; those into `CLI/commands/build_base.py`, which `flet-dev/flet#7036` rearranged, are at `22a6dcb16` unless a row has been redone since (#1007).
+**Path aliases.** All are inside a clone of flet-dev/flet at our version (`v1.1.0.dev4`, the commit `a9ef26fdb`; optional, §2.2), unless stated. Line numbers are at that commit, and re-checked when it moves; those into `CLI/commands/build_base.py`, which `flet-dev/flet#7036` rearranged, are at `22a6dcb16` unless a row has been redone since (#1007).
 
 | Alias | Path |
 |---|---|
@@ -28,9 +28,9 @@
 
 | I want to… | Command (from the repo root) | Section |
 |---|---|---|
-| Set up a fresh clone | `gh repo clone …`, the Flet checkout at `.flet-ref`, `uv sync --locked` | §5.1 |
+| Set up a fresh clone | `gh repo clone …`, `uv sync --locked` | §5.1 |
 | Run the real app shell on an emulator, simulator or phone | `uv run flet debug android -d emulator-5554` (or `ios -d <udid>`); `-d` is required | §5.3 |
-| Run the app with Python hot reload | `BROWSER=true uv run flet run -r -w -p 8550`, plus `flutter run -d <id>` in `.flet-src/client` | §5.2 |
+| Run the app with Python hot reload | `BROWSER=true uv run flet run -r -w -p 8550`, plus `flutter run -d <id>` in a Flet clone's `client` | §5.2 |
 | List devices or emulators | `uv run flet devices`, `uv run flet emulators` | §5.5 |
 | Lint, type-check and test | `tools/check.sh` (`ci.yml`'s steps; `--fast` skips pytest), or one step, e.g. `uv run pytest` | §7 |
 | Gate PRs and merge them (D-100, D-273) | `tools/merge.sh <pr> [<pr>...]`, the PRs in merge order | §7 |
@@ -58,8 +58,8 @@
 
 | Fact | Value | Source |
 |---|---|---|
-| Flet | **1.1** from flet-dev/flet's **`flet-1.1.0` branch**, pinned at `a9ef26fdb` (`.flet-ref`; `22a6dcb16` before #1005, `08b89cce5` before #805) until 1.1.0 is on PyPI, where the latest is 1.0.5 and the newest 1.1 pre-release 1.1.0.dev3 (2026-11-02). The first pin (`3710aff`, on `main`) was 1.0.4 plus fixes: its template targets iOS 13.0, which Xcode 27 rejects. `flet --version` prints the nearest tag: `1.1.0.dev3` at `a9ef26fdb`, `1.1.0.dev2` at `22a6dcb16`, `1.1.0.dev1` at `08b89cce5` (`1.0.4` at the pins before it; §2.2). | D-81, D-104; F20; S5 |
-| Flutter | **3.47.9** (3.47.8 before `a9ef26fdb`, 3.47.7 before `22a6dcb16`), read from the checkout's `.fvmrc`. flet-cli uses `~/flutter/3.47.9` if it exists, else the `flutter` on `PATH` if its major.minor matches (any 3.47.x, without a word: #1004, #1006); otherwise it asks, then downloads 3.47.9 into `~/flutter/3.47.9` (about 5 minutes; `--yes` skips the question). It adds that SDK to `PATH` only for its own subprocesses, not your shell. So keep the pin's version in `~/flutter` (§2.2, step 2); `tools/setup_worktree.sh` says when it's missing. | `flet/version.py` `get_flutter_version`; `CLI/commands/flutter_base.py:207-234, 252-280, 334-338, 482-494`; `CLI/utils/flutter.py:43-55` |
+| Flet | **1.1.0.dev4** from PyPI, the commit `a9ef26fdb` on flet-dev/flet's `flet-1.1.0` branch (§2.2). Before it, a source checkout at `a9ef26fdb`, `22a6dcb16` (before #1005) and `08b89cce5` (before #805); the first pin (`3710aff`, on `main`) was 1.0.4 plus fixes, whose template targets iOS 13.0, which Xcode 27 rejects. PyPI's latest stable is 1.0.5. | D-81, D-104, D-481; F20; S5 |
+| Flutter | **3.47.9** (3.47.8 before `a9ef26fdb`, 3.47.7 before `22a6dcb16`), written into the `flet` wheel (`flet.version.flutter_version`). flet-cli uses `~/flutter/3.47.9` if it exists, else the `flutter` on `PATH` if its major.minor matches (any 3.47.x, without a word: #1004, #1006); otherwise it asks, then downloads 3.47.9 into `~/flutter/3.47.9` (about 5 minutes; `--yes` skips the question). It adds that SDK to `PATH` only for its own subprocesses, not your shell. So keep that version in `~/flutter` (§2.2, step 3); `tools/setup_worktree.sh` says when it's missing. | `flet/version.py` `get_flutter_version`; `CLI/commands/flutter_base.py:207-234, 252-280, 334-338, 482-494`; `CLI/utils/flutter.py:43-55` |
 | JDK (Android builds) | **17**. flet-cli uses `JAVA_HOME`, then `/usr/libexec/java_home`, if either is a JDK 17; otherwise it downloads Temurin **17.0.13+11** into `~/java/17.0.13+11`. Either way it runs `flutter config --jdk-dir=<that JDK>`, a global Flutter setting. A newer system JDK is ignored. | `CLI/utils/jdk.py:15-18, 87-163`; `CLI/commands/flutter_base.py:382-405` |
 | Android SDK | `ANDROID_HOME`, then `ANDROID_SDK_ROOT`, then Android Studio's `~/Library/Android/sdk`, then `~/Android/sdk`; if none exists, flet-cli asks and installs one into `~/Android/sdk`. | `CLI/utils/android_sdk.py:42-103, 269` |
 | Python in the app | CPython **3.14.10** on both platforms since 2026-10-27 (About this app on an iOS 26.5 simulator and an API 36 emulator, #700; again at `22a6dcb16`, #805, where flet-cli pins python-build `20261027` and the template serious_python 6.1.2, so the manifest and the bundle agree; and at `a9ef26fdb`, #1005, with serious_python 6.1.3, which changes only its command output); 3.14.8 in #445's builds, 3.14.7 before `08b89cce5` (S5). flet-cli picks only the minor, 3.14, from `requires-python = ">=3.14,<3.15"`; the patch comes from the `serious_python_*` platform packages pub resolves, which float (below). The packaging step builds site-packages and `.pyc` with 3.14.10 too. | Minor: `CLI/utils/python_versions.py:31` (python-build `20261027` at `22a6dcb16`; `20261016` at `08b89cce5`) and `CLI/commands/build_base.py:3355` (`SERIOUS_PYTHON_VERSION` only). Patch: `serious_python_darwin`/`_android` 6.1.0 `python_versions.properties:5, 10` (python-build `20261027`, 3.14.10), read by the podspec (`:49-50`) and `build.gradle.kts:44-45`. Packaging: `serious_python` 6.1.2 `lib/src/python_versions.dart:57`, used by `bin/package_command.dart:762` (`compileall` at `:331, 510`). U229 (#702) |
@@ -79,72 +79,68 @@
 
 **Why the Flet pin does not pin the Python patch (#700).** At `08b89cce5`, flet-cli and serious_python agree: flet-cli's python-build release is `20261016` (3.14 → 3.14.8), the template pins `serious_python: 6.0.1` exactly (`TPL/pubspec.yaml:26`), and serious_python 6.0.1's `lib/src/python_versions.dart:13, 56-58` says the same. But serious_python 6.0.1 asks for its platform packages with carets (`pubspec.yaml:32-36`, `^6.0.1`), so pub takes the newest 6.x, and the platform packages are what download and bundle the runtime. Since `serious_python_darwin` and `serious_python_android` 6.1.0 reached pub.dev (2026-10-27), every build gets python-build `20261027`, CPython 3.14.10 (`build/flutter/pubspec.lock`, `dist_ios/.python_build_id` `3.14.10-20261027`). Neither a stale cache nor a worktree caused it: a fresh clone of `~/.pub-cache` resolves the same. At `22a6dcb16` (#805) flet-cli pins python-build `20261027` and the template `serious_python: 6.1.2`, so the manifest says 3.14.10 too; the carets remain, so a later 6.x platform package can still move the patch. It is harmless while the minor holds (flet-cli fixes it, and cp314 wheels and `.pyc` files work on any 3.14.x), so we take the patch releases. To check which Python a build ships, read the `serious_python_*` lines of `build/flutter/pubspec.lock`, or About this app on the device. To hold a build to flet-cli's manifest, pin the platform packages in `[tool.flet.flutter.pubspec.dependency_overrides]` (`CLI/commands/build_base.py:2034-2050`). The upstream fix is U229 (#702).
 
-### 2.2 Flet from source until 1.1.0 (D-81)
+### 2.2 Flet from PyPI: the prereleases, then 1.1.0 (D-81, D-481)
 
-**Why a plain git dependency is not enough.** Installing `flet` and `flet-cli` from a git URL into `site-packages` breaks `flet build` in three ways:
+**What we run.** Every Flet package comes from PyPI at one exact version, `1.1.0.dev4` today, which is the commit `a9ef26fdb` on `flet-dev/flet` (tag `v1.1.0.dev4`). No checkout of Flet is needed to set up, test or build.
 
-| What | Behaviour outside a source checkout | Source |
+| Piece | Where it comes from | What pins it |
 |---|---|---|
-| Flutter version | Unknown (`"0"`), and `flet build` stops with "Unable to determine the required Flutter SDK version" | `flet/version.py:135`; `CLI/commands/flutter_base.py:189` |
-| Build template | Downloaded from the GitHub release `v{flet_version}`, which does not exist for an unreleased commit | `CLI/commands/build_base.py:84-87, 1893-1924` |
-| Dart `flet` package | Only a source checkout rewrites `pubspec.yaml` to the monorepo's `packages/flet` | `CLI/commands/build_base.py:1976-1990` |
+| Python, in the venv and in the app | The wheels: `flet`, `flet-cli`, `flet-web`, `flet-desktop`, `flet-platform-assets`, `flet-notifications`, `flet-permission-handler`, `flet-secure-storage` | `==` in `pyproject.toml`, all the same (`tests/test_bundled_dependencies.py`). `uv.lock` holds them for the host; `flet build` reads `pyproject.toml` (§2.1) |
+| Build template | The GitHub release: `https://github.com/flet-dev/flet/releases/download/v1.1.0.dev4/flet-build-template.zip`, kept in `~/.flet/cache/build-template/v1.1.0.dev4/` (or `$FLET_CACHE_DIR`) | `flet-cli`'s version |
+| Flutter | `flet.version.flutter_version`, written into the wheel: 3.47.9 | `flet-cli`'s version |
+| Dart `flet` package | The template's `pubspec.yaml`: `git: {url: flet-dev/flet, ref: <40-character SHA>, path: packages/flet}`, under `dependencies` and `dependency_overrides` | The template |
+| Dart extensions (`flet_notifications`, `flet_permission_handler`, `flet_secure_storage`) | The wheels' `flutter/<name>/`, copied to `build/flutter-packages/` | The Python package's version |
+| `serious_python` | pub.dev, exactly as the template says (6.1.3); its platform packages float inside its caret (§2.1, #702) | The template |
+| `flet_integration_test`, `flet test` only | `git` at the tag `v1.1.0.dev4`, `packages/flet_integration_test` | `flet-cli`'s version |
 
-Run from a checkout, flet-cli instead finds `sdk/python/templates/build` and the repo root (worktrees included), and uses both. Checked from a fresh clone set up as below (2026-10-12): `uv run flet --version --json` reported `"flet": "1.0.4", "flutter": "3.47.7"`, and `flet debug` built from the local template and Dart package.
+**Dart and prereleases: the owner's question.** Flet publishes no Dart prereleases to pub.dev, and it doesn't matter here: a prerelease's template names the Dart package by its exact commit, so pub fetches it from GitHub. The wheels' extensions say `flet: path: ../../../../../../../packages/flet`, a path that exists only in Flet's own repository; the template's `dependency_overrides` beats it. That is how a stable release works too: 1.0.5's wheels hold the same path, and its template has `flet: 1.0.5` under both keys (#1027).
 
-**The setup.**
-- `.flet-ref` (committed) holds one line: the pinned 40-character `flet-dev/flet` commit SHA. It is the single pin for development, CI and builds.
-- `.flet-src` (git-ignored) is a checkout of `flet-dev/flet` at that SHA:
-  - In the main checkout (and for contributors), a clone of its own, never a `git worktree` of someone's Flet repo (D-451): the agents keep it at the pin and move it after every bump, without waiting on anyone, and nobody's Flet work shares its git metadata. Until 2026-10-31 the owner's was a worktree of his Flet repo, which only he could move, so it stayed at the old pin after #808.
-  - In a second worktree of this repo (an agent's, for example), an APFS clone of the main checkout's `.flet-src`, never a link to it: every build writes a wheel build folder inside the Flet checkout, so linked worktrees broke each other's builds (§5.8, D-219).
-- `pyproject.toml` points uv at the packages in `.flet-src` (`[tool.uv.sources]`) and tells `flet build` to bundle the same `flet` (`[tool.flet.dev_packages]`, §3.1).
+The price of the git dependency: a build needs `git` and github.com, and pub keeps a mirror of Flet's repository (250 MB) and a checkout of the commit (180 MB) in the pub cache (§5.8).
+
+**Reading Flet's source.** The Python is in `.venv/lib/python3.14/site-packages/`. The Dart is in the pub cache after a build: `build/flutter/.dart_tool/package_config.json` says where. For the rest (the client, the docs, the template as written), keep a clone if you want one; nothing needs it, and it's git-ignored at this path:
 
 ```bash
-# The main checkout (and contributors): a fresh clone at the pin (about 10 s).
-git clone --filter=blob:none https://github.com/flet-dev/flet.git .flet-src
-git -C .flet-src checkout --detach "$(cat .flet-ref)"
-
-# Check the pin before building anything for testers: HEAD, then the files (about 9 s).
-# A worktree's APFS clone (§5.8) keeps the HEAD it was copied at, so HEAD alone can pass on stale files.
-test "$(git -C .flet-src rev-parse HEAD)" = "$(cat .flet-ref)" \
-  && git --no-optional-locks -C .flet-src diff --quiet HEAD && echo "Flet pin OK"
+git clone --filter=blob:none --branch v1.1.0.dev4 https://github.com/flet-dev/flet.git .flet-src
 ```
 
-**Bumping the pin** happens in its own PR (`chore/<issue>-bump-flet`, D-92):
-1. In the bump's own worktree, move its `.flet-src` to the new SHA and write the SHA to `.flet-ref`. **Right after the merge**, whoever merged moves the main checkout's `.flet-src` the same way, then runs `uv sync --locked` and `rm -rf build` there, and checks the pin (above); every other worktree then replaces its clone (§5.8). Nobody waits on the owner for this (D-451).
-   ```bash
-   # A clone with its own .git folder only (D-451). A link, or a .git FILE (a copy made before D-451), would
-   # move someone else's checkout: replace it (§5.8) instead.
-   test ! -L .flet-src && test -d .flet-src/.git || { echo "replace .flet-src first (§5.8)"; exit 1; }
-   git -C .flet-src fetch -q origin <sha> && git -C .flet-src checkout -q --detach <sha>
-   # Each bundled package's wheel build folder (flet's and the extensions', [tool.flet.dev_packages]) survives a
-   # checkout, and its stale files would ship (§5.8). No Flet package tracks a top-level build/ folder.
-   # find, not a packages/*/build glob: when no such folder exists, zsh stops with "no matches found", ending an
-   # && chain. The depth limits spare the source folder flet-mcp/src/flet_mcp/build.
-   find .flet-src/sdk/python/packages -mindepth 2 -maxdepth 2 -type d -name build -exec rm -rf {} +
-   ```
-2. If `.flet-src/.fvmrc` names a new Flutter, put it in `~/flutter/<version>`, or builds quietly take any `3.47.x` on `PATH` (#1004): `cp -cR ~/fvm/versions/<version> ~/flutter/<version>` with fvm, else `git clone -b <version> --depth 1 https://github.com/flutter/flutter.git ~/flutter/<version>`. After a build, `build/flutter/.dart_tool/version` must say that version and `build/flutter/android/local.properties` that `flutter.sdk`.
-3. Run `uv lock`, because Flet's own dependencies may have changed, then `uv sync`. Our `httpx` pin must stay inside Flet's range (`grep httpx .flet-src/sdk/python/packages/flet/pyproject.toml`; `>=0.28.1` at `22a6dcb16`). If it falls out, `uv lock` stops with "No solution found": set `[project].dependencies` to the version the range now needs, run `uv lock` again, and say so in the PR. Otherwise the pin stays, even if the lock could take a newer one (D-470).
-4. Delete `build/` (`rm -rf build`) on every bump. It caches Dart build-hook binaries compiled by the previous
-   Flutter, which a newer Flutter refuses ("Invalid kernel binary format version"; seen in #120 going from 3.44.8 to
-   3.47.7; since `a9ef26fdb` flet-cli clears `.dart_tool` when the Flutter version changes, `flet-dev/flet#7039`, but the rest of this step still stands). It also caches the generated app shell, which flet-cli keys on the template path, the reported version
-   and the configuration, not on the pin's SHA; the reported version is the nearest tag, which a bump need not change (§2.2 quirks).
-   It also deletes the worktree's pub cache clone (§5.8), as `flet clean` and a change of the bundled Python version
-   do: if `build/pub-cache` is missing, clone it again before the next build.
-5. Run the full checks, then build and smoke-test on an Android emulator (`flet build apk --arch arm64-v8a`; and re-run §8.1's backup and restore check, D-472) and an iOS simulator (`flet build ios-simulator`); the template and Dart package change with the pin. A release build on the iPhone only when the bump touches something that needs hardware (D-102). On Android, `adb shell uiautomator dump` must still show `resource-id` `app.nav.<tab>` on each bottom-bar destination's node, and `<tab>.title` on the node with the root's title text (D-170): D-166 relies on Flet's `Semantics` not forcing a node of its own for an identifier (#163).
-6. In the PR body, put the compare link (`flet-dev/flet/compare/<old>...<new>`) and what changed for us.
+The source paths in this document are in that tree (the aliases above). Never edit Flet's files in it: a gap is an upstream issue (D-213).
 
-**When 1.1.0 is on PyPI** (one PR):
-- Set `flet==1.1.0`, the dev tools `==1.1.0` and the extensions `==1.1.0`.
-- Delete `[tool.uv.sources]`, `[tool.flet.dev_packages]`, `.flet-ref`, the Flet checkout steps in the workflows (§7), and this subsection.
-- About this app's Flet row and the diagnostics text show `flet.version.flet_version` instead of `FLET_VERSION` ("source build").
-- After that, flet-cli downloads the release template and the Dart package is the published one.
+**Bumping to the next prerelease, `dev5` or later**, in its own PR (`chore/<issue>-bump-flet`, D-92):
+1. Set the version on every Flet line of `pyproject.toml`, and run `uv lock`, then `uv sync`. Our `httpx` pin must stay inside Flet's range: `uv lock` stops with "No solution found" otherwise, so set the version it now needs and say so in the PR. Otherwise the pin stays, even if the lock could take a newer one (D-470).
+2. Check what the release's template pins: `curl -sL https://github.com/flet-dev/flet/releases/download/v<version>/flet-build-template.zip | tar -xOf - '*/pubspec.yaml'`. `flet`'s `ref` must be the tag's commit (`git ls-remote https://github.com/flet-dev/flet.git 'refs/tags/v<version>^{}'`), and the three extensions on PyPI must exist at that version, or the bump waits.
+3. If `uv run flet --version` names a new Flutter, put it in `~/flutter/<version>`, or builds quietly take any `3.47.x` on `PATH` (#1006): `cp -cR ~/fvm/versions/<version> ~/flutter/<version>` with fvm, else `git clone -b <version> --depth 1 https://github.com/flutter/flutter.git ~/flutter/<version>`. After a build, `build/flutter/.dart_tool/version` must say that version and `build/flutter/android/local.properties` that `flutter.sdk`.
+4. Delete `build/` (`rm -rf build`) on every bump, then `tools/setup_worktree.sh`. Build once before starting parallel builds: two first builds of a version at once can fail on the template's download (U286; a second try works). It caches Dart build-hook binaries compiled by the previous Flutter, which a newer Flutter refuses ("Invalid kernel binary format version"; seen in #120 going from 3.44.8 to 3.47.7; since `a9ef26fdb` flet-cli clears `.dart_tool` when the Flutter version changes, `flet-dev/flet#7039`, but the rest of this step still stands), and the generated app shell.
+5. Run the full checks, then build and smoke-test on an Android emulator (`flet build apk --arch arm64-v8a`; and re-run §8.1's backup and restore check, D-472) and an iOS simulator (`flet build ios-simulator`). After the build, `uv run pytest tests/test_theme.py tests/test_high_contrast.py -k flet -rs` must run the two tests that mirror Flet's Dart source and skip neither: they can't run where no build has fetched it, so neither the gate nor CI runs them. A release build on the iPhone only when the bump touches something that needs hardware (D-102). On Android, `adb shell uiautomator dump` must still show `resource-id` `app.nav.<tab>` on each bottom-bar destination's node, and `<tab>.title` on the node with the root's title text (D-170): D-166 relies on Flet's `Semantics` not forcing a node of its own for an identifier (#163).
+6. In the PR body, put the compare link (`flet-dev/flet/compare/v<old>...v<new>`) and what changed for us.
 
-**Known quirks of a source pin:**
-- `.flet-src/sdk/python` is a uv workspace, so `uv.lock` also records Flet's own dev group (every extension package under `sdk/python/packages`) as editable paths. Nothing extra is installed, but `uv sync --locked` needs all those directories: a checkout must include the whole `sdk/python` tree (CI's sparse checkout of `sdk/python` does).
-- With `[tool.flet.dev_packages]` set, `flet build` never reuses installed site-packages and passes `--no-cache-dir`, so every build reinstalls the bundled packages (`CLI/commands/build_base.py:2714-2738`). Slower, but expected while the pin lasts.
-- `flet --version` prints the nearest git tag, for example `1.1.0.dev3` at `a9ef26fdb` (`1.1.0.dev2` at `22a6dcb16`). In CI's shallow clone it prints `0.1.0`.
-- Packaged apps report `flet.version.flet_version == "0.1.0"`, because a mobile build skips the git lookup (`flet/version.py:86-103`). About this app (INFO-03) and the diagnostics text (INFO-04) say "source build" instead (`FLET_VERSION` in `pycon_us/__init__.py`, D-271).
-- None of this affects the build (S5, #125).
+**Bumping to `1.1.0`:** the same steps. What changes on the Dart side is checked, not assumed: the template should then say `flet: 1.1.0`, from pub.dev, so `build/flutter/pubspec.lock` shows `flet` as `source: hosted`, and the git mirror stops growing. Then drop "prerelease" from D-481's wording, and §5.2 can use the store's companion app once one speaks 1.1.
+
+**When we need a fix that isn't released.** The owner sometimes merges upstream fixes between prereleases. Ask for a prerelease first: it costs one line here. If one isn't coming, use the smallest of these, in a PR that says why and which release ends it, and undo it in the bump that brings the fix:
+- **A Dart-only fix:** keep the wheels, and move the Dart package to the commit. `[tool.flet.flutter.pubspec.dependency_overrides]` replaces the template's entry (`CLI/commands/build_base.py`, `pyproject_pubspec`):
+  ```toml
+  [tool.flet.flutter.pubspec.dependency_overrides]
+  flet = { git = { url = "https://github.com/flet-dev/flet.git", ref = "<sha>", path = "packages/flet" } }
+  ```
+- **A fix on the Python side, or in the template or `flet-cli`:** the source pin we used until #1027. A plain git source doesn't work: installed from git, `flet` reports Flutter `"0"`, and `flet build` stops, and the template URL names a release that doesn't exist. So clone Flet at the SHA into `.flet-src`, unpin the family (`"flet"`, not `"flet==..."`), add the two tables below, `uv lock`, and in every worktree repeat the clone: a wheel builds in place there, so worktrees never share it (D-219). `flet --version` prints the nearest tag and the packaged app says `0.1.0`. The pin tests allow what `[tool.uv.sources]` names.
+  ```toml
+  [tool.uv.sources]
+  flet = { path = ".flet-src/sdk/python/packages/flet", editable = true }
+  flet-cli = { path = ".flet-src/sdk/python/packages/flet-cli", editable = true }
+  flet-web = { path = ".flet-src/sdk/python/packages/flet-web", editable = true }
+  flet-desktop = { path = ".flet-src/sdk/python/packages/flet-desktop", editable = true }
+  flet-platform-assets = { path = ".flet-src/sdk/python/packages/flet-platform-assets", editable = true }
+  flet-notifications = { path = ".flet-src/sdk/python/packages/flet-notifications", editable = true }
+  flet-permission-handler = { path = ".flet-src/sdk/python/packages/flet-permission-handler", editable = true }
+  flet-secure-storage = { path = ".flet-src/sdk/python/packages/flet-secure-storage", editable = true }
+
+  [tool.flet.dev_packages]              # what flet build bundles instead of PyPI's packages
+  flet = ".flet-src/sdk/python/packages/flet"
+  flet-notifications = ".flet-src/sdk/python/packages/flet-notifications"
+  flet-permission-handler = ".flet-src/sdk/python/packages/flet-permission-handler"
+  flet-secure-storage = ".flet-src/sdk/python/packages/flet-secure-storage"
+  ```
+
+**Why the pin matters for pip.** `flet build` hands pip the lines in `[project].dependencies`, and pip and uv skip prereleases unless a requirement names one. Unpinned, `flet` would resolve to stable 1.0.5 and `flet-notifications` to the unrelated project's 0.1.x (`flet-gaps-and-extensions.md` §6).
 
 ---
 
@@ -163,7 +159,7 @@ readme = "README.md"
 license = "Apache-2.0"
 requires-python = ">=3.14,<3.15"      # flet build bundles CPython 3.14 (D-82, F19)
 dependencies = [                      # bundled into the app by flet build: pin exactly
-    "flet",                           # pinned by .flet-ref until 1.1.0 is on PyPI (D-81)
+    "flet==1.1.0.dev4",               # one version for the whole Flet family (§2.2)
     "httpx==0.28.1",                  # the app imports it: without this, phones get what pip finds that day (D-470)
     "tzdata==2026.5",                 # zoneinfo data on phones (D-43)
 ]
@@ -174,11 +170,11 @@ build-backend = "uv_build"
 
 [dependency-groups]
 dev = [                               # host only, never bundled; versions in uv.lock (D-75)
-    "flet-cli",                       # flet run / build / debug / devices / test
-    "flet-web",                       # flet run --android/--ios serves through it
-    "flet-desktop",                   # optional desktop window (D-09, development.md §5.4)
-    "flet-platform-assets",           # flet-cli dependency, listed so uv takes it from .flet-src
-    "flet[test]",                     # flet test flows (D-78) and pytest-asyncio
+    "flet-cli==1.1.0.dev4",           # flet run / build / debug / devices / test
+    "flet-web==1.1.0.dev4",           # flet run --android/--ios serves through it
+    "flet-desktop==1.1.0.dev4",       # optional desktop window (D-09, development.md §5.4)
+    "flet-platform-assets==1.1.0.dev4", # flet-cli's dependency, held to the family's version
+    "flet[test]==1.1.0.dev4",         # flet test flows (D-78) and pytest-asyncio
     "pytest",
     "hypothesis",
     "ruff",
@@ -236,21 +232,9 @@ export_options = { manageAppVersionAndBuildNumber = false }   # Xcode must not r
 [tool.flet.ios.info]
 ITSAppUsesNonExemptEncryption = false # HTTPS only: no export-compliance prompt on upload
 
-# ------------------------------------------------------------------ Flet from source (development.md §2.2)
-# Delete both tables in the PR that pins flet==1.1.0.
-[tool.uv.sources]
-flet = { path = ".flet-src/sdk/python/packages/flet", editable = true }
-flet-cli = { path = ".flet-src/sdk/python/packages/flet-cli", editable = true }
-flet-web = { path = ".flet-src/sdk/python/packages/flet-web", editable = true }
-flet-desktop = { path = ".flet-src/sdk/python/packages/flet-desktop", editable = true }
-flet-platform-assets = { path = ".flet-src/sdk/python/packages/flet-platform-assets", editable = true }
-
-[tool.flet.dev_packages]              # what flet build bundles instead of PyPI's flet
-flet = ".flet-src/sdk/python/packages/flet"
-
 # ------------------------------------------------------------------ tools
 [tool.ruff]
-target-version = "py314"              # ruff also skips git-ignored paths (excluded/, .flet-src)
+target-version = "py314"              # ruff also skips git-ignored paths (excluded/)
 extend-exclude = ["*.md"]             # code sketches in the docs are illustrations, not our code
 
 [tool.ruff.lint]
@@ -270,7 +254,7 @@ pythonpath = ["."]                    # tools.mock_api; pycon_us is installed by
 addopts = ["--ignore=tests/ui"]       # device flows run through flet test (D-78)
 ```
 
-**Validated** on 2026-10-11 in a scratch project with `.flet-src` linked to the monorepo:
+**Validated** on 2026-10-11, then with a source checkout of Flet, in a scratch project:
 - flet-cli's own `load_pyproject_toml` read it, and every leaf key was matched to its reader (§3.2);
 - `resolve_python_version` picked 3.14.7;
 - `uv lock` resolved `flet` as `editable = ".flet-src/…"`;
@@ -302,7 +286,6 @@ S5 then built every target from this setup, and P0-04 (#52) built `apk --arch ar
 | `tool.flet.ios.team_id`, `tool.flet.ios.export_methods.<method>` | `CLI/commands/build_base.py:1493-1528` | The method from `--ios-export-method`, else `export_method`, else `debugging` picks its table; its `provisioning_profile`, `signing_certificate` and `export_options` go into the Runner's build settings and `ios/exportOptions.plist` (§8.2) |
 | `tool.flet.deep_linking` | `CLI/commands/build_base.py:2801-2855` (`get_deep_linking`) | `confcompanion://app/<route path>` on Android and iOS (D-269, §5.5); a platform table would override it per key, and we have none |
 | `tool.flet.android.permission` | `CLI/commands/build_base.py:1285-1288`; `TPL/android/app/src/main/AndroidManifest.xml:3-7` | Merged over the template's `INTERNET`: one `<uses-permission>` per `true` key; adds `POST_NOTIFICATIONS` and `SCHEDULE_EXACT_ALARM` (D-221, #446) |
-| `tool.flet.dev_packages` | `CLI/commands/build_base.py:2714-2738` | Rewrites `flet`, `flet-notifications`, `flet-permission-handler` and `flet-secure-storage` to `<name> @ file:///…/.flet-src/…` for the bundle; relative paths resolve from the project root |
 
 Not set, because the default is what we want:
 
@@ -329,10 +312,7 @@ Not set, because the default is what we want:
 
 ### 3.4 Additions by phase
 
-Each row lands in the PR that ships the feature, never earlier. A Flet extension from the monorepo is added three times while the source pin lasts:
-- in `dependencies`, so it is bundled;
-- in `[tool.uv.sources]`, so the host uses the checkout;
-- in `[tool.flet.dev_packages]`, so the bundle uses the checkout.
+Each row lands in the PR that ships the feature, never earlier. A Flet extension goes in `dependencies` at the family's exact version (§2.2).
 
 | Phase | Feature | Addition | Exists in flet-cli today? |
 |---|---|---|---|
@@ -386,7 +366,7 @@ def test_version_matches_pyproject():
 
 ### 5.0 The short path: a fresh worktree to the app on a device
 
-The Mac already has the tools (§5.1 if it doesn't), and the main checkout has `.flet-src` (§2.2). From the worktree's root:
+The Mac already has the tools (§5.1 if it doesn't). From the worktree's root:
 
 ```bash
 tools/setup_worktree.sh
@@ -415,7 +395,7 @@ This section is for a Mac with none of the tools. The timed run on a truly clean
 | Access to the repo, while it is private | `gh` 2.100.0 here | `brew install gh`, then `gh auth login` | See "What `gh` is for" below |
 | uv | CI uses 0.12.x; 0.13.6 here | `curl -LsSf https://astral.sh/uv/install.sh \| sh`, then open a new terminal | `ci.yml`, and `uv_build>=0.12,<0.13` in `pyproject.toml` |
 | Python on the Mac | 3.14.x (3.14.10 with uv 0.13.6) | `uv sync` downloads it | `requires-python` in `pyproject.toml`; the app's own Python is separate (§2.1) |
-| Flutter | 3.47.9 | flet-cli installs it (below) | `.flet-src/.fvmrc` |
+| Flutter | 3.47.9 | flet-cli installs it (below) | `uv run flet --version` |
 | JDK, Android only | 17 (Temurin 17.0.13+11) | flet-cli installs it (below) | `CLI/utils/jdk.py:15-18` |
 | Android SDK, Android only | `platform-tools`, `platforms;android-35`, `build-tools;34.0.0` | flet-cli installs them (below) | `CLI/utils/android_sdk.py:15-19` |
 | Xcode, iOS only | 27 (27.2 here); no older one has been tried with this pin | App Store | §2.1, D-81 |
@@ -423,7 +403,7 @@ This section is for a Mac with none of the tools. The timed run on a truly clean
 
 Allow about 20 GB of disk for Android (here: Flutter 2.1 GB, Android emulator 1.2 GB, system image 4.3 GB, NDK 2.8 GB, plus the Gradle and pub caches), and more for Xcode.
 
-**What `gh` is for.** Only for cloning this repo while it is private: any git credential with access works too. Building, running and testing never call it. The Flet clone is public and needs no login. People who open or merge PRs need it as well (`tools/gate.sh` posts through it). Once the repo is public (#852), clone with `git clone https://github.com/ndonkoHenri/pycon-us-flet.git` with no account; `gh` then leaves this list.
+**What `gh` is for.** Only for cloning this repo while it is private: any git credential with access works too. Building, running and testing never call it. People who open or merge PRs need it as well (`tools/gate.sh` posts through it). Once the repo is public (#852), clone with `git clone https://github.com/ndonkoHenri/pycon-us-flet.git` with no account; `gh` then leaves this list.
 
 **Pasting into zsh.** The blocks in this section hold no comments on purpose. In an interactive zsh, macOS's default shell, `#` doesn't start a comment unless you run `setopt interactivecomments` first, so a pasted `uv sync   # note` passes the note as arguments. Blocks elsewhere in this guide do have comments.
 
@@ -431,17 +411,15 @@ Allow about 20 GB of disk for Android (here: Flutter 2.1 GB, Android emulator 1.
 
 ```bash
 gh repo clone ndonkoHenri/pycon-us-flet && cd pycon-us-flet
-git clone --filter=blob:none https://github.com/flet-dev/flet.git .flet-src
-git -C .flet-src checkout --detach "$(cat .flet-ref)"
 uv sync --locked
 git config core.hooksPath .githooks
 uv run flet --version
 uv run pytest
 ```
 
-- `.flet-src` is your own clone of Flet at the pin (§2.2, D-451). `git config` turns on the pre-push checks, once per clone (§7, D-273). The pre-commit hooks are optional: `git config hooks.precommit true` turns them on for each commit (§7, D-480).
+- `git config` turns on the pre-push checks, once per clone (§7, D-273). The pre-commit hooks are optional: `git config hooks.precommit true` turns them on for each commit (§7, D-480).
 - With a uv newer than 0.12, `uv sync` prints ``warning: `build_system.requires = ["uv-build>=0.12,<0.13"]` does not contain the current uv version``. It is harmless: uv fetches the older `uv_build`. `uv.lock` also passes `uv lock --check` under uv 0.12.24.
-- `flet --version` prints `Flet: 1.1.0.dev3` and `Flutter: 3.47.9`. It needs no Flutter yet.
+- `flet --version` prints `Flet: 1.1.0.dev4` and `Flutter: 3.47.9`. It needs no Flutter yet.
 - `pytest` needs no device and takes about 3 minutes on a quiet M4, 5 or 6 on a busy one: about 9,000 passed, 1 skipped in 2026-11. The count grows; what matters is that nothing fails. It can run in a second terminal while you go on.
 
 **2. Android.** The first command that needs the mobile tools installs them. flet-cli asks once for Flutter and once for the Android SDK, whose yes covers the JDK too; `--yes` skips both questions. Flutter goes to `~/flutter/3.47.9`, the JDK to `~/java/17.0.13+11` and the SDK to `~/Android/sdk`, and none of them joins your shell's `PATH` (§2.1).
@@ -508,28 +486,28 @@ So Android from nothing, not counting `pytest`, comes to about 20 to 35 minutes,
 **The rehearsal (#849, 2026-11-02, at `22a6dcb16`).** Step 1 was followed in a new directory, with new clones of both repos and uv's cache and Python folders empty (`UV_CACHE_DIR`, `UV_PYTHON_INSTALL_DIR`, `UV_PYTHON_PREFERENCE=only-managed`); then `uv run flet devices` ran (13 s, no devices). What wasn't clean: the owner's Mac already had Homebrew, Xcode 27.2, a logged-in `gh`, uv 0.13.6, Flutter 3.47.8 through fvm, the JDK, the Android SDK, and warm Gradle and pub caches. The Flutter, JDK and SDK installers write into the home folder, so they weren't run. Nothing was built, and no emulator or simulator was used; steps 2 and 3 were read against flet-cli's source at the pin only. This section's device steps last ran on 2026-10-12, at an older pin and with warm caches: the 70 s and 3 minutes above.
 
 `.gitignore` covers, among others:
-- `.venv/`, `.flet-src`, `.flet/` (the `flet run` storage, F14), `build/`, `excluded/`;
+- `.venv/`, `.flet-src` (an optional clone of Flet, §2.2), `.flet/` (the `flet run` storage, F14), `build/`, `excluded/`;
 - `*.jks`, `*.keystore`, `*.p12`, `*.p8`, `*.mobileprovision` and `.env*`, as a second line of defence for D-86.
 
-### 5.2 Hot reload: a companion client built from the pin
+### 5.2 Hot reload: a companion client built from a Flet clone
 
-The Flet companion app in the stores is built from released Flet and lacks 1.1's Dart changes, so it is not used with the pin (D-81). `uv run flet run --android|--ios` (port 8551 and a QR code for that app) waits for a 1.1 companion in the stores. Until then, Python hot reload uses a companion client built from `.flet-src/client` on an emulator or simulator:
+The Flet companion app in the stores is built from released Flet and lacks 1.1's Dart changes, so it is not used with a prerelease (D-81). `uv run flet run --android|--ios` (port 8551 and a QR code for that app) waits for a 1.1 companion in the stores. Until then, Python hot reload uses a companion client built from the `client` folder of a Flet clone at our version, on an emulator or simulator. It's the one thing in the normal path that needs the clone, and only if you want hot reload; clone it once (§2.2):
 
 ```bash
 # Terminal 1, at the repo root: serve src/main.py on port 8550; -r restarts Python on any change under src/.
 BROWSER=true uv run flet run -r -w -p 8550
 
 # Terminal 2: build and start the client (first build about 4 minutes on Android, 2 on iOS).
-cd .flet-src/client && flutter run -d emulator-5554    # or -d <simulator udid>
+cd .flet-src/client && flutter run -d <emulator serial>    # or -d <simulator udid>
 ```
 
 - Terminal 2 needs Flutter 3.47.x on `PATH`. If flet-cli downloaded it (§2.1), first run `export PATH="$HOME/flutter/3.47.9/bin:$PATH"`.
 - The client connects to `http://localhost:8550` at the root path, or `http://10.0.2.2:8550` on the Android emulator (`client/lib/main.dart:84-97`), and logs "Page URL: …". A phone cannot reach the laptop that way, so phones use `flet debug` (§5.3).
 - `-r` watches `src/` recursively; without it only `src/main.py` reloads (F22). A reload restarts Python, so in-memory state resets; preferences live on the device and survive.
+- **At `a9ef26fdb` a reload strands the client.** The first load works, but after Python restarts, each `SharedPreferences.get` times out in 10 s ("Timeout waiting for invoke method listener") and the client stays on the boot spinner: 5 timeouts and the same screen from a source pin and from the wheels (#1027, iPhone 17 simulator). Until that's fixed, stop and start the client after a reload.
 - `-w` also opens a browser tab; `BROWSER=true` stops that.
-- An "Exception in ASGI application" traceback ending in "Web root path not found: …/flet_web/web" on any HTTP `GET /` (a browser tab, `curl`) is harmless: a source checkout has no built web client, and the native client uses only the WebSocket.
 - Stopping `flet run` can leave the app's Python child listening on port 8550, and the next `flet run -p 8550` then cannot bind. `lsof -nP -iTCP:8550 -sTCP:LISTEN` names the process; kill it.
-- On iOS, `flutter run` rewrites three tracked files in the Flet checkout: `client/ios/Podfile.lock`, `client/ios/Runner.xcodeproj/project.xcworkspace/xcshareddata/swiftpm/Package.resolved` and `client/ios/Runner.xcworkspace/xcshareddata/swiftpm/Package.resolved`. After a session, check `git -C .flet-src status` and restore only those three with `git -C .flet-src restore --source=HEAD --worktree -- <path>`, in the main checkout and in a worktree's clone alike: each has its own `.git` folder (D-451), and copying them from the main checkout would bring another pin's files during a bump. A clone with a `.git` file (made before D-451) takes no git write: replace it first (§5.8). Never restore all of `client/`.
+- On iOS, `flutter run` rewrites three tracked files in the clone: `client/ios/Podfile.lock`, `client/ios/Runner.xcodeproj/project.xcworkspace/xcshareddata/swiftpm/Package.resolved` and `client/ios/Runner.xcworkspace/xcshareddata/swiftpm/Package.resolved`. They matter only to `git status` there; before moving the clone to another tag, restore them with `git -C .flet-src restore --source=HEAD --worktree -- <path>`. Never restore all of `client/`.
 - Stop with `q` in terminal 2 and Ctrl+C in terminal 1.
 
 What is different in the companion client:
@@ -568,7 +546,7 @@ Notes:
 ### 5.4 Desktop window (developer convenience only)
 
 `uv run flet run -r` opens a desktop window (D-09). Use it for quick layout iteration at a phone-sized window. The UI flows never use it: `flet test` runs in device mode (D-78), and `flet test linux` in CI is spike S9's question.
-- From a source pin it needs the Flet desktop client built from `.flet-src/client`, with `FLET_VIEW_PATH` set (`CONTRIBUTING.md` in the monorepo, "FLET_VIEW_PATH").
+- `flet-desktop` downloads the client from the GitHub release of its version (`flet-macos.tar.gz`) the first time.
 - Never add desktop-only code paths, and never judge touch targets, safe areas or gestures there.
 
 ### 5.5 Devices, emulators and logs
@@ -644,23 +622,18 @@ uv run flet test ios -d <udid> --tests-dir tests/ui -v -k "offline or switch_day
 - **Why the iOS flows run on an iPhone 17 Pro Max** (D-223, D-478): a flow cannot scroll (`RemoteTester` has no drag, U35), and the test binding drops the device's own touches (`shouldPropagateDevicePointerEvents`), so a host-side swipe doesn't reach the app either. About this app is below the fold of More on every phone, so the flows open it by its deep link: `adb` on Android, and on iOS Maestro (`maestro/subflows/open_link.yaml`), which answers the simulator's "Open" prompt, so the iOS flows need the Maestro CLI. Developer's Refresh now must then be on its first screen, which takes the Pro Max (440 x 956 pt); `flet_probe_api36` (1080 x 2400 px, 420 dpi) shows it too.
 - **F1–F5 set the scene in Developer** (`tests/ui/developer.py`): each unlocks it, sets the fake clock to the day before the conference, and F2–F5 refresh from the recorded feed that the `feed_url` fixture serves from the laptop. The app fetches the year's feed at launch, so the flows need no network of their own, but a device without one only makes the first Refresh now wait for the app's 10 s feed timeout.
 
-### 5.8 Several builds at once: a Flet checkout and a pub cache per worktree (D-219, D-176)
+### 5.8 Several builds at once: a pub cache per worktree (D-176)
 
-**Why.** Two folders that every worktree's builds wrote to let overlapping builds spoil each other: the Flet checkout's wheel build folder, which fails a build loudly, and the pub cache, which ships the wrong Python silently.
-
-**The Flet checkout** (#208). Every build pip-installs the bundled `flet` from `.flet-src/sdk/python/packages/flet` (`[tool.flet.dev_packages]`, §2.2), and pip builds a local folder in place: setuptools writes `build/lib/`, `build/bdist.<platform>/wheel/` and `src/flet.egg-info/` inside it. Worktrees whose `.flet-src` is a link to the main checkout's all build in that one folder, so one build deletes or rewrites what another is copying, and `flet build` stops in the packaging step with "Failed building wheel for flet" after `[Errno 2] No such file or directory`, `[Errno 66] Directory not empty` or `[Errno 17] File exists` on a path under `build/bdist.macosx-11.0-arm64/wheel/` (three times on 2026-10-13).
-- An interrupted build leaves `build/bdist.*/wheel/flet-0.1.0.dist-info` behind, and from then on every build from that folder fails with `[Errno 17]`, even alone.
-- Files left in `build/lib/` go into the wheel even after the source has dropped them, for example across a pin bump.
-- A link also points `uv sync`'s editable installs at the main checkout, since uv resolves the link: `uv run flet` then runs the main checkout's flet-cli and template, not the worktree's.
+**Why.** The pub cache is one folder that every worktree's builds write to, and overlapping builds that share it can ship each other's Python, silently. (Until D-481 a Flet checkout per worktree was the other half of this section: pip built `flet`'s wheel inside it, D-219. A wheel from PyPI builds nothing.)
 
 **The pub cache.** serious_python (6.1.3 at `a9ef26fdb`; 6.1.2 at `22a6dcb16`; 6.0.1 at `08b89cce5`, with its platform packages at 6.1.0 since 2026-10-27, §2.1; 5.0.0 before; #445 found the same paths and `build.gradle.kts` lines in 6.0.1), which embeds Python in the app, stages each build's Python app inside its own plugin folder in the **pub cache**, and every Flutter project on the Mac shares that folder. Two builds that overlap can ship each other's Python; nothing fails or warns, and the app runs another worktree's code. It happened three times on 2026-10-12 with agents building in parallel (#176).
 - **iOS:** the packaging step copies `build/python-app/` into `<pub cache>/hosted/pub.dev/serious_python_darwin-<version>/darwin/` (`dist_ios/app`, then the Swift package's `serious_python_darwin/Sources/serious_python_darwin/Resources/app`; site-packages and the native extension frameworks go there too). Xcode copies that folder into the app's `serious_python_darwin_serious_python_darwin.bundle/app` minutes later, so a build that packages in between wins.
 - **Android: the same race, with a shorter window.** The plugin's Gradle tasks write `app.zip`, `stdlib.zip` and `sitepackages.zip` to `serious_python_android-<version>/android/src/main/assets/` and the native libraries to `src/main/jniLibs/<abi>/`, paths relative to the plugin's folder in the pub cache (`build.gradle.kts:151, 423-454`); the APK takes them when Gradle merges assets later in the same run. Two Gradle builds that overlap there can package each other's `app.zip`.
 - `flet debug` and `flet test` run the same pipeline (§5.3, §5.7). The companion client (§5.2) does not embed Python and is not affected.
 
-**The rule.** Every worktree of this repo has a Flet checkout of its own: an APFS clone of the main checkout's `.flet-src`, never a link to it. When another build may run on the Mac (agents in parallel, D-102), every `flet build`, `flet debug` and `flet test` in a worktree also uses a pub cache of its own under `build/`, another APFS clone.
+**The rule.** When another build may run on the Mac (agents in parallel, D-102), every `flet build`, `flet debug` and `flet test` in a worktree uses a pub cache of its own under `build/`, an APFS clone of `~/.pub-cache`.
 
-`tools/setup_worktree.sh` does both, once per worktree, and is safe to run again: it makes the clone (replacing a link, a pre-D-451 copy or a clone off the pin), runs `uv sync --locked`, clones the pub cache if `build/pub-cache` is gone, and turns on the pre-push hook. It only reads the main checkout's `.flet-src`, and stops if that is off the pin. Then prefix every build, debug and test command in the worktree:
+`tools/setup_worktree.sh` does it, once per worktree, and is safe to run again: it runs `uv sync --locked`, clones the pub cache if `build/pub-cache` is gone, turns on the pre-push hook, and says when Flet's Flutter isn't in `~/flutter`. Then prefix every build, debug and test command in the worktree:
 
 ```bash
 PUB_CACHE=$PWD/build/pub-cache LANG=en_US.UTF-8 uv run flet build ios-simulator --yes
@@ -668,15 +641,8 @@ PUB_CACHE=$PWD/build/pub-cache uv run flet debug android -d emulator-5580
 PUB_CACHE=$PWD/build/pub-cache uv run flet test ios -d <udid> --tests-dir tests/ui -v
 ```
 
-**The Flet clone.**
-- It took 2 s for the 178 MB checkout (8,400 files). It leaves out the `flet` package's `build/` folder, which the main checkout's own builds left there, for the reasons above.
-- The main checkout's `.flet-src` stays the source of truth at the pin, and nobody edits Flet's files in it or a clone (D-213). It is a plain clone with its own `.git` folder (D-451), so a worktree's APFS clone carries a `.git` of its own too, and a checkout there moves only that clone. The pin check (§2.2) still compares the clone's files: a clone copied before a bump keeps the old HEAD and files until it is replaced.
-- Before D-451 the main checkout's `.flet-src` was a `git worktree` of the owner's Flet repo, whose `.git` file each clone kept, so a checkout in a clone moved the owner's Flet worktree. A clone made from that setup still has the `.git` file (`test -f .flet-src/.git`): replace it, never run a git write in it.
-- After a pin bump (§2.2), run `tools/setup_worktree.sh` again: it replaces the clone.
-- If the wheel step fails with `[Errno 17]` or `[Errno 66]` after an interrupted build, delete your clone's leftovers, `rm -rf .flet-src/sdk/python/packages/flet/build`, and build again. Never clean the main checkout's `.flet-src` from a worktree.
-- `rm -rf build` and `flet clean` leave the clone alone: it lives outside `build/`.
-
 **The pub cache clone.**
+- **The Dart `flet` package lives here too** (§2.2): pub's mirror of Flet's repository, `git/cache/flet-<hash>`, and a checkout, `git/flet-<sha>`. A clone made after `~/.pub-cache` has them shares their blocks; one made before writes what it lacks on its first build. From an empty cache the two hold about 430 MB, hard-linked, so `du` on one alone misleads, and the whole cache 714 MB after an APK, 976 MB after an iOS build as well. With `~/.pub-cache` holding the mirror but not this commit, a new worktree's `tools/setup_worktree.sh` took 57 s and its first APK 112 s (2026-11-04, on a busy Mac).
 - `cp -c` clones with `clonefile(2)` when both folders are on one APFS volume, and falls back to a plain copy otherwise (`man cp`). The clone shares its blocks with `~/.pub-cache` until one side changes. On the owner's Mac it took 6 s for the 1.0 GB cache (44,000 files), and the volume's used space grew by about 20 MB (metadata; other builds were writing at the same time). An empty `build/pub-cache` works too, but the first build then downloads every package again (9 to 10 minutes on a busy host, #176).
 - The script tests for the folder first: `cp -R` into a folder that already exists copies the source *inside* it, so a second bare `cp -cR` adds a nested `build/pub-cache/.pub-cache` and leaves the cache that `PUB_CACHE` names as it was. If a clone was interrupted, `rm -rf build/pub-cache` and run the script again.
 - The clone carries whatever another build last staged in the plugin folders; your build replaces it in your copy only.
@@ -712,9 +678,7 @@ diff -rq -x .keep build/python-app \
 
 Checked on 2026-10-12 (#176), from a fresh clone of the cache: `flet build ios-simulator` took 4 minutes and `flet build apk --arch arm64-v8a` 2 minutes. Both staged into `build/pub-cache` (`dist_ios/app` and `assets/app.zip` written by these builds) while the copies in `~/.pub-cache` still held another worktree's app from half an hour earlier, both checks printed nothing, and the app ran on an iPhone 17 simulator (iOS 26.5). On 2026-10-13, `flet build aab` (`build/aab/pycon-us.aab`) and an unsigned `flet build ipa` (`build/ipa/pycon-us.xcarchive`) from the same clone passed the AAB and archive checks; the signed-IPA line was tried on an IPA zipped by hand from that archive's app, since no profile exists to export one yet (#121).
 
-Checked on 2026-10-14 (#208). The race, in scratch copies of the `flet` package (never in a shared checkout): four `pip wheel` runs at once in one folder, five rounds, failed 12 of 20 times with `[Errno 17]`, `[Errno 2]` and `[Errno 66]` under `build/bdist.macosx-11.0-arm64/wheel/`; four runs at once in four clones failed 0 of 20. A planted `build/bdist.*/wheel/flet-0.1.0.dist-info` failed a lone build with `[Errno 17]` until `build/` was deleted, and a file planted in `build/lib/flet/` came out in the wheel. The fix: two worktrees, each set up with the lines above, started `flet build ios-simulator` in the same second. Their three wheel builds each (one per Python platform) ran in step, second for second, each from its own clone; both builds passed (8 and 10 minutes on a busy host), both bundle checks printed nothing, and no log named the main checkout's `.flet-src`. A second round, `flet build ios-simulator` in one and `flet build apk --arch arm64-v8a` in the other, again overlapped their wheel builds: the APK passed and its `app.zip` check printed nothing; the iOS build packaged its Python and then stopped in Xcode with "No Xcode build settings have been found", the Xcode step on a busy host, not the wheel (as on #197); run again, it passed in 4½ minutes and its check printed nothing.
-
-The upstream fix for the pub cache, staging per Flutter project instead of in the plugin's folder, is U28 (#185, flet-dev/serious-python#255; [`flet-gaps-and-extensions.md`](flet-gaps-and-extensions.md) §1.3). When the pin brings it, the pub cache half of this subsection and D-176 go. The Flet clone goes with the source pin (§2.2): with 1.1.0 on PyPI, builds install `flet` from a published wheel and build nothing from `.flet-src`.
+The upstream fix for the pub cache, staging per Flutter project instead of in the plugin's folder, is U28 (#185, flet-dev/serious-python#255; [`flet-gaps-and-extensions.md`](flet-gaps-and-extensions.md) §1.3). When a Flet bump brings it, this subsection and D-176 go.
 
 ### 5.9 Device flows: Maestro (D-252)
 
@@ -849,19 +813,18 @@ mock connection said "Connected to the local mock server.", in light and dark, a
 
 **While the repo is private, the checks run locally** (D-273). A private repo on GitHub Free includes 2,000 Linux minutes a month, and by 2026-10-20 `ci.yml`, run on every PR push and every push to `main`, had used about 1,875 of them. So GitHub Actions run only by hand, and local checks replace them.
 
-**`tools/check.sh`** runs `ci.yml`'s steps (§7.2) in the same order on your machine: `uv sync --locked`, `ruff check`, `ruff format --check`, the pre-commit hooks (below), `pyright`, `pytest --hypothesis-profile=ci`, with `UV_LOCKED=1`. `--fast` runs every step but pytest. It prints one line per step and stops at the first failure, with that step's exit status. It needs `.flet-src` (§2.2, §5.8). On the owner's Mac the fast run takes about 15 s (about 9 s before the hooks of D-480 joined) and the full one about 6 minutes (344 s in the gate of 2026-11-02, for 8,420 tests). It runs at three points:
+**`tools/check.sh`** runs `ci.yml`'s steps (§7.2) in the same order on your machine: `uv sync --locked`, `ruff check`, `ruff format --check`, the pre-commit hooks (below), `pyright`, `pytest --hypothesis-profile=ci`, with `UV_LOCKED=1`. `--fast` runs every step but pytest. It prints one line per step and stops at the first failure, with that step's exit status. On the owner's Mac the fast run takes about 15 s (about 9 s before the hooks of D-480 joined) and the full one about 6 minutes (344 s in the gate of 2026-11-02, for 8,420 tests). It runs at three points:
 - **The pre-push hook**, `.githooks/pre-push`, turned on once per clone with `git config core.hooksPath .githooks` (§5.1; every worktree of the clone then runs its own checkout's hook). Before each push it runs `tools/check.sh --fast`, unless the push changes only Markdown (`*.md`) or nothing: it compares a new branch with its merge base with `origin/main`, and an existing one with the remote's commit (a remote commit it doesn't have counts as code). The checks see the working tree, so it warns when that has uncommitted changes or HEAD isn't the pushed commit. `git push --no-verify` skips it once. A branch from before D-273 has no hook.
 - **The pre-commit hooks** (D-480), `.pre-commit-config.yaml`: file hygiene (trailing whitespace, end of file, YAML and TOML syntax, merge-conflict markers, files over 1 MB), `actionlint` on the workflows, and `tools/check_backticks.py`, which rejects reST double backticks in Python comments and docstrings (Markdown's single backtick is the house style; a span whose text holds a backtick is allowed). Hooks in stage `manual` are the ones `tools/check.sh` runs, as `uv run pre-commit run --all-files --hook-stage manual`, so the pre-push hook, the merge gate and `ci.yml` run the same set; they are one step, whose first run builds the hook environments (about 20 s, cached in `~/.cache/pre-commit`) and later ones take about 5 s. ruff comes from `uv.lock` through `uv run` (`language: system`), not from a `rev` in the config, so there is one pin to bump and CI, `check.sh` and the hook use the same version. A fixer that changes a file fails the step; run `uv run pre-commit run --all-files --hook-stage manual` yourself to apply it, then commit the result. Files that are data (`src/assets/`, `tests/fixtures/`, the licence texts, `docs/icon-options/`, `docs/research/`) are excluded.
 - **The lint rules** are ruff's own defaults plus the families `extend-select` names in `pyproject.toml`, one comment each; the rules switched off sit under `ignore` and `per-file-ignores` with a reason, and the families left out (ERA, TC, PLR) are named in the comment above them (D-480). Prefer a fix to a `noqa`; a `noqa` says why, in parentheses after the code. Prose lines (docstrings, comments) may run to 120 columns; `ruff format` keeps code at 88.
 - **Commit-time hooks are optional.** `pre-commit install` refuses while `core.hooksPath` is set, so `.githooks/pre-commit` stands in for it and does nothing until you run `git config hooks.precommit true` (once per clone, every worktree). Then each commit runs the same hooks on the staged files plus the commit-time ones: `ruff check`, `ruff format`, `gitleaks` (a secret scan of the staged diff, configured by `.gitleaks.toml`, §7.6) and a refusal to commit on `main` (D-88). `git commit --no-verify` skips it for one commit.
 - **Before you mark a PR ready**, run the full `tools/check.sh` and list it in the PR.
 - **`tools/merge.sh <pr> [<pr>...]`** gates the PRs and squash-merges them, one run at a time on the Mac. It merges only on the gate's own exit status, and only the head it read before the gate, so a push after that needs a new gate: `tools/gate.sh <pr> | tail … && gh pr merge <pr>` takes tail's status, and that merged #868 after a failed gate. Its exit status says what happened: 0 merged, with `main` at the gated tree; 1 the gate failed and nothing merged; 3 a merge didn't happen or `main`'s tree differs, so run `tools/check.sh` on `main`.
-- **The merge gate**, `tools/gate.sh <pr> [<pr>...]`, runs before every merge (D-100 condition 1, D-273). It fetches `main`, creates a scratch worktree detached at `origin/main` with its own copy of `.flet-src` (D-219), merges each PR's head into it in the order given, and runs the full `tools/check.sh` there, into a log.
+- **The merge gate**, `tools/gate.sh <pr> [<pr>...]`, runs before every merge (D-100 condition 1, D-273). It fetches `main`, creates a scratch worktree detached at `origin/main`, merges each PR's head into it in the order given, and runs the full `tools/check.sh` there, into a log.
   - The scratch worktree lives in `~/Library/Caches/gate.XXXXXX` and is removed when the gate ends. Not in `$TMPDIR`: macOS's `dirhelper` sweeps that daily at 03:35, removing files older than 3 days, and uv's clones keep their old timestamps, so a sweep during a gate can take files from its fresh `.venv` and fail tests falsely (inferred from a gate log, since `dirhelper` logged nothing; #898). `$HOME` and `$TMPDIR` are on the same volume, so `cp -c` and uv's clones still work. A gate killed outright (SIGKILL, a power loss) can't remove its scratch, and nothing sweeps that folder, so each gate first removes any `gate.XXXXXX` there untouched for a day; a younger one may be another gate's, running now.
   - A PR that doesn't merge cleanly stops it: merge `main` into that PR's branch first.
   - When a check fails, it prints the end of the log, keeps the log and posts nothing.
   - When the checks pass, it posts one comment on each PR: "Local checks passed (D-273): `main` <sha> + #<pr>@<sha> … → tree `<sha>`", the steps and pytest's summary line, then `$GATE_SIGNATURE` in a paragraph of its own when that is set (agents set their signature line, AGENTS.md rule 6). It prints the merged tree's sha last, the only line on its standard output.
-  - It warns when `.flet-src` is not at the merged tree's `.flet-ref`, since the checks then ran against another Flet.
   - Exit status: 0 passed, 1 failed (or couldn't run), 2 usage.
   - Its result holds for the PR's head and the `main` it names: after a new push to the PR, or once `main` has moved, run it again. Gate a batch together, in merge order, and squash-merge it in that order; `main`'s tree (`git rev-parse origin/main^{tree}` after a fetch) must then equal the printed tree, or else run `tools/check.sh` on `main`.
 
@@ -903,7 +866,6 @@ Conventions in every workflow:
 | Step | Command | Why |
 |---|---|---|
 | Check out the app | `actions/checkout` | |
-| Read the Flet pin, check out Flet at the pin | `actions/checkout` of `flet-dev/flet` at `.flet-ref`, sparse `sdk/python`, into `.flet-src` | `uv.lock` points at the path sources there (§2.2). Delete both steps with the 1.1.0 pin. |
 | Set up uv | `astral-sh/setup-uv`, `version: "0.12.x"`, `enable-cache: true` | uv stays on the `uv_build>=0.12,<0.13` line of `pyproject.toml`; unpinned, the action installs the latest uv, which warns that `uv_build` does not match it. Bump both together. The cache holds uv's packages, keyed on `uv.lock` and the `pyproject.toml` files. `uv sync` then installs CPython 3.14 from `requires-python`. |
 | Install | `uv sync --locked` | Fails if `uv.lock` is stale (D-75). |
 | Lint, Check formatting | `uv run ruff check`, `uv run ruff format --check` | D-74 |
@@ -927,7 +889,6 @@ The target is under 2 minutes (D-84). The time-zone tests run under two machine 
 - **Next year.** It also says whether next year's feed answers, at this year's `feed_url` with the next year in its path (D-05's pattern): "not published yet (HTTP 404 …)", "redirects to … not published yet" (a redirect is never taken for the new feed), or "PUBLISHED … with N slots". That line never fails the run. When it appears, record the feed (`tests/fixtures/feeds/README.md`) and add `data/<year>/` (docs/roadmap.md, the 2027 rollover).
 - **Notification.** With the schedule back, a failed scheduled run emails the person who last changed the schedule. That is the alert, so there is no issue bot and no `issues: write`.
 - **Concurrency.** One run at a time (group `feed-check`, `cancel-in-progress: false`): every run checks the same live feed, so a pending run may be replaced, but a running one is never cancelled.
-- **Why the Flet steps.** They are there only because `uv sync` needs `.flet-src` to exist; they disappear with the 1.1.0 pin. `ci.yml` and this workflow check out only `sdk/python` (sparse), which holds the five path sources, so the monorepo's Dart client and website do not eat the 2-minute budget (D-84). `build-android.yml` keeps the full checkout, because `flet build` needs the template, the Dart package and `.fvmrc`.
 
 ### 7.4 `.github/workflows/build-android.yml`: on demand
 
@@ -941,12 +902,11 @@ The target is under 2 minutes (D-84). The time-zone tests run under two machine 
 |---|---|---|
 | Check out the app | `actions/checkout`, `fetch-depth: 0` | The build number is the commit count (§4). The build also reads `flutter_packages/roboto_fonts` (§3.1). |
 | Check that the tag matches the version | Tags only: the tag must equal `v` + `[project].version`; otherwise the job fails with an error naming both | §4 |
-| Read the Flet pin and the build number | `cat .flet-ref`, `git rev-list --count HEAD` | |
-| Check out Flet at the pin | `actions/checkout` of `flet-dev/flet` at `.flet-ref` into `.flet-src`: the whole tree at depth 1, not sparse | `flet build` needs the template, `.fvmrc` and the Dart package `packages/flet`, which it adds to `pubspec.yaml` as a path dependency (§2.2). Delete the step with the 1.1.0 pin. |
+| Read the build number | `git rev-list --count HEAD` | |
 | Set up uv | `astral-sh/setup-uv`, `version: "0.12.x"`, `enable-cache: false` | The same uv line as `ci.yml` (§7.2). No cache: a tag build starts from clean inputs, and `uv sync` takes seconds. |
 | Install | `uv sync --locked` | D-75 |
 | Free disk space | `sudo rm -rf /usr/share/dotnet /usr/local/.ghcup /opt/hostedtoolcache/CodeQL` | The build fills about 11 GB (Flutter, the NDK, Gradle's caches) and the runner starts with about 13 GB free: the first run ended with 1.9 GB left. These preinstalled toolchains are never used here. |
-| Build the APK | `uv run flet build apk --arch arm64-v8a --build-number <count> --yes -v`, with `FLET_CLI_NO_RICH_OUTPUT=1` | The command of §8.1 with D-106's ABI. `--yes` lets flet-cli download Flutter (the version in `.flet-src/.fvmrc`) into `~/flutter`; it uses the runner's JDK 17 (`JAVA_HOME`) and Android SDK (`ANDROID_HOME`). `-v` and plain output keep the log useful when a build fails. |
+| Build the APK | `uv run flet build apk --arch arm64-v8a --build-number <count> --yes -v`, with `FLET_CLI_NO_RICH_OUTPUT=1` | The command of §8.1 with D-106's ABI. `--yes` lets flet-cli download Flutter (the version in the `flet` wheel) into `~/flutter`; it uses the runner's JDK 17 (`JAVA_HOME`) and Android SDK (`ANDROID_HOME`). `-v` and plain output keep the log useful when a build fails. |
 | Name the APK | `build/apk/pycon-us.apk` → `pycon-us-<count>-<short sha>-arm64-v8a.apk` | Downloads from different runs don't collide. |
 | Upload the APK | `actions/upload-artifact`, artifact named like the file, `compression-level: 0`, `overwrite: true`, `retention-days: 14` | Zipped (the default), because `gh run download` cannot fetch an unzipped artifact: it unzips the APK itself and fails (cli/cli#13012, seen on the first run). No compression, because an APK is already compressed. `overwrite`, because a re-run of the same run uploads the same name again. 14 days, because artifact storage is small (§7.1). |
 
@@ -963,9 +923,8 @@ The target is under 2 minutes (D-84). The time-zone tests run under two machine 
 
 So the `-Xmx4G` heap fits the runner, with about 1 GB to spare. Both APKs installed and started on the `flet_probe_api34` emulator. The two runs signed with different debug keys, so the second installed only after `adb uninstall`.
 
-**Why not `flet-dev/flet-build-action`.** It was the plan, but running the documented command directly is simpler and correct under the source pin (`ACTION/action.yml` at `v1`):
+**Why not `flet-dev/flet-build-action`.** It was the plan, but running the documented command directly is simpler (`ACTION/action.yml` at `v1`):
 - Its own `setup-uv` step installs the latest uv, which would replace the `0.12.x` line we keep with `uv_build` (§7.2).
-- Its Flet download cache is keyed on the reported Flet version, a constant `0.1.0` under the source pin (§2.2). After a pin bump it would restore the previous pin's downloads unless someone remembers to run once with `cache: false` (the S5 caveat).
 - It wraps the APK in its own `flet-apk.zip` and names it the same in every run.
 - P0-06 asks for the same commands as this document, and one `flet build apk` line is exactly that.
 
@@ -1038,13 +997,12 @@ Only `example.com` and `example.org` sample accounts, the conference's public ad
 
 **Personal data in the text.** Look at the commit identities (`git -C build/sweep/mirror.git log --all --format='%ae%n%ce' | sort | uniq -c`), and grep the dump and `build/sweep/api` for phone numbers, emails and `/Users/`. A phone number that isn't a `555-01xx` fake or the Code of Conduct hotline needs a look. #847's first result lists what is already known.
 
-**Dependabot** (`.github/dependabot.yml`) keeps the Actions our workflows use current once the repo is public; it doesn't read the Python side (the file says why).
+**Dependabot** (`.github/dependabot.yml`) keeps the Actions our workflows and `uv.lock` current, leaving out the Flet family (§2.2).
 
-**Python dependencies on the host.** `uv.lock` is what the tools and tests run on, and nothing else. The workspace's own Flet packages come from `.flet-src`, so they're left out of the export:
+**Python dependencies on the host.** `uv.lock` is what the tools and tests run on, and nothing else:
 
 ```sh
-uv export --locked --format requirements-txt --no-hashes --no-emit-workspace --no-editable -q -o build/sweep/req-all.txt
-grep -vE '^\./\.flet-src' build/sweep/req-all.txt > build/sweep/req.txt
+uv export --locked --format requirements-txt --no-hashes --no-emit-project -q -o build/sweep/req.txt
 uvx pip-audit -r build/sweep/req.txt --no-deps --disable-pip
 osv-scanner -L uv.lock
 ```
@@ -1067,10 +1025,9 @@ The result covers those builds only. `uv tree --locked --no-default-groups` list
 
 Fix a hit that ships with an exact pin in `[project].dependencies`, like `tzdata==2026.5`, then `uv lock`, or by seeing that a new build already resolves the fixed version. Either way, run the audit on a new build to confirm it. If no phone wheel has the fix, a pin would break the build, so it's an `upstream` issue here (D-213). One is known: `msgpack` 1.1.2, the newest wheel on `pypi.flet.dev`, has two advisories (#890).
 
-**Dart dependencies.** The pin's client has a lockfile, and a real build has the set that ships, with the extensions (§5.3):
+**Dart dependencies.** A real build has the set that ships, with the extensions (§5.3):
 
 ```sh
-osv-scanner -L .flet-src/client/pubspec.lock
 osv-scanner -L build/flutter/pubspec.lock
 ```
 
@@ -1216,7 +1173,7 @@ There is no release train. The procedure:
 3. **Version PR:** bump `[project].version` and `__version__` (§4), then merge.
 4. **Tag** `vX.Y.Z` on `main`. View source links to this tag, so a build without it opens a 404 (D-461). While the repo is private the tag builds nothing (D-273): build the quick-look APK locally (§8.1), or run `build-android.yml` by hand on the tag (`gh workflow run build-android.yml --ref vX.Y.Z`, §7.4). Once the repo is public, the tag runs it.
 5. **Locally, at the same commit:**
-   - check the pin (§2.2) and run `uv sync`;
+   - run `uv sync --locked`;
    - if another build may run on the Mac, build with the worktree's own pub cache and run §5.8's AAB and IPA checks before uploading;
    - signed AAB → Play internal testing;
    - IPA (`--ios-export-method app-store-connect`, §8.2) → TestFlight.
@@ -1245,14 +1202,14 @@ Nothing here is planned. It is the list we would work through if the owner ever 
 
 ## 10. Open items this document depends on
 
-S5 closed the rows it answered: builds from the `.flet-src` setup (§2.2, §8), the companion client (§5.2), Roboto (§3.4, D-105), the SDK levels and sizes (§2.1, D-106) and the Gradle heap on the Mac (§2.1).
+S5 closed the rows it answered: builds from a source checkout of Flet (then §2.2, §8), the companion client (§5.2), Roboto (§3.4, D-105), the SDK levels and sizes (§2.1, D-106) and the Gradle heap on the Mac (§2.1).
 
 | Item | Owner of the answer | Until then |
 |---|---|---|
 | ITMS-91053 on the first TestFlight upload (§8.2) | #121 | Testers get Android builds; the iPhone runs `flet debug ios` once it has a development certificate |
 | An iPhone development certificate and profiles; the release numbers on the iPhone | #121 | Simulators only for iOS (§5.3) |
 | `build-android.yml` on a GitHub runner: the `-Xmx4G` heap, `--arch arm64-v8a`, the first run's time | P0-06 (#54) | **Answered** by #54: the heap fits `ubuntu-latest` (7.9 GB; at least 1 GB available, swap under 400 MB), and a clean run takes about 9.5-12.5 minutes (§7.4) |
-| A Flet companion app in the stores that speaks 1.1 | Flet 1.1.0 release | The companion client from `.flet-src/client` (§5.2), or `flet debug` |
+| A Flet companion app in the stores that speaks 1.1 | Flet 1.1.0 release | The companion client from a Flet clone (§5.2), or `flet debug` |
 | Distribution routes | O-5 | Internal only (D-85) |
 | Cleartext HTTP and iOS local-network behaviour with the LAN mock | The first P3 device test | Use the companion client or the emulator |
 | serious_python stages the app in the shared pub cache, so overlapping builds can ship each other's Python (§5.8) | U28 (#185, flet-dev/serious-python#255) | A pub cache per worktree and the bundle check (§5.8, D-176) |

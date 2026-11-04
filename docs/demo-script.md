@@ -58,7 +58,7 @@ then shows its Scan badges card from the start.
 
 - **Simulator A:** an iPhone 17 on iOS 26.5, running the packaged build from `flet build ios-simulator`. Flutter has no
   release mode for simulators (D-102), so judge smoothness in the dry run.
-- **Simulator B:** an iPhone 17 Pro on iOS 26.5, running the companion client from `.flet-src/client`. Python runs on
+- **Simulator B:** an iPhone 17 Pro on iOS 26.5, running the companion client from a Flet clone (`development.md` §5.2). Python runs on
   the laptop, so its font is the system's (D-26) and its capabilities are the interims (D-63). A second simulator
   means no app switch on stage, and a broken reload can't touch A.
 - **The spare:** the AVD `pycon_pixel6a_api36` with a release APK, set up as A is, with `http://10.0.2.2:8000` as the
@@ -296,7 +296,7 @@ Exit 3 asks for two runs, and door check-ins outlive a restart, so a second run 
 4. Confirm the five stars on My schedule, and that `git status` is clean.
 5. Terminate the app on A.
 
-After the talk, restore the three files `flutter run` rewrites in `.flet-src` (`development.md` §5.2), and reset the
+After the talk, reset the
 fake clock if the simulators stay in use.
 
 ## A phone instead of a simulator (not tried)

@@ -33,7 +33,7 @@ import flet as ft
 from pycon_us.locations import BOOTH_PARAM, use_query
 from pycon_us.memory import ViewMemory
 from pycon_us.prefs import use_prefs
-from pycon_us.screens.expo_pane import ExpoPane
+from pycon_us.screens.expo_pane import ExpoPane, use_still_bar
 from pycon_us.screens.map import tab_href
 from pycon_us.screens.map_plans import FLOOR_PLANS
 from pycon_us.screens.plan_label import EDGE, PIN_BOX, label_card, label_room
@@ -364,6 +364,7 @@ def ExpoPlan() -> ft.View:
     """
     view_path = ft.use_view_path()  # before the return: no conditional hooks (D-70)
     query = use_query()
+    still, on_view = use_still_bar()
     year_map = use_services().year.map
     plan = year_map.plan(EXPO_PLAN)
     if plan is None or not year_map.booths:
@@ -371,5 +372,7 @@ def ExpoPlan() -> ft.View:
     return AppScaffold(
         title=plan.title,
         source=__name__,
-        body=ExpoPane(view_path, query.get(BOOTH_PARAM, "")),
+        # The booth card scrolls under the bar on the Map; the List scrolls the page.
+        still_bar=still,
+        body=ExpoPane(view_path, query.get(BOOTH_PARAM, ""), on_view),
     )

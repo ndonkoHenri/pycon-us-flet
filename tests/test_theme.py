@@ -16,6 +16,7 @@ import pytest
 
 from pycon_us import theme
 from pycon_us.theme_badges import BadgeColors
+from tests.flet_dart import flet_dart_file
 
 # Background roles and their text partners. A role the theme leaves to the seed is None in
 # both columns; Flutter computes it on the Dart side, so it is checked on screen instead
@@ -34,8 +35,8 @@ PAIRS = [
     ("inverse_surface", "on_inverse_surface"),
 ]
 
-# Flet's neutral ramp (neutralizeSurfaces in packages/flet/lib/src/utils/theme.dart at
-# the .flet-ref pin): every surface, including surface_bright, surface_dim and the five
+# Flet's neutral ramp (neutralizeSurfaces in packages/flet/lib/src/utils/theme.dart in
+# our Flet): every surface, including surface_bright, surface_dim and the five
 # surface_container* roles that cards, sheets, bars and Markdown code spans sit on, and
 # the text roles the ramp sets. A test checks this mirror against the Dart source.
 NEUTRAL_RAMP = {
@@ -68,10 +69,7 @@ NEUTRAL_SURFACES = {
     dark: [value for role, value in ramp.items() if role.startswith("surface")]
     for dark, ramp in NEUTRAL_RAMP.items()
 }
-FLET_THEME_DART = (
-    Path(__file__).resolve().parents[1]
-    / ".flet-src/packages/flet/lib/src/utils/theme.dart"
-)
+FLET_THEME_DART = "lib/src/utils/theme.dart"
 
 AA_TEXT = 4.5
 
@@ -202,16 +200,13 @@ def test_surface_roles_match_flets_neutral_ramp(dark: bool) -> None:
     assert hex_role(color_scheme, "on_surface_variant") == ramp["onSurfaceVariant"]
 
 
-@pytest.mark.skipif(
-    not FLET_THEME_DART.exists(), reason="CI checks out only .flet-src/sdk/python"
-)
-def test_neutral_ramp_mirrors_the_pinned_flet_source() -> None:
-    """The mirrored neutral ramp is the one in the pinned Flet source.
+def test_neutral_ramp_mirrors_the_flet_source() -> None:
+    """The mirrored neutral ramp is the one in our Flet's Dart source.
 
-    Runs wherever the full pin is checked out, so a Flet bump that changes the ramp
+    Runs wherever a build has fetched that source, so a Flet bump that changes the ramp
     fails here instead of leaving the contrast tests green on stale colours.
     """
-    source = FLET_THEME_DART.read_text(encoding="utf-8")
+    source = flet_dart_file(FLET_THEME_DART).read_text(encoding="utf-8")
     body = source[source.index("ColorScheme neutralizeSurfaces(") :]
     dark_branch, light_branch = body.split("return scheme.copyWith(")[1:3]
     pattern = r"(\w+): const Color\(0xFF([0-9A-F]{6})\)"

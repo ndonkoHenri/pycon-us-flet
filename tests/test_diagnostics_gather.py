@@ -13,6 +13,7 @@ import re
 import flet as ft
 import httpx
 import pytest
+from flet.version import flet_version
 
 import pycon_us
 from pycon_us import capabilities
@@ -64,7 +65,7 @@ async def test_gathering_reads_the_build_and_the_year(
     assert lines["App"] == pycon_us.__version__
     assert lines["Build"] == "none"  # not a packaged build under pytest (D-386)
     assert lines["Python"] == platform.python_version()
-    assert lines["Flet"] == pycon_us.FLET_VERSION
+    assert lines["Flet"] == flet_version
     assert lines["Year"] == "2026"
     assert lines["Conference zone"] == PACIFIC
     # Under pytest nothing is embedded, so no capability is on (D-63).

@@ -65,14 +65,12 @@ that date motivates us but never justifies cutting corners.
 
 ## Working with Flet
 
-- The owner maintains Flet. Until Flet 1.1.0 is on PyPI we build against a pinned flet-dev/flet commit: the
-  `.flet-src` checkout at the SHA in `.flet-ref` (D-81, `docs/development.md` §2.2). That checkout is the source of
-  truth for Flet APIs: check controls, properties and signatures there (or by introspection) instead of trusting
-  memory or old docs. The main checkout's `.flet-src` is the agents' own `git clone` of flet-dev/flet, kept at the
-  pin: whoever merges a pin bump moves it right after (`docs/development.md` §2.2; D-451). A second worktree of this
-  repo gets its own `.flet-src`, never a link to the main checkout's, and its own pub cache: run
-  `tools/setup_worktree.sh`, then `docs/development.md` §5.0 is the way to a device (D-219, D-176). Never
-  edit Flet's files in any `.flet-src`: a gap is an upstream issue (below).
+- The owner maintains Flet. Every Flet package comes from PyPI at one exact version, a prerelease until 1.1.0 is out
+  (D-481, `docs/development.md` §2.2), and no checkout of Flet is needed. The installed packages, by source or by
+  introspection, are the source of truth for Flet APIs, instead of memory or old docs; the Dart is in the pub cache
+  after a build, and §2.2 says how to clone the rest for reading. A second worktree of this repo gets its own pub
+  cache: run `tools/setup_worktree.sh`, then `docs/development.md` §5.0 is the way to a device (D-176). Never edit
+  Flet's files in a clone or in `.venv`: a gap is an upstream issue (below).
 - Declarative style: `@ft.component`, hooks, `@ft.observable` stores, `ft.Router`. Follow the rules in
   `docs/decisions.md` D-70 (async APIs only from `async def` handlers; long-running `use_effect` work runs
   in a coroutine setup, which Flet cancels on unmount; one context per observable store; no conditional hooks).

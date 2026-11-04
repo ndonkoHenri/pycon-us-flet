@@ -1,7 +1,6 @@
-# Dependabot watches what GitHub's own scanners can read. It covers the Actions our workflows use, pinned by commit with
-# the release in a comment. The Python side isn't listed: `uv.lock` points Flet at a checkout (`.flet-src`) that isn't in
-# the repository, which Dependabot can't resolve, and a phone's bundle isn't read from the lock anyway (docs/development.md
-# §7.6). Add `uv` here once the app builds against Flet from PyPI (#1027).
+# Dependabot watches what GitHub's own scanners can read: the Actions our workflows use, pinned by commit with the release
+# in a comment, and `uv.lock`, which holds the host's tools and tests. It leaves the Flet family out: those move together,
+# in a bump of their own (docs/development.md §2.2). A phone's bundle isn't read from the lock (§7.6).
 version: 2
 updates:
   - package-ecosystem: "github-actions"
@@ -12,4 +11,15 @@ updates:
       prefix: "Bump"
     groups:
       actions:
+        patterns: ["*"]
+  - package-ecosystem: "uv"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    commit-message:
+      prefix: "Bump"
+    ignore:
+      - dependency-name: "flet*"
+    groups:
+      python:
         patterns: ["*"]

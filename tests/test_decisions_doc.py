@@ -44,7 +44,7 @@ def _all_docs() -> list[Path]:
     """Return every Markdown file of the repository, the README of a tool or a spike and a GitHub template included."""
     docs = []
     for folder, subfolders, files in os.walk(ROOT):
-        # Pruned while walking, so Flet's checkout (`.flet-src`) is never entered.
+        # Pruned while walking, so an optional Flet clone (`.flet-src`) is never entered.
         subfolders[:] = [
             name
             for name in subfolders

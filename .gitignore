@@ -19,7 +19,7 @@ build/
 # Claude Code's own folder (settings, agent worktrees, scheduled-task lock): never part of the repository
 .claude/
 
-# Flet from source (docs/development.md §2.2) and flet run storage
+# An optional clone of Flet for reading (docs/development.md §2.2) and flet run storage
 .flet-src
 .flet/
 

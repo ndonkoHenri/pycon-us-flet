@@ -14,7 +14,7 @@ from typing import Any, cast
 import flet as ft
 
 # Private: Flet has no public way to bind a page (its own pytest plugin sets this too).
-# Checked against the .flet-ref pin 08b89cce5 (#445); switch when #160's binding lands.
+# Checked against Flet at 08b89cce5 (#445); switch when #160's binding lands.
 from flet.controls.context import _context_page
 
 from pycon_us.theme import LIGHT_TOKENS, Tokens
