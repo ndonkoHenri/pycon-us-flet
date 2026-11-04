@@ -1,5 +1,5 @@
 # Build the app for the iOS simulator on a macOS runner, with no signing: a check that the native config and the pins
-# still build (D-84, D-86, D-484; docs/development.md §7.5). Builds for people stay on the owner's Mac. It isn't a
+# still build (D-84, D-86, D-490; docs/development.md §7.5). Builds for people stay on the owner's Mac. It isn't a
 # required check (§7.2). While the repo is private it runs only by hand, since macOS minutes count ten times (D-273):
 # `gh workflow run build-ios-simulator.yml --ref <branch>`.
 name: Build iOS simulator

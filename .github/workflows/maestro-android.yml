@@ -1,4 +1,4 @@
-# The Maestro smoke flows on an Android emulator: a release APK, the repo's own flows and the local mock (D-252, D-484,
+# The Maestro smoke flows on an Android emulator: a release APK, the repo's own flows and the local mock (D-252, D-490,
 # docs/development.md §7.7). Local Maestro only: never Maestro Cloud or a login. It isn't a required check (§7.2).
 # While the repo is private it runs only by hand (D-273): `gh workflow run maestro-android.yml --ref <branch>`.
 name: Maestro Android
