@@ -998,7 +998,7 @@ Only `example.com` and `example.org` sample accounts, the conference's public ad
 
 **Personal data in the text.** Look at the commit identities (`git -C build/sweep/mirror.git log --all --format='%ae%n%ce' | sort | uniq -c`), and grep the dump and `build/sweep/api` for phone numbers, emails and `/Users/`. A phone number that isn't a `555-01xx` fake or the Code of Conduct hotline needs a look. #847's first result lists what is already known.
 
-**Dependabot** (`.github/dependabot.yml`) keeps the Actions our workflows and `uv.lock` current, leaving out the Flet family (§2.2).
+**Dependabot** (`.github/dependabot.yml`) keeps the Actions our workflows and `uv.lock` current, leaving out the Flet family (§2.2) and `uv_build`, whose line moves with `setup-uv`'s `version` (§7.2). Its log for run 41840155996 says "All versions of flet ignored" for each of the family, `flet[test]` included. `httpx` and `tzdata` get a PR of their own, since they reach phones.
 
 **Python dependencies on the host.** `uv.lock` is what the tools and tests run on, and nothing else:
 
