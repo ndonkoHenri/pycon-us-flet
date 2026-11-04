@@ -723,7 +723,7 @@ Every screen once, on 2026-11-04. **A machine "heard" this, not a person.** Talk
 | Screen | TalkBack: order, names, roles, states | 200 % | Schemes | iOS largest |
 |---|---|---|---|---|
 | Welcome | ok, "Get started" last | not photographed | not photographed | not photographed |
-| Now | ok; status spoken first (#1102) | ok | ok | ok |
+| Now | ok; status spoken first (#1102, since settled, D-498) | ok | ok | ok |
 | Schedule | ok; a clipped row's star is one swipe back (#1101) | Now button, below | ok | ok |
 | My schedule, saved; empty heard only | ok | ok | ok | ok |
 | Map: Rooms, Floor plans, Expo, Job fair | ok; a screen reader gets Expo's List | ok | ok | ok |
@@ -770,7 +770,7 @@ Every screen once, on 2026-11-04. **A machine "heard" this, not a person.** Talk
 | Date picker | Flutter's words: "Friday, May 15, 2026", "Fake clock date" |
 | CoC review dialog | "Grace Sample", "Badge: Grace S.", "1 incident on record", "What happened?", Cancel, Record incident |
 
-**Bugs.** Fixed: #1058 (D-485), #1074, #1083, #1085, #1087, #1089, #1091, #1093, #1095, #1099 (D-496), #1100 (D-497), #1103. Not a bug of ours: #1101 (below). Open: #1102 (the status strip spoken as each screen opens, `design`).
+**Bugs.** Fixed: #1058 (D-485), #1074, #1083, #1085, #1087, #1089, #1091, #1093, #1095, #1099 (D-496), #1100 (D-497), #1103. Settled: #1102 (D-498). Not a bug of ours: #1101 (below).
 
 **Judged again.**
 - **"My schedule"'s wrap and its star (D-167) stands.** Tried on the iOS simulator: `label_text_style` at 11 sp with no letter spacing still wraps at Flutter's 1.3x clamp on an iPhone 17, and shrinks all five labels at 100 %. Only a label control or a one-word label can fix it; the second is the owner's choice in D-167.

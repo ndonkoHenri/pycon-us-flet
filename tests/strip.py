@@ -43,6 +43,8 @@ def hooks(
     monkeypatch.setattr(status_strip, "use_services", lambda: svc)
     monkeypatch.setattr(status_strip, "use_conference", lambda: conference)
     monkeypatch.setattr(status_strip, "use_tokens", lambda: DARK_TOKENS)
+    # Its own state: `Hooks` answers one per test, the minute's here.
+    monkeypatch.setattr(status_strip, "use_just_changed", lambda _line: False)
     return hooks
 
 

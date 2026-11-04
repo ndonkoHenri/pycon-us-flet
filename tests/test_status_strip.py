@@ -147,15 +147,18 @@ def test_the_strip_is_hidden_while_the_data_is_fresh(
     assert strip.visible is False
 
 
-def test_a_stale_strip_is_a_live_region_with_refresh(
+def test_a_stale_strip_shows_refresh_and_isn_t_live_as_it_opens(
     hooks: Hooks, page: FakePage, conference: Conference, fake_now: datetime
 ) -> None:
-    """A day-old feed shows the strip as a live region, with Refresh enabled, no bar."""
+    """A day-old feed shows the strip with Refresh enabled, no bar, and no live region.
+
+    A live region speaks as it appears: TalkBack said it first on every screen (D-498).
+    """
     conference.fetched_at = fake_now - timedelta(hours=25)
     strip = render_strip()
     text, button, progress = strip_parts(strip)
     assert strip.visible is True
-    assert strip.live_region is True
+    assert strip.live_region is False
     assert strip.identifier == "app.status"
     assert text.value == "Updated 1 day ago"
     assert button.disabled is False
