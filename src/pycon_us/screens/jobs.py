@@ -34,7 +34,7 @@ Once the conference is over (`info.last_day` has passed, as Welcome's thanks and
 were listed for PyCon US 2026, and some have closed." The listings are the feed's
 snapshot, whose role links go stale (27 of 44 returned 404 six months on, #869) and
 which the app never edits or checks (D-135); the links stay, and the page says
-what it cannot know (D-481). During the conference it says nothing new.
+what it cannot know (D-482). During the conference it says nothing new.
 
 **The filter** (SPON-07): the pinned `SearchField` "Filter jobs" the Speakers and
 Sprints lists use (D-189), under the strip, keeps the listings whose text holds every
@@ -227,7 +227,7 @@ def closed_line(info: ConferenceInfo, day: date) -> str | None:
 
     The roles' links come from a snapshot of the feed that nobody re-checks, so after
     the last day (`info.last_day`, the sprints') the page says that some may have
-    closed (#869, D-481).
+    closed (#869, D-482).
 
     Args:
         info: The year's facts: its name and its last day.

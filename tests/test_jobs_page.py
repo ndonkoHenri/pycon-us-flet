@@ -10,15 +10,18 @@ read to TalkBack and VoiceOver is checked on devices (the PR).
 
 import asyncio
 from dataclasses import replace
-from datetime import timedelta
+from datetime import UTC, datetime, time, timedelta
 from pathlib import Path
 from typing import Any, cast
+from zoneinfo import ZoneInfo
 
 import flet as ft
 import httpx
 
+from pycon_us import clock
 from pycon_us.core.jobs import sponsor_of
 from pycon_us.core.sprints import needs_more
+from pycon_us.core.timefmt import today
 from pycon_us.locations import parent_of
 from pycon_us.screens import jobs as screen
 from pycon_us.services import api
@@ -175,6 +178,31 @@ def test_the_closed_line_starts_the_day_after_the_last_day() -> None:
     assert screen.closed_line(info, info.last_day) is None
     assert screen.closed_line(info, info.last_day + timedelta(days=1)) == CLOSED
     assert screen.closed_line(info, info.last_day + timedelta(days=200)) == CLOSED
+
+
+def test_the_closed_line_counts_the_conference_s_days_not_the_device_s() -> None:
+    """Midnight at the venue ends the conference: a UTC or another zone's date doesn't."""
+    info = YEAR.conference
+    midnight = datetime.combine(
+        info.last_day + timedelta(days=1), time(0, 0), tzinfo=info.zone
+    )
+    for zone in (UTC, ZoneInfo("Asia/Tokyo"), info.zone):
+        before = (midnight - timedelta(minutes=1)).astimezone(zone)
+        at = midnight.astimezone(zone)
+        assert screen.closed_line(info, today(before, info.zone)) is None
+        assert screen.closed_line(info, today(at, info.zone)) == CLOSED
+
+
+async def test_a_render_after_the_clock_crosses_midnight_adds_the_line(
+    show: Any, sleeps: Any
+) -> None:
+    """Nothing is cached: the next render, a filter's, reads the clock again (D-482)."""
+    shown = await show(now=DURING)
+    assert shown.nodes("jobs.closed") == []
+    clock.set_test_now(AFTER)
+    await jobs_view.type_into(shown, "temporal")
+    await jobs_view.pause(shown, sleeps)
+    assert CLOSED in shown.texts()
 
 
 async def test_during_the_conference_the_page_says_nothing_of_closed_roles(
