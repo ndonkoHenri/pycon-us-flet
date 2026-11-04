@@ -263,5 +263,10 @@ async def test_sponsor_details_wraps_rather_than_overflowing(render: Render) -> 
     await shown.lay_out()
     await shown.tap("613")
     details = shown.node(f"{expo.SCREEN}.card.details")
-    (row,) = [c for c in shown.find(ft.Row) if details in c.controls]
+    # `named()` puts a `MergeSemantics` around its node.
+    (row,) = [
+        c
+        for c in shown.find(ft.Row)
+        if any(getattr(child, "content", None) is details for child in c.controls)
+    ]
     assert row.wrap
