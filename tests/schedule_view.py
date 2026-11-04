@@ -184,6 +184,14 @@ class Shown(harness.Shown):
         """What Flutter sends when a scroll of the day's list ends."""
         await self.event(self.list_of(day), "scroll", _scroll_end(pixels))
 
+    async def drag(self, day: date = FRIDAY) -> None:
+        """What Flutter sends when the user's finger starts moving the day's list."""
+        await self.event(
+            self.list_of(day),
+            "scroll",
+            {**_scroll_end(0.0), "event_type": "user", "direction": "reverse"},
+        )
+
     async def scroll_away(self, day: date = FRIDAY) -> None:
         """Scroll the day's list back to its top, far from where a jump landed."""
         await self.scroll_end(day, 0.0)

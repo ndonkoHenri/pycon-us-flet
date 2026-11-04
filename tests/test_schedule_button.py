@@ -20,6 +20,7 @@ from pycon_us import clock
 from pycon_us.core.feed import process
 from pycon_us.core.timeline import NOW_KEY
 from pycon_us.memory import ViewMemory
+from pycon_us.screens import schedule as schedule_module
 from pycon_us.services.storage import Storage
 from pycon_us.state import Conference
 from pycon_us.ui import scrolling
@@ -242,8 +243,57 @@ async def test_the_button_waits_for_the_first_jump_on_a_list_already_in_place(
     assert "did not move" in caplog.text
     assert len(schedule.scrolls) == scrolling.JUMP_TRIES
     assert schedule.fab is None  # "still": the place is in view
+    await schedule.drag()
     await schedule.scroll_end(FRIDAY, 3000.0)
     assert schedule.fab is not None  # the landing was kept, so a scroll away counts
+
+
+async def _still_jump(
+    shown: Callable[..., Awaitable[Shown]], monkeypatch: pytest.MonkeyPatch
+) -> Shown:
+    """A first display whose jump came back "still": no scroll end came in its tries."""
+    monkeypatch.setattr(scrolling, "LANDING_S", 0.0)
+    schedule = await shown(moves=False, reduce_motion=True)
+    await schedule.until(lambda: schedule.jumps)
+    assert schedule.jumps == [(TEN_30, "still")]
+    return schedule
+
+
+async def test_a_jump_s_own_late_end_keeps_the_button_hidden(
+    shown: Callable[..., Awaitable[Shown]],
+    memory: ViewMemory,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """#1115: a starved scroll ends after the jump gave up: that end is the landing."""
+    schedule = await _still_jump(shown, monkeypatch)
+    await schedule.scroll_end(FRIDAY, 4000.0)
+    assert schedule.fab is None
+    assert memory.schedule_at_landing is True
+    assert memory.schedule_landing is not None
+    assert memory.schedule_landing.pixels == 4000.0
+    await schedule.drag()
+    await schedule.scroll_end(FRIDAY, 0.0)  # away from where it really landed
+    assert schedule.fab is not None
+
+
+async def test_a_user_s_drag_after_a_still_jump_brings_the_button_back(
+    shown: Callable[..., Awaitable[Shown]], monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """#1115: a list really in place stays "still", and a drag away from it still counts."""
+    schedule = await _still_jump(shown, monkeypatch)
+    await schedule.drag()
+    await schedule.scroll_end(FRIDAY, 4000.0)
+    assert schedule.fab is not None
+
+
+async def test_an_end_after_the_window_is_no_longer_the_jump_s_own(
+    shown: Callable[..., Awaitable[Shown]], monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """#1115: only an end soon after the jump is taken for it (`LATE_END_S`)."""
+    monkeypatch.setattr(schedule_module, "LATE_END_S", 0.0)
+    schedule = await _still_jump(shown, monkeypatch)
+    await schedule.scroll_end(FRIDAY, 4000.0)
+    assert schedule.fab is not None
 
 
 async def test_a_screen_reader_keeps_the_button_so_a_tap_never_drops_its_focus(

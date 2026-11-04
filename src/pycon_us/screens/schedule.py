@@ -32,6 +32,8 @@ cache, NEW-03) the screen shows the skeleton until the first fetch has failed, t
 
 import asyncio
 import logging
+import time
+from dataclasses import replace
 from datetime import date
 from typing import cast
 
@@ -49,6 +51,7 @@ from pycon_us.screens.schedule_filter import use_track_filter
 from pycon_us.screens.schedule_head import Head, ScheduleHead
 from pycon_us.screens.schedule_layout import layout_probe
 from pycon_us.screens.schedule_now import (
+    LATE_END_S,
     PENDING,
     SAID_S,
     InView,
@@ -181,6 +184,10 @@ def Schedule() -> ft.View:
         memory.schedule_landing = landing
         memory.schedule_at_landing = True
         set_in_view(landing)
+        # "still" may only be late: its offset is then not where the list is going.
+        signals.late_ends_until = (
+            time.monotonic() + LATE_END_S if ended == "still" else 0.0
+        )
         # The user's own tap: a screen reader hears where the list went, since the
         # tab switch and the scroll are silent. The first display's jump is not asked.
         if not (asked and prefs.screen_reader):
@@ -237,6 +244,7 @@ def Schedule() -> ft.View:
     @report_errors
     async def changed(e: ft.Event[ft.Tabs]) -> None:
         signals.settled.set()
+        signals.late_ends_until = 0.0  # the day's restore isn't a jump's scroll
         day = all_days[e.control.selected_index]
         if day == shown:  # the echo of a switch made from Python
             return
@@ -279,12 +287,20 @@ def Schedule() -> ft.View:
     @report_errors
     def scrolled(day: date, e: ft.OnScrollEvent) -> None:
         keeper.scrolled(day, e)
+        if (
+            e.event_type == ft.ScrollType.USER
+            and e.direction != ft.ScrollDirection.IDLE
+        ):
+            signals.late_ends_until = 0.0  # the scroll is the user's from here on
         if e.event_type != ft.ScrollType.END:
             return
         memory.schedule_offsets[day] = e.pixels
         signals.ended.set()
         landing = memory.schedule_landing
         if landing is not None and landing.day == day:
+            if time.monotonic() < signals.late_ends_until:
+                landing = replace(landing, pixels=e.pixels)
+                memory.schedule_landing = landing
             near = landing.near(e.pixels, e.viewport_dimension)
             memory.schedule_at_landing = near
             set_in_view(landing if near else None)

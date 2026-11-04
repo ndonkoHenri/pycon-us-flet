@@ -136,6 +136,7 @@ async def test_a_jump_to_now_during_the_old_top_jump_stops_the_put_back(
     schedule = await shown(moves=False)  # Friday, today
     await _measure(schedule, 40.0)
     await _report(schedule, FRIDAY, HEIGHT)
+    await schedule.drag()
     await schedule.scroll_end(FRIDAY, 3 * HEIGHT + 50)
     key = memory.schedule_places[FRIDAY].key
     schedule.forget()
