@@ -1530,4 +1530,4 @@ for issue in seed["issues"]:  # epics and dependencies come first
     numbers[issue["key"]] = int(url.rsplit("/", 1)[-1])
 ```
 
-After seeding, pin the P0 status issue (`P0-00`). Mark `good first issue` candidates as they appear; none are pre-assigned while the repo is private.
+After seeding, pin the P0 status issue (`P0-00`). Mark `good first issue` candidates as they appear: none were pre-assigned while the repo was private, and the first seven were picked near the flip (#854), so the label lists them.
