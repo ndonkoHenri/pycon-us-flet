@@ -16,7 +16,7 @@ number from its top, so whatever was typed before, the booth's exhibitor is what
 shows (#643).
 """
 
-from collections.abc import Collection
+from collections.abc import Callable, Collection
 
 import flet as ft
 
@@ -67,6 +67,25 @@ def seed(memory: ViewMemory, number: str, placed: Collection[str]) -> tuple[str,
     return number, ""
 
 
+def use_still_bar() -> tuple[bool, Callable[[str], None]]:
+    """Return whether the screen's app bar stays still, and where the pane tells its view.
+
+    The hall's booth card scrolls its body inside a box (D-370), and Flutter's `AppBar`
+    takes that scroll for the page's and tints the bar (F297, #962); the List scrolls
+    the page, so its bar must tint. The screen owning the bar cannot see which view the
+    pane shows (the pane keeps it, with the link's `missing` line), so the pane tells it
+    through the callback and the screen passes the flag to `AppScaffold(still_bar=)`.
+
+    Returns:
+        `(still, on_view)`: True while the Map shows; pass `on_view` to `ExpoPane`.
+        It starts from the remembered view, which the pane corrects once it mounts.
+    """
+    memory = use_services().memory
+    prefs = use_prefs()
+    view, set_view = ft.use_state(lambda: view_of(memory, prefs))
+    return view == MAP, set_view
+
+
 def missing_line(number: str) -> str:
     """Return the line over the List for a link's booth that the plan doesn't draw."""
     return f"Booth {number} isn't on the map yet"
@@ -85,13 +104,19 @@ def view_of(memory: ViewMemory, prefs: Prefs) -> str:
 
 
 @ft.component
-def ExpoPane(zoom_key: str = "", link: str = "") -> ft.Control:
+def ExpoPane(
+    zoom_key: str = "",
+    link: str = "",
+    on_view: Callable[[str], None] | None = None,
+) -> ft.Control:
     """The expo: the Map | List switch over the hall or the List (EXPO-01, #404).
 
     Args:
         zoom_key: The hall's `zoom_key`: the Map pane's slug, or the View's path
             for `…/plan/expo`.
         link: `?booth=`'s number, for `…/plan/expo` (EXPO-05); empty for none.
+        on_view: Told the view shown, `MAP` or `LIST_VIEW`, once mounted and after each
+            change, for the screen's app bar (`use_still_bar()`).
     """
     svc = use_services()
     prefs = use_prefs()
@@ -118,6 +143,7 @@ def ExpoPane(zoom_key: str = "", link: str = "") -> ft.Control:
         set_switches(lambda n: n + 1)
 
     on_pick = ft.use_callback(picked, [])
+    ft.use_effect(lambda: on_view(view) if on_view else None, [view])
     # Keyed, so Flet never moves one view's state into the other (F130).
     body = (
         ExpoHall(zoom_key, reveal, key=MAP)  # pyright: ignore[reportCallIssue]

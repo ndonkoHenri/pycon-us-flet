@@ -99,7 +99,8 @@ def AppScaffold(
             Back does, and it is never where a new session returns (D-143, D-270).
         still_bar: Keep the app bar's colour whatever scrolls in the body: for a
             screen whose page never scrolls under the bar, only a box inside it, such
-            as the floor viewer's label card. Flutter's `AppBar` takes any scroll
+            as the floor viewer's label card, or the expo hall's booth card while its
+            Map shows (D-479). Flutter's `AppBar` takes any scroll
             in the body at depth 0 for the page's, and Flet has no
             `notification_predicate` to say otherwise (F297, D-447).
 
