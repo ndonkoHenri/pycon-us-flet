@@ -1429,7 +1429,7 @@ An in-memory attendee directory, name search, a review dialog before every recor
 
 epic, area:quality
 
-A performance pass against D-80, a full accessibility audit (every flow, 200 % text, four schemes, reduced motion), and a handful of goldens once the UI is stable.
+A performance pass against D-80, a full accessibility audit (every flow, 200 % text, four schemes, reduced motion), and six goldens, recorded early (D-495) and re-recorded when the UI changes on purpose.
 
 ### P4-E2 · Epic: 2027 conference data
 
