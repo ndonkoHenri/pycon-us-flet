@@ -26,7 +26,7 @@ from pycon_us.screens import developer_data
 from pycon_us.screens.developer_data import (
     DataActions,
 )
-from pycon_us.services import Services, api, errors
+from pycon_us.services import Services, api, errors, feed_api
 from pycon_us.services.outbox_db import OutboxDb
 from pycon_us.services.storage import Storage
 from pycon_us.staff import Staff
@@ -65,7 +65,7 @@ def offline(monkeypatch: pytest.MonkeyPatch) -> list[str]:
         asked.append(url)
         raise api.NetworkError("ConnectError: offline")
 
-    monkeypatch.setattr(api, "fetch_feed", fetch)
+    monkeypatch.setattr(feed_api, "fetch_feed", fetch)
     return asked
 
 

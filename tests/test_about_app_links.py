@@ -15,7 +15,7 @@ import pycon_us
 from pycon_us import clock
 from pycon_us.screens import about_app
 from pycon_us.screens.about_app import ConferenceData, shown_url
-from pycon_us.services import Services, api
+from pycon_us.services import Services, feed_api
 from pycon_us.state import Conference
 from tests import about_page
 from tests.about_page import headings, link_rows
@@ -161,7 +161,7 @@ async def test_after_a_refresh_the_line_says_from_the_feed_and_its_age_moves(
     async def serve(url: str, **_: Any) -> bytes:
         return recorded(2026)
 
-    monkeypatch.setattr(api, "fetch_feed", serve)
+    monkeypatch.setattr(feed_api, "fetch_feed", serve)
     await conference.refresh(svc.storage, svc.year)
     assert data_rows(section())["Schedule"] == "From the feed, updated just now"
     fetched = conference.fetched_at

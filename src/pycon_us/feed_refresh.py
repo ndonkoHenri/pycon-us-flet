@@ -22,7 +22,7 @@ from pycon_us.config import ConferenceInfo, YearData
 from pycon_us.core import feed
 from pycon_us.core.models import ConferenceData
 from pycon_us.core.timefmt import today
-from pycon_us.services import api
+from pycon_us.services import api, feed_api
 
 logger = logging.getLogger(__name__)
 
@@ -105,7 +105,7 @@ async def fetch(
         one), or the `Problem` that stopped it (D-146).
     """
     try:
-        raw = await api.fetch_feed(url, transport=transport)
+        raw = await feed_api.fetch_feed(url, transport=transport)
         digest = feed_digest(raw)
         if digest == published:
             return raw, digest, None

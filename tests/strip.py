@@ -20,7 +20,7 @@ from zoneinfo import ZoneInfo
 import flet as ft
 import pytest
 
-from pycon_us.services import Services, api
+from pycon_us.services import Services, feed_api
 from pycon_us.state import Conference
 from pycon_us.theme import DARK_TOKENS
 from pycon_us.ui import status_strip
@@ -82,7 +82,7 @@ def strip_parts(strip: ft.Semantics) -> tuple[ft.Text, ft.TextButton, ft.Progres
 
 
 class Network:
-    """Stands in for `api.fetch_feed`: counts requests, each held until released.
+    """Stands in for `feed_api.fetch_feed`: counts requests, each held until released.
 
     Released, it answers with an empty body, which `feed.process` rejects: a failed
     refresh, which is enough to end it; or it raises `error` when one is set.
@@ -110,9 +110,9 @@ class Network:
 
 @pytest.fixture
 def network(monkeypatch: pytest.MonkeyPatch) -> Iterator[Network]:
-    """Replace `api.fetch_feed` with a `Network` until the test ends."""
+    """Replace `feed_api.fetch_feed` with a `Network` until the test ends."""
     fake = Network()
-    monkeypatch.setattr(api, "fetch_feed", fake.fetch_feed)
+    monkeypatch.setattr(feed_api, "fetch_feed", fake.fetch_feed)
     yield fake
     fake.released.set()  # a held refresh ends with the test
 

@@ -15,7 +15,7 @@ import pytest
 from pycon_us import clock
 from pycon_us.config import YearData
 from pycon_us.core.models import ConferenceData
-from pycon_us.services import api
+from pycon_us.services import feed_api
 from pycon_us.services.storage import Storage
 from tests import feed_store
 from tests.feed_store import (
@@ -224,7 +224,7 @@ async def test_an_unexpected_refresh_error_is_logged_at_once(
     ) -> bytes:
         raise RuntimeError("a bug")
 
-    monkeypatch.setattr(api, "fetch_feed", broken)
+    monkeypatch.setattr(feed_api, "fetch_feed", broken)
     conference = await loaded(storage, year)
 
     with caplog.at_level(logging.ERROR):
@@ -249,7 +249,7 @@ async def test_an_unexpected_refresh_error_reaches_refresh_callers(
     ) -> bytes:
         raise RuntimeError("a bug")
 
-    monkeypatch.setattr(api, "fetch_feed", broken)
+    monkeypatch.setattr(feed_api, "fetch_feed", broken)
     conference = await loaded(storage, year)
 
     with pytest.raises(RuntimeError, match="a bug"):
