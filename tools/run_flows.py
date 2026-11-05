@@ -12,7 +12,8 @@ One platform's lane runs next to the other's, so they share the host: read a fai
 the `load` beside it. `<out>/results.jsonl` gets one line per flow (`round`, `platform`,
 `flow`, `rc`, `seconds`, `load`, `at`), and `<out>/<round>/<platform>/<flow>/` keeps its
 log, debug output and screenshots. It reports; it never reruns: a rerun's pass isn't a
-first-run pass. Each flow's setup is the one `maestro/README.md` gives it, and
+first-run pass. It exits 1 if any flow failed, or if a lane stopped on a failed setup.
+Each flow's setup is the one `maestro/README.md` gives it, and
 `docs/testing-and-quality.md` §5.5 says when a full run is due.
 """
 
@@ -20,6 +21,7 @@ import argparse
 import json
 import os
 import shutil
+import signal
 import subprocess
 import sys
 import threading
@@ -27,7 +29,7 @@ import time
 from collections.abc import Iterator, Sequence
 from contextlib import contextmanager
 from pathlib import Path
-from typing import NamedTuple
+from typing import NamedTuple, TextIO
 
 from tools.device import refuse_owners
 
@@ -36,6 +38,9 @@ FLOW_SECONDS = 1800
 
 SIMULATOR_SETTLE_SECONDS = 45
 """How long a rebooted simulator rests before `rail_tabs`, which needs a fresh one (#1011)."""
+
+STOP_SECONDS = 10
+"""How long a timed-out flow's processes get to end before they are killed."""
 
 SERVER_START_SECONDS = 4
 """How long a server just started gets to open its port; `feed_pair` first runs the parser."""
@@ -152,6 +157,7 @@ class FlowRun:
         self.flows = flows
         self.skip = skip
         self.lock = threading.Lock()
+        self.failed = False
         self.env = {
             **os.environ,
             "MAESTRO_CLI_NO_ANALYTICS": "1",
@@ -181,6 +187,7 @@ class FlowRun:
             (self.out / "results.jsonl").open("a", encoding="utf-8") as results,
         ):
             results.write(line + "\n")
+            self.failed = self.failed or result["rc"] != 0
         print(line, flush=True)
 
     def run(
@@ -191,27 +198,24 @@ class FlowRun:
         directory.mkdir(parents=True, exist_ok=True)
         start = time.monotonic()
         with (directory / "stdout.log").open("w", encoding="utf-8") as log:
-            try:
-                rc = subprocess.run(
-                    command,
-                    check=False,
-                    env=self.env,
-                    stdout=log,
-                    stderr=subprocess.STDOUT,
-                    timeout=FLOW_SECONDS,
-                ).returncode
-            except subprocess.TimeoutExpired:
-                rc = -1
+            rc = run_in_group(command, self.env, log, FLOW_SECONDS)
         seconds = round(time.monotonic() - start)
         self.record(round=rnd, platform=platform, flow=flow, rc=rc, seconds=seconds)
 
     @contextmanager
     def server(self, *command: str) -> Iterator[None]:
-        """Keep a server running for a `with` block."""
+        """Keep a server running for a `with` block.
+
+        Raises:
+            RuntimeError: It stopped at its start, such as on a taken port. Going on would
+                test whatever else answers there, or nothing.
+        """
         process = subprocess.Popen(
             command, env=self.env, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL
         )
         time.sleep(SERVER_START_SECONDS)
+        if process.poll() is not None:
+            raise RuntimeError(f"server stopped at its start: {' '.join(command)}")
         try:
             yield
         finally:
@@ -223,10 +227,14 @@ class FlowRun:
         self.tool("tools.device", "prefs", device, *options)
 
     def tool(self, *module_and_args: str) -> None:
-        """Run one of these tools and wait for it, its output dropped."""
+        """Run one of these tools and wait for it, its output dropped.
+
+        Raises:
+            subprocess.CalledProcessError: It failed, so the scene isn't what the flow needs.
+        """
         subprocess.run(
             [sys.executable, "-m", *module_and_args],
-            check=False,
+            check=True,
             env=self.env,
             capture_output=True,
         )
@@ -256,9 +264,11 @@ class FlowRun:
             with self.server(*pair):
                 self.run(command, directory, name)
         elif flow == "sponsors_large_text":
-            self.prefs(device, "--text", "max", "--bold")
-            self.run(command, directory, name)
-            self.prefs(device, "--reset")
+            try:
+                self.prefs(device, "--text", "max", "--bold")
+                self.run(command, directory, name)
+            finally:
+                self.prefs(device, "--reset")
         elif flow == "rail_tabs":
             if platform == "ios":
                 reboot_simulator(device)
@@ -297,10 +307,28 @@ class FlowRun:
                     if self.wanted(flow):
                         self.journey(device, platform, rnd, flow)
 
+    def guarded_lane(
+        self, platform: str, device: str, rnd: str, journeys: Sequence[str]
+    ) -> None:
+        """Run a lane, and record it if it stops, since a thread's exception goes nowhere."""
+        try:
+            self.lane(platform, device, rnd, journeys)
+        except (OSError, RuntimeError, subprocess.SubprocessError) as error:
+            self.record(
+                round=rnd,
+                platform=platform,
+                flow="LANE STOPPED",
+                rc=1,
+                seconds=0,
+                error=str(error),
+            )
+
     def round(self, rnd: str, devices: dict[str, str], journeys: Sequence[str]) -> None:
         """Run the lanes side by side, then the regression flow on each in turn."""
         lanes = [
-            threading.Thread(target=self.lane, args=(platform, device, rnd, journeys))
+            threading.Thread(
+                target=self.guarded_lane, args=(platform, device, rnd, journeys)
+            )
             for platform, device in devices.items()
         ]
         for lane in lanes:
@@ -320,6 +348,29 @@ class FlowRun:
 def no_server() -> Iterator[None]:
     """Stand in for `FlowRun.server` on a lane that needs none."""
     yield
+
+
+def run_in_group(
+    command: list[str], env: dict[str, str], log: TextIO, seconds: int
+) -> int:
+    """Run `command` in its own process group, and return its exit code, or -1 on timeout.
+
+    Maestro starts processes of its own, and `offline_scans` starts Maestro, so a timeout
+    ends the whole group: a survivor would go on driving the device under the next flow.
+    """
+    process = subprocess.Popen(
+        command, env=env, stdout=log, stderr=subprocess.STDOUT, start_new_session=True
+    )
+    try:
+        return process.wait(timeout=seconds)
+    except subprocess.TimeoutExpired:
+        os.killpg(process.pid, signal.SIGTERM)
+        try:
+            process.wait(timeout=STOP_SECONDS)
+        except subprocess.TimeoutExpired:
+            os.killpg(process.pid, signal.SIGKILL)
+            process.wait()
+        return -1
 
 
 def reboot_simulator(udid: str) -> None:
@@ -362,8 +413,8 @@ def parser() -> argparse.ArgumentParser:
     return arguments
 
 
-def main(argv: Sequence[str] | None = None) -> None:
-    """Run the rounds asked for."""
+def main(argv: Sequence[str] | None = None) -> int:
+    """Run the rounds asked for, and return 1 if anything failed."""
     options = parser().parse_args(argv)
     devices = {
         platform: device
@@ -380,7 +431,8 @@ def main(argv: Sequence[str] | None = None) -> None:
     run = FlowRun(options.out, options.flows, options.skip)
     for rnd in options.rounds.split(","):
         run.round(rnd, devices, journeys)
+    return 1 if run.failed else 0
 
 
 if __name__ == "__main__":
-    main()
+    sys.exit(main())

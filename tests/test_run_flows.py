@@ -1,5 +1,10 @@
 """Tests for `tools/run_flows.py`: a lane's order, each flow's setup and the command line."""
 
+import json
+import os
+import subprocess
+import sys
+import time
 from pathlib import Path
 
 import pytest
@@ -98,3 +103,96 @@ def test_a_run_refuses_the_owners_device() -> None:
     """The flows replace the app's data, so the owner's emulator is refused."""
     with pytest.raises(SystemExit, match="owner"):
         run_flows.main(["--out", "unused", "--android", "emulator-5554"])
+
+
+def _run_at(tmp_path: Path) -> run_flows.FlowRun:
+    """Return a run with its folder in `tmp_path`, starting no device."""
+    return run_flows.FlowRun(tmp_path, None, set())
+
+
+def test_a_server_that_stops_at_its_start_is_reported(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """A taken port ends the server, so a flow can't test whatever else answers there."""
+    monkeypatch.setattr(run_flows, "SERVER_START_SECONDS", 0.5)
+    with (
+        pytest.raises(RuntimeError, match="stopped at its start"),
+        _run_at(tmp_path).server(sys.executable, "-c", "raise SystemExit(1)"),
+    ):
+        pass
+
+
+def test_a_stopped_lane_is_recorded_and_fails_the_run(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """A lane's exception would die with its thread, so it gets a line and fails the run."""
+    run = _run_at(tmp_path)
+
+    def stop(*_: object) -> None:
+        """Stand in for a lane whose setup fails."""
+        raise RuntimeError("no mock")
+
+    monkeypatch.setattr(run, "lane", stop)
+    run.guarded_lane("ios", "udid", "r1", [])
+    line = json.loads((tmp_path / "results.jsonl").read_text(encoding="utf-8"))
+    assert (line["flow"], line["rc"], line["error"]) == ("LANE STOPPED", 1, "no mock")
+    assert run.failed
+
+
+def test_large_text_is_reset_when_its_flow_cannot_run(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """A failure while at the largest text doesn't leave later flows at that size."""
+    run = _run_at(tmp_path)
+    calls: list[tuple[str, ...]] = []
+
+    def prefs(_: str, *options: str) -> None:
+        """Note what was asked of the device."""
+        calls.append(options)
+
+    def fail(*_: object) -> None:
+        """Stand in for a flow that can't start."""
+        raise OSError("no maestro")
+
+    monkeypatch.setattr(run, "prefs", prefs)
+    monkeypatch.setattr(run, "run", fail)
+    with pytest.raises(OSError, match="no maestro"):
+        run.journey("udid", "ios", "r1", "sponsors_large_text")
+    assert calls == [("--text", "max", "--bold"), ("--reset",)]
+
+
+def test_a_failed_setup_tool_raises(tmp_path: Path) -> None:
+    """A text size that wasn't set stops the lane instead of passing at the default size."""
+    with pytest.raises(subprocess.CalledProcessError):
+        _run_at(tmp_path).tool("tools.no_such_tool")
+
+
+def test_a_timeout_ends_the_whole_group(tmp_path: Path) -> None:
+    """A flow's child process doesn't outlive it to drive the device under the next flow."""
+    pid_file = tmp_path / "pid"
+    child = "import time; time.sleep(60)"
+    script = (
+        "import pathlib, subprocess, sys, time\n"
+        f"p = subprocess.Popen([sys.executable, '-c', {child!r}])\n"
+        f"pathlib.Path({str(pid_file)!r}).write_text(str(p.pid))\n"
+        "time.sleep(60)\n"
+    )
+    with (tmp_path / "log").open("w", encoding="utf-8") as log:
+        rc = run_flows.run_in_group(
+            [sys.executable, "-c", script], dict(os.environ), log, 2
+        )
+    assert rc == -1
+    pid = int(pid_file.read_text(encoding="utf-8"))
+    deadline = time.monotonic() + 5
+    while time.monotonic() < deadline and _alive(pid):
+        time.sleep(0.1)
+    assert not _alive(pid)
+
+
+def _alive(pid: int) -> bool:
+    """Say whether a process is still there."""
+    try:
+        os.kill(pid, 0)
+    except ProcessLookupError:
+        return False
+    return True
