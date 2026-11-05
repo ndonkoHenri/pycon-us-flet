@@ -46,6 +46,7 @@
 | Set up a worktree of this repo | `tools/setup_worktree.sh`, then §5.0 to a device | §5.8 |
 | Build, debug or test while another build may run (parallel agents) | Prefix each command with `PUB_CACHE=$PWD/build/pub-cache`, which `tools/setup_worktree.sh` made | §5.8 |
 | Upload a PR's screenshots; set a board status | `tools/pr_shots.sh <pr> <shots>.png`; `tools/board.sh <n> in-progress` (or `in-review`) | AGENTS.md |
+| Run every Maestro journey, with its setup, on both platforms, for N rounds | `uv run python -m tools.run_flows --out build/flows --rounds r1,r2 --android <serial> --ios <udid>` | §5.9 |
 | Photograph the staff tools per text size and appearance | `uv run python -m tools.sweep --device <id> --modes default max` | `maestro/README.md` |
 | Check the feature matrix after editing it (ids, vocabulary, counts; also run by `tests/test_check_matrix.py`) | `uv run python -m tools.check_matrix` (`--breakdown` for the fuller counts) | — |
 | Check the live public feed (what `feed-check.yml` runs; no weekly run while the repo is private, D-273) | `uv run python -m tools.check_feed`, or `gh workflow run feed-check.yml --ref main` | §7.3 |
@@ -703,6 +704,10 @@ write a flow; the strategy is [`testing-and-quality.md`](testing-and-quality.md)
 - The flows need no `uv run` and no Python: Maestro reads the YAML and talks to the device. Debug output
   (screenshots, the view hierarchy, `maestro.log`) goes to `~/.maestro/tests/` unless
   `--debug-output build/maestro/<name>` names a folder.
+- **Every flow, every platform:** `uv run python -m tools.run_flows --out build/flows --rounds r1,r2 --android <serial> --ios <udid>` gives each journey the setup
+  `maestro/README.md` asks of it (the mocks, the feed pairs, the largest text, the reboot before `rail_tabs`), in two lanes side by side, then `fling_after_sheet` on each in
+  turn. `--flows` and `--skip` narrow it, and one device runs one lane. `<out>/results.jsonl` has one line per flow, with the exit code and the host's load, and it never
+  reruns one, so a failure stays a first-run failure. The lanes share the host: when load may have failed a flow, rerun that flow alone to find out, and report both results.
 
 ### 5.10 The OS floors, run (#816)
 

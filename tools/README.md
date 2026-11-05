@@ -25,6 +25,7 @@ What's here, and when you'd reach for it. Run from the repo's root; each script'
 | `readme_shots.py` | Photograph the README's screenshots (`docs/images/`) on your own emulator and simulator, light and dark |
 | `clip_processing.py` | The video half of `demo_videos.py`: trim a recording to the stretches that change, and the contact sheets and flash checks of a clip |
 | `sweep.py` | Photograph the staff tools per text size and appearance, for a person to read |
+| `run_flows.py` | Run every Maestro journey with its setup, on both platforms side by side, for one or more rounds: the full device run of a phase exit |
 | `offline_scans.py` | Run the offline scans journey, with a mock whose listener can stop and keep its captures |
 | `feed_pair.py` | Serve a change-log feed pair for the change log's device check |
 | `shifted_feed.py` | Write the feed shifted in time, to check reminders in real time |
