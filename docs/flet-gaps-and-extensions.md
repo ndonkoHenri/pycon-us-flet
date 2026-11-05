@@ -54,7 +54,7 @@ Only gaps that matter to a **Material 3 app on Android and iOS** are kept. Web, 
 
 ### 1.2 Deep links: no gap
 
-Deep links (NEW-07, D-21) use what exists: the common `[tool.flet.deep_linking]` table, which `flet build` resolves per key for Android and iOS after any per-platform table (`get_deep_linking()`, `CLI/commands/build_base.py:2801-2855`; `flet-dev/flet#6953`, fixing `flet-dev/flet#6951`, merged into `flet-1.1.0` and in the pin since `68a4b326c`), and the template's custom-scheme intent filter (`TPL/android/app/src/main/AndroidManifest.xml:40-48`) and `CFBundleURLTypes` entry (`TPL/ios/Runner/Info.plist:53-67`). Both register nothing unless `scheme` resolves (`scheme` and `host` until `a9ef26fdb`, `flet-dev/flet#7031`); iOS registers the scheme alone, with the host as the entry's `CFBundleURLName`. We set **one common table** (D-269):
+Deep links (NEW-07, D-21) use what exists: the common `[tool.flet.deep_linking]` table, which `flet build` resolves per key for Android and iOS after any per-platform table (`get_deep_linking()`, `CLI/commands/build_base.py:2801-2855`; `flet-dev/flet#6953`, fixing `flet-dev/flet#6951`, merged into `flet-1.1.0` and in the pin since `68a4b326c`), and the template's custom-scheme intent filter (`TPL/android/app/src/main/AndroidManifest.xml:40-48`) and `CFBundleURLTypes` entry (`TPL/ios/Runner/Info.plist:74-88`). Both register nothing unless `scheme` resolves (`scheme` and `host` until `a9ef26fdb`, `flet-dev/flet#7031`); iOS registers the scheme alone, with the host as the entry's `CFBundleURLName`. We set **one common table** (D-269):
 
 ```toml
 # pyproject.toml (P2-24, #384). The values are the app identity's (D-452).
@@ -189,11 +189,11 @@ Rules:
 
 ### 2.3 Developing against an unreleased piece (D-81, F18)
 
-The app takes Flet from PyPI at one exact prerelease until 1.1.0 is out, so a piece is available once it's in a prerelease ([`development.md`](development.md) §2.2, D-481). A first-party extension from the monorepo is listed in `[project].dependencies` at the family's version, and its Dart package comes in its wheel. Moving the version is its own PR (D-92).
+The app takes Flet from PyPI at one exact version, so a piece is available once it's in a release, or a prerelease we move to ([`development.md`](development.md) §2.2, D-481). A first-party extension from the monorepo is listed in `[project].dependencies` at the family's version, and its Dart package comes in its wheel. Moving the version is its own PR (D-92).
 
-A piece that isn't in a prerelease yet takes the temporary route of §2.2, "When we need a fix that isn't released", and only with a release in sight.
+A piece that isn't released yet takes the temporary route of §2.2, "When we need a fix that isn't released", and only with a release in sight.
 
-- Listed without its version, `flet-notifications` would resolve to the unrelated PyPI `flet-notifications` 0.1.x (§6), not Flet's (#6999 took that name at `08b89cce5`; pip and uv skip prereleases unless the requirement names one).
+- Listed without its version, `flet-notifications` would resolve to the unrelated PyPI `flet-notifications` 0.1.x (§6), not Flet's (#6999 took that name at `08b89cce5`; while we pinned a prerelease, pip and uv skipped Flet's versions unless the requirement named one).
 
 ### 2.4 Generic upgrade steps (every item)
 

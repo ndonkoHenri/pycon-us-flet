@@ -43,7 +43,7 @@ def test_the_whole_text_of_a_packaged_run() -> None:
             "App: 0.1.0",
             "Build: 812",
             "Python: 3.14.0",
-            "Flet: 1.1.0.dev4",
+            "Flet: 1.1.0",
             "Device: Google Pixel 9, emulator",
             "OS: Android 15 (API 35)",
             "Run: packaged app",

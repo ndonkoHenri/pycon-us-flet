@@ -73,8 +73,8 @@ The app is also a test of Flet. When it needs something Flet lacks, we ship a do
 
 ## How it's built
 
-- **Python 3.14 and Flet 1.1.0.dev4.** Every Flet package comes from PyPI at that one exact version, a prerelease until
-  Flet 1.1.0 is out; `pyproject.toml` pins it. `flet build` packs the Python runtime into the Android and iOS apps.
+- **Python 3.14 and Flet 1.1.0.** Every Flet package comes from PyPI at that one exact version; `pyproject.toml` pins
+  it. `flet build` packs the Python runtime into the Android and iOS apps.
 - **Declarative UI.** Each screen is an `@ft.component` module in `src/pycon_us/screens/`, shared widgets live in
   `ui/`, state is held in `@ft.observable` stores, and `ft.Router` handles navigation.
 - **A pure core.** `core/` holds the feed, models, queries and time handling, and never imports Flet, so it is tested

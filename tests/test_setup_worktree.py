@@ -51,7 +51,7 @@ class Sandbox:
         uv = bin_dir / "uv"
         uv.write_text(
             '#!/bin/sh\necho "$*" >> "$UV_LOG"\n'
-            'case "$1" in run) echo "1.1.0.dev4 3.47.9" ;; esac\n'
+            'case "$1" in run) echo "1.1.0 3.47.9" ;; esac\n'
         )
         uv.chmod(0o755)
         self.env = {
@@ -87,7 +87,7 @@ def test_fresh_worktree_gets_everything(sandbox: Sandbox) -> None:
     assert "sync --locked -q" in sandbox.uv_log.read_text()
     assert (sandbox.tree / "build" / "pub-cache" / "marker").is_file()
     assert _git(sandbox.tree, "config", "core.hooksPath") == ".githooks"
-    assert "ready at Flet 1.1.0.dev4" in done.stderr
+    assert "ready at Flet 1.1.0" in done.stderr
 
 
 def test_no_flet_checkout_is_made_or_needed(sandbox: Sandbox) -> None:
