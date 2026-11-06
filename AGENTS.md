@@ -65,8 +65,8 @@ that date motivates us but never justifies cutting corners.
 
 ## Working with Flet
 
-- The owner maintains Flet. Every Flet package comes from PyPI at one exact version, a prerelease until 1.1.0 is out
-  (D-481, `docs/development.md` §2.2), and no checkout of Flet is needed. The installed packages, by source or by
+- The owner maintains Flet. Every Flet package comes from PyPI at one exact version (D-481,
+  `docs/development.md` §2.2), and no checkout of Flet is needed. The installed packages, by source or by
   introspection, are the source of truth for Flet APIs, instead of memory or old docs; the Dart is in the pub cache
   after a build, and §2.2 says how to clone the rest for reading. A second worktree of this repo gets its own pub
   cache: run `tools/setup_worktree.sh`, then `docs/development.md` §5.0 is the way to a device (D-176). Never edit

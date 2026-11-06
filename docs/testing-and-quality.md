@@ -69,11 +69,11 @@ The project file is the one in [`development.md`](development.md) §3; these are
 # pyproject.toml (excerpt)
 [dependency-groups]
 dev = [                      # host only; every flet-* pinned to one version (development.md §2.2, D-481)
-    "flet-cli==1.1.0.dev4",  # flet run / build / test; without it the `flet` script pip-installs a PyPI flet-cli at runtime
-    "flet-web==1.1.0.dev4",
-    "flet-desktop==1.1.0.dev4",
-    "flet-platform-assets==1.1.0.dev4",
-    "flet[test]==1.1.0.dev4", # pytest-asyncio, numpy, Pillow, scikit-image
+    "flet-cli==1.1.0",  # flet run / build / test; without it the `flet` script pip-installs a PyPI flet-cli at runtime
+    "flet-web==1.1.0",
+    "flet-desktop==1.1.0",
+    "flet-platform-assets==1.1.0",
+    "flet[test]==1.1.0", # pytest-asyncio, numpy, Pillow, scikit-image
     "pytest",
     "pytest-xdist",                   # `-n auto` in ci.yml and tools/check.sh: the tests take 90% of a CI run (D-483)
     "hypothesis",

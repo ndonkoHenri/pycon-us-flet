@@ -69,7 +69,7 @@ class Facts:
             packaged build's own (D-386).
         build_number: A packaged build's number, or None (D-386).
         python: The Python version, e.g. `3.14.0`.
-        flet: The Flet version, e.g. `1.1.0.dev4`.
+        flet: The Flet version, e.g. `1.1.0`.
         platform: The page's platform, e.g. `android`.
         device: The device's make and model, and whether it is an emulator or a
             simulator; None when the platform did not say.
