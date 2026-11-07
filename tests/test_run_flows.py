@@ -119,7 +119,9 @@ def test_a_server_that_stops_at_its_start_is_reported(
     log = tmp_path / "r1" / "ios" / "mock.log"
     script = "import sys; print('booting'); sys.exit('boom')"
     with (
-        pytest.raises(RuntimeError, match=r"(?s)stopped at its start \(see its log.*boom"),
+        pytest.raises(
+            RuntimeError, match=r"(?s)stopped at its start \(see its log.*boom"
+        ),
         _run_at(tmp_path).server(log, _free_port(), sys.executable, "-c", script),
     ):
         pass
