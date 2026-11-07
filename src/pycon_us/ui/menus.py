@@ -9,6 +9,8 @@ Once `SOURCE_URL` is set, every screen's overflow ends in View source, which ope
 the screen's own module on GitHub (`view_source_items()`, NEW-09, D-461).
 """
 
+import re
+
 import flet as ft
 
 from pycon_us import SOURCE_URL, __version__
@@ -29,6 +31,25 @@ ICON_GAP = 12
 
 VIEW_SOURCE = "View source"
 """The item that opens a screen's module on GitHub (NEW-09)."""
+
+BREAK = "\u200b"
+"""A zero-width space: where a line may break, with nothing drawn or said."""
+
+HOST_DOT = re.compile(r"\.(?=\w)")
+"""A dot inside a host name, as in "pycon-archive.python.org"; not a sentence's last."""
+
+
+def breakable(label: str) -> str:
+    """Return `label` with a line break allowed after each dot inside a word.
+
+    A host name is one word to Flutter's line breaker, which breaks after a hyphen but
+    not after a dot: at 200 % on iOS "Open on pycon-archive.python.org" broke inside
+    "org" (#895). After each dot it now breaks between the host's parts.
+
+    Args:
+        label: The item's words, e.g. "Open on pycon-archive.python.org".
+    """
+    return HOST_DOT.sub("." + BREAK, label)
 
 
 def overflow_menu(identifier: str, items: list[ft.PopupMenuItem]) -> ft.Control:
@@ -86,8 +107,10 @@ def menu_item(
     if link:
         title = ft.Semantics(
             link=True,
+            # The breaks are for the eye alone: the node reads the plain label.
             content=ft.Text(
-                label, semantics_label=f"{label}\n{OPENS_IN[LinkKind.WEB]}"
+                breakable(label),
+                semantics_label=f"{label}\n{OPENS_IN[LinkKind.WEB]}",
             ),
         )
     tile = ft.ListTile(

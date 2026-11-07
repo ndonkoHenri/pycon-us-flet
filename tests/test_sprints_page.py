@@ -239,8 +239,11 @@ async def test_the_menu_opens_the_sprint_page_and_the_project_form(
     assert menu.tooltip == "More options"
     assert shown.node("sprints.menu").content is menu
     assert isinstance(shown.node("sprints.menu").parent, ft.MergeSemantics)  # D-190
-    labels = [menu_text(item).value for item in menu.items]
-    assert labels == ["Sprint info on us.pycon.org", screen.SUBMIT]
+    labels = [menu_text(item).semantics_label for item in menu.items]
+    assert labels == [
+        "Sprint info on us.pycon.org\nOpens in browser",
+        f"{screen.SUBMIT}\nOpens in browser",
+    ]
     assert [shown.node(f"sprints.{key}") for key in ("info", "submit")] == [
         item.content for item in menu.items
     ]
@@ -267,8 +270,8 @@ async def test_2026_s_menu_has_the_info_page_alone_since_its_form_is_gone(
     """The project form went with the live site, so no dead item for it (#824)."""
     shown = await show()
     (menu,) = shown.find(ft.PopupMenuButton)
-    assert [menu_text(item).value for item in menu.items] == [
-        "Sprint info on us.pycon.org"
+    assert [menu_text(item).semantics_label for item in menu.items] == [
+        "Sprint info on us.pycon.org\nOpens in browser"
     ]
 
 
