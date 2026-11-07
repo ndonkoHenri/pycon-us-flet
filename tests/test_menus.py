@@ -10,9 +10,11 @@ from pathlib import Path
 from typing import cast
 
 import flet as ft
+import pytest
 
 import pycon_us
 from pycon_us.ui.menus import (
+    BREAK,
     ICON_GAP,
     ITEM_HEIGHT,
     MORE_OPTIONS,
@@ -79,8 +81,30 @@ def test_a_link_item_is_a_link_read_opens_in_browser_after_its_words() -> None:
     )
     title = cast(ft.Semantics, tile_of(item).title)
     assert isinstance(title, ft.Semantics) and title.link
-    assert menu_text(item).value == LABEL
+    assert menu_text(item).value.replace(BREAK, "") == LABEL
     assert menu_text(item).semantics_label == f"{LABEL}\nOpens in browser"
+
+
+@pytest.mark.parametrize(
+    ("label", "shown"),
+    [
+        (
+            "Open on pycon-archive.python.org",
+            "Open on pycon-archive.\u200bpython.\u200borg",
+        ),
+        ("Open on us.pycon.org", "Open on us.\u200bpycon.\u200borg"),
+        ("Opens the page.", "Opens the page."),  # a sentence's last dot: nothing after
+        ("View source", "View source"),
+    ],
+)
+def test_a_link_s_host_may_break_after_each_dot(label: str, shown: str) -> None:
+    """A long host wraps between its parts, never inside "org" (#895).
+
+    The breaks are drawn as nothing; the node still reads the plain label.
+    """
+    item = menu_item(ft.Icons.OPEN_IN_NEW, label, go, identifier="x", link=True)
+    assert menu_text(item).value == shown
+    assert menu_text(item).semantics_label == f"{label}\nOpens in browser"
 
 
 def test_an_item_that_stays_in_the_app_is_no_link() -> None:
