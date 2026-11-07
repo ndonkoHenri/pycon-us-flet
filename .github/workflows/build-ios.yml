@@ -21,6 +21,19 @@ on:
         description: Also build a signed IPA and upload it to TestFlight, when TESTFLIGHT_UPLOADS is on
         type: boolean
         default: false
+    # The TestFlight job's secrets. They live in the app-store environment, and a caller must still pass them by name:
+    # without that they read as empty in a called workflow (GitHub's "Using inputs and secrets in a reusable workflow").
+    secrets:
+      IOS_CERTIFICATE_P12:
+        required: false
+      IOS_CERTIFICATE_PASSWORD:
+        required: false
+      APPLE_API_ISSUER:
+        required: false
+      APPLE_API_KEY_ID:
+        required: false
+      APPLE_API_KEY_P8:
+        required: false
     outputs:
       simulator:
         description: The name of the simulator artifact, which holds one file, `<simulator>.app.zip`.
