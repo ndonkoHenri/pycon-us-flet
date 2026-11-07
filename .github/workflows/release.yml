@@ -1,0 +1,100 @@
+# A release from a v* tag (D-502; docs/development.md §7.8): build the APK and the iOS builds with the two build
+# workflows, then publish a GitHub Release with the APK and the zipped simulator app. The unsigned archive stays a
+# workflow artifact, and TestFlight runs only when the owner has turned it on (build-ios.yml).
+# By hand, on a tag that exists: `gh workflow run release.yml --ref vX.Y.Z`. While the repo is private nobody pushes a
+# v* tag, so this never runs (D-273, D-502).
+name: Release
+
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+# One release per tag at a time; a second push of the same tag waits rather than cancelling a half-published one.
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  tag:
+    name: Check the tag
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Check out the app
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      # Before any macOS minute is spent: the ref is a tag, and the tag is v + [project].version (development.md §4).
+      - name: Check that the tag matches the version
+        run: |
+          if [ "$GITHUB_REF_TYPE" != tag ]; then
+            echo "::error::Run the release on a v* tag, not on $GITHUB_REF_TYPE $GITHUB_REF_NAME."
+            exit 1
+          fi
+          version=$(python3 -c 'import tomllib; print(tomllib.load(open("pyproject.toml", "rb"))["project"]["version"])')
+          if [ "$GITHUB_REF_NAME" != "v$version" ]; then
+            echo "::error::Tag $GITHUB_REF_NAME does not match [project].version $version (development.md §4)."
+            exit 1
+          fi
+
+  android:
+    name: Android
+    needs: tag
+    uses: ./.github/workflows/build-android.yml # zizmor: ignore[self-repository] actionlint 1.7.12 rejects $/
+
+  ios:
+    name: iOS
+    needs: tag
+    uses: ./.github/workflows/build-ios.yml # zizmor: ignore[self-repository] actionlint 1.7.12 rejects $/
+    with:
+      testflight: true          # still off until the owner turns it on (TESTFLIGHT_UPLOADS)
+    # By name, not `inherit`: only the five the TestFlight job reads (the app-store environment's, development.md §7.5).
+    secrets:
+      IOS_CERTIFICATE_P12: ${{ secrets.IOS_CERTIFICATE_P12 }}
+      IOS_CERTIFICATE_PASSWORD: ${{ secrets.IOS_CERTIFICATE_PASSWORD }}
+      APPLE_API_ISSUER: ${{ secrets.APPLE_API_ISSUER }}
+      APPLE_API_KEY_ID: ${{ secrets.APPLE_API_KEY_ID }}
+      APPLE_API_KEY_P8: ${{ secrets.APPLE_API_KEY_P8 }}
+
+  release:
+    name: Publish the release
+    needs: [android, ios]
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: write           # to create the release and upload its files
+    steps:
+      - name: Download the APK
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: ${{ needs.android.outputs.artifact }}
+          path: dist
+
+      - name: Download the simulator app
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: ${{ needs.ios.outputs.simulator }}
+          path: dist
+
+      # --verify-tag: never let gh create a tag. The generated notes follow ours.
+      - name: Publish the release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          ls -l dist
+          cat > notes.md <<'NOTES'
+          Conf Companion, a community conference app for PyCon US written in Python with Flet. **Not an official PSF app.**
+
+          - **Android:** the `.apk` is a quick look, for arm64 phones and emulators. It is signed with a throwaway debug
+            key that changes with every build, so uninstall an earlier build first (which loses its data).
+          - **iOS simulator:** unzip the `.app.zip` and drag the `.app` onto a booted simulator, or run
+            `xcrun simctl install booted pycon-us.app`. It doesn't run on an iPhone.
+
+          NOTES
+          gh release create "$GITHUB_REF_NAME" dist/* --repo "$GITHUB_REPOSITORY" --verify-tag \
+            --title "Conf Companion $GITHUB_REF_NAME" --notes-file notes.md --generate-notes

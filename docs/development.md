@@ -39,7 +39,8 @@
 | Build an APK for the emulator | `uv run flet build apk --arch arm64-v8a --build-number $(git rev-list --count HEAD)` (D-106) | §8.1 |
 | Build an AAB for Play | `uv run flet build aab --build-number $(git rev-list --count HEAD)` | §8.1 |
 | Build an IPA for TestFlight | `uv run flet build ipa --ios-export-method app-store-connect --build-number $(git rev-list --count HEAD)` | §8.2 |
-| Get a quick-look APK | Locally, the emulator APK above (§8.1); or a manual run, `gh workflow run build-android.yml --ref main` (or Actions › Build Android › Run workflow), then `gh run download <run-id>`. While the repo is private a `v*` tag builds nothing (D-273) | §7.4 |
+| Get a quick-look APK | Locally, the emulator APK above (§8.1); or a manual run, `gh workflow run build-android.yml --ref main` (or Actions › Build Android › Run workflow), then `gh run download <run-id>`. While the repo is private nobody pushes a `v*` tag (D-273, D-502) | §7.4 |
+| Get the iOS simulator app or an unsigned archive from CI | `gh workflow run build-ios.yml --ref main`, then `gh run download <run-id>` (macOS minutes: not while the repo is private) | §7.5 |
 | Refresh the bundled feed snapshot (from P0-17) | `uv run python tools/update_snapshot.py` | §8.3 |
 | Run the UI flows on an emulator or a simulator | `uv run flet test android -d emulator-5580 --tests-dir tests/ui -v` (or `ios -d <udid>`) | §5.7 |
 | Run the Maestro device journeys on a packaged build | `maestro --device emulator-5570 test --include-tags=journeys maestro` (or `--device <udid>`) | §5.9 |
@@ -834,7 +835,7 @@ mock connection said "Connected to the local mock server.", in light and dark, a
   - Exit status: 0 passed, 1 failed (or couldn't run), 2 usage.
   - Its result holds for the PR's head and the `main` it names: after a new push to the PR, or once `main` has moved, run it again. Gate a batch together, in merge order, and squash-merge it in that order; `main`'s tree (`git rev-parse origin/main^{tree}` after a fetch) must then equal the printed tree, or else run `tools/check.sh` on `main`.
 
-No Linux machine runs the checks until P4 (the owner's call), so a failure that only Linux shows would surface when CI comes back. The PR that makes the repo public brings back the workflows' triggers below (`ci.yml`'s PR and `main` triggers, the feed check's schedule, `build-android.yml`'s tags), and with them §7.2's required checks.
+No Linux machine runs the checks until P4 (the owner's call), so a failure that only Linux shows would surface when CI comes back. The PR that makes the repo public brings back the workflows' triggers below (`ci.yml`'s PR and `main` triggers, the feed check's schedule), and with them §7.2's required checks. A `v*` tag runs `release.yml` (§7.8), and nobody pushes one while the repo is private (D-502).
 
 ### 7.1 Constraints of a private repo on GitHub Free
 
@@ -842,10 +843,10 @@ Check the current numbers in Settings › Billing; these were the terms at the t
 
 | Constraint | Consequence for us |
 |---|---|
-| Included Actions minutes are limited (2,000 Linux minutes a month), and macOS minutes count about 10× Linux | Everything runs on Linux. There is no iOS job (§7.5). While the repo is private, every workflow runs only by hand and the checks run locally (§7, D-273). |
+| Included Actions minutes are limited (2,000 Linux minutes a month), and macOS minutes count about 10× Linux | Everything runs on Linux except `build-ios.yml` (§7.5), which nobody dispatches while the repo is private. While the repo is private, every workflow runs only by hand and the checks run locally (§7, D-273). |
 | Artifact storage is small (hundreds of MB) | APK artifacts are kept for 14 days. |
 | Branch protection and rulesets are not enforced on private repos | `main` is protected by convention until the repo is public (D-88): PRs only, the merge gate passed (D-273), agents merge under D-100. Creating a ruleset returns HTTP 403 (checked 2026-10-11); AGENTS.md › Branches and commits has the ruleset to add once the repo is public. |
-| Environments (and their secrets and required reviewers) are unavailable for private repos | We need none: CI holds no secrets (D-86). |
+| Environments (and their secrets and required reviewers) are unavailable for private repos | CI holds no secrets while the repo is private. The TestFlight job's secrets go in the `app-store` environment once the repo is public (§7.5, D-502). |
 
 Conventions in every workflow:
 - `permissions: contents: read`.
@@ -896,11 +897,11 @@ The target is under 5 minutes (D-483). On the private repo's 2-vCPU runner a job
 - **Notification.** With the schedule back, a failed scheduled run emails the person who last changed the schedule. That is the alert, so there is no issue bot and no `issues: write`.
 - **Concurrency.** One run at a time (group `feed-check`, `cancel-in-progress: false`): every run checks the same live feed, so a pending run may be replaced, but a running one is never cancelled.
 
-### 7.4 `.github/workflows/build-android.yml`: on demand
+### 7.4 `.github/workflows/build-android.yml`: on demand, and for releases
 
 [`.github/workflows/build-android.yml`](../.github/workflows/build-android.yml) is the source of truth; this section says what it does and why. It builds a debug-signed arm64 APK (D-84, D-86, D-106). It is not a required check (§7.2).
 
-**Run it:** Actions › Build Android › Run workflow, or `gh workflow run build-android.yml --ref main` (or `--ref vX.Y.Z` for a tag). While the repo is private, pushing a `vX.Y.Z` tag no longer runs it (D-273): build the quick-look APK locally instead (§8.1, the same `flet build apk --arch arm64-v8a` command), or run the workflow by hand. The PR that makes the repo public brings back the tag trigger (§8.3). A new run for the same branch or tag cancels the older one.
+**Run it:** Actions › Build Android › Run workflow, or `gh workflow run build-android.yml --ref main` (or `--ref vX.Y.Z` for a tag). `release.yml` calls it on a `v*` tag (`workflow_call`, §7.8), and reads the artifact's name from its `artifact` output. While the repo is private nobody pushes a `v*` tag (D-273, D-502): build the quick-look APK locally (§8.1, the same `flet build apk --arch arm64-v8a` command), or run the workflow by hand. A new run for the same branch or tag cancels the older one; the concurrency group holds the calling workflow's name, so a release and a run by hand never cancel each other.
 
 **One Linux job**, `Debug-signed APK`, with a 45-minute timeout. Its steps, in order:
 
@@ -943,20 +944,38 @@ When 1.1.0 is on PyPI and the Flet checkout goes, the action is worth another lo
 - Installing over an earlier CI build, or over a local build, therefore fails with `INSTALL_FAILED_UPDATE_INCOMPATIBLE`. Run `adb uninstall io.github.ndonkohenri.confcompanion` first, which loses the app's data.
 - Builds you want to keep updating come from §8.1 instead.
 
-### 7.5 iOS: a simulator build by hand, and builds for people on the Mac
+### 7.5 `.github/workflows/build-ios.yml`: the simulator app, an unsigned archive and TestFlight
 
-[`.github/workflows/build-ios-simulator.yml`](../.github/workflows/build-ios-simulator.yml) (`gh workflow run build-ios-simulator.yml --ref <branch>`) runs `flet build ios-simulator` on `macos-latest` with no signing (D-490): a check that the native config and the pins still build, not an app anyone installs. It isn't a required check (§7.2). While the repo is private it runs only by hand, since macOS minutes count ten times; the PR that makes the repo public runs it on PRs that touch native config or a pin. **It hasn't run on Actions yet:** eight tries on 2026-11-04 (seven on `macos-latest`, one on `macos-15-intel`) waited 15 minutes each and ended with "The job was not acquired by Runner of type hosted", beside GitHub's note that macOS arm64 runners are short of capacity. No minutes were spent. The same commands passed on the Mac, with this repo's pub cache, in 1 min 53 s (Xcode 27.2); a runner's Xcode is the part still untested.
+[`.github/workflows/build-ios.yml`](../.github/workflows/build-ios.yml) (`gh workflow run build-ios.yml --ref <branch or tag>`; it was `build-ios-simulator.yml` until D-502) builds the iOS app on `macos-latest`. It isn't a required check (§7.2). `release.yml` calls it on a `v*` tag (§7.8). **While the repo is private nobody dispatches it,** since macOS minutes count ten times (D-273); its commands are tried on the Mac instead (below). Three jobs, each with a 45- or 60-minute timeout, the build number from `git rev-list --count HEAD` (§4), `LANG=en_US.UTF-8` for CocoaPods, and plain flet-cli output:
 
-Builds for people run on the owner's Mac (D-84). Signing material never enters CI (D-86).
+| Job | What it builds | Artifact (14 days) |
+|---|---|---|
+| `simulator`, "iOS simulator build" | `flet build ios-simulator`, no signing (D-490): the check that the native config and the pins still build | `pycon-us-<n>-<sha>-ios-simulator`, one file: the `.app` zipped with `ditto --keepParent` (a plain zip can lose a bundle's symlinks). Its name is the `simulator` output, which `release.yml` reads. |
+| `archive`, "Unsigned iOS archive" | `flet build ipa` with no profile: flet-cli passes `--no-codesign` and Xcode stops at `build/ipa/pycon-us.xcarchive` (§8.2). Skipped on pull requests, should a trigger for them be added. | `pycon-us-<n>-<sha>-ios-unsigned`: the `.xcarchive` zipped, and its `.app` in `Payload/`, zipped as an unsigned `.ipa`, which re-signing tools take. Neither installs on an iPhone as it is. |
+| `testflight`, "Signed IPA to TestFlight" | `flet build ipa --ios-export-method app-store-connect`, then `xcrun altool --upload-package` | None: the build goes to TestFlight. **Off** unless both hold: the caller asks (`testflight: true`; `release.yml` does, a run by hand can) and the repository variable `TESTFLIGHT_UPLOADS` is `true`. |
 
-**If signing in CI is ever wanted** (open a `needs-decision` issue that supersedes D-86):
-- **A TestFlight job** follows `DOCS/publish/ios.md` "Building and signing in CI":
-  - repository secrets `IOS_CERTIFICATE_P12` and `IOS_CERTIFICATE_PASSWORD` (the owner's Apple Distribution certificate);
-  - `APPLE_API_ISSUER`, `APPLE_API_KEY_ID` and `APPLE_API_KEY_P8` (an App Store Connect API key with the App Manager role, used to download the profile and to upload);
-  - the variable `APPSTORE_APP_ID`;
-  - `apple-actions/import-codesign-certs` and `apple-actions/download-provisioning-profiles`, then `xcrun altool --upload-package`.
-- **Android Play uploads** would need the keystore (base64) and the `FLET_ANDROID_SIGNING_*` values as secrets.
-- **Without environments on a private Free repo,** all of these would be plain repository secrets, readable by any workflow on any branch. That is one more reason to keep signing local.
+**It hasn't run on Actions yet:** eight tries of the simulator build on 2026-11-04 (seven on `macos-latest`, one on `macos-15-intel`) waited 15 minutes each and ended with "The job was not acquired by Runner of type hosted", beside GitHub's note that macOS arm64 runners are short of capacity. No minutes were spent. The commands of the first two jobs passed on the Mac, with this repo's pub cache, in #1129 (the PR has the log); a runner's Xcode is the part still untested.
+
+**Turning TestFlight on (owner-only, D-502).** It follows `DOCS/publish/ios.md` "Building and signing in CI". Do it after the repo is public (environments need a public repo on GitHub Free, §7.1) and after #121 has made the profiles:
+1. **The Apple side (#121, §8.2):** the App ID, an Apple Distribution certificate, an **App Store** provisioning profile for the bundle id, the App Store Connect record, and `provisioning_profile` committed under `[tool.flet.ios.export_methods."app-store-connect"]`. The job stops early, naming #121, while that line is missing: without it flet-cli would build an unsigned archive.
+2. **An App Store Connect API key:** App Store Connect › Users and Access › Integrations › App Store Connect API › Team Keys, role **App Manager**. Note its Key ID and the Issuer ID above the list, and download the `.p8` (it downloads once).
+3. **The certificate as a `.p12`:** in Keychain Access, export the Apple Distribution certificate with its private key, with a password; then `base64 -i dist.p12 | pbcopy`.
+4. **The environment:** Settings › Environments › New environment, named `app-store`. Under Deployment branches and tags choose Selected branches and tags and add the tag rule `v*`, so only a release tag reaches the secrets. Required reviewers are optional (the owner approving each upload).
+5. **Its secrets** (Environment secrets in `app-store`, never in a file or a comment):
+
+   | Secret | Value |
+   |---|---|
+   | `IOS_CERTIFICATE_P12` | The base64 of the `.p12` (step 3) |
+   | `IOS_CERTIFICATE_PASSWORD` | Its password |
+   | `APPLE_API_ISSUER` | The Issuer ID (step 2) |
+   | `APPLE_API_KEY_ID` | The Key ID |
+   | `APPLE_API_KEY_P8` | The whole `.p8` file's text, `-----BEGIN PRIVATE KEY-----` lines included |
+
+6. **Two variables** (Settings › Secrets and variables › Actions › Variables): `APPSTORE_APP_ID`, the record's numeric Apple ID (App Store Connect › App Information), as a repository or environment variable; and the switch, the **repository** variable `TESTFLIGHT_UPLOADS` = `true`. A job's `if` can read variables but not secrets, which is why the switch is a variable. Delete it, or set anything else, to turn uploads off again.
+
+The job's first step names any missing secret and fails; it then imports the certificate into a temporary keychain (`apple-actions/import-codesign-certs`), downloads the App Store profiles for the bundle id read from `pyproject.toml` (`apple-actions/download-provisioning-profiles`, with the API key, so no profile is stored as a secret), builds, uploads, and removes the key file whatever happened. The build number is the commit count, like every other build, so a tag's build never collides with a later one on `main` (§4). ITMS-91053 may still reject the first upload (§8.2).
+
+**Android Play uploads** are not written: they would need the upload keystore (base64) and the `FLET_ANDROID_SIGNING_*` values as secrets in another environment, and a decision that supersedes D-86 for Android.
 
 ### 7.6 Sweep for secrets and vulnerabilities (#847)
 
@@ -1048,13 +1067,26 @@ The OSV database covers few Dart packages, so "no issues found" there says less 
 
 [`.github/workflows/maestro-android.yml`](../.github/workflows/maestro-android.yml) (`gh workflow run maestro-android.yml --ref <branch>`) builds a release APK for x86_64, boots an API 34 emulator with KVM through `reactivecircus/android-emulator-runner`, and runs the `smoke` flows and `coc_capture` with the local mock (D-252, D-490). Local Maestro only, pinned by version and checksum: never Maestro Cloud or a login. It isn't a required check (§7.2). **Measured** on the private repo's 2 vCPUs and 7.9 GB, four green runs (41853214463, 41869169965, 41880520180, 41885857086): 27 to 34 minutes in all; the build 11 to 15 minutes, the emulator's boot 50 to 70 s with `/dev/kvm`, `drill_back` 3 min 52 s to 4 min 33 s, `star_undo` 3 min 58 s to 4 min 58 s, where a quiet Mac takes 1 to 2 minutes each. **One run of the five that reached the flows failed** (41875259734): "System UI isn't responding" sat over a healthy Welcome screen and both flows stopped there. The job now sets `hide_error_dialogs`, and two runs have passed since, which is too few to call it fixed. That setting hides the app's own crash or ANR dialog too, so a flow then fails on a missing element; `build/maestro/crashes.log`, among the artifacts of a failed run, keeps the reason. The build leaves 5.6 GB free and the emulator wants 7.4 GB for its data, so the job stops Gradle's daemons and drops the build's folders first (a daemon still writing failed `rm` once). That's too slow and too unproven for every PR, so it runs on pushes to `main` and by hand: a running one is never cancelled, and a newer push replaces only a pending one. It's the first check that runs a release build at all in CI, so a failure here is worth a look even when `ci.yml` is green.
 
+### 7.8 `.github/workflows/release.yml`: a release from a `v*` tag
+
+[`.github/workflows/release.yml`](../.github/workflows/release.yml) runs when a `v*` tag is pushed, or by hand on a tag that exists (`gh workflow run release.yml --ref vX.Y.Z`). **While the repo is private nobody pushes a `v*` tag** (D-273). **On the public repo a Release is a build for people outside the team, so the first `v*` tag is the owner's go** (D-502); later ones follow §8.3.
+
+| Job | What it does |
+|---|---|
+| `tag`, "Check the tag" (Linux, seconds) | Fails unless the ref is a tag equal to `v` + `[project].version` (§4), before any macOS minute is spent. |
+| `android` | Calls `build-android.yml` (§7.4). |
+| `ios` | Calls `build-ios.yml` (§7.5) with `testflight: true`, so TestFlight runs only if the owner has turned it on, and passes the five TestFlight secrets by name: a called workflow sees an environment's secrets only when its caller passes them, and they read as empty otherwise. |
+| `release`, "Publish the release" (Linux) | Downloads the APK and the simulator `.app` zip and runs `gh release create <tag> --verify-tag --notes-file … --generate-notes`. The only job with `contents: write`. `--verify-tag` means it never creates a tag. |
+
+The reusable workflows are referenced as `./.github/workflows/…`, with zizmor's `self-repository` audit ignored on those two lines: GitHub's newer `$/` form is what it asks for, but actionlint 1.7.12 rejects it. Switch when actionlint accepts it. The Release holds the APK and the simulator `.app` zip; the unsigned archive and IPA stay workflow artifacts (14 days), since nobody can install them without re-signing. The notes say the APK is debug-signed with a key that changes every build (uninstall first, §7.4), how to install the simulator app (`xcrun simctl install booted pycon-us.app`), and that this is not an official PSF app; GitHub's generated list of merged PRs follows. A second run on the same tag waits for the first (`cancel-in-progress: false`) and then fails at `gh release create`, since the Release exists: delete the Release first to publish it again.
+
 ## 8. Signing and distribution (D-85, prov. O-5)
 
 The owner's own accounts are the only route, and testing is internal only. There is no public listing (D-85, D-36).
 
 **Where secrets live (D-86):**
 - in the owner's password manager, plus local files outside the repo: the keystore in `~/keys/`, the App Store Connect API key in `~/.appstoreconnect/private_keys/`, the certificates in the login keychain;
-- never in the repo, CI, issues or PRs.
+- never in the repo, issues or PRs; in CI only as the `app-store` environment's secrets, once the owner adds them (§7.5, D-502).
 
 ### 8.1 Android
 
@@ -1182,7 +1214,7 @@ There is no release train. The procedure:
 1. `main` is green: its tree is one the merge gate passed, or `tools/check.sh` passed on it (§7, D-273; when the repo is public, `ci.yml` passed on it). The phase status issue lists what this build is for.
 2. **Snapshot PR:** run `uv run python tools/update_snapshot.py`, which refreshes `data/<year>/conference.json` and its `snapshot_captured_at` in `conference.toml` (D-38, D-135, NEW-03). It refuses a feed that `feed.process` rejects, that has a record the parser skips, or whose days fall outside the conference dates, and then changes nothing (exit status 1). Otherwise it prints each count before and after (sessions, speakers, days, posters, sprints, job listings); put that in the PR body, review the diff, then merge.
 3. **Version PR:** bump `[project].version` and `__version__` (§4), then merge.
-4. **Tag** `vX.Y.Z` on `main`. View source links to this tag, so a build without it opens a 404 (D-461). While the repo is private the tag builds nothing (D-273): build the quick-look APK locally (§8.1), or run `build-android.yml` by hand on the tag (`gh workflow run build-android.yml --ref vX.Y.Z`, §7.4). Once the repo is public, the tag runs it.
+4. **Tag** `vX.Y.Z` on `main`. View source links to this tag, so a build without it opens a 404 (D-461). While the repo is private nobody pushes a `v*` tag, since it would run `release.yml`'s macOS jobs (D-273, D-502): build the quick-look APK locally (§8.1). Once the repo is public, the tag runs `release.yml` (§7.8), which publishes a GitHub Release with the APK and the simulator app, and uploads to TestFlight if the owner has turned that on (§7.5); the first such tag is the owner's go (D-502).
 5. **Locally, at the same commit:**
    - run `uv sync --locked`;
    - if another build may run on the Mac, build with the worktree's own pub cache and run §5.8's AAB and IPA checks before uploading;
@@ -1206,7 +1238,7 @@ Nothing here is planned. It is the list we would work through if the owner ever 
 | Private API | Public builds keep the D-51 guard: the mock-only features are invisible without the Developer screen. A real backend needs the PSF (PLAN appendix). |
 | Content and licences | Settle [the licence and asset review](licence-and-assets-review.md) (#846): `NOTICE`, the reused Ionic assets (floor plans, D-87), sponsor logos and the bundled dependencies' licences. |
 | Secrets and vulnerabilities | Run the sweep in §7.6 again right before the flip (#847, #852). |
-| Signing in CI | Optional at that point: move the keys to CI secrets (§7.5), superseding D-86 by decision. |
+| Signing in CI | Written and off (D-502): the owner adds the `app-store` environment's secrets and turns on `TESTFLIGHT_UPLOADS` (§7.5). Play uploads would need a decision of their own. |
 | Store assets | Screenshots, descriptions, the age-rating questionnaires. |
 
 ---
