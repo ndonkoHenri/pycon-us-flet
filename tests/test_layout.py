@@ -12,9 +12,11 @@ import flet as ft
 import pytest
 
 from pycon_us.layout import (
+    SHORT_DP,
     WIDE_DP,
     Layout,
     follow_width,
+    is_short,
     is_wide,
     layout_for,
     side_insets,
@@ -39,6 +41,43 @@ def test_the_rail_shows_from_600_dp(width: float | None, wide: bool) -> None:
     """`is_wide` is True from `WIDE_DP` on, and a missing width is a phone's."""
     assert WIDE_DP == 600
     assert is_wide(width) is wide
+
+
+@pytest.mark.parametrize(
+    ("height", "short"),
+    [
+        (None, False),  # no height reported yet: not short
+        (0, False),
+        (402.0, True),  # an iPhone 17 in landscape
+        (411.4, True),  # a Pixel 6a in landscape
+        (479.9, True),
+        (480, False),  # M3's compact height class ends here
+        (800, False),  # a tablet in landscape
+        (914.3, False),  # a phone in portrait
+    ],
+)
+def test_a_window_under_480_dp_tall_is_short(height: float | None, short: bool) -> None:
+    """`is_short` is True under `SHORT_DP`, and a missing height isn't short (D-501)."""
+    assert SHORT_DP == 480
+    assert is_short(height) is short
+
+
+def test_a_rotation_notifies_the_short_class_once() -> None:
+    """Turning a phone flips `short`, and the same height again notifies nothing."""
+    layout = Layout()
+    changes: list[str | None] = []
+
+    def listen(_sender: object, field: str | None) -> None:
+        """Record the field each notification names."""
+        changes.append(field)
+
+    assert isinstance(layout, ft.Observable)
+    layout.subscribe(listen)  # held weakly: a local function, not a lambda
+    layout.set_width(411, height=914)
+    assert changes == []
+    layout.set_width(411, height=411)
+    layout.set_width(411, height=420)
+    assert (layout.short, changes) == (True, ["short"])
 
 
 def test_the_store_notifies_on_a_crossing_and_on_room_over_the_reading_width() -> None:
@@ -108,10 +147,26 @@ def test_follow_width_reads_the_page_and_follows_its_resizes() -> None:
     with bound(page):
         follow_width(cast(ft.Page, page), layout)
         assert layout.wide is True
-        cast(Any, page.on_resize)(SimpleNamespace(width=744.0))  # Split View
+        resize = cast(Any, page.on_resize)
+        resize(SimpleNamespace(width=744.0, height=1133.0))  # Split View
         assert layout.wide is True
-        cast(Any, page.on_resize)(SimpleNamespace(width=375.0))  # a third of it
+        resize(SimpleNamespace(width=375.0, height=1133.0))  # a third of it
         assert layout.wide is False
+
+
+def test_follow_width_takes_the_height_from_the_page_and_each_resize() -> None:
+    """A phone turned to landscape is short, and back in portrait isn't (D-501)."""
+    page = FakePage()
+    page.width, page.height = 411.0, 914.0
+    layout = Layout()
+    with bound(page):
+        follow_width(cast(ft.Page, page), layout)
+        assert layout.short is False
+        cast(Any, page.on_resize)(SimpleNamespace(width=914.0, height=411.0))
+        assert (layout.wide, layout.short) == (True, True)
+        page.width, page.height = 914.0, 411.0
+        cast(Any, page.on_media_change)(page.media)  # keeps the page's height
+        assert layout.short is True
 
 
 def test_follow_width_takes_the_insets_from_each_media_change() -> None:
