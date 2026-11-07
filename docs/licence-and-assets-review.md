@@ -6,7 +6,9 @@ and that outcome becomes a D-number. Contacting anyone (the PSF, GES, the venue,
 alone (D-101).
 
 Checked on 2026-11-02 at `main` `a6899a3b`; the README was read again at `283841e2`, and no asset or bundled data
-changed between the two. Nothing here removes or changes an asset; the table says what could change. `NOTICE` and its
+changed between the two. **Checked again on 2026-11-07 at `main` `e929ca99`:** since then the app icon landed (#863, F3),
+the snapshot was refreshed on 2026-11-04 with the same counts (C1) and the phone number still in `open-spaces[17]`
+(C5), and `LICENSE`'s appendix line was added to the list (A7). No plan, mark or font changed. Nothing here removes or changes an asset; the table says what could change. `NOTICE` and its
 bundled copy `src/pycon_us/licence_texts/notice.txt` were updated in this PR where they were plainly incomplete, and
 the Licences page's Simple Icons row where it overstated CC0.
 
@@ -45,6 +47,7 @@ its `src/` has a copyright line.
 | A3 | Facts taken from Ionic's pages | `2026/content.toml` (sponsor credits: Temporal for the Wi-Fi, Google for the quiet room), `2026/conference.toml` (speakers' Discord page, directions point), `map.toml` (3D tour link) | Apache-2.0 for the code that holds them; each has a source and check date where it matters | Shown as links and credits | Keep |
 | A4 | Reference captures and research | Repo only: `tools/capture_ionic_reference/`, `tests/fixtures/ionic/`, `docs/research/ionic/` | Our drivers, Ionic's output over the feed (speaker names included), and our notes with short code quotes | Tests read the captures; no build has them | Keep; they go public with the repo, as C2 does |
 | A5 | Colours | `src/pycon_us/theme.py` (D-22, "the PyCon palette"); the boot and splash purple `#680579`, also in PR #863's icon | Colour values taken from Ionic's theme; Ionic's magenta is darkened | Our theme | Owner to note that the app still looks like the PyCon palette. Change only if the identity decision wants distance |
+| A7 | `LICENSE`'s appendix line | `LICENSE` line 190: `Copyright 2015 Drifty Co.` | Copied with Ionic's `LICENSE`, which had filled in the appendix's template line `[yyyy] [name of copyright owner]` | A stranger reads our `LICENSE` as saying Drifty Co. holds this repo's copyright. `NOTICE` already says who holds what (Drifty Co. for the original, the contributors for ours) | Restore the template line, so `LICENSE` is the standard text and `NOTICE` keeps the credits (#847 found it). Or put our own line there. Not changed until the owner signs off |
 | A6 | Not taken | Ionic's `appicon.png`, `pycon-us-2026-logo.svg`, `python-logo.png`, `pypi-logo.png`, `splash.png`, `speaker-*` | None of them is in our tree: a listing of tracked images finds only the plans, the marks and one test QR code (G) | Not bundled | Keep it that way |
 
 ### B. Floor plans
@@ -131,7 +134,7 @@ the correct permissions to use the icons relevant to their project". Its data ha
 |---|---|---|---|---|---|---|
 | F1 | Roboto 400, 500, 700 | `flutter_packages/roboto_fonts/` | googlefonts/roboto 2.138 | Apache-2.0. The font's own records say `Copyright 2011 Google Inc.`, `Version 2.138`, and the licence; `LICENSE` is beside it | Credited (D-105, D-455) | Keep |
 | F2 | Material icons | In Flet and Flutter, not in this repo | Google | Apache-2.0, as `licences.py` says; not checked against a build's files | On the Licences page | Keep |
-| F3 | The app icon | On `main`, none: `src/assets/` has no icon, so builds get Flet's default. PR #863 (D-452) adds `src/assets/icon.svg` and `docs/icon-options/` | Ours: plain shapes, a badge and a star, with no PSF mark | This repo's licence, once merged | Purple from A5 | Merge #863 before #852 |
+| F3 | The app icon | `src/assets/icon.svg`, and the options in `docs/icon-options/` (#863, D-452, merged) | Ours: plain shapes, a badge and a star, with no PSF mark | This repo's licence | Purple from A5 | Keep |
 | F4 | Licence texts | `src/pycon_us/licence_texts/` (17 files) | Each component's own licence file | As `licences.py` states; a test keeps every runtime package of `uv.lock` listed (D-75, D-296) | Shown offline on the Licences page | Keep |
 | F5 | **Gap:** Flutter's and the plugins' per-package notices | In each build, as `NOTICES.Z` | Each Dart package | Flet can't show Flutter's page yet (U51, #371), so the page lists direct components only | Interim shipped in #442 | Keep the interim; before v1.0.0 (#853), compare one build's `NOTICES.Z` with the page. Python's own native libraries weren't checked either |
 
@@ -144,8 +147,8 @@ the correct permissions to use the icons relevant to their project". Its data ha
 
 ## Names
 
-The app's name and bundle id no longer contain "pycon" with D-452 (PR #863, still open at this review; until it merges,
-`main` has the placeholder `io.github.ndonkohenri.pyconus` and scheme `pyconus`). These still do:
+The app's name, bundle id and scheme no longer contain "pycon" (D-452, #863: Conf Companion,
+`io.github.ndonkohenri.confcompanion`, `confcompanion`). These still do:
 
 | Name | Where | Who sees it |
 |---|---|---|
@@ -161,6 +164,14 @@ The app's name and bundle id no longer contain "pycon" with D-452 (PR #863, stil
 Recommendation: rename the repo before #852, when it costs least, since D-452's stated aim is that no PSF mark leaves
 our devices; update the copyright line with it. Rename the package afterwards as a mechanical PR, or leave it, since
 only developers see it. Keep the event's own name in the data. Renames are the owner's call, with #15.
+
+**If the repo moves to an organisation** (the owner has said it may move to `flet-dev`): the move is the natural moment
+for the rename, since every link changes once either way and GitHub redirects the old address. The copyright line
+("The pycon-us-flet contributors") names contributors, not an owner, so it stays right after a move and only follows
+a rename. The bundle id `io.github.ndonkohenri.confcompanion` names a person's GitHub Pages domain: it can't change
+once a build is in App Store Connect or Play Console (`docs/development.md` §9), so if the app should belong to the
+organisation, change it before the first upload (#121), not after. `SOURCE_URL` (D-292) and the View source links
+follow the repo's address.
 
 ## The PSF's published rules
 
@@ -198,5 +209,18 @@ language this is about; the app's name and icon use no PSF mark." It leaves the 
 
 ## Sign-off
 
-The owner's decisions on the plans (B1 to B5), the logos (B6, B7), the feed (C1, C5), the marks (E2, E3) and the names
-go in a comment on #846, then into a D-number. Nothing here is decided until then.
+The owner's decisions go in a comment on #846, then into a D-number. Nothing here is decided until then. To answer by
+number, each with the recommendation first:
+
+1. **Floor plans B1 to B5:** redraw (unless asking gets a clear yes), ask, keep private, or keep and publish.
+2. **Logos on B6 and B7:** redraw with the plans, or keep for internal builds and decide again before anything goes
+   public.
+3. **Feed C1:** keep the snapshot bundled and credited, or fetch it at build time.
+4. **The phone number C5** (and the two emails in the 2025 fixture, #847): blank them in our snapshot and fixtures, or
+   leave them as the feed published them. History keeps them either way unless rewritten.
+5. **Marks E2 and E3:** Material icons for Python and LinkedIn, or keep. E6: remove the unused Discord file.
+6. **`LICENSE` A7:** restore the template line, or put our own line there, or leave it.
+7. **Names:** rename the repo before #852 (or with a move to an organisation), and decide whether the bundle id should
+   name the organisation before the first upload.
+8. **A1:** whether the ported modules' docstrings are the "prominent notices" Apache-2.0 §4(b) asks for, or each gets
+   one more line.
