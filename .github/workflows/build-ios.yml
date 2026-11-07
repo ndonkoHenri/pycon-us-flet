@@ -1,0 +1,247 @@
+# Build the iOS app on macOS runners (D-84, D-490, D-502; docs/development.md §7.5):
+# - `simulator`: the simulator `.app`, zipped, with no signing. The check that the native config and the pins build.
+# - `archive`: `flet build ipa` with no signing: the `.xcarchive`, and its `.app` packed as an unsigned `.ipa`.
+# - `testflight`: a signed IPA uploaded to TestFlight. Off until the owner turns it on with the `TESTFLIGHT_UPLOADS`
+#   variable and the `app-store` environment's secrets (§7.5 lists them); only release.yml asks for it.
+# Each build uploads its files as an artifact. By hand: `gh workflow run build-ios.yml --ref <branch or tag>`.
+# release.yml calls it on a v* tag (§7.8). While the repo is private it runs only by hand, since macOS minutes count ten
+# times (D-273).
+name: Build iOS
+
+on:
+  workflow_dispatch:
+    inputs:
+      testflight:
+        description: Also build a signed IPA and upload it to TestFlight (needs TESTFLIGHT_UPLOADS, §7.5)
+        type: boolean
+        default: false
+  workflow_call:            # from release.yml
+    inputs:
+      testflight:
+        description: Also build a signed IPA and upload it to TestFlight, when TESTFLIGHT_UPLOADS is on
+        type: boolean
+        default: false
+    outputs:
+      simulator:
+        description: The name of the simulator artifact, which holds one file, `<simulator>.app.zip`.
+        value: ${{ jobs.simulator.outputs.artifact }}
+
+permissions:
+  contents: read
+
+# A new run for the same ref cancels the older one. Called from release.yml, github.workflow is the caller's name, so a
+# release and a run by hand never cancel each other.
+concurrency:
+  group: build-ios-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  UV_LOCKED: "1"            # every uv command fails if uv.lock does not match pyproject.toml
+  LANG: en_US.UTF-8         # CocoaPods and the build's Ruby tools need a UTF-8 locale (maestro/README.md)
+  FLET_CLI_NO_RICH_OUTPUT: "1"
+
+jobs:
+  simulator:
+    name: iOS simulator build
+    runs-on: macos-latest
+    timeout-minutes: 45
+    outputs:
+      artifact: ${{ steps.name.outputs.name }}
+    steps:
+      - name: Check out the app
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0            # the build number is the commit count (D-83)
+          persist-credentials: false
+
+      - name: Name the build
+        id: name
+        run: |
+          count=$(git rev-list --count HEAD)
+          echo "build-number=$count" >> "$GITHUB_OUTPUT"
+          echo "name=pycon-us-$count-${GITHUB_SHA::7}-ios-simulator" >> "$GITHUB_OUTPUT"
+
+      - name: Set up uv
+        uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2 # v10.3.3
+        with:
+          version: "0.12.x"         # the uv_build line in pyproject.toml; bump both together
+          enable-cache: false       # a release build starts from clean inputs; uv sync takes seconds
+      - name: Install
+        run: uv sync --locked
+
+      - name: Build for the simulator
+        env:
+          BUILD_NUMBER: ${{ steps.name.outputs.build-number }}
+        run: uv run flet build ios-simulator --build-number "$BUILD_NUMBER" --yes -v
+
+      # ditto keeps the bundle's symlinks and permissions, which a plain zip of a .app can lose.
+      - name: Zip the app
+        env:
+          NAME: ${{ steps.name.outputs.name }}
+        run: ditto -c -k --sequesterRsrc --keepParent build/ios-simulator/pycon-us.app "build/$NAME.app.zip"
+
+      - name: Upload the app
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: ${{ steps.name.outputs.name }}
+          path: build/${{ steps.name.outputs.name }}.app.zip
+          compression-level: 0      # already zipped
+          overwrite: true           # a re-run of the same run uploads the same name again
+          retention-days: 14
+          if-no-files-found: error
+
+  archive:
+    name: Unsigned iOS archive
+    # Not on pull requests, should a trigger for them be added: the simulator build is the check.
+    if: github.event_name != 'pull_request'
+    runs-on: macos-latest
+    timeout-minutes: 60
+    steps:
+      - name: Check out the app
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0            # the build number is the commit count (D-83)
+          persist-credentials: false
+
+      - name: Name the build
+        id: name
+        run: |
+          count=$(git rev-list --count HEAD)
+          echo "build-number=$count" >> "$GITHUB_OUTPUT"
+          echo "name=pycon-us-$count-${GITHUB_SHA::7}-ios-unsigned" >> "$GITHUB_OUTPUT"
+
+      - name: Set up uv
+        uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2 # v10.3.3
+        with:
+          version: "0.12.x"         # the uv_build line in pyproject.toml; bump both together
+          enable-cache: false
+      - name: Install
+        run: uv sync --locked
+
+      # No provisioning profile is configured (#121), so flet-cli passes --no-codesign and Xcode stops at the archive
+      # (development.md §8.2). The default export method is used, as on the Mac.
+      - name: Build the archive
+        env:
+          BUILD_NUMBER: ${{ steps.name.outputs.build-number }}
+        run: uv run flet build ipa --build-number "$BUILD_NUMBER" --yes -v
+
+      # An unsigned .ipa is the archive's .app in a Payload folder, zipped: what re-signing tools take.
+      - name: Pack the archive and an unsigned IPA
+        env:
+          NAME: ${{ steps.name.outputs.name }}
+        run: |
+          archive=build/ipa/pycon-us.xcarchive
+          test -d "$archive/Products/Applications/pycon-us.app"
+          mkdir -p build/unsigned/Payload dist
+          ditto "$archive/Products/Applications/pycon-us.app" build/unsigned/Payload/pycon-us.app
+          ditto -c -k --sequesterRsrc --keepParent build/unsigned/Payload "dist/$NAME.ipa"
+          ditto -c -k --sequesterRsrc --keepParent "$archive" "dist/$NAME.xcarchive.zip"
+
+      - name: Upload the archive and the IPA
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: ${{ steps.name.outputs.name }}
+          path: dist/
+          compression-level: 0      # already zipped
+          overwrite: true
+          retention-days: 14
+          if-no-files-found: error
+
+  testflight:
+    name: Signed IPA to TestFlight
+    # Off unless asked for (release.yml asks) and turned on by the owner (D-502). A job's `if` can't read secrets, so the
+    # repository variable is the switch and the first step names any secret that is missing.
+    if: inputs.testflight && vars.TESTFLIGHT_UPLOADS == 'true'
+    runs-on: macos-latest
+    timeout-minutes: 60
+    # Its secrets live in this environment, which the owner limits to v* tags (development.md §7.5).
+    environment: app-store
+    steps:
+      - name: Check the signing secrets
+        env:
+          IOS_CERTIFICATE_P12: ${{ secrets.IOS_CERTIFICATE_P12 }}
+          IOS_CERTIFICATE_PASSWORD: ${{ secrets.IOS_CERTIFICATE_PASSWORD }}
+          APPLE_API_ISSUER: ${{ secrets.APPLE_API_ISSUER }}
+          APPLE_API_KEY_ID: ${{ secrets.APPLE_API_KEY_ID }}
+          APPLE_API_KEY_P8: ${{ secrets.APPLE_API_KEY_P8 }}
+          APPSTORE_APP_ID: ${{ vars.APPSTORE_APP_ID }}
+        run: |
+          missing=""
+          for name in IOS_CERTIFICATE_P12 IOS_CERTIFICATE_PASSWORD APPLE_API_ISSUER APPLE_API_KEY_ID \
+              APPLE_API_KEY_P8 APPSTORE_APP_ID; do
+            if [ -z "${!name}" ]; then missing="$missing $name"; fi
+          done
+          if [ -n "$missing" ]; then
+            echo "::error::TESTFLIGHT_UPLOADS is on, but the app-store environment lacks:$missing (development.md §7.5)."
+            exit 1
+          fi
+
+      - name: Check out the app
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0            # the build number is the commit count (D-83)
+          persist-credentials: false
+
+      # The bundle id and the profile's name come from pyproject.toml, as on the Mac (§8.2). Without a profile name
+      # flet-cli would build an unsigned archive, so stop here instead.
+      - name: Read the signing configuration
+        id: meta
+        run: |
+          python3 - <<'PY' >> "$GITHUB_OUTPUT"
+          import tomllib
+          flet = tomllib.load(open("pyproject.toml", "rb"))["tool"]["flet"]
+          profile = flet["ios"]["export_methods"]["app-store-connect"].get("provisioning_profile")
+          if not profile:
+              raise SystemExit("[tool.flet.ios.export_methods.app-store-connect] has no provisioning_profile (#121).")
+          print(f"bundle-id={flet['bundle_id']}")
+          PY
+          count=$(git rev-list --count HEAD)
+          echo "build-number=$count" >> "$GITHUB_OUTPUT"
+          echo "name=pycon-us-$count-${GITHUB_SHA::7}-ios-app-store" >> "$GITHUB_OUTPUT"
+
+      - name: Import the signing certificate
+        uses: apple-actions/import-codesign-certs@77ba2a2a8f5cfc8c405ebf3159f767c323e238f9 # v7.1.0
+        with:
+          p12-file-base64: ${{ secrets.IOS_CERTIFICATE_P12 }}
+          p12-password: ${{ secrets.IOS_CERTIFICATE_PASSWORD }}
+
+      - name: Download the App Store profile
+        uses: apple-actions/download-provisioning-profiles@230860ab5f632551a5f9a5e1d98a774485463888 # v7.0.0
+        with:
+          bundle-id: ${{ steps.meta.outputs.bundle-id }}
+          profile-type: IOS_APP_STORE
+          issuer-id: ${{ secrets.APPLE_API_ISSUER }}
+          api-key-id: ${{ secrets.APPLE_API_KEY_ID }}
+          api-private-key: ${{ secrets.APPLE_API_KEY_P8 }}
+
+      - name: Set up uv
+        uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2 # v10.3.3
+        with:
+          version: "0.12.x"         # the uv_build line in pyproject.toml; bump both together
+          enable-cache: false
+      - name: Install
+        run: uv sync --locked
+
+      - name: Build the signed IPA
+        env:
+          BUILD_NUMBER: ${{ steps.meta.outputs.build-number }}
+        run: |
+          uv run flet build ipa --ios-export-method app-store-connect --build-number "$BUILD_NUMBER" --yes -v
+          test -f build/ipa/pycon_us.ipa      # an underscore, unlike the other artifacts (§8.2)
+
+      # altool reads the key from this folder, by the AuthKey_<KEY_ID>.p8 name.
+      - name: Upload to TestFlight
+        env:
+          APPLE_API_ISSUER: ${{ secrets.APPLE_API_ISSUER }}
+          APPLE_API_KEY_ID: ${{ secrets.APPLE_API_KEY_ID }}
+          APPLE_API_KEY_P8: ${{ secrets.APPLE_API_KEY_P8 }}
+          APPSTORE_APP_ID: ${{ vars.APPSTORE_APP_ID }}
+        run: |
+          mkdir -p ~/.appstoreconnect/private_keys
+          printf '%s' "$APPLE_API_KEY_P8" > ~/.appstoreconnect/private_keys/"AuthKey_$APPLE_API_KEY_ID.p8"
+          xcrun altool --upload-package build/ipa/pycon_us.ipa -t ios \
+            --apiKey "$APPLE_API_KEY_ID" --apiIssuer "$APPLE_API_ISSUER" --apple-id "$APPSTORE_APP_ID"
+
+      - name: Remove the API key
+        if: always()
+        run: rm -rf ~/.appstoreconnect/private_keys
