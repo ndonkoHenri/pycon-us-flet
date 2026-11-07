@@ -16,6 +16,7 @@ import pytest
 
 from pycon_us.config import load_year
 from pycon_us.core.badges import Badge, ScanOutcome, ScanResult
+from pycon_us.layout import Layout
 from pycon_us.prefs import Prefs
 from pycon_us.staff import Staff
 from pycon_us.state import Conference
@@ -123,6 +124,7 @@ async def show(
             *,
             prefs: Prefs | None = None,
             staff: Staff | None = None,
+            layout: Layout | None = None,
         ) -> harness.Shown:
             """Render `screen`, by default a scan screen titled "Lead scanner".
 
@@ -130,6 +132,8 @@ async def show(
                 screen: The component to render instead of the default screen.
                 prefs: The `Prefs` store (announcements on, say).
                 staff: The `Staff` store the sync chip counts.
+                layout: The `Layout` store, for a window in landscape; a phone's in
+                    portrait if None.
             """
 
             @ft.component
@@ -155,6 +159,7 @@ async def show(
                     route=VIEW,
                     prefs=prefs,
                     staff=staff,
+                    layout=layout,
                 )
             )
 

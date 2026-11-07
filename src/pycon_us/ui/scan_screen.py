@@ -41,6 +41,7 @@ from pycon_us.core.badges import (
     parse_badge,
 )
 from pycon_us.core.staff_tools import ToolKey, may_open
+from pycon_us.layout import use_layout
 from pycon_us.locations import is_top_view
 from pycon_us.prefs import use_prefs
 from pycon_us.services import use_services
@@ -150,6 +151,7 @@ def ScanScreen(
     staff = use_staff()
     tokens = use_tokens()
     margin = use_margin(LIST)  # its width class (D-305)
+    layout = use_layout()
     query = use_field_query()
     sheet = use_queue_sheet()  # the signed-in account's rows only (D-420)
     use_wake_lock()
@@ -302,11 +304,13 @@ def ScanScreen(
         if tools
         else []
     )
-    if prefs.time_above:
+    if prefs.time_above or layout.short:
         # The field and the result first (D-475): the keyboard scrolls a focused field
         # into view, and below the chip, the context and the camera note it sat four
         # screens down, so the screen opened at its end and the result's heading was
-        # above the bar (#955). The rest follows, a scroll away.
+        # above the bar (#955). The rest follows, a scroll away. A phone in landscape
+        # too (D-501): the keyboard leaves room for the field alone, and a result that
+        # grew above it pushed it under the keyboard, where Android left it (#1120).
         body = [field, panel, *result_note_line, *buttons, *status]
     else:
         body = [*status, panel, *result_note_line, field, *buttons]
