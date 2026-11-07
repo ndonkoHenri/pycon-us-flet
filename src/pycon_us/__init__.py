@@ -18,11 +18,10 @@ never changes again: a new domain makes every event a user exports again a secon
 in their calendar.
 """
 
-SOURCE_URL: str | None = None
-"""The app's source repository, or None while it is private (D-88, D-292).
+SOURCE_URL: str | None = "https://github.com/ndonkoHenri/pycon-us-flet"
+"""The app's source repository (D-88, D-292, D-501).
 
 About this app shows a Source code row and every screen's overflow has View source
-(D-461) only when it is set: a link to a private repository would open a 404 for
-everyone outside the team. The PR that makes the repository public (P4) sets it to
-the repository's `https` address.
+(D-461) only when it is set. A build must never ship it set while the repository is
+private: the link would open a 404 for everyone outside the team.
 """

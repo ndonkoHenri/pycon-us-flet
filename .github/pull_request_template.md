@@ -12,7 +12,7 @@ checklist holds. Add `--project "PyCon US Flet"`, the issue's type and area labe
 
 <!--
 Commands you ran and what you saw: the full `tools/check.sh` (D-273; `uv sync --locked`, `ruff check`,
-`ruff format --check`, `pyright`, `pytest --hypothesis-profile=ci`), plus anything specific. Devices (Android
+`ruff format --check`, the pre-commit hooks, `pyright`, `pytest -n auto --hypothesis-profile=ci`), plus anything specific. Devices (Android
 emulator, iOS simulator, phone) and the Flet version (`uv run flet --version`). Never claim a check you didn't run.
 -->
 
@@ -36,8 +36,7 @@ From a fork, drag the images into the PR instead (CONTRIBUTING.md).
 - Second opinion (D-100): required for more than 400 changed lines, architecture changes or edits to
   docs/decisions.md. Name the model, link the PR comment that summarises its findings and what changed, or write
   "Not required" with the reason, or "Owed (capped), D-458" when the reviewer is capped.
-- Copilot, when requested (`gh pr edit <n> --add-reviewer @copilot`; paused while the repo is private, D-273): it
-  doesn't replace the second opinion; each comment is fixed or answered on its thread with the reason.
+- Copilot, when requested (`gh pr edit <n> --add-reviewer @copilot`): it doesn't replace the second opinion; each comment is fixed or answered on its thread with the reason.
 -->
 
 ## Checklist
@@ -45,8 +44,8 @@ From a fork, drag the images into the PR instead (CONTRIBUTING.md).
 <!-- Before merging (D-93, D-100). Tick what holds; strike through and explain what doesn't apply. -->
 
 - [ ] The issue's acceptance criteria are met.
-- [ ] Tests added or updated; the full `tools/check.sh` passes on the latest commit, and the merge gate
-  (`tools/gate.sh`) passed on what will land before merging (D-273; `ci.yml` once the repo is public).
+- [ ] Tests added or updated; the full `tools/check.sh` passes on the latest commit, `ci.yml` is green on it, and the
+  merge gate (`tools/merge.sh`) passes on what will land (D-273, D-501; a fork's PR: a maintainer runs the gate).
 - [ ] Runs on Android and iOS, with screenshots (UI or native changes).
 - [ ] Accessible: labels, contrast, 200 % text, touch targets (`docs/ux.md` checklist).
 - [ ] Docs and `docs/decisions.md` updated in this PR when behaviour or decisions changed.

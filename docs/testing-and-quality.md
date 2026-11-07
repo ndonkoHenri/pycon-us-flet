@@ -28,7 +28,7 @@
 | Goldens (§6) | `adb exec-out screencap` on Android; `assert_screenshot` | Phase exits and Flet pin bumps; six images, one named emulator (D-495) | no |
 | Accessibility (§7) | contrast test; flows at 200 %; screen readers | every PR (contrast); phase exits | contrast only |
 | Device checklist and performance (§8, §9) | packaged builds on an Android emulator and an iOS simulator; the iPhone for hardware checks (D-102) | phase exits | no |
-| Public feed check (§12) | `tools/check_feed.py`, `httpx.MockTransport` in its tests | by hand while the repo is private; weekly once it is public (D-273) | its tests; the check itself runs on its own |
+| Public feed check (§12) | `tools/check_feed.py`, `httpx.MockTransport` in its tests | weekly, on Mondays (D-501) | its tests; the check itself runs on its own |
 
 ## 2. Layout, configuration and commands
 
@@ -1038,7 +1038,7 @@ curl -X POST http://127.0.0.1:8460/swap                      # serve the copy; /
 ## 10. Definition of done for a PR (D-93)
 
 Every PR:
-- [ ] Links its issue (`Closes #N`); the full local checks pass before it is marked ready, and the merge gate passes before it merges (D-273, §12; once the repo is public, CI is green).
+- [ ] Links its issue (`Closes #N`); the full local checks pass before it is marked ready, CI is green, and the merge gate passes before it merges (D-273, D-501, §12).
 - [ ] New behaviour has tests; a fixed bug has a test that failed before the fix.
 - [ ] "How tested" lists the commands actually run, the devices or emulators used, and the Flet pin. Agents report only checks they ran.
 - [ ] Docs and `decisions.md` are updated in the same PR.
@@ -1070,11 +1070,11 @@ Testing gates per phase, from PLAN §7's exit criteria (the milestone descriptio
 
 ## 12. Checks and CI wiring (D-84, D-273)
 
-- **Local checks while the repo is private** (D-273; development.md §7): `tools/check.sh` runs `ci.yml`'s steps on the Mac, `--fast` all but pytest. The pre-push hook runs the fast checks on every push that changes more than Markdown; the author runs the full checks before marking a PR ready; the merge gate (`tools/gate.sh <pr> [<pr>...]`) runs them on the PRs merged onto the latest `main` before every merge and posts the result on each PR. Nothing runs them on Linux until P4. The three workflows below run only by hand (`gh workflow run <file> --ref <branch>`) until the PR that makes the repo public brings their triggers back.
-- **`ci.yml`** (by hand while the repo is private; every PR and push to `main` once it is public; Linux): `uv sync --locked`, `ruff check`, `ruff format --check`, the pre-commit hooks (D-480), `pyright`, `pytest -n auto --hypothesis-profile=ci` (hypothesis's built-in profile, extended in `tests/conftest.py`, §3.1). Target under 5 minutes (D-483). UI flows are excluded by `addopts = ["--ignore=tests/ui"]` (§2).
-- **`feed-check.yml`** (by hand while the repo is private, with `uv run python -m tools.check_feed` locally; weekly once it is public): `tools/check_feed.py` runs our parser and the invariants on the current year's public feed, and says whether next year's feed answers yet (a 404 is "not published yet", never a failure). Keys the recorded feeds lack are printed, not failed. Its tests serve the recorded feed, broken copies of it and HTTP errors through `httpx.MockTransport` (`tests/test_check_feed.py`).
-- **`build-android.yml`** (manual, and from `release.yml` on a `v*` tag, D-502): a debug-signed APK artifact; while the repo is private the quick-look APK is usually built locally. iOS builds for people and the rest of the device work stay local.
-- **`build-ios.yml`** (by hand, and from `release.yml` on a `v*` tag, D-502) builds for the simulator with no signing, plus an unsigned archive and an opt-in TestFlight upload, and **`maestro-android.yml`** (by hand; pushes to `main` once it is public) runs the smoke flows and `coc_capture` on an emulator (D-490; development.md §7.5, §7.7).
+- **Local checks** (D-273, D-501; development.md §7): `tools/check.sh` runs `ci.yml`'s steps on the Mac, `--fast` all but pytest. The pre-push hook runs the fast checks on every push that changes more than Markdown; the author runs the full checks before marking a PR ready; the merge gate (`tools/gate.sh <pr> [<pr>...]`) runs them on the PRs merged onto the latest `main` before every merge and posts the result on each PR.
+- **`ci.yml`** (every PR and push to `main`; Linux): `uv sync --locked`, `ruff check`, `ruff format --check`, the pre-commit hooks (D-480), `pyright`, `pytest -n auto --hypothesis-profile=ci` (hypothesis's built-in profile, extended in `tests/conftest.py`, §3.1). Target under 5 minutes (D-483). UI flows are excluded by `addopts = ["--ignore=tests/ui"]` (§2).
+- **`feed-check.yml`** (weekly, Mondays; by hand, or `uv run python -m tools.check_feed` locally): `tools/check_feed.py` runs our parser and the invariants on the current year's public feed, and says whether next year's feed answers yet (a 404 is "not published yet", never a failure). Keys the recorded feeds lack are printed, not failed. Its tests serve the recorded feed, broken copies of it and HTTP errors through `httpx.MockTransport` (`tests/test_check_feed.py`).
+- **`build-android.yml`** (manual, and from `release.yml` on a `v*` tag, D-502): a debug-signed APK artifact. iOS builds for people and the rest of the device work stay local.
+- **`build-ios.yml`** (its simulator job on PRs that touch native config or a pin; all three by hand, and from `release.yml` on a `v*` tag, D-502) builds for the simulator with no signing, plus an unsigned archive and an opt-in TestFlight upload, and **`maestro-android.yml`** (pushes to `main`; by hand) runs the smoke flows and `coc_capture` on an emulator (D-490; development.md §7.5, §7.7).
 - **Not in CI:** the `flet test` flows, goldens, the other device checks, performance. Spike S9 (#363, D-492, [`spikes/09-flet-test-linux.md`](spikes/09-flet-test-linux.md)) said no to `flet test linux`: the app and the flows are phone-only, and 5 of 7 flows couldn't reach their scene. `flet test android` on a KVM emulator passed its first flow before the private runner gave out, so it is the follow-up to try on the public runner (#1075); once it has run green for two weeks, it is proposed as a separate workflow through a `needs-decision` issue, never inside `ci.yml` (D-78, D-84).
 
 ## 13. Flet testing gaps

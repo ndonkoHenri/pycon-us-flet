@@ -51,7 +51,7 @@ then shows its Scan badges card from the start.
 | The mock over loopback from a packaged build | Tried with the network on (#668, on both platforms). **Not tried** with the Wi-Fi off; `10.0.2.2` is the one most worth checking. |
 | Door check, its words and its queue | The UI was tried at `08b89cce5` (#784), and #827 is the rerun at the current pin. The words below came from the real client and the real server over loopback, in a Python script with no UI, on 2026-11-02. |
 | A phone on a laptop hotspot | **Never tried** (D-457). |
-| View source | **Not built** (#834), and it needs the public repo (#835). |
+| View source | Built (#834) and on since `SOURCE_URL` is set (D-501). Its links open the version's tag, so they need that tag pushed and the public repo: **not tried** signed out or on a device (#835). |
 | Any timing in this file | **Not measured.** |
 
 ## The rig
@@ -97,8 +97,7 @@ start one without `setopt interactivecomments` (`development.md` §5.1).
    ```
 
 4. Open beat 6's page in a private window, so no GitHub session or notification shows, and never reload it:
-   `<SOURCE_URL>/blob/<ref>/src/pycon_us/screens/now.py`, with the ref #834 settles. **Until the repo is public it
-   would 404 there,** so beat 6 uses the editor.
+   `<SOURCE_URL>/blob/<ref>/src/pycon_us/screens/now.py`, with the ref #834 settles.
 5. Copy the recordings to the laptop.
 
 **Turn the network off, then check it:**
@@ -280,13 +279,13 @@ the form allows (`sign_in.py`). If it does, answer it in rehearsal, so it doesn'
 **The point:** a screen is one tap from its Python, and here is the one you just saw.
 
 1. On A, go to the **Now** tab and open the app bar's overflow menu. Point at **View source**. Don't tap it: it needs
-   GitHub, and #834 settles what it says offline.
+   GitHub, and offline it stays a web link like any other (D-461).
 2. Close the menu and switch to the browser window.
 
 **On screen:** `src/pycon_us/screens/now.py` on GitHub, in the page opened before the Wi-Fi went off.
 
-**Not built:** View source doesn't exist yet (#834), and turns on with the public repo (#835). Until then, step 1 is a
-sentence and step 2 is the editor. About this app has no Source code row either, while `SOURCE_URL` is `None`.
+**Needs:** a build of a tagged version: View source opens `blob/v<version>/...`, so the tag must exist and the repo be
+public (D-461, #835). Open the page in the browser before the Wi-Fi goes off. Without the tag, step 2 is the editor.
 
 **Fallback:** the page went blank or tries to reload: the same file in the editor needs no network. Then the recording.
 

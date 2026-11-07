@@ -47,8 +47,8 @@ conference data until the 2027 feed is published.
 - **Accounts and staff tools are built against the mock server.** The scanner's camera preview waits on a
   barcode-scanner extension for Flet; until then, badge codes are typed in.
 - **The last phase, P4 Showcase, is what comes next:** the performance pass, the accessibility audit, a View source
-  action on each screen, the 2027 data and the licence and trademark review. The repository is private for now, and
-  making it public is part of this phase.
+  action on each screen, the 2027 data and the licence and trademark review. The repository went public in this
+  phase.
 
 GitHub issues hold the live task list; [`docs/roadmap.md`](docs/roadmap.md) describes the phases.
 
@@ -109,18 +109,17 @@ yet, and VoiceOver needs a real iPhone, so those checks are still to come. Limit
 ## Running it
 
 You need git and [uv](https://docs.astral.sh/uv/). Android also needs an emulator or a phone, and iOS needs a Mac with
-Xcode. While the repository is private, cloning it needs access to it.
+Xcode.
 
 ```bash
-gh repo clone ndonkoHenri/pycon-us-flet && cd pycon-us-flet
+git clone https://github.com/ndonkoHenri/pycon-us-flet.git && cd pycon-us-flet
 uv sync --locked
 uv run pytest
 uv run flet devices
 uv run flet debug android -d <device>
 ```
 
-- `uv sync` installs Python 3.14 and every package, Flet included; `gh` is one way to clone, any git login with access
-  works too.
+- `uv sync` installs Python 3.14 and every package, Flet included.
 - `pytest` needs no device.
 - `flet devices` lists your emulators, simulators and phones. For iOS, run
   `LANG=en_US.UTF-8 uv run flet debug ios -d <simulator>` instead of the last line.

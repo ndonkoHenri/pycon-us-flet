@@ -1,7 +1,6 @@
 # PyCon US app on Flet: plan (v2)
 
 **Status:** plan of record, 2026-10-11. This v2 replaces the PSF-oriented v1, which stays in git history (the repository's first commit) and is not binding.
-**Owner:** U, a Flet core maintainer.
 **Binding decisions:** [`docs/decisions.md`](docs/decisions.md) (D-nn, cited below).
 **How we work:** [`AGENTS.md`](AGENTS.md).
 
@@ -9,7 +8,7 @@ We are rebuilding the PyCon US mobile app in Python with [Flet](https://flet.dev
 - **The reference.** The official Ionic app is our functional reference and our quality bar. It is not a spec, and the PSF is not a dependency.
 - **The design.** We keep the app's data semantics, improve its user experience, and build one Material 3 UI that is identical on both platforms.
 - **The data.** Real data comes from the public conference feed. Features that need the PSF's private API run against a local mock server.
-- **The pace.** The work is ordered in five phases, each with exit criteria. Presenting the app at PyCon US 2027 (Long Beach, CA, May 12–18) is the objective, not a deadline.
+- **The pace.** The work is ordered in five phases, each with exit criteria rather than a date: quality comes first.
 
 ---
 

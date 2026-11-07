@@ -4,11 +4,16 @@
 # - `testflight`: a signed IPA uploaded to TestFlight. Off until the owner turns it on with the `TESTFLIGHT_UPLOADS`
 #   variable and the `app-store` environment's secrets (§7.5 lists them); only release.yml asks for it.
 # Each build uploads its files as an artifact. By hand: `gh workflow run build-ios.yml --ref <branch or tag>`.
-# release.yml calls it on a v* tag (§7.8). While the repo is private it runs only by hand, since macOS minutes count ten
-# times (D-273).
+# release.yml calls it on a v* tag (§7.8). On PRs that touch the native config, a pin or the fonts' package, only the
+# simulator build runs.
 name: Build iOS
 
 on:
+  pull_request:
+    paths:                  # what can change the native build: the config, the pins and the fonts' package
+      - pyproject.toml
+      - uv.lock
+      - flutter_packages/**
   workflow_dispatch:
     inputs:
       testflight:

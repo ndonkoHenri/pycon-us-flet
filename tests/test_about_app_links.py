@@ -54,9 +54,9 @@ async def test_flet_opens_in_the_in_app_browser_and_reads_as_a_link(
     ]
 
 
-def test_the_source_url_is_unset_until_the_repository_is_public() -> None:
-    """`SOURCE_URL` ships as None until P4 makes the repository public (D-88, D-292)."""
-    assert pycon_us.SOURCE_URL is None
+def test_the_source_url_is_the_public_repository() -> None:
+    """`SOURCE_URL` names the repository, so About this app and View source reach it (D-292, D-501)."""
+    assert pycon_us.SOURCE_URL == "https://github.com/ndonkoHenri/pycon-us-flet"
 
 
 def test_no_source_code_row_while_the_repository_is_private(

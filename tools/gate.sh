@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
-# The merge gate (D-273): checks what will land before a merge, while the repo is private and GitHub Actions don't
-# run on PRs. It merges the PRs, in the order given, onto the latest origin/main in a scratch worktree, runs the full
+# The merge gate (D-273, D-501): checks what will land before a merge: a PR's CI run tests it on the `main` of its
+# push, and this on the latest. It merges the PRs, in the order given, onto the latest origin/main in a scratch worktree, runs the full
 # local checks (tools/check.sh) there, and when they pass posts one comment on each PR naming the commits and the
 # tree it checked. After the PRs are squash-merged in that order, main's tree must equal the tree printed last;
 # otherwise run the full checks again on main (docs/development.md §7).

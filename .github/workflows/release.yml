@@ -1,8 +1,8 @@
 # A release from a v* tag (D-502; docs/development.md §7.8): build the APK and the iOS builds with the two build
 # workflows, then publish a GitHub Release with the APK and the zipped simulator app. The unsigned archive stays a
 # workflow artifact, and TestFlight runs only when the owner has turned it on (build-ios.yml).
-# By hand, on a tag that exists: `gh workflow run release.yml --ref vX.Y.Z`. While the repo is private nobody pushes a
-# v* tag, so this never runs (D-273, D-502).
+# By hand, on a tag that exists: `gh workflow run release.yml --ref vX.Y.Z`. A Release is a build for people outside
+# the team, so the first v* tag is the owner's go (D-502).
 name: Release
 
 on:
