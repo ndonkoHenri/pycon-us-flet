@@ -45,12 +45,12 @@ jobs:
   android:
     name: Android
     needs: tag
-    uses: $/.github/workflows/build-android.yml
+    uses: ./.github/workflows/build-android.yml # zizmor: ignore[self-repository] actionlint 1.7.12 rejects $/
 
   ios:
     name: iOS
     needs: tag
-    uses: $/.github/workflows/build-ios.yml
+    uses: ./.github/workflows/build-ios.yml # zizmor: ignore[self-repository] actionlint 1.7.12 rejects $/
     with:
       testflight: true          # still off until the owner turns it on (TESTFLIGHT_UPLOADS)
 
