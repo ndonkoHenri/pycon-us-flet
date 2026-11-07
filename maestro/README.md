@@ -444,6 +444,14 @@ fails under `tools/check.sh`. A new `text:` in those flows needs its words there
 - The expo opens on the List under a screen reader and on the Map otherwise
   (`view_of()`), and Maestro makes Android report one (F72): a flow that needs one view
   taps its segment (`expo.view.map`, `expo.view.list`) when that view isn't showing.
+- **Wait for where a step lands before a `notVisible` condition** (#1136): `when:
+  notVisible:` and `repeat: while: notVisible:` are true the moment their element is
+  missing, which it is while the next screen slides in, so a check right after a Back or
+  a tap took the wrong branch (a second Back popped More). Wait first for the
+  destination: `extendedWaitUntil` on either expected screen's id (`id:
+  "more\\.title|about_app\\.version"`), or, when the screen you leave keeps its ids
+  while it slides out, on the destination alone with `optional: true` and a short
+  timeout. A `visible` condition waits for its element by itself.
 - A busy host can lose keystrokes in a controlled field (F63): type in a `retry` until the
   field shows the whole value, as `set_scene.yaml` does. On iOS a tap can put the caret
   mid-field, so it taps and erases twice. A tap on a moving list only stops it: wait for

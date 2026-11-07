@@ -9,6 +9,13 @@ appId: io.github.ndonkohenri.confcompanion
         id: app.nav.more
     commands:
       - runFlow: ../subflows/back.yaml
+      # More, before the check: mid-pop it isn't there yet, and a Back too many
+      # leaves the app (#1136).
+      - extendedWaitUntil:
+          visible:
+            id: app.nav.more
+          timeout: 5000
+          optional: true
 - runFlow:
     file: ../subflows/tab.yaml
     env:
