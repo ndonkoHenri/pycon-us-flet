@@ -22,6 +22,12 @@ env:
 - tapOn:
     id: developer.mock_api_save
 - runFlow: back.yaml
+# Where Back landed, before the check: mid-pop neither title is there yet, and a check
+# then took a second Back off More (#1136). Developer options has neither id.
+- extendedWaitUntil:
+    visible:
+      id: "more\\.title|about_app\\.version"
+    timeout: 15000
 - runFlow:  # About this app, when it stayed under Developer options
     when:
       notVisible:
@@ -46,10 +52,21 @@ env:
 - tapOn:
     id: sign_in.password
 - inputText: ${PASSWORD}
-- pressKey: Enter
-- tapOn:
-    id: sign_in.submit
-    optional: true  # Enter may have sent it already
+- pressKey: Enter  # the password's action key signs in
+# Submit only if Enter didn't: a tap on the page as it slid out found the button and
+# landed on More's row under it (Speakers), so wait for the page to go first (#1136).
+- extendedWaitUntil:
+    notVisible:
+      id: sign_in.email
+    timeout: 8000
+    optional: true
+- runFlow:
+    when:
+      visible:
+        id: sign_in.submit
+    commands:
+      - tapOn:
+          id: sign_in.submit
 # iOS offers to save the password in its own sheet: Not Now keeps nothing.
 - runFlow:
     when:
