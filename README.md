@@ -44,15 +44,13 @@ The app is under active development and has no public builds. To try it, build i
 conference data until the 2027 feed is published.
 
 - **The attendee features are built:** schedule, My schedule, search, maps, venue pages, reminders and offline use.
-  What remains is mostly checking them on real devices.
 - **Accounts and staff tools are built against the mock server.** The scanner's camera preview waits on a
   barcode-scanner extension for Flet; until then, badge codes are typed in.
 - **The last phase, P4 Showcase, is what comes next:** the performance pass, the accessibility audit, a View source
   action on each screen, the 2027 data and the licence and trademark review. The repository is private for now, and
   making it public is part of this phase.
 
-The objective is to present the app at PyCon US 2027. GitHub issues hold the live task list;
-[`docs/roadmap.md`](docs/roadmap.md) describes the phases.
+GitHub issues hold the live task list; [`docs/roadmap.md`](docs/roadmap.md) describes the phases.
 
 ## What it isn't
 
@@ -69,7 +67,7 @@ Flet lets you write a mobile interface in Python: Flutter draws the screen, and 
 app. That gives one codebase for both platforms, in a language many developers at PyCon can read and change.
 
 The app is also a test of Flet. When it needs something Flet lacks, we ship a documented interim and record the gap in
-[`docs/flet-gaps-and-extensions.md`](docs/flet-gaps-and-extensions.md). The project's owner maintains Flet.
+[`docs/flet-gaps-and-extensions.md`](docs/flet-gaps-and-extensions.md).
 
 ## How it's built
 
