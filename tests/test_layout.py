@@ -71,7 +71,8 @@ def test_a_rotation_notifies_the_short_class_once() -> None:
         """Record the field each notification names."""
         changes.append(field)
 
-    layout.subscribe(listen)
+    assert isinstance(layout, ft.Observable)
+    layout.subscribe(listen)  # held weakly: a local function, not a lambda
     layout.set_width(411, height=914)
     assert changes == []
     layout.set_width(411, height=411)
