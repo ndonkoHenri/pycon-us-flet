@@ -707,7 +707,7 @@ write a flow; the strategy is [`testing-and-quality.md`](testing-and-quality.md)
   `--debug-output build/maestro/<name>` names a folder.
 - **Every flow, every platform:** `uv run python -m tools.run_flows --out build/flows --rounds r1,r2 --android <serial> --ios <udid>` gives each journey the setup
   `maestro/README.md` asks of it (the mocks, the feed pairs, the largest text, the reboot before `rail_tabs`), in two lanes side by side, then `fling_after_sheet` on each in
-  turn. `--flows` and `--skip` narrow it, and one device runs one lane. `<out>/results.jsonl` has one line per flow, with the exit code and the host's load, and it never
+  turn. `--flows` and `--skip` narrow it, and one device runs one lane. Each lane's servers write their output beside its flows (`<out>/<round>/<platform>/mock.log`), and a port another process holds stops the lane with that port's number (#1137). `<out>/results.jsonl` has one line per flow, with the exit code and the host's load, and it never
   reruns one, so a failure stays a first-run failure. The lanes share the host: when load may have failed a flow, rerun that flow alone to find out, and report both results.
 
 ### 5.10 The OS floors, run (#816)

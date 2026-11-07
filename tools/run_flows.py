@@ -11,7 +11,10 @@ Usage, from the repo's root, with the build under test installed on your own dev
 One platform's lane runs next to the other's, so they share the host: read a failure with
 the `load` beside it. `<out>/results.jsonl` gets one line per flow (`round`, `platform`,
 `flow`, `rc`, `seconds`, `load`, `at`), and `<out>/<round>/<platform>/<flow>/` keeps its
-log, debug output and screenshots. It reports; it never reruns: a rerun's pass isn't a
+log, debug output and screenshots. A lane's servers write to `<out>/<round>/<platform>/`
+(`mock.log`, `no_logo_feed.log`), a feed pair to its flow's folder (`feed_pair.log`), and a
+server that can't start says why: a port another process holds, or its log's last lines.
+It reports; it never reruns: a rerun's pass isn't a
 first-run pass. It exits 1 if any flow failed, or if a lane stopped on a failed setup.
 Each flow's setup is the one `maestro/README.md` gives it, and
 `docs/testing-and-quality.md` §5.5 says when a full run is due.
@@ -22,6 +25,7 @@ import json
 import os
 import shutil
 import signal
+import socket
 import subprocess
 import sys
 import threading
@@ -44,6 +48,9 @@ STOP_SECONDS = 10
 
 SERVER_START_SECONDS = 4
 """How long a server just started gets to open its port; `feed_pair` first runs the parser."""
+
+SERVER_LOG_LINES = 5
+"""How many of a server's last lines a stop at its start quotes."""
 
 NO_LOGO_PORT = 8766
 """`sponsors_offline_logos.yaml`'s default port for its feed on iOS."""
@@ -148,6 +155,25 @@ def no_logo_feed(snapshot: str) -> str:
     return moved
 
 
+def port_taken(port: int) -> bool:
+    """Say whether something on this Mac already listens on `port`, at its loopback."""
+    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as probe:
+        probe.settimeout(1)
+        return probe.connect_ex(("127.0.0.1", port)) == 0
+
+
+def stopped_at_start(command: Sequence[str], log: Path) -> str:
+    """Return why a server stopped at its start: the cause when known, and its last lines."""
+    text = log.read_text(encoding="utf-8", errors="replace")
+    cause = (
+        "its port is taken"
+        if "Address already in use" in text or "Errno 48" in text
+        else "see its log"
+    )
+    tail = "\n".join(text.strip().splitlines()[-SERVER_LOG_LINES:])
+    return f"server stopped at its start ({cause}, {log}): {' '.join(command)}\n{tail}"
+
+
 class FlowRun:
     """One run's output folder, its environment and the results it records."""
 
@@ -203,24 +229,42 @@ class FlowRun:
         self.record(round=rnd, platform=platform, flow=flow, rc=rc, seconds=seconds)
 
     @contextmanager
-    def server(self, *command: str) -> Iterator[None]:
-        """Keep a server running for a `with` block.
+    def server(self, log: Path, port: int, *command: str) -> Iterator[None]:
+        """Keep a server running for a `with` block, its output in `log`.
+
+        Args:
+            log: Where its output goes, in the round's folder, to read after the run.
+            port: The port it opens, checked first: another process there would answer
+                the flows in its place.
+            command: The server's command line.
 
         Raises:
-            RuntimeError: It stopped at its start, such as on a taken port. Going on would
-                test whatever else answers there, or nothing.
+            RuntimeError: The port was taken, or the server stopped at its start; the
+                message says which, with the log's last lines. Going on would test
+                whatever else answers there, or nothing.
         """
-        process = subprocess.Popen(
-            command, env=self.env, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL
-        )
-        time.sleep(SERVER_START_SECONDS)
-        if process.poll() is not None:
-            raise RuntimeError(f"server stopped at its start: {' '.join(command)}")
-        try:
-            yield
-        finally:
-            process.terminate()
-            process.wait()
+        if port_taken(port):
+            raise RuntimeError(
+                f"port {port} is taken by another process (lsof -nP -iTCP:{port}),"
+                f" so this server can't start: {' '.join(command)}"
+            )
+        log.parent.mkdir(parents=True, exist_ok=True)
+        with log.open("w", encoding="utf-8") as output:
+            # Unbuffered, so the log has the lines in order, and has them all if it dies.
+            process = subprocess.Popen(
+                command,
+                env={**self.env, "PYTHONUNBUFFERED": "1"},
+                stdout=output,
+                stderr=subprocess.STDOUT,
+            )
+            time.sleep(SERVER_START_SECONDS)
+            if process.poll() is not None:
+                raise RuntimeError(stopped_at_start(command, log))
+            try:
+                yield
+            finally:
+                process.terminate()
+                process.wait()
 
     def prefs(self, device: str, *options: str) -> None:
         """Set `device`'s text size through `tools.device`."""
@@ -261,7 +305,7 @@ class FlowRun:
                 str(lane.feed),
                 *moves,
             ]
-            with self.server(*pair):
+            with self.server(directory / "feed_pair.log", lane.feed, *pair):
                 self.run(command, directory, name)
         elif flow == "sponsors_large_text":
             try:
@@ -295,14 +339,19 @@ class FlowRun:
             "--port",
             str(LANES[platform].mock),
         ]
-        with self.server(*mock):
+        servers = self.out / rnd / platform
+        with self.server(servers / "mock.log", LANES[platform].mock, *mock):
             feed = [
                 sys.executable,
                 *["-m", "http.server", str(NO_LOGO_PORT), "--bind", "127.0.0.1"],
                 *["--directory", str(self.out / "no-logo-feed")],
             ]
             # Android cuts its network, so only iOS's flow reads this feed (`maestro/README.md`).
-            with self.server(*feed) if platform == "ios" else no_server():
+            with (
+                self.server(servers / "no_logo_feed.log", NO_LOGO_PORT, *feed)
+                if platform == "ios"
+                else no_server()
+            ):
                 for flow in lane_order(journeys):
                     if self.wanted(flow):
                         self.journey(device, platform, rnd, flow)
