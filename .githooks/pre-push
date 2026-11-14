@@ -1,6 +1,6 @@
 #!/bin/sh
 # Git's pre-push hook (D-273): runs the fast local checks (`tools/check.sh --fast`, everything but pytest) before a
-# push, since GitHub Actions don't run on pushes while the repo is private. A push that changes only Markdown skips
+# push, so a problem shows here rather than on a PR's CI run. A push that changes only Markdown skips
 # them. Turn it on once per clone, for every worktree of it: `git config core.hooksPath .githooks`.
 # Skip it for one push with `git push --no-verify`.
 #

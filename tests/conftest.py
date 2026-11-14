@@ -9,7 +9,7 @@ import httpx
 import pytest
 from hypothesis import settings
 
-from pycon_us.ui import focus_back
+from pycon_us.ui import focus_back, menus
 
 SNAPSHOTS = Path(__file__).parent / "fixtures" / "snapshots"
 
@@ -54,6 +54,15 @@ def quick_focus_back(monkeypatch: pytest.MonkeyPatch) -> None:
     opened a link from a button would otherwise wait `LEAVE_WITHIN` (3 s) for nothing.
     """
     monkeypatch.setattr(focus_back, "LEAVE_WITHIN", 0.01)
+
+
+@pytest.fixture(autouse=True)
+def no_view_source(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Leave View source out of a bar's overflow, unless a test sets `SOURCE_URL` itself (D-461).
+
+    Each screen's tests read their own overflow; `tests/test_view_source.py` has the item.
+    """
+    monkeypatch.setattr(menus, "SOURCE_URL", None)
 
 
 @pytest.fixture(autouse=True)

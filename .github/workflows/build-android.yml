@@ -1,7 +1,6 @@
 # Build a debug-signed arm64 APK (D-84, D-86, D-106, D-502; docs/development.md §7.4).
 # It runs the documented `flet build apk` command directly, not flet-dev/flet-build-action (§7.4 says why).
 # By hand: `gh workflow run build-android.yml --ref <branch or tag>`. release.yml calls it on a v* tag (§7.8).
-# While the repo is private it runs only by hand, and nobody pushes a v* tag (D-273, D-502).
 name: Build Android
 
 on:

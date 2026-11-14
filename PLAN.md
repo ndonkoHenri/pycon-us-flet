@@ -1,7 +1,6 @@
 # PyCon US app on Flet: plan (v2)
 
 **Status:** plan of record, 2026-10-11. This v2 replaces the PSF-oriented v1, which stays in git history (the repository's first commit) and is not binding.
-**Maintainer:** U, a Flet core maintainer.
 **Binding decisions:** [`docs/decisions.md`](docs/decisions.md) (D-nn, cited below).
 **How we work:** [`AGENTS.md`](AGENTS.md).
 
@@ -9,7 +8,7 @@ We are rebuilding the PyCon US mobile app in Python with [Flet](https://flet.dev
 - **The reference.** The official Ionic app is our functional reference and our quality bar. It is not a spec, and the PSF is not a dependency.
 - **The design.** We keep the app's data semantics, improve its user experience, and build one Material 3 UI that is identical on both platforms.
 - **The data.** Real data comes from the public conference feed. Features that need the PSF's private API run against a local mock server.
-- **The pace.** The work is ordered in five phases, each with exit criteria. Presenting the app at PyCon US 2027 (Long Beach, CA, May 12–18) is the objective, not a deadline.
+- **The pace.** The work is ordered in five phases, each with exit criteria rather than a date: quality comes first.
 
 ---
 
@@ -323,11 +322,11 @@ Each spike is an issue titled `Spike: …` (label `test`, D-91), time-boxed to h
 
 The workflow is written down in [`AGENTS.md`](AGENTS.md), the operating manual for humans and agents, which is maintained separately. The work itself is broken down in [`docs/roadmap.md`](docs/roadmap.md); GitHub issues are the live task list. In brief (D-88..D-96):
 
-- **Issues first.** One private GitHub repo (public in P4). Every change starts from an issue, except trivial chores; an issue describes a journey or a mechanism, with feature ids, D-ids, acceptance criteria and the device evidence needed.
-- **One issue, one PR.** A `<type>/<issue>-<slug>` branch and an early draft PR of about 400 changed lines or fewer, with screenshots for UI. The checks pass: locally while the repo is private, with the merge gate before every merge (D-273), and in CI once it is public. Agents squash-merge their own PRs under the merge conditions of D-100; the maintainers watch and can step in, but is never a blocker.
+- **Issues first.** One public GitHub repo (private until P4). Every change starts from an issue, except trivial chores; an issue describes a journey or a mechanism, with feature ids, D-ids, acceptance criteria and the device evidence needed.
+- **One issue, one PR.** A `<type>/<issue>-<slug>` branch and an early draft PR of about 400 changed lines or fewer, with screenshots for UI. The checks pass in CI and locally, with the merge gate before every merge (D-273, D-505). Agents squash-merge their own PRs under the merge conditions of D-100; the maintainers watch and can step in, but are never blockers.
 - **Milestones are the phases**, with the labels in D-90, a "PyCon US Flet" Project board and a weekly status issue per phase.
 - **Decisions change only through a `needs-decision` issue** and a PR that edits [`docs/decisions.md`](docs/decisions.md). Reversible choices are decided by agents and recorded; only hard-to-reverse or outward-facing ones wait for the maintainers (D-101). Docs change in the same PR as the behaviour.
-- **Second opinions** (Claude Fable, Codex) are summarised as PR comments, and PRs that change code or configuration also get a GitHub Copilot review (D-103; paused while the repo is private, D-273). **Upstream work** lives in flet-dev and is the maintainers'; agents act only in this repository and track it here by `upstream` issues (D-212).
+- **Second opinions** (Claude Fable, Codex) are summarised as PR comments, and PRs that change code or configuration also get a GitHub Copilot review (D-103, when its quota allows; D-505). **Upstream work** lives in flet-dev and is the maintainers'; agents act only in this repository and track it here by `upstream` issues (D-212).
 
 ## 11. Risks
 

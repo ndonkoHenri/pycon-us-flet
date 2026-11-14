@@ -7,7 +7,7 @@
 - Versioning (§4).
 - The development loop (§5).
 - The mock API workflow (§6).
-- GitHub Actions for a private repo (§7).
+- GitHub Actions (§7).
 - Signing and internal distribution (§8).
 - What a public release would need later (§9).
 
@@ -28,7 +28,7 @@
 
 | I want to… | Command (from the repo root) | Section |
 |---|---|---|
-| Set up a fresh clone | `gh repo clone …`, `uv sync --locked` | §5.1 |
+| Set up a fresh clone | `git clone …`, `uv sync --locked` | §5.1 |
 | Run the real app shell on an emulator, simulator or phone | `uv run flet debug android -d emulator-5554` (or `ios -d <udid>`); `-d` is required | §5.3 |
 | Run the app with Python hot reload | `BROWSER=true uv run flet run -r -w -p 8550`, plus `flutter run -d <id>` in a Flet clone's `client` | §5.2 |
 | List devices or emulators | `uv run flet devices`, `uv run flet emulators` | §5.5 |
@@ -39,8 +39,8 @@
 | Build an APK for the emulator | `uv run flet build apk --arch arm64-v8a --build-number $(git rev-list --count HEAD)` (D-106) | §8.1 |
 | Build an AAB for Play | `uv run flet build aab --build-number $(git rev-list --count HEAD)` | §8.1 |
 | Build an IPA for TestFlight | `uv run flet build ipa --ios-export-method app-store-connect --build-number $(git rev-list --count HEAD)` | §8.2 |
-| Get a quick-look APK | Locally, the emulator APK above (§8.1); or a manual run, `gh workflow run build-android.yml --ref main` (or Actions › Build Android › Run workflow), then `gh run download <run-id>`. While the repo is private nobody pushes a `v*` tag (D-273, D-502) | §7.4 |
-| Get the iOS simulator app or an unsigned archive from CI | `gh workflow run build-ios.yml --ref main`, then `gh run download <run-id>` (macOS minutes: not while the repo is private) | §7.5 |
+| Get a quick-look APK | Locally, the emulator APK above (§8.1); or a manual run, `gh workflow run build-android.yml --ref main` (or Actions › Build Android › Run workflow), then `gh run download <run-id>`. A `v*` tag runs it too | §7.4 |
+| Get the iOS simulator app or an unsigned archive from CI | `gh workflow run build-ios.yml --ref main`, then `gh run download <run-id>` | §7.5 |
 | Refresh the bundled feed snapshot (from P0-17) | `uv run python tools/update_snapshot.py` | §8.3 |
 | Run the UI flows on an emulator or a simulator | `uv run flet test android -d emulator-5580 --tests-dir tests/ui -v` (or `ios -d <udid>`) | §5.7 |
 | Run the Maestro device journeys on a packaged build | `maestro --device emulator-5570 test --include-tags=journeys maestro` (or `--device <udid>`) | §5.9 |
@@ -50,7 +50,7 @@
 | Run every Maestro journey, with its setup, on both platforms, for N rounds | `uv run python -m tools.run_flows --out build/flows --rounds r1,r2 --android <serial> --ios <udid>` | §5.9 |
 | Photograph the staff tools per text size and appearance | `uv run python -m tools.sweep --device <id> --modes default max` | `maestro/README.md` |
 | Check the feature matrix after editing it (ids, vocabulary, counts; also run by `tests/test_check_matrix.py`) | `uv run python -m tools.check_matrix` (`--breakdown` for the fuller counts) | — |
-| Check the live public feed (what `feed-check.yml` runs; no weekly run while the repo is private, D-273) | `uv run python -m tools.check_feed`, or `gh workflow run feed-check.yml --ref main` | §7.3 |
+| Check the live public feed (what `feed-check.yml` runs every Monday) | `uv run python -m tools.check_feed`, or `gh workflow run feed-check.yml --ref main` | §7.3 |
 
 ---
 
@@ -394,8 +394,7 @@ This section is for a Mac with none of the tools. The timed run on a truly clean
 |---|---|---|---|
 | macOS, Apple silicon | macOS 27.0 on an M4 here | | Our AVDs are arm64 (§5.5). Intel is unverified. |
 | git | any | `xcode-select --install`, or Xcode | |
-| Homebrew | any | [brew.sh](https://brew.sh); only for `gh` and CocoaPods | |
-| Access to the repo, while it is private | `gh` 2.100.0 here | `brew install gh`, then `gh auth login` | See "What `gh` is for" below |
+| Homebrew | any | [brew.sh](https://brew.sh); only for CocoaPods | |
 | uv | CI uses 0.12.x; 0.13.6 here | `curl -LsSf https://astral.sh/uv/install.sh \| sh`, then open a new terminal | `ci.yml`, and `uv_build>=0.12,<0.13` in `pyproject.toml` |
 | Python on the Mac | 3.14.x (3.14.10 with uv 0.13.6) | `uv sync` downloads it | `requires-python` in `pyproject.toml`; the app's own Python is separate (§2.1) |
 | Flutter | 3.47.9 | flet-cli installs it (below) | `uv run flet --version` |
@@ -406,14 +405,14 @@ This section is for a Mac with none of the tools. The timed run on a truly clean
 
 Allow about 20 GB of disk for Android (here: Flutter 2.1 GB, Android emulator 1.2 GB, system image 4.3 GB, NDK 2.8 GB, plus the Gradle and pub caches), and more for Xcode.
 
-**What `gh` is for.** Only for cloning this repo while it is private: any git credential with access works too. Building, running and testing never call it. People who open or merge PRs need it as well (`tools/gate.sh` posts through it). Once the repo is public (#852), clone with `git clone https://github.com/ndonkoHenri/pycon-us-flet.git` with no account; `gh` then leaves this list.
+**`gh` isn't needed to build, run or test.** People who open or merge PRs use it (`tools/gate.sh` posts through it).
 
 **Pasting into zsh.** The blocks in this section hold no comments on purpose. In an interactive zsh, macOS's default shell, `#` doesn't start a comment unless you run `setopt interactivecomments` first, so a pasted `uv sync   # note` passes the note as arguments. Blocks elsewhere in this guide do have comments.
 
 **1. The checkout.**
 
 ```bash
-gh repo clone ndonkoHenri/pycon-us-flet && cd pycon-us-flet
+git clone https://github.com/ndonkoHenri/pycon-us-flet.git && cd pycon-us-flet
 uv sync --locked
 git config core.hooksPath .githooks
 uv run flet --version
@@ -473,7 +472,7 @@ uv run flet debug ios -d <simulator udid>
 
 | Step | Measured | On a clean Mac |
 |---|---|---|
-| `gh repo clone` | 11 s | About the same |
+| `git clone` (measured as `gh repo clone`) | 11 s | About the same |
 | Flet clone and checkout (335 MB) | 12 s | About the same |
 | `uv sync --locked`, with CPython and every package downloaded | 6 s, fast connection (25.5 MiB Python, about 250 MB of packages) | Under a minute |
 | `uv run pytest` | About 3 min quiet, 5 min 35 s under load (#897, the gate on 2026-11-03) | About the same on an M4 |
@@ -818,7 +817,7 @@ mock connection said "Connected to the local mock server.", in light and dark, a
 
 ## 7. Checks and GitHub Actions (D-84, D-273)
 
-**While the repo is private, the checks run locally** (D-273). A private repo on GitHub Free includes 2,000 Linux minutes a month, and by 2026-10-20 `ci.yml`, run on every PR push and every push to `main`, had used about 1,875 of them. So GitHub Actions run only by hand, and local checks replace them.
+**GitHub Actions run on every PR and every push to `main`** (D-505), free now that the repo is public, and the local checks stay beside them (D-273): they find a problem before a push, and the gate tests the PR on the latest `main`, where a PR's run tested the `main` of its push.
 
 **`tools/check.sh`** runs `ci.yml`'s steps (§7.2) in the same order on your machine: `uv sync --locked`, `ruff check`, `ruff format --check`, the pre-commit hooks (below), `pyright`, `pytest -n auto --hypothesis-profile=ci`, with `UV_LOCKED=1`. `--fast` runs every step but pytest. It prints one line per step and stops at the first failure, with that step's exit status. On a maintainer's Mac the fast run takes about 15 s (about 9 s before the hooks of D-480 joined) and the full one about a minute and a half (67 s for pytest on 2026-11-04, for 9,170 tests with `-n auto`, D-483; `tests/test_ci_matches_check.py` keeps these steps and `ci.yml`'s equal). It runs at three points:
 - **The pre-push hook**, `.githooks/pre-push`, turned on once per clone with `git config core.hooksPath .githooks` (§5.1; every worktree of the clone then runs its own checkout's hook). Before each push it runs `tools/check.sh --fast`, unless the push changes only Markdown (`*.md`) or nothing: it compares a new branch with its merge base with `origin/main`, and an existing one with the remote's commit (a remote commit it doesn't have counts as code). The checks see the working tree, so it warns when that has uncommitted changes or HEAD isn't the pushed commit. `git push --no-verify` skips it once. A branch from before D-273 has no hook.
@@ -835,18 +834,9 @@ mock connection said "Connected to the local mock server.", in light and dark, a
   - Exit status: 0 passed, 1 failed (or couldn't run), 2 usage.
   - Its result holds for the PR's head and the `main` it names: after a new push to the PR, or once `main` has moved, run it again. Gate a batch together, in merge order, and squash-merge it in that order; `main`'s tree (`git rev-parse origin/main^{tree}` after a fetch) must then equal the printed tree, or else run `tools/check.sh` on `main`.
 
-No Linux machine runs the checks until P4 (the maintainers' call), so a failure that only Linux shows would surface when CI comes back. The PR that makes the repo public brings back the workflows' triggers below (`ci.yml`'s PR and `main` triggers, the feed check's schedule), and with them §7.2's required checks. A `v*` tag runs `release.yml` (§7.8), and nobody pushes one while the repo is private (D-502).
+### 7.1 Limits of a public repo on GitHub Free
 
-### 7.1 Constraints of a private repo on GitHub Free
-
-Check the current numbers in Settings › Billing; these were the terms at the time of writing.
-
-| Constraint | Consequence for us |
-|---|---|
-| Included Actions minutes are limited (2,000 Linux minutes a month), and macOS minutes count about 10× Linux | Everything runs on Linux except `build-ios.yml` (§7.5), which nobody dispatches while the repo is private. While the repo is private, every workflow runs only by hand and the checks run locally (§7, D-273). |
-| Artifact storage is small (hundreds of MB) | APK artifacts are kept for 14 days. |
-| Branch protection and rulesets are not enforced on private repos | `main` is protected by convention until the repo is public (D-88): PRs only, the merge gate passed (D-273), agents merge under D-100. Creating a ruleset returns HTTP 403 (checked 2026-10-11); AGENTS.md › Branches and commits has the ruleset to add once the repo is public. |
-| Environments (and their secrets and required reviewers) are unavailable for private repos | CI holds no secrets while the repo is private. The TestFlight job's secrets go in the `app-store` environment once the repo is public (§7.5, D-502). |
+Standard runners are free for a public repo, macOS included. `ubuntu-latest` there has 4 vCPUs and 16 GB; a private repo's had 2 vCPUs and 7.9 GB, which §7.2 and §7.4 measured. While the repo was private, 2,000 Linux minutes a month ran out fast, which is why D-273 moved the checks onto the Mac. APKs are kept for 14 days. CI holds no secrets until a maintainer adds the TestFlight ones to the `app-store` environment (§7.5, D-502). A fork's PR runs with a read-only token and no secrets, and a first-time contributor's run waits for a maintainer's approval (the default). A `v*` tag runs `release.yml` (§7.8); the first one is the maintainers' go (D-502).
 
 Conventions in every workflow:
 - `permissions: contents: read`.
@@ -856,17 +846,17 @@ Conventions in every workflow:
 - `pull_request`, never `pull_request_target`.
 - `UV_LOCKED=1`, so every `uv` command fails if `uv.lock` is stale.
 
-### 7.2 `.github/workflows/ci.yml`: by hand while the repo is private
+### 7.2 `.github/workflows/ci.yml`: every PR and every push to `main`
 
 [`.github/workflows/ci.yml`](../.github/workflows/ci.yml) is the source of truth; this section says what it does and why. `tools/check.sh` runs the same steps locally (§7).
 
-**Required checks (D-100).** While the repo is private, the required check is the merge gate's (§7, D-273): it ran the full checks on the PR merged onto the latest `main` and posted its result on the PR. When the repo is public, a PR may be merged only when every check below has passed on its latest commit. A missing, pending, skipped or cancelled required check is not green. Rename a job only together with this list.
+**Required checks (D-100, D-505).** A PR may be merged only when every check below has passed on its latest commit, and the merge gate has passed on what will land (§7). A missing, pending, skipped or cancelled required check is not green. Rename a job only together with this list.
 
 | Workflow | Job id | Check name (as GitHub shows it) |
 |---|---|---|
 | `CI` (`ci.yml`) | `check` | `Lint, types and tests` |
 
-`gh pr checks <n>` lists them. GitHub does not enforce this list on a private Free repo (§7.1); agents check it before merging.
+`gh pr checks <n>` lists them. Agents check it before merging, and the ruleset can name them as required once they have run for a while.
 
 **One Linux job**, `Lint, types and tests`. Its steps, in order (the first failure fails the job):
 
@@ -880,15 +870,15 @@ Conventions in every workflow:
 | Type-check | `uv run pyright` | D-74 |
 | Test | `uv run pytest -n auto --hypothesis-profile=ci` | D-76, D-483. Hypothesis's built-in `ci` profile (derandomised, no deadline, `too_slow` suppressed), extended in `tests/conftest.py` to 200 examples per property; named explicitly rather than left to the `CI` variable (testing-and-quality.md §3.1). |
 
-**Triggers and concurrency.** While the repo is private it runs only by hand (`workflow_dispatch`, D-273): Actions › CI › Run workflow, or `gh workflow run ci.yml --ref <branch>`; each run has a concurrency group of its own (the run id). The PR that makes the repo public brings back its triggers, every `pull_request` and every push to `main`. Then the concurrency group is the PR number, so a new push to a PR cancels that PR's older run. A push to `main` gets a group of its own (the run id): in a shared group a newer run would replace a pending one, even with `cancel-in-progress: false`. So every commit on `main` keeps its own result.
+**Triggers and concurrency.** Every `pull_request`, every push to `main`, and by hand (`gh workflow run ci.yml --ref <branch>`). The concurrency group is the PR number, so a new push to a PR cancels that PR's older run. A push to `main` gets a group of its own (the run id): in a shared group a newer run would replace a pending one, even with `cancel-in-progress: false`. So every commit on `main` keeps its own result.
 
 The target is under 5 minutes (D-483). On the private repo's 2-vCPU runner a job took 4 min 31 s and 7 min 14 s, the same steps on a runner that happened to be slower; the first number to compare is the public repo's 4-vCPU runner, after the flip. The test step is 90% of the job and no test is slow, so it runs in parallel (`-n auto`). The time-zone tests run under two machine time zones through a pytest fixture, not a CI matrix (D-43). UI flows never join this job (D-78). Spike S9 said no to `flet test linux` (D-492, [`spikes/09-flet-test-linux.md`](spikes/09-flet-test-linux.md)); the road it found is `flet test android` on a KVM emulator, a separate workflow to try after the flip (#1075).
 
-### 7.3 `.github/workflows/feed-check.yml`: by hand while the repo is private
+### 7.3 `.github/workflows/feed-check.yml`: every Monday
 
 [`.github/workflows/feed-check.yml`](../.github/workflows/feed-check.yml) is the source of truth; this section says what it does and why. It is not a required check (§7.2).
 
-**Run it:** locally, `uv run python -m tools.check_feed` (add years, e.g. `2025 2026`, to check those instead). It runs as a module because it imports `tools.feed_invariants`. By hand on GitHub: Actions › Feed check › Run workflow, or `gh workflow run feed-check.yml --ref main`. While the repo is private there is no weekly run (D-273), so run it when the feed matters: before a snapshot PR (§8.3), and while next year's feed is expected. The PR that makes the repo public brings back its schedule, Mondays at 06:17 UTC.
+**Run it:** locally, `uv run python -m tools.check_feed` (add years, e.g. `2025 2026`, to check those instead). It runs as a module because it imports `tools.feed_invariants`. By hand on GitHub: Actions › Feed check › Run workflow, or `gh workflow run feed-check.yml --ref main`. It also runs on Mondays at 06:17 UTC.
 
 **One Linux job**, `Parse the public feed`, with a 10-minute timeout and `contents: read` only. Its steps are `ci.yml`'s up to `uv sync --locked` (the same checkouts, Flet pin, uv line and cache, §7.2), then `uv run python -m tools.check_feed`. A run takes well under a minute after setup: fetching and processing the 2026 feed takes about a second.
 
@@ -901,7 +891,7 @@ The target is under 5 minutes (D-483). On the private repo's 2-vCPU runner a job
 
 [`.github/workflows/build-android.yml`](../.github/workflows/build-android.yml) is the source of truth; this section says what it does and why. It builds a debug-signed arm64 APK (D-84, D-86, D-106). It is not a required check (§7.2).
 
-**Run it:** Actions › Build Android › Run workflow, or `gh workflow run build-android.yml --ref main` (or `--ref vX.Y.Z` for a tag). `release.yml` calls it on a `v*` tag (`workflow_call`, §7.8), and reads the artifact's name from its `artifact` output. While the repo is private nobody pushes a `v*` tag (D-273, D-502): build the quick-look APK locally (§8.1, the same `flet build apk --arch arm64-v8a` command), or run the workflow by hand. A new run for the same branch or tag cancels the older one; the concurrency group holds the calling workflow's name, so a release and a run by hand never cancel each other.
+**Run it:** Actions › Build Android › Run workflow, or `gh workflow run build-android.yml --ref main` (or `--ref vX.Y.Z` for a tag). `release.yml` calls it on a `v*` tag (`workflow_call`, §7.8), and reads the artifact's name from its `artifact` output. A new run for the same branch or tag cancels the older one; the concurrency group holds the calling workflow's name, so a release and a run by hand never cancel each other.
 
 **One Linux job**, `Debug-signed APK`, with a 45-minute timeout. Its steps, in order:
 
@@ -946,7 +936,7 @@ When 1.1.0 is on PyPI and the Flet checkout goes, the action is worth another lo
 
 ### 7.5 `.github/workflows/build-ios.yml`: the simulator app, an unsigned archive and TestFlight
 
-[`.github/workflows/build-ios.yml`](../.github/workflows/build-ios.yml) (`gh workflow run build-ios.yml --ref <branch or tag>`; it was `build-ios-simulator.yml` until D-502) builds the iOS app on `macos-latest`. It isn't a required check (§7.2). `release.yml` calls it on a `v*` tag (§7.8). **While the repo is private nobody dispatches it,** since macOS minutes count ten times (D-273); its commands are tried on the Mac instead (below). Three jobs, each with a 45- or 60-minute timeout, the build number from `git rev-list --count HEAD` (§4), `LANG=en_US.UTF-8` for CocoaPods, and plain flet-cli output:
+[`.github/workflows/build-ios.yml`](../.github/workflows/build-ios.yml) (`gh workflow run build-ios.yml --ref <branch or tag>`; it was `build-ios-simulator.yml` until D-502) builds the iOS app on `macos-latest`. It isn't a required check (§7.2). `release.yml` calls it on a `v*` tag (§7.8). It runs the simulator job on PRs that touch native config or a pin (the `paths:` in the workflow), and all three by hand. Three jobs, each with a 45- or 60-minute timeout, the build number from `git rev-list --count HEAD` (§4), `LANG=en_US.UTF-8` for CocoaPods, and plain flet-cli output:
 
 | Job | What it builds | Artifact (14 days) |
 |---|---|---|
@@ -956,7 +946,7 @@ When 1.1.0 is on PyPI and the Flet checkout goes, the action is worth another lo
 
 **It hasn't run on Actions yet:** eight tries of the simulator build on 2026-11-04 (seven on `macos-latest`, one on `macos-15-intel`) waited 15 minutes each and ended with "The job was not acquired by Runner of type hosted", beside GitHub's note that macOS arm64 runners are short of capacity. No minutes were spent. The commands of the first two jobs passed on the Mac, with this repo's pub cache, in #1129 (the PR has the log); a runner's Xcode is the part still untested.
 
-**Turning TestFlight on (maintainer-only, D-502).** It follows `DOCS/publish/ios.md` "Building and signing in CI". Do it after the repo is public (environments need a public repo on GitHub Free, §7.1) and after #121 has made the profiles:
+**Turning TestFlight on (maintainer-only, D-502).** It follows `DOCS/publish/ios.md` "Building and signing in CI". Do it after #121 has made the profiles:
 1. **The Apple side (#121, §8.2):** the App ID, an Apple Distribution certificate, an **App Store** provisioning profile for the bundle id, the App Store Connect record, and `provisioning_profile` committed under `[tool.flet.ios.export_methods."app-store-connect"]`. The job stops early, naming #121, while that line is missing: without it flet-cli would build an unsigned archive.
 2. **An App Store Connect API key:** App Store Connect › Users and Access › Integrations › App Store Connect API › Team Keys, role **App Manager**. Note its Key ID and the Issuer ID above the list, and download the `.p8` (it downloads once).
 3. **The certificate as a `.p12`:** in Keychain Access, export the Apple Distribution certificate with its private key, with a password; then `base64 -i dist.p12 | pbcopy`.
@@ -1069,7 +1059,7 @@ The OSV database covers few Dart packages, so "no issues found" there says less 
 
 ### 7.8 `.github/workflows/release.yml`: a release from a `v*` tag
 
-[`.github/workflows/release.yml`](../.github/workflows/release.yml) runs when a `v*` tag is pushed, or by hand on a tag that exists (`gh workflow run release.yml --ref vX.Y.Z`). **While the repo is private nobody pushes a `v*` tag** (D-273). **On the public repo a Release is a build for people outside the team, so the first `v*` tag is the maintainers' go** (D-502); later ones follow §8.3.
+[`.github/workflows/release.yml`](../.github/workflows/release.yml) runs when a `v*` tag is pushed, or by hand on a tag that exists (`gh workflow run release.yml --ref vX.Y.Z`). **A Release is a build for people outside the team, so the first `v*` tag is the maintainers' go** (D-502); later ones follow §8.3.
 
 | Job | What it does |
 |---|---|
@@ -1211,10 +1201,10 @@ The Transporter app is the no-terminal alternative (`DOCS/publish/ios.md` "Uploa
 ### 8.3 A build for testers: the checklist
 
 There is no release train. The procedure:
-1. `main` is green: its tree is one the merge gate passed, or `tools/check.sh` passed on it (§7, D-273; when the repo is public, `ci.yml` passed on it). The phase status issue lists what this build is for.
+1. `main` is green: its tree is one the merge gate passed, or `tools/check.sh` passed on it (§7, D-273), and `ci.yml` passed on it. The phase status issue lists what this build is for.
 2. **Snapshot PR:** run `uv run python tools/update_snapshot.py`, which refreshes `data/<year>/conference.json` and its `snapshot_captured_at` in `conference.toml` (D-38, D-135, NEW-03). It refuses a feed that `feed.process` rejects, that has a record the parser skips, or whose days fall outside the conference dates, and then changes nothing (exit status 1). Otherwise it prints each count before and after (sessions, speakers, days, posters, sprints, job listings); put that in the PR body, review the diff, then merge.
 3. **Version PR:** bump `[project].version` and `__version__` (§4), then merge.
-4. **Tag** `vX.Y.Z` on `main`. View source links to this tag, so a build without it opens a 404 (D-461). While the repo is private nobody pushes a `v*` tag, since it would run `release.yml`'s macOS jobs (D-273, D-502): build the quick-look APK locally (§8.1). Once the repo is public, the tag runs `release.yml` (§7.8), which publishes a GitHub Release with the APK and the simulator app, and uploads to TestFlight if a maintainer has turned that on (§7.5); the first such tag is the maintainers' go (D-502).
+4. **Tag** `vX.Y.Z` on `main`. View source links to this tag, so a build without it opens a 404 (D-461). The tag runs `release.yml` (§7.8), which publishes a GitHub Release with the APK and the simulator app, and uploads to TestFlight if a maintainer has turned that on (§7.5). The first such tag is the maintainers' go (D-502).
 5. **Locally, at the same commit:**
    - run `uv sync --locked`;
    - if another build may run on the Mac, build with the worktree's own pub cache and run §5.8's AAB and IPA checks before uploading;

@@ -99,7 +99,7 @@ Naming rules are [decisions §M](decisions.md#m-naming-binding). Each module's d
 | Module | Responsibility | Phase |
 |---|---|---|
 | `src/main.py` | `ft.run(main, before_main=prepare_first_page)` (the boot purple and no theme animation until the gate opens, F35, D-161); `setup_logging()` at import, one `ViewMemory` per process (D-163, D-143); `page.on_view_pop` (to `parent_of(e.route)`, D-19) set **before** `page.render_views(App, memory)` | P0 |
-| `pycon_us/__init__.py` | `__version__`, tested equal to `[project].version` (D-83); `APP_NAME`; `SOURCE_URL`, None until the repo is public (D-292) | P0 |
+| `pycon_us/__init__.py` | `__version__`, tested equal to `[project].version` (D-83); `APP_NAME`; `SOURCE_URL`, the public repository (D-292, D-505) | P0 |
 | `app.py` | `App`, `bootstrap()`, the lifecycle handler, the theme effect and the boot View (§4) | P0 |
 | `routes.py`, `locations.py` | The route table (`ROUTES`, `Drill`, `Start`, `NotFound`) and what screens import to link and go back without it: `drill_href()`, `parent_of()`, `start_target()`, `use_query()`, `TAB_ROOTS` (§5, D-164) | P0 |
 | `state.py`, `feed_refresh.py`, `change_log.py`, `memory.py`, `layout.py`, `prefs.py`, `favorites.py`, `account.py`, `staff.py` | One store each with its context and `use_*()` hook (§6, D-160): `Conference` and its refresh without the store (§6.2, D-231), the change log's store (§7.9), `ViewMemory` (§6.3), the window's width class (D-277, D-305), the settings, the saved sessions, the signed-in account and the staff outbox as screens see it | P0 to P3 |

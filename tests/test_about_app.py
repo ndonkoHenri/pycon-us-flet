@@ -114,7 +114,12 @@ def test_the_version_row_carries_its_identifier_for_ui_flows(
     """The Version row's merged node carries the `about_app.version` id."""
     rows = [c for c in body_of(render()) if isinstance(c, ft.MergeSemantics)]
     identifiers = [cast(ft.Semantics, row.content).identifier for row in rows]
-    assert identifiers == ["about_app.version", "about_app.licences", "about_app.flet"]
+    assert identifiers == [
+        "about_app.version",
+        "about_app.licences",
+        "about_app.flet",
+        "about_app.source",
+    ]
 
 
 def test_licences_opens_its_page_under_about_this_app(
