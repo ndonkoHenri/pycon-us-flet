@@ -47,10 +47,12 @@ published.
 - **The attendee features are built:** schedule, My schedule, search, maps, venue pages, reminders and offline use.
 - **Accounts and staff tools are built against the mock server.** The scanner's camera preview waits on a
   barcode-scanner extension for Flet; until then, badge codes are typed in.
-- **View source is on:** every screen's menu opens its Python module on GitHub at the build's version tag, which
-  exists once the first version is tagged.
+- **View source is on:** the menu of every screen with an app bar (not Start, Welcome or the not-found page) opens its
+  Python module on GitHub at the build's version tag. Those links open a 404 until the maintainers push the first
+  version tag.
 - **The last phase, P4 Showcase, is what comes next:** the performance pass, the accessibility audit on real
-  devices, the 2027 data, the first tagged version with internal builds, and the demo.
+  devices, the 2027 data, the first tagged version (its release publishes an Android APK and an iOS simulator app, so
+  it waits for the maintainers' go) and the demo.
 
 GitHub issues hold the live task list; [`docs/roadmap.md`](docs/roadmap.md) describes the phases.
 
