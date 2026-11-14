@@ -40,15 +40,19 @@ Taken at a fixed moment of the 2026 conference (Friday, 11:04), so the schedule 
 
 ## Status
 
-The app is under active development and has no public builds. To try it, build it from source. It carries the 2026
-conference data until the 2027 feed is published.
+The app is under active development, and the repository has been public since 2026-11-14. There are no builds to
+download yet, so to try it, build it from source. It carries the 2026 conference data until the 2027 feed is
+published.
 
 - **The attendee features are built:** schedule, My schedule, search, maps, venue pages, reminders and offline use.
 - **Accounts and staff tools are built against the mock server.** The scanner's camera preview waits on a
   barcode-scanner extension for Flet; until then, badge codes are typed in.
-- **The last phase, P4 Showcase, is what comes next:** the performance pass, the accessibility audit, a View source
-  action on each screen, the 2027 data and the licence and trademark review. The repository went public in this
-  phase.
+- **View source is on:** the menu of every screen with an app bar (not Start, Welcome or the not-found page) opens its
+  Python module on GitHub at the build's version tag. Those links open a 404 until the maintainers push the first
+  version tag.
+- **The last phase, P4 Showcase, is what comes next:** the performance pass, the accessibility audit on real
+  devices, the 2027 data, the first tagged version (its release publishes an Android APK and an iOS simulator app, so
+  it waits for the maintainers' go) and the demo.
 
 GitHub issues hold the live task list; [`docs/roadmap.md`](docs/roadmap.md) describes the phases.
 

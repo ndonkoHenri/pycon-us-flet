@@ -154,13 +154,14 @@ def help_rows(
 ) -> list[ft.Control]:
     """Return Help us fix it's heading and rows, which switch on `SOURCE_URL` (D-297).
 
-    While the repository is private, one row, **Report a problem**, shares the log and
-    the diagnostics: a Share log row would open the same sheet. Once it is public,
+    While `SOURCE_URL` is None, one row, **Report a problem**, shares the log and
+    the diagnostics: a Share log row would open the same sheet. Once it is set,
     Report a problem opens a new issue in the in-app browser (INFO-14) and **Share log**
     under it shares what to attach.
 
     Args:
-        source_url: `SOURCE_URL`: None while the repository is private (D-88).
+        source_url: `SOURCE_URL`: None in a build that doesn't point at a public
+            repository (D-88).
         packaged: A packaged build, whose share adds `console.log`; the row says
             beforehand whether it does.
         sharing: The share sheet is up: the share row is disabled until it closes.
@@ -209,8 +210,8 @@ def links(source_url: str | None) -> list[ft.Control]:
     reads as a link, "Opens in browser" (D-182).
 
     Args:
-        source_url: `SOURCE_URL`: None while the repository is private, which hides
-            its row (D-88).
+        source_url: `SOURCE_URL`: None in a build that doesn't point at a public
+            repository, which hides its row (D-88).
     """
     rows: list[ft.Control] = [
         SectionHeader("Links"),

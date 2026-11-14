@@ -1,8 +1,8 @@
 """Tests for Help & safety's Report a problem with the app (`/more/help`; D-281).
 
 `ReportProblem` runs outside a renderer over the fixtures of `tests/help_page.py`,
-with the help section's stand-ins from `tests/about_page.py`: while the repository is
-private the row shares the log and the diagnostics, once public it opens a new issue.
+with the help section's stand-ins from `tests/about_page.py`: while `SOURCE_URL` is
+None the row shares the log and the diagnostics, once it is set it opens a new issue.
 The page around it is tested in `test_help.py`.
 """
 
@@ -52,7 +52,7 @@ def report_svc(svc: Services, tmp_path: Path) -> Services:
 async def report_section(
     monkeypatch: pytest.MonkeyPatch, report_svc: Services, page: FakePage
 ) -> tuple[Callable[[], list[ft.Control]], Services]:
-    """Render `ReportProblem` in a packaged build, while the repository is private.
+    """Render `ReportProblem` in a packaged build, while `SOURCE_URL` is None.
 
     Returns the render and the services it shares through.
     """

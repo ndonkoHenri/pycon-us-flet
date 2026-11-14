@@ -96,7 +96,7 @@ async def tap_row(render: Callable[[], list[ft.Control]], identifier: str) -> No
 def test_while_private_one_row_reports_a_problem_with_the_log(
     help_section: Callable[[], list[ft.Control]],
 ) -> None:
-    """While the repository is private, Help us fix it is one Report a problem row.
+    """While `SOURCE_URL` is None, Help us fix it is one Report a problem row.
 
     A level-2 heading over it; the row says beforehand that it sends the log and the
     diagnostics; the outcome line under it is hidden until a share ends.

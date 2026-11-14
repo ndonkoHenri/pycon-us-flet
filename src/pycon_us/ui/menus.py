@@ -142,7 +142,7 @@ def source_link(source_url: str, module: str) -> str:
 
 
 def view_source_items(svc: Services, module: str | None) -> list[ft.PopupMenuItem]:
-    """Return View source for `module`, or nothing while the repository is private.
+    """Return View source for `module`, or nothing while `SOURCE_URL` is None.
 
     A list, so that a menu takes it with `*` and stays as it was while
     `SOURCE_URL` is None (D-88, D-461). A web link like any other (ux.md §4.7), also

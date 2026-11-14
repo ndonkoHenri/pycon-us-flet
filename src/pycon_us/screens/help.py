@@ -18,8 +18,8 @@ is what someone in trouble needs:
 - **Code of Conduct:** its summary in our words, then the full text and how reports
   are handled, both on the PSF's site, in the in-app browser.
 - **The app:** Report a problem with the app, last on the page whatever the year has.
-  While the repository is private it shares the app's log and diagnostics, as About
-  this app's Report a problem does; once `SOURCE_URL` is set it opens a new issue in
+  While `SOURCE_URL` is None it shares the app's log and diagnostics, as About
+  this app's Report a problem does; once it is set it opens a new issue in
   the in-app browser (`ReportProblem`, INFO-11, D-88, D-297).
 
 Everything is bundled year data (`[help]`, `year_info`), so the page works in
@@ -155,16 +155,17 @@ def report_problem_row(
 ) -> ft.Control:
     """Return Report a problem with the app, which switches on `SOURCE_URL` (D-88).
 
-    While the repository is private, an action that shares the log and diagnostics
-    (`share_console_log()`); once it is public, an external row that opens a new
+    While `SOURCE_URL` is None, an action that shares the log and diagnostics
+    (`share_console_log()`); once it is set, an external row that opens a new
     issue in the in-app browser and reads "Opens in browser" (INFO-14, D-182). One
     row either way: under stress, one way to report; Share log stays on About this app.
 
     Args:
-        source_url: `SOURCE_URL`: None while the repository is private.
+        source_url: `SOURCE_URL`: None in a build that doesn't point at a public
+            repository.
         packaged: A packaged build, whose share adds `console.log`.
         sharing: The share sheet is up: the row is disabled until it closes.
-        on_share: The row's action while the repository is private.
+        on_share: The row's action while `source_url` is None.
     """
     identifier = f"{SCREEN}.report_problem"
     if source_url is None:

@@ -139,7 +139,7 @@ def identifier_of(item: ft.PopupMenuItem) -> str | None:
 
 
 def source_url_set(monkeypatch: pytest.MonkeyPatch) -> None:
-    """Set `SOURCE_URL` where View source reads it, as the PR going public will."""
+    """Set `SOURCE_URL` where View source reads it, as the shipped build has it."""
     monkeypatch.setattr(menus, "SOURCE_URL", URL)
 
 

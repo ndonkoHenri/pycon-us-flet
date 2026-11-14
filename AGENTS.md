@@ -129,7 +129,7 @@ that date motivates us but never justifies cutting corners.
   runs before every merge (`tools/merge.sh`, below).
 - **Screenshots** (D-162): `gh` can't upload images, so they go to the orphan branch `pr-assets`, one folder per PR,
   and the PR embeds them. Look at every image first: no tokens, personal data, notifications or real badges (it all
-  stays in history and becomes public with the repo). Keep it to the images the PR needs, about 1 MB per PR.
+  stays in history, and the repo is public). Keep it to the images the PR needs, about 1 MB per PR.
   `tools/pr_shots.sh <pr> <shots>.png` uploads them (D-168, from any worktree) and prints the Markdown for the PR body
   or a comment, which anyone can see. Never force-push `pr-assets`.
 
