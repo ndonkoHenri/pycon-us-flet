@@ -61,7 +61,7 @@ env:
 jobs:
   simulator:
     name: iOS simulator build
-    runs-on: macos-latest
+    runs-on: macos-26
     timeout-minutes: 45
     outputs:
       artifact: ${{ steps.name.outputs.name }}
@@ -112,7 +112,7 @@ jobs:
     name: Unsigned iOS archive
     # Not on pull requests, should a trigger for them be added: the simulator build is the check.
     if: github.event_name != 'pull_request'
-    runs-on: macos-latest
+    runs-on: macos-26
     timeout-minutes: 60
     steps:
       - name: Check out the app
@@ -170,7 +170,7 @@ jobs:
     # Off unless asked for (release.yml asks) and turned on by the maintainers (D-502). A job's `if` can't read secrets, so the
     # repository variable is the switch and the first step names any secret that is missing.
     if: inputs.testflight && vars.TESTFLIGHT_UPLOADS == 'true'
-    runs-on: macos-latest
+    runs-on: macos-26
     timeout-minutes: 60
     # Its secrets live in this environment, which a maintainer limits to v* tags (development.md §7.5).
     environment: app-store

@@ -836,7 +836,7 @@ mock connection said "Connected to the local mock server.", in light and dark, a
 
 ### 7.1 Limits of a public repo on GitHub Free
 
-Standard runners are free for a public repo, macOS included. `ubuntu-latest` there has 4 vCPUs and 16 GB; a private repo's had 2 vCPUs and 7.9 GB, which §7.2 and §7.4 measured. While the repo was private, 2,000 Linux minutes a month ran out fast, which is why D-273 moved the checks onto the Mac. APKs are kept for 14 days. CI holds no secrets until a maintainer adds the TestFlight ones to the `app-store` environment (§7.5, D-502). A fork's PR runs with a read-only token and no secrets, and a first-time contributor's run waits for a maintainer's approval (the default). A `v*` tag runs `release.yml` (§7.8); the first one is the maintainers' go (D-502).
+Standard runners are free for a public repo, macOS included. The workflows name a runner image, never a `-latest` label, so an image change is a PR of its own: `ubuntu-24.04` and `macos-26` (arm64), the images `-latest` pointed at when the repo went public. `ubuntu-24.04` there has 4 vCPUs and 16 GB; a private repo's had 2 vCPUs and 7.9 GB, which §7.2 and §7.4 measured. While the repo was private, 2,000 Linux minutes a month ran out fast, which is why D-273 moved the checks onto the Mac. APKs are kept for 14 days. CI holds no secrets until a maintainer adds the TestFlight ones to the `app-store` environment (§7.5, D-502). A fork's PR runs with a read-only token and no secrets, and a first-time contributor's run waits for a maintainer's approval (the default). A `v*` tag runs `release.yml` (§7.8); the first one is the maintainers' go (D-502).
 
 Conventions in every workflow:
 - `permissions: contents: read`.
