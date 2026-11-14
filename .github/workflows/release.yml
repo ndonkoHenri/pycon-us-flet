@@ -1,8 +1,8 @@
 # A release from a v* tag (D-502; docs/development.md §7.8): build the APK and the iOS builds with the two build
 # workflows, then publish a GitHub Release with the APK and the zipped simulator app. The unsigned archive stays a
-# workflow artifact, and TestFlight runs only when the owner has turned it on (build-ios.yml).
+# workflow artifact, and TestFlight runs only when a maintainer has turned it on (build-ios.yml).
 # By hand, on a tag that exists: `gh workflow run release.yml --ref vX.Y.Z`. A Release is a build for people outside
-# the team, so the first v* tag is the owner's go (D-502).
+# the team, so the first v* tag is the maintainers' go (D-502).
 name: Release
 
 on:
@@ -52,7 +52,7 @@ jobs:
     needs: tag
     uses: ./.github/workflows/build-ios.yml # zizmor: ignore[self-repository] actionlint 1.7.12 rejects $/
     with:
-      testflight: true          # still off until the owner turns it on (TESTFLIGHT_UPLOADS)
+      testflight: true          # still off until a maintainer turns it on (TESTFLIGHT_UPLOADS)
     # By name, not `inherit`: only the five the TestFlight job reads (the app-store environment's, development.md §7.5).
     secrets:
       IOS_CERTIFICATE_P12: ${{ secrets.IOS_CERTIFICATE_P12 }}

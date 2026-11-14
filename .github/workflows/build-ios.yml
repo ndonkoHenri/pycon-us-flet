@@ -1,7 +1,7 @@
 # Build the iOS app on macOS runners (D-84, D-490, D-502; docs/development.md §7.5):
 # - `simulator`: the simulator `.app`, zipped, with no signing. The check that the native config and the pins build.
 # - `archive`: `flet build ipa` with no signing: the `.xcarchive`, and its `.app` packed as an unsigned `.ipa`.
-# - `testflight`: a signed IPA uploaded to TestFlight. Off until the owner turns it on with the `TESTFLIGHT_UPLOADS`
+# - `testflight`: a signed IPA uploaded to TestFlight. Off until a maintainer turns it on with the `TESTFLIGHT_UPLOADS`
 #   variable and the `app-store` environment's secrets (§7.5 lists them); only release.yml asks for it.
 # Each build uploads its files as an artifact. By hand: `gh workflow run build-ios.yml --ref <branch or tag>`.
 # release.yml calls it on a v* tag (§7.8). On PRs that touch the native config, a pin or the fonts' package, only the
@@ -167,12 +167,12 @@ jobs:
 
   testflight:
     name: Signed IPA to TestFlight
-    # Off unless asked for (release.yml asks) and turned on by the owner (D-502). A job's `if` can't read secrets, so the
+    # Off unless asked for (release.yml asks) and turned on by the maintainers (D-502). A job's `if` can't read secrets, so the
     # repository variable is the switch and the first step names any secret that is missing.
     if: inputs.testflight && vars.TESTFLIGHT_UPLOADS == 'true'
     runs-on: macos-latest
     timeout-minutes: 60
-    # Its secrets live in this environment, which the owner limits to v* tags (development.md §7.5).
+    # Its secrets live in this environment, which a maintainer limits to v* tags (development.md §7.5).
     environment: app-store
     steps:
       - name: Check the signing secrets
@@ -218,13 +218,13 @@ jobs:
           echo "name=pycon-us-$count-${GITHUB_SHA::7}-ios-app-store" >> "$GITHUB_OUTPUT"
 
       - name: Import the signing certificate
-        uses: apple-actions/import-codesign-certs@77ba2a2a8f5cfc8c405ebf3159f767c323e238f9 # v7.1.0
+        uses: apple-actions/import-codesign-certs@288b8ec97b82c66b6f2a6baaf7acc8dfbcbe331c # v7.2.0
         with:
           p12-file-base64: ${{ secrets.IOS_CERTIFICATE_P12 }}
           p12-password: ${{ secrets.IOS_CERTIFICATE_PASSWORD }}
 
       - name: Download the App Store profile
-        uses: apple-actions/download-provisioning-profiles@230860ab5f632551a5f9a5e1d98a774485463888 # v7.0.0
+        uses: apple-actions/download-provisioning-profiles@233aa54e59082c0e8a8cf8b0b02c72dea2422ef9 # v7.1.0
         with:
           bundle-id: ${{ steps.meta.outputs.bundle-id }}
           profile-type: IOS_APP_STORE

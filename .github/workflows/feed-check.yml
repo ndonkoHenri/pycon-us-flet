@@ -1,6 +1,6 @@
 # Run our parser and the feed invariants on the live public feed (D-84, DEV-08; docs/development.md §7.3).
 # It also reports, without failing, whether next year's feed is published.
-# It runs on Mondays at 06:17 UTC, and a failed scheduled run emails the owner as the alert. By hand:
+# It runs on Mondays at 06:17 UTC, and a failed scheduled run emails the maintainers as the alert. By hand:
 # `gh workflow run feed-check.yml --ref main`, or locally `uv run python -m tools.check_feed`.
 name: Feed check
 

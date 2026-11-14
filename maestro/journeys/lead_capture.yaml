@@ -142,6 +142,14 @@ tags:
 
 # 4. Asked once per account: the scan screen opens at once.
 - runFlow: ../subflows/back.yaml
+# More, if the Back left the scan screen; checked mid-pop, More's title wasn't there
+# yet and a second Back took More off too (#1136). The scan screen is still in the tree
+# while it slides out, so its ids can't say where the Back landed.
+- extendedWaitUntil:
+    visible:
+      id: more.title
+    timeout: 5000
+    optional: true
 - runFlow:  # the first Back only closed the keyboard
     when:
       notVisible:

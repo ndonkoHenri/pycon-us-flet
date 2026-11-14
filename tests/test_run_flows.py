@@ -2,6 +2,7 @@
 
 import json
 import os
+import socket
 import subprocess
 import sys
 import time
@@ -100,8 +101,8 @@ def test_a_run_needs_a_device() -> None:
 
 
 def test_a_run_refuses_the_owners_device() -> None:
-    """The flows replace the app's data, so the owner's emulator is refused."""
-    with pytest.raises(SystemExit, match="owner"):
+    """The flows replace the app's data, so a maintainer's emulator is refused."""
+    with pytest.raises(SystemExit, match="maintainer"):
         run_flows.main(["--out", "unused", "--android", "emulator-5554"])
 
 
@@ -113,13 +114,68 @@ def _run_at(tmp_path: Path) -> run_flows.FlowRun:
 def test_a_server_that_stops_at_its_start_is_reported(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """A taken port ends the server, so a flow can't test whatever else answers there."""
+    """A server that dies at once stops the lane, quoting its log, kept in the round's folder."""
     monkeypatch.setattr(run_flows, "SERVER_START_SECONDS", 0.5)
+    log = tmp_path / "r1" / "ios" / "mock.log"
+    script = "import sys; print('booting'); sys.exit('boom')"
     with (
-        pytest.raises(RuntimeError, match="stopped at its start"),
-        _run_at(tmp_path).server(sys.executable, "-c", "raise SystemExit(1)"),
+        pytest.raises(
+            RuntimeError, match=r"(?s)stopped at its start \(see its log.*boom"
+        ),
+        _run_at(tmp_path).server(log, _free_port(), sys.executable, "-c", script),
     ):
         pass
+    assert log.read_text(encoding="utf-8").splitlines() == ["booting", "boom"]
+
+
+def test_a_server_that_finds_its_port_taken_says_so(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """A bind error in the log is named as a taken port, not a bare stop (#1137)."""
+    monkeypatch.setattr(run_flows, "SERVER_START_SECONDS", 0.5)
+    script = "import sys; sys.exit('OSError: [Errno 48] Address already in use')"
+    with (
+        pytest.raises(RuntimeError, match="its port is taken"),
+        _run_at(tmp_path).server(
+            tmp_path / "mock.log", _free_port(), sys.executable, "-c", script
+        ),
+    ):
+        pass
+
+
+def test_a_port_another_process_holds_stops_the_server_before_it_starts(
+    tmp_path: Path,
+) -> None:
+    """A listener already on the port would answer the flows: the run names the port."""
+    with socket.socket() as holder:
+        holder.bind(("127.0.0.1", 0))
+        holder.listen()
+        port = holder.getsockname()[1]
+        with (
+            pytest.raises(RuntimeError, match=f"port {port} is taken"),
+            _run_at(tmp_path).server(tmp_path / "x.log", port, "true"),
+        ):
+            pass
+    assert not (tmp_path / "x.log").exists()  # nothing was started
+
+
+def test_a_server_s_output_stays_in_its_log(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """What a running server prints is kept for after the run, not dropped."""
+    monkeypatch.setattr(run_flows, "SERVER_START_SECONDS", 0.5)
+    log = tmp_path / "feed_pair.log"
+    script = "import sys, time; print('serving', flush=True); time.sleep(30)"
+    with _run_at(tmp_path).server(log, _free_port(), sys.executable, "-c", script):
+        pass
+    assert log.read_text(encoding="utf-8") == "serving\n"
+
+
+def _free_port() -> int:
+    """Return a port nothing listens on now."""
+    with socket.socket() as probe:
+        probe.bind(("127.0.0.1", 0))
+        return probe.getsockname()[1]
 
 
 def test_a_stopped_lane_is_recorded_and_fails_the_run(

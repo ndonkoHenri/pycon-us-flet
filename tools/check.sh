@@ -1,5 +1,5 @@
 #!/bin/sh
-# The local checks (D-273, D-501): ci.yml's steps, in the same order, run on this machine, beside GitHub Actions: the
+# The local checks (D-273, D-505): ci.yml's steps, in the same order, run on this machine, beside GitHub Actions: the
 # pre-push hook runs `tools/check.sh --fast`, agents run the full checks before marking a
 # PR ready, and the merge gate (tools/gate.sh) runs them on the PRs merged onto the latest main
 # (docs/development.md §7).

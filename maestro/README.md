@@ -105,7 +105,7 @@ grants notifications on iOS, the step fails at its wait, which says it can go.
 ## Devices: your own
 
 The bundle id is the app's own, so a run replaces the app on the device: use an emulator
-and a simulator of your own (D-102), never the owner's `emulator-5554` or a shared
+and a simulator of your own (D-102), never a maintainer's `emulator-5554` or a shared
 simulator.
 
 ```bash
@@ -387,7 +387,7 @@ Two subflows are the scanner's:
 
 - `subflows/scan.yaml` sends `CODE`, then Enter, with no tap on the field, as a USB or
   Bluetooth HID scanner does: it fails if the screen lost the focus (F274). That is
-  HID-style entry only: real hardware is the owner's (#121), and the camera waits on E1
+  HID-style entry only: real hardware is the maintainers' (#121), and the camera waits on E1
   (#520). A flow's first scan on a screen taps `scan.keyboard` first, as a person typing.
 - `subflows/past_cooldown.yaml` waits until the panel's age line reads at least 5 seconds.
   A code accepted in the last 4 s is cleared without a word, so a rescan any sooner shows
@@ -444,6 +444,14 @@ fails under `tools/check.sh`. A new `text:` in those flows needs its words there
 - The expo opens on the List under a screen reader and on the Map otherwise
   (`view_of()`), and Maestro makes Android report one (F72): a flow that needs one view
   taps its segment (`expo.view.map`, `expo.view.list`) when that view isn't showing.
+- **Wait for where a step lands before a `notVisible` condition** (#1136): `when:
+  notVisible:` and `repeat: while: notVisible:` are true the moment their element is
+  missing, which it is while the next screen slides in, so a check right after a Back or
+  a tap took the wrong branch (a second Back popped More). Wait first for the
+  destination: `extendedWaitUntil` on either expected screen's id (`id:
+  "more\\.title|about_app\\.version"`), or, when the screen you leave keeps its ids
+  while it slides out, on the destination alone with `optional: true` and a short
+  timeout. A `visible` condition waits for its element by itself.
 - A busy host can lose keystrokes in a controlled field (F63): type in a `retry` until the
   field shows the whole value, as `set_scene.yaml` does. On iOS a tap can put the caret
   mid-field, so it taps and erases twice. A tap on a moving list only stops it: wait for
@@ -550,7 +558,7 @@ platforms; real Android airplane mode and killing/relaunching with queued scans 
 
 ## Demo videos
 
-`maestro/demo/` drives the short clips the owner shares with people outside the team.
+`maestro/demo/` drives the short clips a maintainer shares with people outside the team.
 These flows are paced for a viewer, with pauses and slow swipes, and aren't in
 `config.yaml`. One command films them all on a new simulator, trims them and cleans up:
 

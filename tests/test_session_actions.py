@@ -124,7 +124,7 @@ async def test_the_overflow_opens_the_public_page(render: Render) -> None:
     title = cast(ft.ListTile, cast(ft.Semantics, item.content).content).title
     assert cast(ft.Semantics, title).link  # it leaves the app (ux.md §4.7)
     text = menu_text(item)  # a tile's title, which wraps at 200 % (F47, D-233)
-    assert text.value == "Open on us.pycon.org"
+    assert text.value == "Open on us.\u200bpycon.\u200borg"  # breaks between its parts
     assert text.semantics_label == "Open on us.pycon.org\nOpens in browser"
     await detail.click(item)
     assert detail.launcher.launched == [

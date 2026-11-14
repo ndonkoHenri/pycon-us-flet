@@ -10,6 +10,9 @@ re-renders nothing, and only a crossing re-renders the screens that read it.
 It also holds the width the body has, the window's less its side insets, once that is
 wider than `READING_DP`: from there the content widths cap the screens (`ui.widths`,
 D-305). Under it no cap applies, so a phone in portrait still re-renders on nothing.
+
+And it holds whether the window is short, under `SHORT_DP` tall: a phone in landscape,
+where the keyboard leaves room for one field, so the scan screen leads with it (D-501).
 """
 
 from dataclasses import dataclass
@@ -27,6 +30,10 @@ READING_DP = 720
 LIST_DP = 840
 """The widest a list's content may be, in dp (D-09): every screen but reading ones."""
 
+SHORT_DP = 480
+"""The lowest window, in dp, that isn't short: M3's compact height class ends here.
+A phone in landscape is about 400 dp tall, a tablet either way 800 or more (D-501)."""
+
 
 def is_wide(width: float | None) -> bool:
     """Return whether a window `width` dp wide shows the rail rather than the bar.
@@ -36,6 +43,16 @@ def is_wide(width: float | None) -> bool:
             test page), which counts as a phone.
     """
     return width is not None and width >= WIDE_DP
+
+
+def is_short(height: float | None) -> bool:
+    """Return whether a window `height` dp tall is short: a phone in landscape.
+
+    Args:
+        height: The window's height in dp; None before Flutter has reported one (a
+            test page), which counts as not short.
+    """
+    return height is not None and 0 < height < SHORT_DP
 
 
 # eq=False: a store is one object, compared by identity (F5), as the other stores.
@@ -52,20 +69,27 @@ class Layout:
         room: The body's width in dp, the window's less its side insets (the
             `SafeArea`'s), when it is wider than `READING_DP`; else 0, since no
             content cap applies under it (D-305).
+        short: Whether the window is under `SHORT_DP` tall (D-501). The window's
+            height, not the body's: the keyboard leaves it as it is.
     """
 
     wide: bool = False
     room: float = 0.0
+    short: bool = False
 
-    def set_width(self, width: float | None, insets: float = 0.0) -> None:
-        """Take the window's new width; only a change of class or of `room` notifies.
+    def set_width(
+        self, width: float | None, insets: float = 0.0, height: float | None = None
+    ) -> None:
+        """Take the window's new size; only a change of class or of `room` notifies.
 
         Args:
             width: The window's width in dp, from `page.width` or a resize.
             insets: The left and right safe-area insets together, in dp: a notch or a
                 cutout beside the body in landscape (`page.media.padding`).
+            height: The window's height in dp, from `page.height` or a resize.
         """
         self.wide = is_wide(width)  # the same value notifies nothing (F5)
+        self.short = is_short(height)
         room = (width or 0.0) - insets
         self.room = room if room > READING_DP else 0.0
 
@@ -92,7 +116,7 @@ def layout_for(page: ft.Page) -> Layout:
         page: The session's page.
     """
     layout = Layout()
-    layout.set_width(page.width, side_insets(page.media))
+    layout.set_width(page.width, side_insets(page.media), page.height)
     return layout
 
 
@@ -112,17 +136,17 @@ def follow_width(page: ft.Page, layout: Layout) -> None:
 
     @report_errors
     def resized(e: ft.PageResizeEvent) -> None:
-        layout.set_width(e.width, side_insets(page.media))
+        layout.set_width(e.width, side_insets(page.media), e.height)
 
     @report_errors
     def media_changed(_e: object) -> None:
         # The page's media is already the new one; the event's type is not an Event
         # at the pin, so the handler reads the page rather than the event.
-        layout.set_width(page.width, side_insets(page.media))
+        layout.set_width(page.width, side_insets(page.media), page.height)
 
     page.on_resize = resized
     page.on_media_change = media_changed
-    layout.set_width(page.width, side_insets(page.media))
+    layout.set_width(page.width, side_insets(page.media), page.height)
 
 
 LayoutCtx: ft.ContextProvider[Layout | None] = ft.create_context(None)

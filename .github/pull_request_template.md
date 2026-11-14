@@ -45,7 +45,7 @@ From a fork, drag the images into the PR instead (CONTRIBUTING.md).
 
 - [ ] The issue's acceptance criteria are met.
 - [ ] Tests added or updated; the full `tools/check.sh` passes on the latest commit, `ci.yml` is green on it, and the
-  merge gate (`tools/merge.sh`) passes on what will land (D-273, D-501; a fork's PR: a maintainer runs the gate).
+  merge gate (`tools/merge.sh`) passes on what will land (D-273, D-505; a fork's PR: a maintainer runs the gate).
 - [ ] Runs on Android and iOS, with screenshots (UI or native changes).
 - [ ] Accessible: labels, contrast, 200 % text, touch targets (`docs/ux.md` checklist).
 - [ ] Docs and `docs/decisions.md` updated in this PR when behaviour or decisions changed.

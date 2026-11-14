@@ -37,7 +37,7 @@ We are rebuilding the PyCon US mobile app in Python with [Flet](https://flet.dev
 
 ## 2. Principles
 
-From the owner's direction:
+From the maintainers' direction:
 1. **Showcase, not a dependency.** The official app sets our quality bar. We don't contact the PSF now, and we never call its private endpoints (D-01, D-06).
 2. **Mobile only.** Android and iOS. A desktop window is a developer convenience, never a target (D-09).
 3. **Material 3 only, identical on both platforms.** No Cupertino or adaptive variants. The one deliberate difference is native back gestures (D-10, D-11).
@@ -182,7 +182,7 @@ Phases are GitHub milestones (D-89). Each milestone description carries its goal
 - **App shell:** five tabs, routes with the recursive drill, light and dark themes, Roboto and the boot gate.
 
 **Exit criteria:**
-1. Packaged builds from the pinned Flet run on an Android emulator and on the owner's iPhone, with no connection to a dev server (D-102). On first launch offline they show the bundled schedule on the Schedule stub (days, session counts and source); online, a refresh replaces it. State survives kill and relaunch, and an update install.
+1. Packaged builds from the pinned Flet run on an Android emulator and on a maintainer's iPhone, with no connection to a dev server (D-102). On first launch offline they show the bundled schedule on the Schedule stub (days, session counts and source); online, a refresh replaces it. State survives kill and relaunch, and an update install.
 2. CI is green on `main`. The feed tests (rules, invariants, snapshot) pass on the 2025 and 2026 feeds.
 3. The shell passes the S4 navigation journey on an Android emulator and the iPhone, using stub detail screens. The shell smoke flow (`test_shell_starts`, `flet test`) passes on an emulator and a simulator.
 4. Spikes S1–S5 are closed with written verdicts in `docs/spikes/`. Their outcomes are recorded in the decisions record: the Flet pin mechanics, the list-row architecture, the route shape and the performance targets.
@@ -236,7 +236,7 @@ In parallel upstream: U1, U15 and spike S6.
    - A denied permission never blocks a task.
 4. The change log shows a simulated change from a fixture feed pair, with saved sessions first. Deep links and, with E3, reminder taps land with a back stack.
 5. The device checklist passes (D-79), including high contrast, the tablet layout and TalkBack and VoiceOver on three new flows.
-6. Someone other than the owner installs an internal build and, unaided, finds a room, saves a session and copies the Wi-Fi password.
+6. Someone other than the maintainers installs an internal build and, unaided, finds a room, saves a session and copies the Wi-Fi password.
 
 ### P3 Accounts & staff tools (soft marker: March 2027)
 
@@ -276,7 +276,7 @@ In parallel upstream: U1, U15 and spike S6.
 
 **Exit criteria:**
 1. There are no known data-loss or task-blocking bugs, and the performance targets are met on the iPhone and on a borrowed mid-range Android phone; if none was borrowed, the P4 status issue says that Android was measured on the emulator only (D-102).
-2. Someone else, or the owner on a clean machine, builds and runs the app from a clean checkout in 30 minutes or less, following `docs/development.md`.
+2. Someone else, or the maintainers on a clean machine, builds and runs the app from a clean checkout in 30 minutes or less, following `docs/development.md`.
 3. The [demo script](docs/demo-script.md) runs end to end twice without Wi-Fi (D-463 says what counts).
 4. The repo is public, and `v1.0.0` is tagged with internal builds for both platforms.
 
@@ -323,20 +323,20 @@ Each spike is an issue titled `Spike: …` (label `test`, D-91), time-boxed to h
 The workflow is written down in [`AGENTS.md`](AGENTS.md), the operating manual for humans and agents, which is maintained separately. The work itself is broken down in [`docs/roadmap.md`](docs/roadmap.md); GitHub issues are the live task list. In brief (D-88..D-96):
 
 - **Issues first.** One public GitHub repo (private until P4). Every change starts from an issue, except trivial chores; an issue describes a journey or a mechanism, with feature ids, D-ids, acceptance criteria and the device evidence needed.
-- **One issue, one PR.** A `<type>/<issue>-<slug>` branch and an early draft PR of about 400 changed lines or fewer, with screenshots for UI. The checks pass in CI and locally, with the merge gate before every merge (D-273, D-501). Agents squash-merge their own PRs under the merge conditions of D-100; the owner watches and can step in, but is never a blocker.
+- **One issue, one PR.** A `<type>/<issue>-<slug>` branch and an early draft PR of about 400 changed lines or fewer, with screenshots for UI. The checks pass in CI and locally, with the merge gate before every merge (D-273, D-505). Agents squash-merge their own PRs under the merge conditions of D-100; the maintainers watch and can step in, but are never blockers.
 - **Milestones are the phases**, with the labels in D-90, a "PyCon US Flet" Project board and a weekly status issue per phase.
-- **Decisions change only through a `needs-decision` issue** and a PR that edits [`docs/decisions.md`](docs/decisions.md). Reversible choices are decided by agents and recorded; only hard-to-reverse or outward-facing ones wait for the owner (D-101). Docs change in the same PR as the behaviour.
-- **Second opinions** (Claude Fable, Codex) are summarised as PR comments, and PRs that change code or configuration also get a GitHub Copilot review (D-103, when its quota allows; D-501). **Upstream work** lives in flet-dev and is the owner's; agents act only in this repository and track it here by `upstream` issues (D-212).
+- **Decisions change only through a `needs-decision` issue** and a PR that edits [`docs/decisions.md`](docs/decisions.md). Reversible choices are decided by agents and recorded; only hard-to-reverse or outward-facing ones wait for the maintainers (D-101). Docs change in the same PR as the behaviour.
+- **Second opinions** (Claude Fable, Codex) are summarised as PR comments, and PRs that change code or configuration also get a GitHub Copilot review (D-103, when its quota allows; D-505). **Upstream work** lives in flet-dev and is the maintainers'; agents act only in this repository and track it here by `upstream` issues (D-212).
 
 ## 11. Risks
 
 | Risk | Signal | Mitigation |
 |---|---|---|
-| Flet churns between releases | Builds break after a pin bump | Pin one release, every Flet package at that version (1.1.0 since 2026-11-05), and bump it deliberately in its own PR (D-81, D-481). The owner fixes issues upstream, and S5 documents the setup. |
+| Flet churns between releases | Builds break after a pin bump | Pin one release, every Flet package at that version (1.1.0 since 2026-11-05), and bump it deliberately in its own PR (D-81, D-481). A maintainer fixes issues upstream, and S5 documents the setup. |
 | Packaged performance (cold start, list rendering in components mode) | S1 or S2 misses the targets | Measure first; then lazy imports, `.pyc`, rendering from cache first, memoised rows, simpler rows, and upstream fixes. |
 | Scheduled notifications are harder than expected (receivers, exact alarms, iOS limits) | S6 fails a case | An honest interim (D-60), a bounded plan, inexact alarms by default. Ship E3 only when it is solid. |
 | The scanner extension is unreliable (camera, permissions, `material_ui`) | S8 shows decode or permission issues | Manual and HID entry are first-class, so the staff tools never depend on E1. |
-| Device coverage: one iPhone, no Android hardware (D-102) | Bugs reported on real Android devices; Android performance known only relative to the emulator | Android emulators and iOS simulators for every functional check, the iPhone for hardware checks. Borrow a mid-range Android phone before P4 for absolute numbers, TalkBack, the camera and reminders on hardware (a friend, the Flet community or a tester); buying one is the owner's call (D-101). |
+| Device coverage: one iPhone, no Android hardware (D-102) | Bugs reported on real Android devices; Android performance known only relative to the emulator | Android emulators and iOS simulators for every functional check, the iPhone for hardware checks. Borrow a mid-range Android phone before P4 for absolute numbers, TalkBack, the camera and reminders on hardware (a friend, the Flet community or a tester); buying one is the maintainers' call (D-101). |
 | Trademark and identity: PSF marks leave our devices | Any build shared outside the team | Attribution, our own icon, no public listing (D-36, D-85, O-4). |
 | 2027 data arrives late or changes format | `feed-check.yml` fails, or the feed returns 404 | Tolerant parser guards, a weekly feed check, and the 2026 data with the fake clock meanwhile. |
 | The mock drifts from the real API | Cannot be detected without the PSF | A contract README citing Ionic's code, never a claim of compatibility, and the PSF appendix. |
@@ -346,13 +346,13 @@ The workflow is written down in [`AGENTS.md`](AGENTS.md), the operating manual f
 
 ## 12. Open decisions
 
-The full list, each with a recommendation, is in [`docs/decisions.md` › Open decisions](docs/decisions.md#open-decisions); provisional decisions apply until they are settled under D-101 (owner-only ones by the owner). **O-1** the tabs and start screen (settled by D-454: Now · Schedule · My schedule · Map · More, opening on Now, with no dogfooding behind it); **O-2** per-platform page transitions (yes; settled by D-148 after S4); **O-3** the font (settled by D-455: Roboto); **O-4** app identity, bundle id and icon (settled by D-452: Conf Companion, with no PSF marks on anything that leaves our devices); **O-5** distribution (internal only); **O-6** a CFP proposal (decide around 2026-11-20); **O-7** staff-tool depth (settled by D-456: all four, all built); **O-8** a stage-demo backend (settled by D-457: the LAN mock from the laptop).
+The full list, each with a recommendation, is in [`docs/decisions.md` › Open decisions](docs/decisions.md#open-decisions); provisional decisions apply until they are settled under D-101 (maintainer-only ones by the maintainers). **O-1** the tabs and start screen (settled by D-454: Now · Schedule · My schedule · Map · More, opening on Now, with no dogfooding behind it); **O-2** per-platform page transitions (yes; settled by D-148 after S4); **O-3** the font (settled by D-455: Roboto); **O-4** app identity, bundle id and icon (settled by D-452: Conf Companion, with no PSF marks on anything that leaves our devices); **O-5** distribution (internal only); **O-6** a CFP proposal (decide around 2026-11-20); **O-7** staff-tool depth (settled by D-456: all four, all built); **O-8** a stage-demo backend (settled by D-457: the LAN mock from the laptop).
 
 ---
 
 ## Appendix: if we later approach the PSF
 
-This applies only if the owner is satisfied with the app and chooses to; nothing here is a dependency.
+This applies only if the maintainers are satisfied with the app and chooses to; nothing here is a dependency.
 
 **What we would offer:**
 - the Apache-2.0 source and the Flet extensions;

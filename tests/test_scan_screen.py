@@ -28,6 +28,7 @@ from pycon_us.core.badges import (
 from pycon_us.core.staff_tools import ToolKey
 from pycon_us.core.timefmt import seconds_ago
 from pycon_us.dev_options import DEV_MOCK_API_URL
+from pycon_us.layout import Layout
 from pycon_us.prefs import Prefs
 from pycon_us.theme import LIGHT_TOKENS
 from pycon_us.ui import scan_screen
@@ -529,6 +530,31 @@ async def test_at_large_text_the_field_and_the_result_come_first(show: Show) -> 
     """The field leads, so the keyboard scrolls nothing, then the result, then the rest (#955)."""
     shown = await show(prefs=Prefs(loaded=True, time_above=True))
     assert body_order(shown) == ["field", "result", "chip", "camera"]
+
+
+async def test_on_a_short_window_the_field_and_the_result_come_first(
+    show: Show, rig: Rig
+) -> None:
+    """A phone in landscape leads with the field, so a result can't push it under the keyboard (#1120)."""
+    layout = Layout()
+    layout.set_width(914, height=411)  # a Pixel 6a turned
+    shown = await show(prefs=Prefs(loaded=True, time_above=False), layout=layout)
+    await enter(shown, "NOCOLON")
+    assert body_order(shown) == ["field", "result", "edit", "camera"]
+
+
+async def test_the_field_is_the_same_control_when_a_rotation_flips_the_order(
+    show: Show, rig: Rig
+) -> None:
+    """Turning the phone moves the field without rebuilding it, so it keeps the focus."""
+    layout = Layout()
+    layout.set_width(411, height=914)
+    shown = await show(prefs=Prefs(loaded=True, time_above=False), layout=layout)
+    field_id = entry(shown)._i
+    layout.set_width(914, height=411)
+    await shown.settle()
+    assert body_order(shown)[0] == "field"
+    assert entry(shown)._i == field_id
 
 
 async def test_at_large_text_the_result_s_buttons_follow_it_before_the_rest(

@@ -25,6 +25,11 @@ onFlowComplete:
     visible:
       id: expo.view.map
     timeout: 15000
+# Either pane's content, so the check below sees a built pane, not a toggle alone (#1136).
+- extendedWaitUntil:
+    visible:
+      id: "expo\\.filter|expo\\.booth\\..*"
+    timeout: 15000
 - runFlow:
     when:
       notVisible:

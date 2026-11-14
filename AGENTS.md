@@ -48,10 +48,10 @@ that date motivates us but never justifies cutting corners.
 - `docs/decisions.md` is binding. To change it, open an issue labelled `needs-decision` with the options and your
   recommendation, then record the outcome as a new D-number in a PR **before or together with** the code that
   depends on it (D-101):
-  - **Reversible choices** don't wait for the owner. The question is **settled** once you post the decision as a
+  - **Reversible choices** don't wait for the maintainers. The question is **settled** once you post the decision as a
     comment on the issue; then record it as a D-number in a PR, mention it in the phase status issue, and remove
-    the `needs-decision` label. The owner can override later.
-  - **Owner-only choices** wait for the owner: app identity and bundle id; making anything public (the repo, a
+    the `needs-decision` label. The maintainers can override later.
+  - **Maintainer-only choices** wait for the maintainers: app identity and bundle id; making anything public (the repo, a
     store listing, builds for people outside the team); accounts or anything that costs money; contacting people
     outside this work (the PSF, social media, blogs); and anything that would lose data or need someone else's
     help to undo. Routine work is already authorised: issues, PRs and comments in this repo,
@@ -65,7 +65,7 @@ that date motivates us but never justifies cutting corners.
 
 ## Working with Flet
 
-- The owner maintains Flet. Every Flet package comes from PyPI at one exact version (D-481,
+- This project's maintainers also maintain Flet. Every Flet package comes from PyPI at one exact version (D-481,
   `docs/development.md` §2.2), and no checkout of Flet is needed. The installed packages, by source or by
   introspection, are the source of truth for Flet APIs, instead of memory or old docs; the Dart is in the pub cache
   after a build, and §2.2 says how to clone the rest for reading. A second worktree of this repo gets its own pub
@@ -109,7 +109,7 @@ that date motivates us but never justifies cutting corners.
   why when it isn't obvious, and the issue reference (`Refs #14`).
 - Keep commits focused. Rebase on `main` when needed, but never force-push a branch someone else is working on.
 - **`main` is protected** (D-88): every change reaches it through a squash-merged PR, and nobody pushes, force-pushes
-  to or deletes `main`. A ruleset on the default branch enforces it (D-501): it requires a PR, blocks force pushes and
+  to or deletes `main`. A ruleset on the default branch enforces it (D-505): it requires a PR, blocks force pushes and
   deletion, and requires **no** approvals, so agents can still merge their own PRs (D-100).
 
 ### Pull requests
@@ -123,7 +123,7 @@ that date motivates us but never justifies cutting corners.
   light and dark when relevant), reviews (second opinion and Copilot), a pre-merge checklist (definition of done,
   docs and decision updates) and follow-ups. `gh pr create --body` doesn't fill it in: use its sections.
 - Add every PR to the Project: `gh pr create ... --project "PyCon US Flet"`.
-- **CI runs on every PR and every push to `main`** (D-501): `ci.yml`'s job `Lint, types and tests`. The local checks
+- **CI runs on every PR and every push to `main`** (D-505): `ci.yml`'s job `Lint, types and tests`. The local checks
   stay: the pre-push hook runs `tools/check.sh --fast` (ruff, the pre-commit hooks, pyright) on every push that changes
   more than Markdown; run the full `tools/check.sh` before you mark a PR ready and list it in the PR; the merge gate
   runs before every merge (`tools/merge.sh`, below).
@@ -135,12 +135,12 @@ that date motivates us but never justifies cutting corners.
 
 ### Reviews and merging
 
-- **Agents merge their own PRs** (D-100). The owner watches and can step in at any time, but is never a blocker:
+- **Agents merge their own PRs** (D-100). The maintainers watch and can step in at any time, but are never blockers:
   don't wait for approval. Merge only when all of these hold:
   1. **Checks pass on what will land.** Every `ci.yml` check is green on the PR's latest commit (`gh pr checks <pr>`):
      missing, pending, skipped or cancelled checks don't count (the required checks are the `ci.yml` jobs listed in
      `docs/development.md`). A PR's run tests it merged with `main` as `main` was at the push, so `tools/merge.sh <pr>`
-     (D-273, D-501) still runs the merge gate, which runs the full checks
+     (D-273, D-505) still runs the merge gate, which runs the full checks
      on the PR merged onto the latest `main` and posts the result on the PR, then merges only if the gate passed. Never
      pipe the gate before a merge: that merged #868 after a failed gate. Run it with
      `GATE_SIGNATURE='_Written by <agent name> (AI agent)._'`, so its comments are signed (rule 6). For several PRs in
@@ -158,26 +158,26 @@ that date motivates us but never justifies cutting corners.
      PR comment that starts `Second opinion owed` and names the reviewer. Run the review later, on what is current
      then, and record the reviewer and the result in a signed comment on that PR. Any Claude model or Codex is
      welcome while its limit allows.
-  4. **The owner is heard.** A request from the owner to stop or change something is acted on, not just
-     acknowledged; every owner comment has a reply.
+  4. **The maintainers are heard.** A request from the maintainers to stop or change something is acted on, not just
+     acknowledged; every maintainer comment has a reply.
   5. **No unsettled `needs-decision` question** affects the PR.
-- **A Copilot review** is back (D-501), when its quota allows. D-103 says when to request one and how to handle it; it
+- **A Copilot review** is back (D-505), when its quota allows. D-103 says when to request one and how to handle it; it
   never replaces the second opinion above.
 - `tools/merge.sh` squash-merges and deletes the branch; the PR title becomes the commit on `main`.
-- The owner may comment, request changes or revert at any time. Feedback that arrives after a merge becomes a new
+- The maintainers may comment, request changes or revert at any time. Feedback that arrives after a merge becomes a new
   issue, or a revert PR when something is broken.
 
 ### Upstream Flet work
 
-- **This repository is the only one agents work in** (D-212, the owner's direction). Agents never open or comment
+- **This repository is the only one agents work in** (D-212, the maintainers' direction). Agents never open or comment
   on an issue, nor review or send a PR, nor make any other change, in `flet-dev/flet`, `flet-dev/serious-python`,
   an extension's repository or any other repository, even when it would help the upstream track. Reading them (the
   pinned source, issues, PRs) is fine.
 - When the app needs something Flet lacks, open an `upstream` issue **here** with the full analysis: what happens,
   the Flet source at the pin (files and lines), a minimal repro, the suggested fix and the interim; a short draft
   diff in a fenced block when it makes the analysis clearer, never a patch file in the app's tree (D-213). The
-  owner, who maintains Flet, decides whether and how to take it to Flet; the issue links the flet-dev issue or PR
-  once the owner has opened one.
+  maintainers, who also maintain Flet, decide whether and how to take it to Flet; the issue links the flet-dev issue
+  or PR once a maintainer has opened one.
 - App issues that wait on it get `blocked` plus a link; meanwhile the interim from
   `docs/flet-gaps-and-extensions.md` ships.
 
@@ -186,7 +186,7 @@ that date motivates us but never justifies cutting corners.
 - A GitHub Project ("PyCon US Flet") gives the overview with one Status field (Todo, In progress, In review,
   Done); group or filter it by milestone (the phase) and by `area:*` label (D-90, D-94). The issue is the source
   of truth; the board is a view of it.
-- **The Project's built-in workflows do most of the bookkeeping.** The owner turned them on in the web UI
+- **The Project's built-in workflows do most of the bookkeeping.** A maintainer turned them on in the web UI
   (the API can't; #118): open issues and PRs are auto-added, "Item added" sets Todo, "Pull request linked to
   issue" sets In progress, "Item closed" and "Pull request merged" set Done, "Auto-close issue" closes an issue
   set to Done, and "Item reopened" sets Todo. Still pass `--project "PyCon US Flet"` when you create an issue
@@ -210,10 +210,10 @@ that date motivates us but never justifies cutting corners.
 4. Verify for real: run the tests and linters, and for UI work run the app (emulator, simulator or device). Say
    exactly what you ran and what you saw; never claim a check you didn't do.
 5. Don't guess silently on product or architecture questions: use `needs-decision` and the decision rules
-   (D-101). Decide the reversible ones yourself and record them; wait only for the owner-only kinds.
-6. Sign your work: agents act through the owner's GitHub account, so end every issue comment and PR comment you
+   (D-101). Decide the reversible ones yourself and record them; wait only for the maintainer-only kinds.
+6. Sign your work: agents act through a maintainer's GitHub account, so end every issue comment and PR comment you
    write with `_Written by <agent name> (AI agent)._`, so the history shows who did the work. Commit messages and PR
-   descriptions carry no attribution line (the owner's harness setting); the PR's signed comments say who did it.
+   descriptions carry no attribution line (the maintainers' harness setting); the PR's signed comments say who did it.
 7. Never call private PSF endpoints, commit secrets or edit `excluded/`.
 8. **Act only in this repository** (D-212). Never create or edit issues, PRs, comments, reviews, reactions or
    anything else in any other repository, the `flet-dev` repositories included, and never ask another agent to;
@@ -225,7 +225,7 @@ that date motivates us but never justifies cutting corners.
 - [ ] Acceptance criteria of the issue met.
 - [ ] Tests added or updated, all passing; linters clean.
 - [ ] Runs on an Android emulator and an iOS simulator (for UI or native changes), with screenshots in the PR; the
-  owner's iPhone only for checks that need hardware or a release build (D-102).
+  a maintainer's iPhone only for checks that need hardware or a release build (D-102).
 - [ ] Accessible: labels, contrast, text scaling, touch targets (`docs/ux.md` checklist).
 - [ ] Docs and `docs/decisions.md` updated when behaviour or decisions changed.
 - [ ] Follow-ups have their own issues.

@@ -55,7 +55,7 @@ async def test_flet_opens_in_the_in_app_browser_and_reads_as_a_link(
 
 
 def test_the_source_url_is_the_public_repository() -> None:
-    """`SOURCE_URL` names the repository, so About this app and View source reach it (D-292, D-501)."""
+    """`SOURCE_URL` names the repository, so About this app and View source reach it (D-292, D-505)."""
     assert pycon_us.SOURCE_URL == "https://github.com/ndonkoHenri/pycon-us-flet"
 
 

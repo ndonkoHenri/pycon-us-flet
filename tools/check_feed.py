@@ -18,7 +18,7 @@ in it (D-05's pattern). That line never fails the check: a 404, or a redirect (t
 year's feed, say), means "not yet".
 
 It exits with 0 when every checked year passes and 1 otherwise; a failed scheduled run
-emails the owner, which is the alert (docs/development.md §7.3).
+emails the maintainers, which is the alert (docs/development.md §7.3).
 """
 
 import argparse

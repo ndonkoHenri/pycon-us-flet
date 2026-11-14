@@ -19,7 +19,7 @@ in their calendar.
 """
 
 SOURCE_URL: str | None = "https://github.com/ndonkoHenri/pycon-us-flet"
-"""The app's source repository (D-88, D-292, D-501).
+"""The app's source repository (D-88, D-292, D-505).
 
 About this app shows a Source code row and every screen's overflow has View source
 (D-461) only when it is set. A build must never ship it set while the repository is

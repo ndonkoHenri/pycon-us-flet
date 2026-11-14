@@ -28,7 +28,7 @@
 | Goldens (§6) | `adb exec-out screencap` on Android; `assert_screenshot` | Phase exits and Flet pin bumps; six images, one named emulator (D-495) | no |
 | Accessibility (§7) | contrast test; flows at 200 %; screen readers | every PR (contrast); phase exits | contrast only |
 | Device checklist and performance (§8, §9) | packaged builds on an Android emulator and an iOS simulator; the iPhone for hardware checks (D-102) | phase exits | no |
-| Public feed check (§12) | `tools/check_feed.py`, `httpx.MockTransport` in its tests | weekly, on Mondays (D-501) | its tests; the check itself runs on its own |
+| Public feed check (§12) | `tools/check_feed.py`, `httpx.MockTransport` in its tests | weekly, on Mondays (D-505) | its tests; the check itself runs on its own |
 
 ## 2. Layout, configuration and commands
 
@@ -774,7 +774,7 @@ Every screen once, on 2026-11-04. **A machine "heard" this, not a person.** Talk
 **Bugs.** Fixed: #1058 (D-485), #1074, #1083, #1085, #1087, #1089, #1091, #1093, #1095, #1099 (D-496), #1100 (D-497), #1103. Settled: #1102 (D-498). Not a bug of ours: #1101 (below).
 
 **Judged again.**
-- **"My schedule"'s wrap and its star (D-167) stands.** Tried on the iOS simulator: `label_text_style` at 11 sp with no letter spacing still wraps at Flutter's 1.3x clamp on an iPhone 17, and shrinks all five labels at 100 %. Only a label control or a one-word label can fix it; the second is the owner's choice in D-167.
+- **"My schedule"'s wrap and its star (D-167) stands.** Tried on the iOS simulator: `label_text_style` at 11 sp with no letter spacing still wraps at Flutter's 1.3x clamp on an iPhone 17, and shrinks all five labels at 100 %. Only a label control or a one-word label can fix it; the second is the maintainers' choice in D-167.
 - **The Now button (D-204) stands.** It covers a row's text at every size while it shows, as any M3 floating button does, and a scroll moves the row out from under it. `FAB_CLEARANCE` lets the list's end clear it, seen at 200 % with bold.
 - **The door picker's keyboard wasn't reproduced.** Six rounds from a scan screen with its keyboard up to the picker through `door.session_chip`, at iOS's largest text, and the tour's move from the Lead scanner to the picker: the keyboard went down each time.
 
@@ -784,7 +784,7 @@ Every screen once, on 2026-11-04. **A machine "heard" this, not a person.** Talk
 
 **Not covered.** Accessibility Scanner wasn't installed: targets were read from the tree's bounds instead (nothing under 48 dp but rows cut by the list's edge, and the expo plan's booths, which have a List), and seeded contrast rests on the images. TalkBack ran at 100 % text in light only. A landscape phone and a tablet. Of the sheets and dialogs, only hand-out and CoC review were photographed in each scheme and at large text. iOS at the largest text only, not its schemes. Change log's review with a real batch, which needs a feed pair (§9.2); its empty state was heard. A recording to tell a sheet's reduced motion from its full motion was inconclusive: both showed one change in the frames read, so reduced motion rests on the tests and on seeing no motion. VoiceOver is #838.
 
-**What this leaves for a person.** Whether the order makes sense read aloud at speed, whether a stop's words are too many or too few, how often a repeated phrase becomes tiresome (#1102), and whether a real finger finds the targets. Gestures here came from the emulator's console, with TalkBack's reading controls and heading navigation not used: headings were read from the tree. Nobody has listened to this: the owner's iPhone and any Android phone should get a real pass with a screen reader user before P4's exit.
+**What this leaves for a person.** Whether the order makes sense read aloud at speed, whether a stop's words are too many or too few, how often a repeated phrase becomes tiresome (#1102), and whether a real finger finds the targets. Gestures here came from the emulator's console, with TalkBack's reading controls and heading navigation not used: headings were read from the tree. Nobody has listened to this: a maintainer's iPhone and any Android phone should get a real pass with a screen reader user before P4's exit.
 
 **Driving it, what's new since §7.3.** Set `pref_log_level` with TalkBack force-stopped, or it writes its preferences back over the line. Console touches wake Gboard's "Try out your stylus" over the app: `settings put secure stylus_handwriting_enabled 0` stops it. A silent stop after the last control is the traversal's end, not a node.
 
@@ -927,7 +927,7 @@ dedicated emulator was shut down after the run.
 - **Against the recorded numbers: no regression past the thresholds.** The ratio is above D-474's 1.4 but under §8's 1.7 and the 20 % line (1.68), and the rise is the reproducer's: it is 15 % faster than on 2026-11-03 (1,574 ms), while the app is 4 % faster (2,207 ms). Star tap is unchanged and under D-159's 16.7 ms. Flings improved on both, and the app stays near the reproducer, so this emulator still can't speak to jank in absolute terms. The APK is the same size as P1's later runs.
 - **Not measured:** a recording of the first frame with rows, which the ratio didn't call for; the AAB and download sizes; first launch; the iPhone (#121) and a borrowed phone (#841).
 
-**Cold start settled, 2026-11-03 (#860, D-474): Android emulator.** Release arm64 APKs of `b343fed8` and S2 at pin `22a6dcb16`, on one boot of `pycon_pixel6a_api36` (`-port 5584`), with the scene and starts of the profile above (the first start of each group discarded). Host: M4, load 3-6, no other agent running, the owner's `iPhone 16` simulator booted idle.
+**Cold start settled, 2026-11-03 (#860, D-474): Android emulator.** Release arm64 APKs of `b343fed8` and S2 at pin `22a6dcb16`, on one boot of `pycon_pixel6a_api36` (`-port 5584`), with the scene and starts of the profile above (the first start of each group discarded). Host: M4, load 3-6, no other agent running, a maintainer's `iPhone 16` simulator booted idle.
 
 | Measure, medians (range), n = 10 unless noted | Reproducer | App | App ÷ reproducer |
 |---|---|---|---|
@@ -955,7 +955,7 @@ Where the app's time goes, from a check-only build (never committed; its content
 - **Lazy screens:** at most the 92 ms of other routes, about 4 %. A normal start needs Now's among them, and a later tap would pay for the rest (D-110 stands).
 - **Moving the content line ahead of the second render:** no screen gets faster, and the comparison with earlier runs breaks.
 - **`theme`'s 115 ms:** most of it is Flet loading its control modules on first use, which the reproducer pays too.
-- **Skipping scalar fields in Flet's walk over new controls (U282, #966, as a check-only monkeypatch):** the content line moved -64 and -169 ms in two pairs, and the first frame with rows did not move (1,954 ms with and without). A modest gain for Python, left to the owner.
+- **Skipping scalar fields in Flet's walk over new controls (U282, #966, as a check-only monkeypatch):** the content line moved -64 and -169 ms in two pairs, and the first frame with rows did not move (1,954 ms with and without). A modest gain for Python, left to the maintainers.
 
 So the 1.15× is net of a head start: the app's Python starts about 185 ms before the reproducer's, for a reason not isolated. From Python's first line to the first round trip back, the app takes 1,020 ms and the reproducer 595 ms (+425 ms), which is the closer reading of what the shell adds.
 
@@ -1038,7 +1038,7 @@ curl -X POST http://127.0.0.1:8460/swap                      # serve the copy; /
 ## 10. Definition of done for a PR (D-93)
 
 Every PR:
-- [ ] Links its issue (`Closes #N`); the full local checks pass before it is marked ready, CI is green, and the merge gate passes before it merges (D-273, D-501, §12).
+- [ ] Links its issue (`Closes #N`); the full local checks pass before it is marked ready, CI is green, and the merge gate passes before it merges (D-273, D-505, §12).
 - [ ] New behaviour has tests; a fixed bug has a test that failed before the fix.
 - [ ] "How tested" lists the commands actually run, the devices or emulators used, and the Flet pin. Agents report only checks they ran.
 - [ ] Docs and `decisions.md` are updated in the same PR.
@@ -1070,10 +1070,10 @@ Testing gates per phase, from PLAN §7's exit criteria (the milestone descriptio
 
 ## 12. Checks and CI wiring (D-84, D-273)
 
-- **Local checks** (D-273, D-501; development.md §7): `tools/check.sh` runs `ci.yml`'s steps on the Mac, `--fast` all but pytest. The pre-push hook runs the fast checks on every push that changes more than Markdown; the author runs the full checks before marking a PR ready; the merge gate (`tools/gate.sh <pr> [<pr>...]`) runs them on the PRs merged onto the latest `main` before every merge and posts the result on each PR.
+- **Local checks** (D-273, D-505; development.md §7): `tools/check.sh` runs `ci.yml`'s steps on the Mac, `--fast` all but pytest. The pre-push hook runs the fast checks on every push that changes more than Markdown; the author runs the full checks before marking a PR ready; the merge gate (`tools/gate.sh <pr> [<pr>...]`) runs them on the PRs merged onto the latest `main` before every merge and posts the result on each PR.
 - **`ci.yml`** (every PR and push to `main`; Linux): `uv sync --locked`, `ruff check`, `ruff format --check`, the pre-commit hooks (D-480), `pyright`, `pytest -n auto --hypothesis-profile=ci` (hypothesis's built-in profile, extended in `tests/conftest.py`, §3.1). Target under 5 minutes (D-483). UI flows are excluded by `addopts = ["--ignore=tests/ui"]` (§2).
 - **`feed-check.yml`** (weekly, Mondays; by hand, or `uv run python -m tools.check_feed` locally): `tools/check_feed.py` runs our parser and the invariants on the current year's public feed, and says whether next year's feed answers yet (a 404 is "not published yet", never a failure). Keys the recorded feeds lack are printed, not failed. Its tests serve the recorded feed, broken copies of it and HTTP errors through `httpx.MockTransport` (`tests/test_check_feed.py`).
-- **`build-android.yml`** (manual, and from `release.yml` on a `v*` tag, D-502): a debug-signed APK artifact. Builds for testers stay on the Mac until the owner turns on `build-ios.yml`'s TestFlight upload (D-502), and the rest of the device work stays local.
+- **`build-android.yml`** (manual, and from `release.yml` on a `v*` tag, D-502): a debug-signed APK artifact. Builds for testers stay on the Mac until a maintainer turns on `build-ios.yml`'s TestFlight upload (D-502), and the rest of the device work stays local.
 - **`build-ios.yml`** (its simulator job on PRs that touch native config or a pin; all three by hand, and from `release.yml` on a `v*` tag, D-502) builds for the simulator with no signing, plus an unsigned archive and an opt-in TestFlight upload, and **`maestro-android.yml`** (pushes to `main`; by hand) runs the smoke flows and `coc_capture` on an emulator (D-490; development.md §7.5, §7.7).
 - **Not in CI:** the `flet test` flows, goldens, the other device checks, performance. Spike S9 (#363, D-492, [`spikes/09-flet-test-linux.md`](spikes/09-flet-test-linux.md)) said no to `flet test linux`: the app and the flows are phone-only, and 5 of 7 flows couldn't reach their scene. `flet test android` on a KVM emulator passed its first flow before the private runner gave out, so it is the follow-up to try on the public runner (#1075); once it has run green for two weeks, it is proposed as a separate workflow through a `needs-decision` issue, never inside `ci.yml` (D-78, D-84).
 

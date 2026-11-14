@@ -160,7 +160,7 @@ def test_app_seeds_the_layout_from_the_page_width_and_follows_its_resizes(
             if not inspect.iscoroutinefunction(setup):
                 setup()
         assert fake_page.on_resize is not None
-        fake_page.on_resize(SimpleNamespace(width=375.0))
+        fake_page.on_resize(SimpleNamespace(width=375.0, height=812.0))
         assert layout.wide is False
 
 
