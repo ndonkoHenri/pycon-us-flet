@@ -45,7 +45,7 @@ Upstream Flet work runs in parallel with the phases (section 8).
 **Goal.** A proven toolchain, a tested data core, and an app shell running as a packaged build on an Android emulator and the iPhone.
 
 **Exit criteria** (PLAN §7):
-1. **Packaged builds.** Builds from the pinned Flet run on an Android emulator and on the owner's iPhone, with no connection to a dev server (D-102).
+1. **Packaged builds.** Builds from the pinned Flet run on an Android emulator and on a maintainer's iPhone, with no connection to a dev server (D-102).
    - Offline, the first launch shows the bundled schedule on the Schedule stub (days, session counts, source); online, a refresh replaces it.
    - State survives kill and relaunch, and an update install.
 2. **CI.** CI is green on `main`, and the feed tests (rules, invariants, snapshot) pass on the 2025 and 2026 feeds.
@@ -96,7 +96,7 @@ chore, area:build · after P0-01
 Issue templates (feature, bug, spike, upstream), a PR template with the D-92 sections, the "PyCon US Flet" Project, and `main` protection.
 
 - Templates exist in `.github/`; the spike template has a verdict section.
-- The Project has Status Todo / In progress / In review / Done; agents add every issue and PR to it. Its built-in workflows (auto-add, Todo on add, Done on close or merge) are on; the owner enabled them in the web UI (#118).
+- The Project has Status Todo / In progress / In review / Done; agents add every issue and PR to it. Its built-in workflows (auto-add, Todo on add, Done on close or merge) are on; a maintainer enabled them in the web UI (#118).
 - AGENTS.md says how `main` is protected (ruleset, or convention on a private Free plan).
 
 #### P0-04 · Apply the mobile build configuration from the S5 verdict
@@ -184,7 +184,7 @@ test, area:build
 Prove the D-81 setup: `flet build apk`, `aab` and `ipa` from a pinned flet-dev/flet commit, and one TestFlight internal upload with a throwaway bundle id, installed on the iPhone; `flet build ios-simulator` for the simulator.
 
 - Verdict in `docs/spikes/05-build-and-ship.md` with exact commands and versions.
-- TestFlight processed the build, or the blocker is filed upstream. *(Moved to the iPhone session, #121: it needs owner-only portal steps, D-101.)*
+- TestFlight processed the build, or the blocker is filed upstream. *(Moved to the iPhone session, #121: it needs maintainer-only portal steps, D-101.)*
 - AAB size, default minSdk, and the three Roboto weights rendering on iOS (D-26) recorded.
 
 ### P0-E3 · Data core and offline data
@@ -751,7 +751,7 @@ Run the P1 exit criteria on packaged builds in airplane mode, with a fake-clock 
 
 design, needs-decision, area:build
 
-Pick an owner-controlled bundle id, a neutral name, our own icon, and the deep-link scheme and host; no PSF marks on anything that leaves our devices.
+Pick an maintainer-controlled bundle id, a neutral name, our own icon, and the deep-link scheme and host; no PSF marks on anything that leaves our devices.
 
 - O-4 settled in decisions.md and applied in `[tool.flet]` before the first real TestFlight upload.
 
@@ -784,7 +784,7 @@ A release build schedules a reminder 2 minutes ahead; test it with the app kille
 
 upstream, area:shell
 
-Write up `RefreshIndicator(content, on_refresh)` for Flet core; the owner takes it to flet-dev/flet, and this issue links the flet-dev issue and PR once opened (D-212).
+Write up `RefreshIndicator(content, on_refresh)` for Flet core; a maintainer takes it to flet-dev/flet, and this issue links the flet-dev issue and PR once opened (D-212).
 
 - The flet-dev PR is merged or its status recorded; an app issue exists for the swap after a pin bump.
 
@@ -792,7 +792,7 @@ Write up `RefreshIndicator(content, on_refresh)` for Flet core; the owner takes 
 
 upstream, area:quality
 
-A non-fatal mode for handler and effect exceptions with a Python error hook, written up here for the owner to take to flet-dev/flet (D-212), so an unexpected exception no longer ends the session (F4).
+A non-fatal mode for handler and effect exceptions with a Python error hook, written up here for the maintainers to take to flet-dev/flet (D-212), so an unexpected exception no longer ends the session (F4).
 
 - The flet-dev PR is merged or its status recorded; an app issue exists to delete `@report_errors`.
 
@@ -812,7 +812,7 @@ A non-fatal mode for handler and effect exceptions with a Python error hook, wri
    - A denied permission never blocks a task.
 4. **Change log and links.** The change log shows a simulated change from a fixture feed pair, with saved sessions first. Deep links and, with E3, reminder taps land with a back stack.
 5. **Device checklist.** The D-79 checklist passes, including high contrast, tablets and screen readers on three new flows.
-6. **Unaided use.** Someone other than the owner installs an internal build and, unaided, finds a room, saves a session and copies the Wi-Fi password.
+6. **Unaided use.** Someone other than the maintainers installs an internal build and, unaided, finds a room, saves a session and copies the Wi-Fi password.
 
 **Early spikes.**
 - S7 (real floor plans with about 60 hotspots in `InteractiveViewer` on a low-RAM phone: a small-RAM Android AVD and the iPhone until a real one is borrowed, D-102) opens P2-E1.
@@ -1302,7 +1302,7 @@ upstream, area:shell · NEW-02
 
 epic, upstream, area:staff
 
-Spike S8 first (a minimal `mobile_scanner` control in release builds for Android and iOS: a printed QR on the iPhone, the virtual scene camera on an Android emulator), then a clean-room extension in flet-dev, taken upstream by the owner (D-212), using `material_ui`. The staff tools never depend on it.
+Spike S8 first (a minimal `mobile_scanner` control in release builds for Android and iOS: a printed QR on the iPhone, the virtual scene camera on an Android emulator), then a clean-room extension in flet-dev, taken upstream by the maintainers (D-212), using `material_ui`. The staff tools never depend on it.
 
 #### P2-02 (S8) · Spike: does a minimal mobile_scanner extension decode reliably in release builds? (#362)
 
@@ -1314,7 +1314,7 @@ test, area:staff · LEAD-01, LEAD-02
 
 upstream, area:build
 
-Write up `page.get_app_info()` (version, build number, package name) for Flet, for the owner to take upstream (D-212); the app uses `__version__` until a pin bump brings it in.
+Write up `page.get_app_info()` (version, build number, package name) for Flet, for the maintainers to take upstream (D-212); the app uses `__version__` until a pin bump brings it in.
 
 - The flet-dev PR is merged or its status recorded; an app issue exists for the swap.
 
@@ -1338,7 +1338,7 @@ test, area:quality · after P2-93, P2-94, P2-95, P2-96, P2-97, P2-07, P2-98, P2-
   - bugs: #337, #342, #343, #344; docs: #359;
   - the iPhone session #121, with VoiceOver checks #261 and #320;
   - decisions: #15 (`P1-34`, O-4, app identity; settled by D-452; its placeholders shipped in `P2-24`), #17 (`P1-35`, O-6), #18 (`P1-36`, O-1; settled by D-454 in #819).
-- **Upstream write-ups filed in P1**, for the owner to take to Flet (D-212): #20 (U1), #21 (U15), #140, #160, #163, #179 (U26), #182 (U27), #183 (U17), #185 (U28), #187, #210, #217 (U29), #221 (U30), #230 (U31), #238 (U32), #259 (U33), #273 (U34), #288 (U35), #308 (U36), #317 (U37), #319 (U43), #321 (U42), #322 (U41). E3's own write-ups, #293 (U7) and #294, are under UP-E3, where `P2-85` waits for them; #345 (U50) is with #333 above.
+- **Upstream write-ups filed in P1**, for the maintainers to take to Flet (D-212): #20 (U1), #21 (U15), #140, #160, #163, #179 (U26), #182 (U27), #183 (U17), #185 (U28), #187, #210, #217 (U29), #221 (U30), #230 (U31), #238 (U32), #259 (U33), #273 (U34), #288 (U35), #308 (U36), #317 (U37), #319 (U43), #321 (U42), #322 (U41). E3's own write-ups, #293 (U7) and #294, are under UP-E3, where `P2-85` waits for them; #345 (U50) is with #333 above.
 
 ## 6. P3 Accounts & staff tools
 
@@ -1417,7 +1417,7 @@ An in-memory attendee directory, name search, a review dialog before every recor
 
 **Exit criteria** (PLAN §7):
 1. **Quality.** There are no known data-loss or task-blocking bugs, and the performance targets are met.
-2. **Clean build.** Someone else, or the owner on a clean machine, builds and runs the app from a clean checkout in 30 minutes or less, using `docs/development.md`.
+2. **Clean build.** Someone else, or the maintainers on a clean machine, builds and runs the app from a clean checkout in 30 minutes or less, using `docs/development.md`.
 3. **Demo.** The demo script runs twice end to end without Wi-Fi.
 4. **Public.** The repo is public, and `v1.0.0` is tagged with internal builds for both platforms.
 
@@ -1457,7 +1457,7 @@ The demo script (offline start, Now & Next for me, My schedule, live edit in the
 
 ## 8. Upstream track
 
-Upstream work happens in flet-dev repositories, by the owner: agents work only in this repository (D-212). Each item is tracked here by an issue labelled `upstream` with the full analysis, which links the flet-dev issue or PR once the owner has opened one (D-97). App issues that wait on one are labelled `blocked`, and the interim ships meanwhile. A core gap is upgraded only by a PR that bumps the pinned Flet (D-64). An extension is enabled by a PR that adds its pinned package, and the interim stays the fallback whenever its capability constant is false (D-63).
+Upstream work happens in flet-dev repositories, by the maintainers: agents work only in this repository (D-212). Each item is tracked here by an issue labelled `upstream` with the full analysis, which links the flet-dev issue or PR once a maintainer has opened one (D-97). App issues that wait on one are labelled `blocked`, and the interim ships meanwhile. A core gap is upgraded only by a PR that bumps the pinned Flet (D-64). An extension is enabled by a PR that adds its pinned package, and the interim stays the fallback whenever its capability constant is false (D-63).
 
 | D-98 | Item | Key | Interim in the app | App swap |
 |---|---|---|---|---|

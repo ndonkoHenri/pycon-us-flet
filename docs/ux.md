@@ -750,7 +750,7 @@ These exist only when a mock API base URL is set (D-51); the app never calls pri
 
 ## 10. Open UX questions
 
-Each default applies until the owner decides. Decision-level questions are settled in the decisions record: tabs (O-1, D-454), transitions (O-2, D-148), font (O-3, D-455) and staff details (O-7, D-456).
+Each default applies until the maintainers decide. Decision-level questions are settled in the decisions record: tabs (O-1, D-454), transitions (O-2, D-148), font (O-3, D-455) and staff details (O-7, D-456).
 
 | # | Question | Default |
 |---|---|---|

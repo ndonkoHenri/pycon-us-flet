@@ -54,7 +54,7 @@ Rows are grouped by topic, and each topic is a section of `docs/decisions.md` yo
 
 | Your work is about | Section |
 |---|---|
-| Scope, the owner's direction | [A. Purpose and scope](docs/decisions.md#a-purpose-and-scope) |
+| Scope, the maintainers' direction | [A. Purpose and scope](docs/decisions.md#a-purpose-and-scope) |
 | Platforms, Material 3 on both, no adaptive widgets | [B. Platforms and UI](docs/decisions.md#b-platforms-and-ui) |
 | Tabs, routes, Back, links | [C. Information architecture and navigation](docs/decisions.md#c-information-architecture-and-navigation) |
 | Colours, type, components, accessibility, how lists are built | [D. Design system](docs/decisions.md#d-design-system) |
@@ -148,7 +148,7 @@ stays public. Use only the images the PR needs.
 ## Where AGENTS.md doesn't apply to you
 
 [`AGENTS.md`](AGENTS.md) is the full manual, for people and AI agents, and much of the work here is done by agents
-through the owner's account. Their comments end with a signature line saying so. These parts are for them and the
+through a maintainer's account. Their comments end with a signature line saying so. These parts are for them and the
 maintainers, not for you:
 
 | In AGENTS.md | For you |

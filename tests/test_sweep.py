@@ -147,8 +147,8 @@ def test_refused_setting_fails_that_mode_only(
 
 
 def test_owners_device_is_refused(calls: list[list[str]]) -> None:
-    """A sweep clears the app's data, so it never runs on the owner's emulator."""
-    with pytest.raises(SystemExit, match="owner's"):
+    """A sweep clears the app's data, so it never runs on a maintainer's emulator."""
+    with pytest.raises(SystemExit, match="maintainer's"):
         sweep.main(["--device", "emulator-5554"])
     assert calls == []
 

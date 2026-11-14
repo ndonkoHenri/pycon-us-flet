@@ -11,7 +11,7 @@ Usage, from the repo's root:
 
 `<device>` is an emulator's serial, a simulator's udid or its name. `up` prints only the
 serial or the udid, so a script can keep it (`docs/development.md` §5.5, D-102). A device
-the owner keeps is refused everywhere: flows and installs replace the app's data.
+a maintainer keeps is refused everywhere: flows and installs replace the app's data.
 """
 
 import argparse
@@ -57,9 +57,9 @@ def is_emulator(device: str) -> bool:
 
 
 def refuse_owners(device: str) -> None:
-    """Exit if `device` is an emulator or a simulator the owner keeps."""
+    """Exit if `device` is an emulator or a simulator a maintainer keeps."""
     if device in (OWNERS_SERIAL, OWNERS_SIMULATOR):
-        sys.exit(f"device.py: {device} is the owner's: use a device of your own")
+        sys.exit(f"device.py: {device} is a maintainer's: use a device of your own")
 
 
 def android_prefs(
@@ -195,7 +195,7 @@ def up_android(avd: str, port: int, animations: bool) -> str:
     serial = f"emulator-{port}"
     refuse_owners(serial)
     if avd == OWNERS_AVD:
-        sys.exit(f"device.py: {avd} is the owner's: use another AVD")
+        sys.exit(f"device.py: {avd} is a maintainer's: use another AVD")
     running = _running_emulators()
     if serial not in running:
         if len(running) > EMULATORS_BEFORE_WARNING:

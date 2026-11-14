@@ -105,7 +105,7 @@ grants notifications on iOS, the step fails at its wait, which says it can go.
 ## Devices: your own
 
 The bundle id is the app's own, so a run replaces the app on the device: use an emulator
-and a simulator of your own (D-102), never the owner's `emulator-5554` or a shared
+and a simulator of your own (D-102), never a maintainer's `emulator-5554` or a shared
 simulator.
 
 ```bash
@@ -387,7 +387,7 @@ Two subflows are the scanner's:
 
 - `subflows/scan.yaml` sends `CODE`, then Enter, with no tap on the field, as a USB or
   Bluetooth HID scanner does: it fails if the screen lost the focus (F274). That is
-  HID-style entry only: real hardware is the owner's (#121), and the camera waits on E1
+  HID-style entry only: real hardware is the maintainers' (#121), and the camera waits on E1
   (#520). A flow's first scan on a screen taps `scan.keyboard` first, as a person typing.
 - `subflows/past_cooldown.yaml` waits until the panel's age line reads at least 5 seconds.
   A code accepted in the last 4 s is cleared without a word, so a rescan any sooner shows
@@ -558,7 +558,7 @@ platforms; real Android airplane mode and killing/relaunching with queued scans 
 
 ## Demo videos
 
-`maestro/demo/` drives the short clips the owner shares with people outside the team.
+`maestro/demo/` drives the short clips a maintainer shares with people outside the team.
 These flows are paced for a viewer, with pauses and slow swipes, and aren't in
 `config.yaml`. One command films them all on a new simulator, trims them and cleans up:
 

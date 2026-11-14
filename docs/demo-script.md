@@ -35,7 +35,7 @@ then shows its Scan badges card from the start.
 | **The camera scan** | Manual entry until E1 (#520, #726), and the scan screen says so. A simulator has no camera anyway, so a camera scan on stage also means a phone. |
 | **Live edit** | On a simulator over loopback only. A phone can't reach `localhost:8550`, and no 1.1 companion is in the stores (`development.md` §5.2, §10). |
 | **View source** | Stage never opens GitHub from the app. The item is shown, not tapped, and the laptop's browser shows the same file from a page opened before the Wi-Fi went off. Fallbacks: the file in the editor, then a recording. |
-| **O-8, an in-app backend** | Not reopened: no beat needs one. It reopens if the owner wants a demo with no laptop, or wants a phone on stage and the hotspot fails (D-457). |
+| **O-8, an in-app backend** | Not reopened: no beat needs one. It reopens if the maintainers want a demo with no laptop, or wants a phone on stage and the hotspot fails (D-457). |
 
 ## What has been tried
 
@@ -309,12 +309,12 @@ fake clock if the simulators stay in use.
 ## A phone instead of a simulator (not tried)
 
 Beats 1, 2, 3 and 5 would move to a phone. Beats 4 and 6 stay on the laptop. Take this route only after two rehearsals
-on the phone that will be on stage. Until then the simulators are the plan. It would be the owner's iPhone: there is
+on the phone that will be on stage. Until then the simulators are the plan. It would be a maintainer's iPhone: there is
 no Android phone (#841), and the iPhone can't take a development build until #121 gives it a certificate.
 
 1. **The hotspot.** macOS Internet Sharing, with a network name and password. **Not tried:** it asks for a connection
    to share, and may refuse to start with nothing to share. If so, a travel router with no uplink gives the same LAN, and so does the
-   phone's own hotspot with the laptop joined to it (`development.md` §6). Buying a router is the owner's call.
+   phone's own hotspot with the laptop joined to it (`development.md` §6). Buying a router is the maintainers' call.
 2. **The server.** `uv run python -m tools.mock_api.server --host 0.0.0.0`, with the firewall prompt answered in
    rehearsal, never on stage (`development.md` §6).
 3. **The address.** **Don't count on the banner:** `lan_addresses()` finds it by asking for a route to the internet,

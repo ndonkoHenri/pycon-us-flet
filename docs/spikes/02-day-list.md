@@ -149,7 +149,7 @@ The first build passed `TextField(on_change=...)` with no `value`. Typing "p" lo
 
 ### iOS simulator (debug build, iPhone 17, iOS 26.5)
 
-`flet build ios-simulator` (debug), installed with `simctl install`, launched with `--route=/tree/column/deferred?auto=1` (F31). The simulator could not be tapped from here (the simulator control waits for the owner's permission, and the owner was away), so `?auto=1` makes the app drive itself through the same handlers: the jump, four star toggles, "python" typed and cleared, then three day switches. It was added after the Android runs and does nothing without the flag.
+`flet build ios-simulator` (debug), installed with `simctl install`, launched with `--route=/tree/column/deferred?auto=1` (F31). The simulator could not be tapped from here (the simulator control waits for the maintainers' permission, and the maintainers were away), so `?auto=1` makes the app drive itself through the same handlers: the jump, four star toggles, "python" typed and cleared, then three day switches. It was added after the Android runs and does nothing without the flag.
 
 | Step | Result (debug build, so timings are not release numbers) |
 |---|---|

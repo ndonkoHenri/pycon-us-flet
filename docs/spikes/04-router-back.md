@@ -132,7 +132,7 @@ Recreation by switching gesture and 3-button navigation (S1's trigger), on `/now
 - **#121 (iPhone session), held items:** the iOS edge-swipe Back on a drill level (it should go through `view-pop` like Android's gesture) and on a root (nothing to pop); a deep link through `s4spike://` after tapping "Open". Both need a finger; the simulator could not be tapped in this session.
 - **The P0 shell issue** (`routes.py`, `app.py`, `ui/scaffold.py`): apply D-141..D-147 and port `check_routes.py`'s cases to `tests/test_routes.py`.
 - **P1 search:** the field regains focus when the results come back (Flutter restores a route's focus), so the first Android Back closes the keyboard. Decide there whether that is acceptable or the results take the focus.
-- **Upstream (owner's track):** U23 and U24 (D-149), filed in flet-dev/flet when the owner schedules them.
+- **Upstream (maintainers' track):** U23 and U24 (D-149), filed in flet-dev/flet when a maintainer schedules them.
 
 ## Fallback
 

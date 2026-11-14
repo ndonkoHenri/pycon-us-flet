@@ -117,7 +117,7 @@ The source paths in this document are in that tree (the aliases above). Never ed
 
 **The bump to `1.1.0` (#1126, 2026-11-05)** took these steps from `1.1.0.dev4`. The template says `flet: 1.1.0` under both keys, and `build/flutter/pubspec.lock` shows `flet` as `source: hosted`, so a build no longer grows the git mirror; D-481 lost its "prerelease". §5.2 can use the store's companion app once one speaks 1.1.
 
-**When we need a fix that isn't released.** The owner sometimes merges upstream fixes between releases. Ask for a release or a prerelease first: it costs one line here. If one isn't coming, use the smallest of these, in a PR that says why and which release ends it, and undo it in the bump that brings the fix:
+**When we need a fix that isn't released.** The maintainers sometimes merge upstream fixes between releases. Ask for a release or a prerelease first: it costs one line here. If one isn't coming, use the smallest of these, in a PR that says why and which release ends it, and undo it in the bump that brings the fix:
 - **A Dart-only fix:** keep the wheels, and move the Dart package to the commit. `[tool.flet.flutter.pubspec.dependency_overrides]` replaces the template's entry (`build_base.py`'s `create_flutter_project()`):
   ```toml
   [tool.flet.flutter.pubspec.dependency_overrides]
@@ -307,7 +307,7 @@ Not set, because the default is what we want:
 `flet build` generates every icon and splash image from `src/assets/` (`DOCS/publish/index.md` "Icons" and "Splash screen", lines 832-1228). Nothing is copied into the template by hand.
 - **P0:** Flet's default icon. A build that has a placeholder icon is obviously a development build. Since `08b89cce5` (flet-dev/flet#6973) flet-cli renders that default in every build from the Flet logo SVG that `flet-platform-assets` bundles ("Generated default app icons" in the build log) instead of keeping the template's committed rasters; on #445's builds the launcher showed the Flet mark labelled "Conf Companion" on Android 16 and iOS 26.5, as before.
 - **P0 (SHELL-01):** the splash and boot-screen colours in §3.1, `#680579` in light and dark. Native splash, Flet's boot screen and our `BootView` then share one background, so nothing flashes between them. The colours live in `pyproject.toml`, not in `--splash-color` flags, so the file stays the only configuration (§7.4).
-- **iOS's launch screen reads a different purple from the app (#880, U281, [#950](https://github.com/ndonkoHenri/pycon-us-flet/issues/950)).** On an iPhone 17 simulator (iOS 26.5, Xcode 27.2, pin `22a6dcb16`) the launch screen reads `#72007e` and the Flutter frames `#680579`. That is `#680579` taken as Display P3 numbers and converted to sRGB. It is not the generated PNG's missing profile: `Assets.car` already holds the swatch as sRGB, and a swatch tagged sRGB or Display P3, or a storyboard background colour with no swatch at all, reads `#72007e` too. Our configuration cannot fix it: `[tool.flet.ios.splash] color = "#5f1275"` makes the launch screen read `#680579`, but Flutter's own splash view, drawn from the same storyboard until the first frame, then reads `#5f1275` for about 0.3 s, so the shift moves and the long stage trades places with the short one. The app keeps `#680579` on both platforms; the fix needs Flet's iOS template (#950). Simulator only: the owner's iPhone (D-102) decides whether it shows there.
+- **iOS's launch screen reads a different purple from the app (#880, U281, [#950](https://github.com/ndonkoHenri/pycon-us-flet/issues/950)).** On an iPhone 17 simulator (iOS 26.5, Xcode 27.2, pin `22a6dcb16`) the launch screen reads `#72007e` and the Flutter frames `#680579`. That is `#680579` taken as Display P3 numbers and converted to sRGB. It is not the generated PNG's missing profile: `Assets.car` already holds the swatch as sRGB, and a swatch tagged sRGB or Display P3, or a storyboard background colour with no swatch at all, reads `#72007e` too. Our configuration cannot fix it: `[tool.flet.ios.splash] color = "#5f1275"` makes the launch screen read `#680579`, but Flutter's own splash view, drawn from the same storyboard until the first frame, then reads `#5f1275` for about 0.3 s, so the shift moves and the long stage trades places with the short one. The app keeps `#680579` on both platforms; the fix needs Flet's iOS template (#950). Simulator only: a maintainer's iPhone (D-102) decides whether it shows there.
 - **On the iOS simulator, the launch screen sometimes fades through black before the boot screen (#958).** It is not Flet's fade: the generated `main.dart`'s `_BootOverlay` fades only when `[tool.flet.boot_screen.flet] fade_out_duration` is above 0, we leave it at its default 0, and the overlay then goes in one step. The layer that dims is the launch screen's view, icon included, which `FlutterViewController` keeps over the Flutter view until the first frame and then fades out in 0.2 s (`onFirstFrameRendered`, then `SplashScreenManager.removeSplashScreen`; Flutter 3.47.7, `engine/src/flutter/shell/platform/darwin/ios/framework/Source/`). When the first Flutter frame is not on screen yet, the opaque Flutter view behind it is black, and the boot screen appears as the fade ends. Our configuration cannot change that: the fade and the view belong to the engine, and `UILaunchStoryboardName` feeds the OS launch screen too. Measured on an iPhone 17 simulator (iOS 26.5, pin `22a6dcb16`, `flet build ios-simulator`), 20 cold starts of the same install recorded with `simctl io recordVideo` and decoded with PyAV: 8 dipped to `#000000`-`#09000a` for about 0.15 s, 12 crossfaded straight from `#72007e` to `#650475` (frame means, status bar included). The simulator only builds debug (`flutter build ios --simulator --release` and `--profile` both stop with "… mode is not supported for simulators"), and the Mac's load average was 6 to 43 while agents built, so this is a debug build on a busy host. On the Android emulator (API 36) none of 4 release and 4 debug cold starts dipped. **Open:** whether a release build on an iPhone does; the check is on #121's session, and a dip there becomes an `upstream` issue with this analysis.
 - **Since D-452:** our own mark, `src/assets/icon.svg`, with `[tool.flet] icon_background = "#680579"`. flet-cli renders every platform's sizes from that one file and frames it for each platform. The native splash has no artwork of its own, so it falls back to the icon on the same purple.
   - The other two drafts are in `docs/icon-options/`. To change the icon, replace `icon.svg`: an icon stays free to change.
@@ -380,7 +380,7 @@ adb -s <serial> shell am start -W -a android.intent.action.VIEW -d confcompanion
 
 On iOS, the same with `LANG=en_US.UTF-8 PUB_CACHE=$PWD/build/pub-cache uv run flet build ios-simulator --yes`, then `xcrun simctl install <udid> build/ios-simulator/pycon-us.app` and `xcrun simctl launch <udid> io.github.ndonkohenri.confcompanion`.
 
-- Use a device of your own, never one another agent or the owner has open: an install replaces the app there (§5.5).
+- Use a device of your own, never one another agent or a maintainer has open: an install replaces the app there (§5.5).
 - A build takes minutes (§5.8). For Python hot reload instead, see §5.2.
 - Drive it with Maestro (§5.9). Staff features need the mock (§6).
 
@@ -486,7 +486,7 @@ uv run flet debug ios -d <simulator udid>
 
 So Android from nothing, not counting `pytest`, comes to about 20 to 35 minutes, estimated. With the tools already installed and every cache empty, `gh repo clone` to the app on an emulator took 7 min 12 s (2026-11-07, #850): clone 17 s, `uv sync --locked` 8 s, `flet --version` 2 s, `flet devices` 13 s, the first `flet debug android` 6 min 32 s. That sits right at PLAN's 30-minute exit target; #850 settles it.
 
-**The rehearsal (#849, 2026-11-02, at `22a6dcb16`).** Step 1 was followed in a new directory, with new clones of both repos and uv's cache and Python folders empty (`UV_CACHE_DIR`, `UV_PYTHON_INSTALL_DIR`, `UV_PYTHON_PREFERENCE=only-managed`); then `uv run flet devices` ran (13 s, no devices). What wasn't clean: the owner's Mac already had Homebrew, Xcode 27.2, a logged-in `gh`, uv 0.13.6, Flutter 3.47.8 through fvm, the JDK, the Android SDK, and warm Gradle and pub caches. The Flutter, JDK and SDK installers write into the home folder, so they weren't run. Nothing was built, and no emulator or simulator was used; steps 2 and 3 were read against flet-cli's source at the pin only. This section's device steps last ran on 2026-10-12, at an older pin and with warm caches: the 70 s and 3 minutes above.
+**The rehearsal (#849, 2026-11-02, at `22a6dcb16`).** Step 1 was followed in a new directory, with new clones of both repos and uv's cache and Python folders empty (`UV_CACHE_DIR`, `UV_PYTHON_INSTALL_DIR`, `UV_PYTHON_PREFERENCE=only-managed`); then `uv run flet devices` ran (13 s, no devices). What wasn't clean: a maintainer's Mac already had Homebrew, Xcode 27.2, a logged-in `gh`, uv 0.13.6, Flutter 3.47.8 through fvm, the JDK, the Android SDK, and warm Gradle and pub caches. The Flutter, JDK and SDK installers write into the home folder, so they weren't run. Nothing was built, and no emulator or simulator was used; steps 2 and 3 were read against flet-cli's source at the pin only. This section's device steps last ran on 2026-10-12, at an older pin and with warm caches: the 70 s and 3 minutes above.
 
 `.gitignore` covers, among others:
 - `.venv/`, `.flet-src` (an optional clone of Flet, §2.2), `.flet/` (the `flet run` storage, F14), `build/`, `excluded/`;
@@ -534,7 +534,7 @@ What is different in the companion client:
 - Ctrl+C ends the session ("Debug session ended."); the app stays installed.
 - The debug build has `versionCode` 1 and `versionName` 1.0.0, because `flet debug` passes no `--build-number` or `--build-name` (`CLI/commands/debug.py:140-159`).
 - When another build may run on the Mac (agents in parallel), prefix it with the worktree's own pub cache, `PUB_CACHE=$PWD/build/pub-cache uv run flet debug …`, or it may run another worktree's Python (§5.8).
-- On an iPhone it signs with the `debugging` table (§8.2), so it needs a valid Apple Development certificate and a development profile that includes the device. The owner's Mac has neither today (its Apple Development certificate is revoked); #121 creates them. Simulators need no signing.
+- On an iPhone it signs with the `debugging` table (§8.2), so it needs a valid Apple Development certificate and a development profile that includes the device. a maintainer's Mac has neither today (its Apple Development certificate is revoked); #121 creates them. Simulators need no signing.
 
 Use it for anything the companion client cannot show:
 - extensions and runtime permissions;
@@ -554,7 +554,7 @@ Notes:
 
 ### 5.5 Devices, emulators and logs
 
-**Your own device.** `tools/device.py` boots one and shuts it down, and refuses the owner's (`emulator-5554`, AVD `pycon_lowram_api34`, the `iPhone 16` simulator). `up` prints only the serial or udid, so a script can keep it.
+**Your own device.** `tools/device.py` boots one and shuts it down, and refuses a maintainer's (`emulator-5554`, AVD `pycon_lowram_api34`, the `iPhone 16` simulator). `up` prints only the serial or udid, so a script can keep it.
 
 ```bash
 uv run python -m tools.device up android --port 5594          # --no-animations for flet test flows, --avd for another AVD
@@ -570,7 +570,7 @@ uv run python -m tools.device down <device>                   # --delete also de
 - **Emulator timing isn't reliable here.** qemu threads drop to background priority behind other windows, and load stays high while other agents run. Don't measure while builds run; compare within one window (`testing-and-quality.md` §8), and repeat timing-sensitive UI checks instead of trusting one pass.
 - **Device work runs long.** Set a time budget before a device matrix: one ran 11 hours (2026-10-20).
 
-**The device set (D-102, D-107).** Work happens on Android emulators and iOS simulators first. The build reference devices are the AVD `pycon_pixel6a_api36` (Pixel 6a profile, 4 GB RAM, Android 16 API 36, Google APIs arm64; `emulator-5554` when it is the only one running) and an **iPhone 17** simulator on **iOS 26.5**. On the owner's Mac the iPhone 16 family exists only on the iOS 18.6 runtime, so use the iPhone 17 family (iPhone 17, 17 Pro, 17 Pro Max, 17e) on iOS 26.5. Also available: the AVDs `Pixel_9_Pro_XL_API_35` (Google Play, API 35) and `flet_probe_api36` (Google APIs, API 36; TalkBack is preinstalled), and an iPad Pro simulator for the tablet layout. **The tablet AVD** is `pycon_tablet_api36` (#461): the Pixel Tablet profile (2560 x 1600 px at 320 dpi, 1280 x 800 dp; its natural orientation is landscape) on `pycon_pixel6a_api36`'s system image, made with `echo no | avdmanager create avd -n pycon_tablet_api36 -k "system-images;android-36;google_apis;arm64-v8a" -d pixel_tablet`, then `hw.ramSize=4096M` and `disk.dataPartition.size=6G` in its `config.ini` (the profile's defaults are 1536 MB and 800 MB). Boot it once without `-read-only` so the first boot writes its data, shut it down, and from then on boot it with `-read-only` like the others. Rotations: Android counts from the natural orientation, so on this tablet `adb shell settings put system user_rotation 1` (or Maestro's `LANDSCAPE_LEFT`) shows it in portrait. An AVD whose system image is missing fails with "Cannot find AVD system path"; install the image named by `image.sysdir.1` in its `config.ini`, e.g. `sdkmanager "system-images;android-35;google_apis_playstore;arm64-v8a"`. The owner's iPhone is used only for checks that need hardware or a release build: release-build performance, the camera, notification delivery, TestFlight installs, VoiceOver, and the release build's exit journeys at phase exits. There is no Android phone; emulator timings are a relative regression signal only ([`testing-and-quality.md`](testing-and-quality.md) §8).
+**The device set (D-102, D-107).** Work happens on Android emulators and iOS simulators first. The build reference devices are the AVD `pycon_pixel6a_api36` (Pixel 6a profile, 4 GB RAM, Android 16 API 36, Google APIs arm64; `emulator-5554` when it is the only one running) and an **iPhone 17** simulator on **iOS 26.5**. On a maintainer's Mac the iPhone 16 family exists only on the iOS 18.6 runtime, so use the iPhone 17 family (iPhone 17, 17 Pro, 17 Pro Max, 17e) on iOS 26.5. Also available: the AVDs `Pixel_9_Pro_XL_API_35` (Google Play, API 35) and `flet_probe_api36` (Google APIs, API 36; TalkBack is preinstalled), and an iPad Pro simulator for the tablet layout. **The tablet AVD** is `pycon_tablet_api36` (#461): the Pixel Tablet profile (2560 x 1600 px at 320 dpi, 1280 x 800 dp; its natural orientation is landscape) on `pycon_pixel6a_api36`'s system image, made with `echo no | avdmanager create avd -n pycon_tablet_api36 -k "system-images;android-36;google_apis;arm64-v8a" -d pixel_tablet`, then `hw.ramSize=4096M` and `disk.dataPartition.size=6G` in its `config.ini` (the profile's defaults are 1536 MB and 800 MB). Boot it once without `-read-only` so the first boot writes its data, shut it down, and from then on boot it with `-read-only` like the others. Rotations: Android counts from the natural orientation, so on this tablet `adb shell settings put system user_rotation 1` (or Maestro's `LANDSCAPE_LEFT`) shows it in portrait. An AVD whose system image is missing fails with "Cannot find AVD system path"; install the image named by `image.sysdir.1` in its `config.ini`, e.g. `sdkmanager "system-images;android-35;google_apis_playstore;arm64-v8a"`. a maintainer's iPhone is used only for checks that need hardware or a release build: release-build performance, the camera, notification delivery, TestFlight installs, VoiceOver, and the release build's exit journeys at phase exits. There is no Android phone; emulator timings are a relative regression signal only ([`testing-and-quality.md`](testing-and-quality.md) §8).
 
 | Task | Command |
 |---|---|
@@ -646,7 +646,7 @@ PUB_CACHE=$PWD/build/pub-cache uv run flet test ios -d <udid> --tests-dir tests/
 
 **The pub cache clone.**
 - **Flet's git checkouts live here too** (§2.2): pub's mirror of Flet's repository, `git/cache/flet-<hash>`, and a checkout, `git/flet-<sha>`. Since 1.1.0 the Dart `flet` package comes from pub.dev (`hosted/`), so only `flet test` fetches them, for `flet_integration_test` at the tag (#1126 found `git/flet-3fd7675f4…` after one run); on a prerelease every build does. The figures below are from 1.1.0.dev4, when every build needed them. A clone made after `~/.pub-cache` has them shares their blocks; one made before writes what it lacks on its first build. From an empty cache the two hold about 430 MB, hard-linked, so `du` on one alone misleads, and the whole cache 714 MB after an APK, 976 MB after an iOS build as well. With `~/.pub-cache` holding the mirror but not this commit, a new worktree's `tools/setup_worktree.sh` took 57 s and its first APK 112 s (2026-11-04, on a busy Mac).
-- `cp -c` clones with `clonefile(2)` when both folders are on one APFS volume, and falls back to a plain copy otherwise (`man cp`). The clone shares its blocks with `~/.pub-cache` until one side changes. On the owner's Mac it took 6 s for the 1.0 GB cache (44,000 files), and the volume's used space grew by about 20 MB (metadata; other builds were writing at the same time). An empty `build/pub-cache` works too, but the first build then downloads every package again (9 to 10 minutes on a busy host, #176).
+- `cp -c` clones with `clonefile(2)` when both folders are on one APFS volume, and falls back to a plain copy otherwise (`man cp`). The clone shares its blocks with `~/.pub-cache` until one side changes. On a maintainer's Mac it took 6 s for the 1.0 GB cache (44,000 files), and the volume's used space grew by about 20 MB (metadata; other builds were writing at the same time). An empty `build/pub-cache` works too, but the first build then downloads every package again (9 to 10 minutes on a busy host, #176).
 - The script tests for the folder first: `cp -R` into a folder that already exists copies the source *inside* it, so a second bare `cp -cR` adds a nested `build/pub-cache/.pub-cache` and leaves the cache that `PUB_CACHE` names as it was. If a clone was interrupted, `rm -rf build/pub-cache` and run the script again.
 - The clone carries whatever another build last staged in the plugin folders; your build replaces it in your copy only.
 - Keep the same `PUB_CACHE` for every command in the worktree: switching makes Flutter resolve the packages again. `build/` is git-ignored, so the clone goes with it: `rm -rf build` (§2.2), `flet clean` (`CLI/commands/clean.py:68`) and a build after a change of the bundled Python version (flet-cli wipes `build/` first, `build_base.py`'s `initialize_command()`) all delete it. If `build/pub-cache` is missing, run the setup line again before the next build; otherwise that build quietly fills a new cache from the network (as the build that changes the Python version does anyway, since it empties `build/` itself).
@@ -700,7 +700,7 @@ write a flow; the strategy is [`testing-and-quality.md`](testing-and-quality.md)
   (then `xcrun simctl install <udid> build/ios-simulator/pycon-us.app`).
 - **Run:** `maestro --device <id> test --include-tags=journeys maestro` (or `smoke`, or
   `regression`, or one flow's file). Each flow starts the app afresh, so a run replaces
-  the app's data on that device: never use the owner's `emulator-5554` or a shared
+  the app's data on that device: never use a maintainer's `emulator-5554` or a shared
   simulator.
 - The flows need no `uv run` and no Python: Maestro reads the YAML and talks to the device. Debug output
   (screenshots, the view hierarchy, `maestro.log`) goes to `~/.maestro/tests/` unless
@@ -820,7 +820,7 @@ mock connection said "Connected to the local mock server.", in light and dark, a
 
 **While the repo is private, the checks run locally** (D-273). A private repo on GitHub Free includes 2,000 Linux minutes a month, and by 2026-10-20 `ci.yml`, run on every PR push and every push to `main`, had used about 1,875 of them. So GitHub Actions run only by hand, and local checks replace them.
 
-**`tools/check.sh`** runs `ci.yml`'s steps (§7.2) in the same order on your machine: `uv sync --locked`, `ruff check`, `ruff format --check`, the pre-commit hooks (below), `pyright`, `pytest -n auto --hypothesis-profile=ci`, with `UV_LOCKED=1`. `--fast` runs every step but pytest. It prints one line per step and stops at the first failure, with that step's exit status. On the owner's Mac the fast run takes about 15 s (about 9 s before the hooks of D-480 joined) and the full one about a minute and a half (67 s for pytest on 2026-11-04, for 9,170 tests with `-n auto`, D-483; `tests/test_ci_matches_check.py` keeps these steps and `ci.yml`'s equal). It runs at three points:
+**`tools/check.sh`** runs `ci.yml`'s steps (§7.2) in the same order on your machine: `uv sync --locked`, `ruff check`, `ruff format --check`, the pre-commit hooks (below), `pyright`, `pytest -n auto --hypothesis-profile=ci`, with `UV_LOCKED=1`. `--fast` runs every step but pytest. It prints one line per step and stops at the first failure, with that step's exit status. On a maintainer's Mac the fast run takes about 15 s (about 9 s before the hooks of D-480 joined) and the full one about a minute and a half (67 s for pytest on 2026-11-04, for 9,170 tests with `-n auto`, D-483; `tests/test_ci_matches_check.py` keeps these steps and `ci.yml`'s equal). It runs at three points:
 - **The pre-push hook**, `.githooks/pre-push`, turned on once per clone with `git config core.hooksPath .githooks` (§5.1; every worktree of the clone then runs its own checkout's hook). Before each push it runs `tools/check.sh --fast`, unless the push changes only Markdown (`*.md`) or nothing: it compares a new branch with its merge base with `origin/main`, and an existing one with the remote's commit (a remote commit it doesn't have counts as code). The checks see the working tree, so it warns when that has uncommitted changes or HEAD isn't the pushed commit. `git push --no-verify` skips it once. A branch from before D-273 has no hook.
 - **The pre-commit hooks** (D-480), `.pre-commit-config.yaml`: file hygiene (trailing whitespace, end of file, YAML and TOML syntax, merge-conflict markers, files over 1 MB), `actionlint` on the workflows, and `tools/check_backticks.py`, which rejects reST double backticks in Python comments and docstrings (Markdown's single backtick is the house style; a span whose text holds a backtick is allowed). Hooks in stage `manual` are the ones `tools/check.sh` runs, as `uv run pre-commit run --all-files --hook-stage manual`, so the pre-push hook, the merge gate and `ci.yml` run the same set; they are one step, whose first run builds the hook environments (about 20 s, cached in `~/.cache/pre-commit`) and later ones take about 5 s. ruff comes from `uv.lock` through `uv run` (`language: system`), not from a `rev` in the config, so there is one pin to bump and CI, `check.sh` and the hook use the same version. A fixer that changes a file fails the step; run `uv run pre-commit run --all-files --hook-stage manual` yourself to apply it, then commit the result. Files that are data (`src/assets/`, `tests/fixtures/`, the licence texts, `docs/icon-options/`, `docs/research/`) are excluded.
 - **The lint rules** are ruff's own defaults plus the families `extend-select` names in `pyproject.toml`, one comment each; the rules switched off sit under `ignore` and `per-file-ignores` with a reason, and the families left out (ERA, TC, PLR) are named in the comment above them (D-480). Prefer a fix to a `noqa`; a `noqa` says why, in parentheses after the code. Prose lines (docstrings, comments) may run to 120 columns; `ruff format` keeps code at 88.
@@ -835,7 +835,7 @@ mock connection said "Connected to the local mock server.", in light and dark, a
   - Exit status: 0 passed, 1 failed (or couldn't run), 2 usage.
   - Its result holds for the PR's head and the `main` it names: after a new push to the PR, or once `main` has moved, run it again. Gate a batch together, in merge order, and squash-merge it in that order; `main`'s tree (`git rev-parse origin/main^{tree}` after a fetch) must then equal the printed tree, or else run `tools/check.sh` on `main`.
 
-No Linux machine runs the checks until P4 (the owner's call), so a failure that only Linux shows would surface when CI comes back. The PR that makes the repo public brings back the workflows' triggers below (`ci.yml`'s PR and `main` triggers, the feed check's schedule), and with them §7.2's required checks. A `v*` tag runs `release.yml` (§7.8), and nobody pushes one while the repo is private (D-502).
+No Linux machine runs the checks until P4 (the maintainers' call), so a failure that only Linux shows would surface when CI comes back. The PR that makes the repo public brings back the workflows' triggers below (`ci.yml`'s PR and `main` triggers, the feed check's schedule), and with them §7.2's required checks. A `v*` tag runs `release.yml` (§7.8), and nobody pushes one while the repo is private (D-502).
 
 ### 7.1 Constraints of a private repo on GitHub Free
 
@@ -956,11 +956,11 @@ When 1.1.0 is on PyPI and the Flet checkout goes, the action is worth another lo
 
 **It hasn't run on Actions yet:** eight tries of the simulator build on 2026-11-04 (seven on `macos-latest`, one on `macos-15-intel`) waited 15 minutes each and ended with "The job was not acquired by Runner of type hosted", beside GitHub's note that macOS arm64 runners are short of capacity. No minutes were spent. The commands of the first two jobs passed on the Mac, with this repo's pub cache, in #1129 (the PR has the log); a runner's Xcode is the part still untested.
 
-**Turning TestFlight on (owner-only, D-502).** It follows `DOCS/publish/ios.md` "Building and signing in CI". Do it after the repo is public (environments need a public repo on GitHub Free, §7.1) and after #121 has made the profiles:
+**Turning TestFlight on (maintainer-only, D-502).** It follows `DOCS/publish/ios.md` "Building and signing in CI". Do it after the repo is public (environments need a public repo on GitHub Free, §7.1) and after #121 has made the profiles:
 1. **The Apple side (#121, §8.2):** the App ID, an Apple Distribution certificate, an **App Store** provisioning profile for the bundle id, the App Store Connect record, and `provisioning_profile` committed under `[tool.flet.ios.export_methods."app-store-connect"]`. The job stops early, naming #121, while that line is missing: without it flet-cli would build an unsigned archive.
 2. **An App Store Connect API key:** App Store Connect › Users and Access › Integrations › App Store Connect API › Team Keys, role **App Manager**. Note its Key ID and the Issuer ID above the list, and download the `.p8` (it downloads once).
 3. **The certificate as a `.p12`:** in Keychain Access, export the Apple Distribution certificate with its private key, with a password; then `base64 -i dist.p12 | pbcopy`.
-4. **The environment:** Settings › Environments › New environment, named `app-store`. Under Deployment branches and tags choose Selected branches and tags and add the tag rule `v*`, so only a release tag reaches the secrets. Required reviewers are optional (the owner approving each upload).
+4. **The environment:** Settings › Environments › New environment, named `app-store`. Under Deployment branches and tags choose Selected branches and tags and add the tag rule `v*`, so only a release tag reaches the secrets. Required reviewers are optional (the maintainers approving each upload).
 5. **Its secrets** (Environment secrets in `app-store`, never in a file or a comment):
 
    | Secret | Value |
@@ -995,7 +995,7 @@ trufflehog filesystem build/sweep/history.patch --no-verification --no-update --
 
 A hit's `StartLine` is a line of the dump. To find its commit: `awk -v n=<line> 'NR<=n && /^commit /{c=$0} NR==n{print c; exit}' build/sweep/history.patch`.
 
-The first sweep's only hits were 34 `generic-api-key` from gitleaks, all false positives: 28 in `tests/fixtures/ionic/signing.json` (two commits; signatures made with the fixture's own dummy secret) and 6 in `src/pycon_us/screens/track.py` (four commits; the argument name `tokens` beside an identifier). `.gitleaks.toml` allowlists exactly those two, so a scan of the tree or of a commit stays quiet about them; the default rules stay on. Anything else is new: look at it. Never paste a value. Say where it is, and mark it for the owner to rotate; rewriting history is the owner's call (D-101).
+The first sweep's only hits were 34 `generic-api-key` from gitleaks, all false positives: 28 in `tests/fixtures/ionic/signing.json` (two commits; signatures made with the fixture's own dummy secret) and 6 in `src/pycon_us/screens/track.py` (four commits; the argument name `tokens` beside an identifier). `.gitleaks.toml` allowlists exactly those two, so a scan of the tree or of a commit stays quiet about them; the default rules stay on. Anything else is new: look at it. Never paste a value. Say where it is, and mark it for the maintainers to rotate; rewriting history is the maintainers' call (D-101).
 
 **Secrets in what people wrote** (issues, PRs, comments, reviews):
 
@@ -1023,7 +1023,7 @@ Only `example.com` and `example.org` sample accounts, the conference's public ad
 
 **Personal data in the text.** Look at the commit identities (`git -C build/sweep/mirror.git log --all --format='%ae%n%ce' | sort | uniq -c`), and grep the dump and `build/sweep/api` for phone numbers, emails and `/Users/`. A phone number that isn't a `555-01xx` fake or the Code of Conduct hotline needs a look. #847's first result lists what is already known.
 
-**Version bumps are by hand, with no bot** (the owner's direction, 2026-11-14; Dependabot was removed). An agent bumps the Actions our workflows pin and the packages in `uv.lock` when there's a reason: an advisory from the audits below, a fix we need, or a release worth taking. The Flet family moves together in a bump of its own (§2.2), `uv_build` moves with `setup-uv`'s `version` (§7.2), and `httpx` and `tzdata` get a PR of their own, since they reach phones.
+**Version bumps are by hand, with no bot** (the maintainers' direction, 2026-11-14; Dependabot was removed). An agent bumps the Actions our workflows pin and the packages in `uv.lock` when there's a reason: an advisory from the audits below, a fix we need, or a release worth taking. The Flet family moves together in a bump of its own (§2.2), `uv_build` moves with `setup-uv`'s `version` (§7.2), and `httpx` and `tzdata` get a PR of their own, since they reach phones.
 
 **Python dependencies on the host.** `uv.lock` is what the tools and tests run on, and nothing else:
 
@@ -1069,31 +1069,31 @@ The OSV database covers few Dart packages, so "no issues found" there says less 
 
 ### 7.8 `.github/workflows/release.yml`: a release from a `v*` tag
 
-[`.github/workflows/release.yml`](../.github/workflows/release.yml) runs when a `v*` tag is pushed, or by hand on a tag that exists (`gh workflow run release.yml --ref vX.Y.Z`). **While the repo is private nobody pushes a `v*` tag** (D-273). **On the public repo a Release is a build for people outside the team, so the first `v*` tag is the owner's go** (D-502); later ones follow §8.3.
+[`.github/workflows/release.yml`](../.github/workflows/release.yml) runs when a `v*` tag is pushed, or by hand on a tag that exists (`gh workflow run release.yml --ref vX.Y.Z`). **While the repo is private nobody pushes a `v*` tag** (D-273). **On the public repo a Release is a build for people outside the team, so the first `v*` tag is the maintainers' go** (D-502); later ones follow §8.3.
 
 | Job | What it does |
 |---|---|
 | `tag`, "Check the tag" (Linux, seconds) | Fails unless the ref is a tag equal to `v` + `[project].version` (§4), before any macOS minute is spent. |
 | `android` | Calls `build-android.yml` (§7.4). |
-| `ios` | Calls `build-ios.yml` (§7.5) with `testflight: true`, so TestFlight runs only if the owner has turned it on, and passes the five TestFlight secrets by name: a called workflow sees an environment's secrets only when its caller passes them, and they read as empty otherwise. |
+| `ios` | Calls `build-ios.yml` (§7.5) with `testflight: true`, so TestFlight runs only if a maintainer has turned it on, and passes the five TestFlight secrets by name: a called workflow sees an environment's secrets only when its caller passes them, and they read as empty otherwise. |
 | `release`, "Publish the release" (Linux) | Downloads the APK and the simulator `.app` zip and runs `gh release create <tag> --verify-tag --notes-file … --generate-notes`. The only job with `contents: write`. `--verify-tag` means it never creates a tag. |
 
 The reusable workflows are referenced as `./.github/workflows/…`, with zizmor's `self-repository` audit ignored on those two lines: GitHub's newer `$/` form is what it asks for, but actionlint 1.7.12 rejects it. Switch when actionlint accepts it. The Release holds the APK and the simulator `.app` zip; the unsigned archive and IPA stay workflow artifacts (14 days), since nobody can install them without re-signing. The notes say the APK is debug-signed with a key that changes every build (uninstall first, §7.4), how to install the simulator app (`xcrun simctl install booted pycon-us.app`), and that this is not an official PSF app; GitHub's generated list of merged PRs follows. A second run on the same tag waits for the first (`cancel-in-progress: false`) and then fails at `gh release create`, since the Release exists: delete the Release first to publish it again.
 
 ## 8. Signing and distribution (D-85, prov. O-5)
 
-The owner's own accounts are the only route, and testing is internal only. There is no public listing (D-85, D-36).
+a maintainer's own accounts are the only route, and testing is internal only. There is no public listing (D-85, D-36).
 
 **Where secrets live (D-86):**
-- in the owner's password manager, plus local files outside the repo: the keystore in `~/keys/`, the App Store Connect API key in `~/.appstoreconnect/private_keys/`, the certificates in the login keychain;
-- never in the repo, issues or PRs; in CI only as the `app-store` environment's secrets, once the owner adds them (§7.5, D-502).
+- in a maintainer's password manager, plus local files outside the repo: the keystore in `~/keys/`, the App Store Connect API key in `~/.appstoreconnect/private_keys/`, the certificates in the login keychain;
+- never in the repo, issues or PRs; in CI only as the `app-store` environment's secrets, once a maintainer adds them (§7.5, D-502).
 
 ### 8.1 Android
 
 | Route | Build | Signed with | Notes |
 |---|---|---|---|
 | Quick look | CI artifact (§7.4) or local `flet build apk --arch arm64-v8a` (D-106) | The debug key | Uninstall before switching builds |
-| Owner's emulator (and a borrowed phone), kept updated | Local `flet build apk --arch arm64-v8a` | The **upload key** | Updates install in place, and data survives (the P0 exit criterion) |
+| Maintainers' emulator (and a borrowed phone), kept updated | Local `flet build apk --arch arm64-v8a` | The **upload key** | Updates install in place, and data survives (the P0 exit criterion) |
 | Testers | Local `flet build aab` → Play Console › **Internal testing** | The upload key; Play re-signs with its app signing key | Up to 100 testers by email list; no review. Testers install through an opt-in link. |
 
 A device can update in place only from one signing identity: our upload key (sideload) or Play's app signing key (Play), not both. Pick one route per device. Switching means uninstalling first.
@@ -1149,15 +1149,15 @@ Expect: the app opens signed out; My schedule holds the starred session; `files/
 
 | Route | Build | Needs |
 |---|---|---|
-| The owner's iPhone, during development | `uv run flet debug ios -d <id>` (add `--release` to judge performance) | `team_id`, an Apple Development certificate, a Development provisioning profile that includes the device, and the device registered |
+| a maintainer's iPhone, during development | `uv run flet debug ios -d <id>` (add `--release` to judge performance) | `team_id`, an Apple Development certificate, a Development provisioning profile that includes the device, and the device registered |
 | Testers | `uv run flet build ipa --ios-export-method app-store-connect` → upload → TestFlight **internal testing** | An Apple Distribution certificate, an App Store provisioning profile and an App Store Connect record |
 
 **Why the export method is chosen per command.** `flet debug` has no export-method default of its own: like `flet build`, it takes `--ios-export-method`, then `[tool.flet.ios] export_method`, then `debugging`, and signs with that method's profile and certificate (`build_base.py`'s `get_ios_signing()`). The template writes them into the Debug, Release and Profile configurations with Manual signing (`TPL/ios/Runner.xcodeproj/project.pbxproj:363-373, 560-570, 595-605`), so Xcode never creates a profile for us. A distribution identity and an App Store profile cannot install an app on a device. So `export_method` stays unset (`debugging`, used by `flet debug ios`), and only the TestFlight build passes `--ios-export-method app-store-connect`.
 
-Internal TestFlight testers are members of the owner's App Store Connect team: up to 100 people, with no Beta App Review. A build expires after 90 days. **External** testing would need Beta App Review, and the store name would then be visible outside the team, so it is out of scope (D-85).
+Internal TestFlight testers are members of a maintainer's App Store Connect team: up to 100 people, with no Beta App Review. A build expires after 90 days. **External** testing would need Beta App Review, and the store name would then be visible outside the team, so it is out of scope (D-85).
 
-**Setup** (owner-only, #121), with the identity in D-452. Today the Mac has a valid Apple Distribution identity, but its Apple Development certificate is revoked and no profile exists for our bundle id (S5):
-1. Register an explicit App ID for the bundle id, and register the owner's devices.
+**Setup** (maintainer-only, #121), with the identity in D-452. Today the Mac has a valid Apple Distribution identity, but its Apple Development certificate is revoked and no profile exists for our bundle id (S5):
+1. Register an explicit App ID for the bundle id, and register a maintainer's devices.
 2. Create an Apple Development certificate and a **Development** provisioning profile for the App ID that includes those devices (`flet debug ios` needs it; see the Flet blog post "flet debug", 2025-12-02, "Testing on a real iPhone/iPad device"). Regenerate it whenever a device is added.
 3. Create an Apple Distribution certificate, and an App Store profile. Name both profiles exactly as in `pyproject.toml`.
 4. Create an App Store Connect record under the name Conf Companion (D-452) and a SKU.
@@ -1173,7 +1173,7 @@ team_id = "VF87YBAN84"
 # then passes --no-codesign and produces an .xcarchive.
 
 [tool.flet.ios.export_methods.debugging]
-# provisioning_profile = "<development profile incl. the owner's devices>"   (#121)
+# provisioning_profile = "<development profile incl. a maintainer's devices>"   (#121)
 signing_certificate = "Apple Development"
 
 [tool.flet.ios.export_methods."app-store-connect"]
@@ -1214,7 +1214,7 @@ There is no release train. The procedure:
 1. `main` is green: its tree is one the merge gate passed, or `tools/check.sh` passed on it (§7, D-273; when the repo is public, `ci.yml` passed on it). The phase status issue lists what this build is for.
 2. **Snapshot PR:** run `uv run python tools/update_snapshot.py`, which refreshes `data/<year>/conference.json` and its `snapshot_captured_at` in `conference.toml` (D-38, D-135, NEW-03). It refuses a feed that `feed.process` rejects, that has a record the parser skips, or whose days fall outside the conference dates, and then changes nothing (exit status 1). Otherwise it prints each count before and after (sessions, speakers, days, posters, sprints, job listings); put that in the PR body, review the diff, then merge.
 3. **Version PR:** bump `[project].version` and `__version__` (§4), then merge.
-4. **Tag** `vX.Y.Z` on `main`. View source links to this tag, so a build without it opens a 404 (D-461). While the repo is private nobody pushes a `v*` tag, since it would run `release.yml`'s macOS jobs (D-273, D-502): build the quick-look APK locally (§8.1). Once the repo is public, the tag runs `release.yml` (§7.8), which publishes a GitHub Release with the APK and the simulator app, and uploads to TestFlight if the owner has turned that on (§7.5); the first such tag is the owner's go (D-502).
+4. **Tag** `vX.Y.Z` on `main`. View source links to this tag, so a build without it opens a 404 (D-461). While the repo is private nobody pushes a `v*` tag, since it would run `release.yml`'s macOS jobs (D-273, D-502): build the quick-look APK locally (§8.1). Once the repo is public, the tag runs `release.yml` (§7.8), which publishes a GitHub Release with the APK and the simulator app, and uploads to TestFlight if a maintainer has turned that on (§7.5); the first such tag is the maintainers' go (D-502).
 5. **Locally, at the same commit:**
    - run `uv sync --locked`;
    - if another build may run on the Mac, build with the worktree's own pub cache and run §5.8's AAB and IPA checks before uploading;
@@ -1227,7 +1227,7 @@ There is no release train. The procedure:
 
 ## 9. Later: a public release
 
-Nothing here is planned. It is the list we would work through if the owner ever chooses to publish (PLAN appendix).
+Nothing here is planned. It is the list we would work through if the maintainers ever chooses to publish (PLAN appendix).
 
 | Topic | What it takes |
 |---|---|
@@ -1238,7 +1238,7 @@ Nothing here is planned. It is the list we would work through if the owner ever 
 | Private API | Public builds keep the D-51 guard: the mock-only features are invisible without the Developer screen. A real backend needs the PSF (PLAN appendix). |
 | Content and licences | Settle [the licence and asset review](licence-and-assets-review.md) (#846): `NOTICE`, the reused Ionic assets (floor plans, D-87), sponsor logos and the bundled dependencies' licences. |
 | Secrets and vulnerabilities | Run the sweep in §7.6 again right before the flip (#847, #852). |
-| Signing in CI | Written and off (D-502): the owner adds the `app-store` environment's secrets and turns on `TESTFLIGHT_UPLOADS` (§7.5). Play uploads would need a decision of their own. |
+| Signing in CI | Written and off (D-502): a maintainer adds the `app-store` environment's secrets and turns on `TESTFLIGHT_UPLOADS` (§7.5). Play uploads would need a decision of their own. |
 | Store assets | Screenshots, descriptions, the age-rating questionnaires. |
 
 ---
