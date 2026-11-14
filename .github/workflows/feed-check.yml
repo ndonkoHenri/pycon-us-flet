@@ -2,7 +2,7 @@
 # It also reports, without failing, whether next year's feed is published.
 # While the repo is private it runs only by hand (`gh workflow run feed-check.yml --ref main`), and the same check
 # runs locally with `uv run python -m tools.check_feed`: its weekly schedule is dropped (D-273). The PR that makes
-# the repo public brings back the schedule (Mondays 06:17 UTC), whose failed runs email the owner as the alert.
+# the repo public brings back the schedule (Mondays 06:17 UTC), whose failed runs email the maintainers as the alert.
 name: Feed check
 
 on:

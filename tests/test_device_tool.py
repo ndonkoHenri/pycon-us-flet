@@ -1,4 +1,4 @@
-"""Tests for `tools/device.py`: the commands it builds, and the owner's devices it refuses."""
+"""Tests for `tools/device.py`: the commands it builds, and a maintainer's devices it refuses."""
 
 from pathlib import Path
 
@@ -83,7 +83,7 @@ def test_setup_keeps_animations_unless_asked() -> None:
 def test_owners_devices_are_refused(
     argv: list[str], monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """Every command stops on the owner's devices, before it runs anything."""
+    """Every command stops on a maintainer's devices, before it runs anything."""
 
     def no_call(*args: object, **kwargs: object) -> str:
         """Fail the test if a command would run."""
@@ -92,16 +92,16 @@ def test_owners_devices_are_refused(
     monkeypatch.setattr(device.subprocess, "run", no_call)
     monkeypatch.setattr(device.subprocess, "Popen", no_call)
     monkeypatch.setattr(device, "_running_emulators", list)
-    with pytest.raises(SystemExit, match="owner's"):
+    with pytest.raises(SystemExit, match="maintainer's"):
         device.main(argv)
 
 
 def test_owners_simulator_is_refused_by_udid(monkeypatch: pytest.MonkeyPatch) -> None:
-    """Naming the owner's simulator by its udid is refused too."""
+    """Naming a maintainer's simulator by its udid is refused too."""
     monkeypatch.setattr(
         device,
         "_simulators",
         lambda: [{"name": device.OWNERS_SIMULATOR, "udid": "U", "state": "Booted"}],
     )
-    with pytest.raises(SystemExit, match="owner's"):
+    with pytest.raises(SystemExit, match="maintainer's"):
         device.main(["prefs", "U", "--reset"])

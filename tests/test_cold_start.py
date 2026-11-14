@@ -46,12 +46,12 @@ def test_summary_gives_median_and_range() -> None:
 
 
 def test_owners_emulator_is_refused(monkeypatch: pytest.MonkeyPatch) -> None:
-    """A run never force-stops anything on the owner's emulator."""
+    """A run never force-stops anything on a maintainer's emulator."""
 
     def no_call(*args: object, **kwargs: object) -> None:
         """Fail the test if `adb` would run."""
         raise AssertionError(f"ran {args}")
 
     monkeypatch.setattr(cold_start.subprocess, "run", no_call)
-    with pytest.raises(SystemExit, match="owner's"):
+    with pytest.raises(SystemExit, match="maintainer's"):
         cold_start.main(["--serial", "emulator-5554"])

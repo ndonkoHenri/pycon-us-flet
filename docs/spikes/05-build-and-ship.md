@@ -16,7 +16,7 @@ Can we build Android and iOS artifacts for internal testing from the pinned Flet
   - A companion client built from `client/` talks to the pinned Python, with Python hot reload, on both the emulator and the simulator.
   - So D-104 moves the pin to that branch (#120).
 - **Roboto works, but not the way D-26 described.** A `flutter.fonts` entry whose assets point outside the generated Flutter project (`../../src/assets/fonts/…`) silently falls back to SF Pro on iOS. A font-only local Flutter package added through `[tool.flet.flutter.pubspec.dependencies]` renders all three weights on iOS and Android (D-105).
-- **TestFlight is not done.** No App ID, App Store profile or App Store Connect record exists for our bundle id, and creating them is owner-only (D-101). The upload, the ITMS-91053 check and the iPhone install moved to #121.
+- **TestFlight is not done.** No App ID, App Store profile or App Store Connect record exists for our bundle id, and creating them is maintainer-only (D-101). The upload, the ITMS-91053 check and the iPhone install moved to #121.
 
 ## Method
 
@@ -72,7 +72,7 @@ Can we build Android and iOS artifacts for internal testing from the pinned Flet
 | `simctl install` + `launch` | — | Starts; "PyCon US companion 0.0.1" |
 | `flet build ipa --build-number 8` without a profile | — | 152 s; the warning panel, then `--no-codesign`; `build/ipa/pycon-us.xcarchive` (Flutter reports 245.4 MB; the `.app` inside is 76 MB) |
 | `flet build ipa --ios-export-method app-store-connect --bundle-id io.github.ndonkohenri.pyconus.spike` with `team_id = "VF87YBAN84"` and profile `PyCon US Spike App Store` | — | Stops after 9 s, before Xcode: "Provisioning profile 'PyCon US Spike App Store' is not installed — Xcode would fail once the build reaches signing." It lists the installed profiles. |
-| Same, with a profile that is installed: `--ios-provisioning-profile "ITMS91065 Repro" --bundle-id com.flet.itms91065-repro` (an App Store profile for another of the owner's App IDs) | — | 144 s; **`pycon_us.ipa` 44,790,396 bytes (44.8 MB)**. `Authority=Apple Distribution: … (VF87YBAN84)`, `codesign --verify --deep --strict` OK, `CFBundleVersion` 8, `ITSAppUsesNonExemptEncryption` false. Not uploaded. |
+| Same, with a profile that is installed: `--ios-provisioning-profile "ITMS91065 Repro" --bundle-id com.flet.itms91065-repro` (an App Store profile for another of a maintainer's App IDs) | — | 144 s; **`pycon_us.ipa` 44,790,396 bytes (44.8 MB)**. `Authority=Apple Distribution: … (VF87YBAN84)`, `codesign --verify --deep --strict` OK, `CFBundleVersion` 8, `ITSAppUsesNonExemptEncryption` false. Not uploaded. |
 
 **Signing material on the Mac:**
 - Valid identities: "Apple Distribution" and "Developer ID Application" for team `VF87YBAN84`. The only "Apple Development" identity is revoked (`CSSMERR_TP_CERT_REVOKED`).
@@ -80,7 +80,7 @@ Can we build Android and iOS artifacts for internal testing from the pinned Flet
 - For our team there is only the wildcard Xcode team profile (a development profile), and no App Store profile for any `io.github.ndonkohenri.*` id.
 - An App Store Connect API key file is present.
 - So:
-  - a TestFlight build needs the owner steps in #121;
+  - a TestFlight build needs the maintainer steps in #121;
   - `flet debug ios` on the iPhone needs a new development certificate.
 
 **Privacy manifest (ITMS-91053):**
@@ -181,7 +181,7 @@ Companion-client caveats:
 - `flet run -w` opens a browser tab; `BROWSER=true` suppresses it.
 - Any HTTP `GET /` fails with "Web root path not found: …/flet_web/web", because a source checkout has no built web client. The native client only uses the WebSocket, so this is harmless.
 - Stopping `flet run` can leave the app's Python child process listening on port 8550. Check with `lsof -iTCP:8550` and kill it.
-- `flutter run` in `client/` rewrites three tracked files in the Flet checkout: `client/ios/Podfile.lock`, `client/ios/Runner.xcodeproj/project.xcworkspace/xcshareddata/swiftpm/Package.resolved` and `client/ios/Runner.xcworkspace/xcshareddata/swiftpm/Package.resolved`. Check `git -C .flet-src status`, then restore only those three files with `git -C .flet-src checkout -- <path>`. In the owner's worktree, never restore all of `client/`, which would discard his own edits.
+- `flutter run` in `client/` rewrites three tracked files in the Flet checkout: `client/ios/Podfile.lock`, `client/ios/Runner.xcodeproj/project.xcworkspace/xcshareddata/swiftpm/Package.resolved` and `client/ios/Runner.xcworkspace/xcshareddata/swiftpm/Package.resolved`. Check `git -C .flet-src status`, then restore only those three files with `git -C .flet-src checkout -- <path>`. In a maintainer's worktree, never restore all of `client/`, which would discard that maintainer's own edits.
 
 ### Other quirks
 
@@ -206,12 +206,12 @@ Companion-client caveats:
 
 **#120, the pin bump (before #52):**
 - Set `.flet-ref` to a `flet-1.1.0` commit, and run `uv lock`.
-- Move the owner's `.flet-src` worktree to that commit (`git -C .flet-src checkout --detach <sha>`).
+- Move a maintainer's `.flet-src` worktree to that commit (`git -C .flet-src checkout --detach <sha>`).
 - Re-run `flet build apk` on the emulator and `flet build ios-simulator` on the simulator.
 
 **P0-04, #52:**
 - Add `flutter_packages/roboto_fonts/`: `pubspec.yaml` as above, the three TTFs from googlefonts/roboto v2.138, its `LICENSE`, and `lib/roboto_fonts.dart`. Add the `[tool.flet.flutter.pubspec.dependencies]` entry, and a Roboto line in `NOTICE`.
-- Add `[tool.flet.ios] team_id = "VF87YBAN84"` and the two export-method tables (development.md §8.2). The profile names wait for the owner steps in #121.
+- Add `[tool.flet.ios] team_id = "VF87YBAN84"` and the two export-method tables (development.md §8.2). The profile names wait for the maintainer steps in #121.
 - Leave `min_sdk_version` and `target_sdk_version` unset; the defaults are 24 and 36.
 - Keep the `-Xmx4G` Gradle override. It was enough on the Mac; the runner check is P0-06's.
 
@@ -242,7 +242,7 @@ Companion-client caveats:
 - If the `flet-1.1.0` branch is rewritten or deleted:
   - if it merged into `main`, pin the merge's commit on `main`;
   - if 1.1.0 is out, pin `flet==1.1.0` (development.md §2.2);
-  - if it was deleted before merging, the tested commit stays in the owner's Flet clone (his `.flet-src` worktree). Keep it reachable there under a local branch or tag, and push it to a ref contributors and CI can fetch (for example a tag in the owner's fork of flet-dev/flet) before moving `.flet-ref`.
+  - if it was deleted before merging, the tested commit stays in a maintainer's Flet clone (that maintainer's `.flet-src` worktree). Keep it reachable there under a local branch or tag, and push it to a ref contributors and CI can fetch (for example a tag in a maintainer's fork of flet-dev/flet) before moving `.flet-ref`.
 - If App Store Connect rejects the upload for ITMS-91053:
   - file U13 upstream: a `Runner/PrivacyInfo.xcprivacy` in the template, or a manifest inside serious_python's `Python.framework`;
   - meanwhile, testers get Android builds, and the iPhone runs `flet debug ios`.

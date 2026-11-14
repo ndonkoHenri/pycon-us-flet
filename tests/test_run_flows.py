@@ -101,8 +101,8 @@ def test_a_run_needs_a_device() -> None:
 
 
 def test_a_run_refuses_the_owners_device() -> None:
-    """The flows replace the app's data, so the owner's emulator is refused."""
-    with pytest.raises(SystemExit, match="owner"):
+    """The flows replace the app's data, so a maintainer's emulator is refused."""
+    with pytest.raises(SystemExit, match="maintainer"):
         run_flows.main(["--out", "unused", "--android", "emulator-5554"])
 
 
