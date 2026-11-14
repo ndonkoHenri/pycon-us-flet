@@ -209,8 +209,8 @@ language this is about; the app's name and icon use no PSF mark." It leaves the 
 
 ## Sign-off
 
-The owner's decisions go in a comment on #846, then into a D-number. Nothing here is decided until then. To answer by
-number, each with the recommendation first:
+**Signed off on 2026-11-14 (D-504):** everything stays as it is except A7, whose template line is restored; E2, E3, E6,
+A1 and the bundle id wait for the first store submission. The questions as they were asked:
 
 1. **Floor plans B1 to B5:** redraw (unless asking gets a clear yes), ask, keep private, or keep and publish.
 2. **Logos on B6 and B7:** redraw with the plans, or keep for internal builds and decide again before anything goes
