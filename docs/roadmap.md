@@ -97,7 +97,7 @@ Issue templates (feature, bug, spike, upstream), a PR template with the D-92 sec
 
 - Templates exist in `.github/`; the spike template has a verdict section.
 - The Project has Status Todo / In progress / In review / Done; agents add every issue and PR to it. Its built-in workflows (auto-add, Todo on add, Done on close or merge) are on; a maintainer enabled them in the web UI (#118).
-- AGENTS.md says how `main` is protected (ruleset, or convention on a private Free plan).
+- AGENTS.md says how `main` is protected (a ruleset, since the repo is public: D-505).
 
 #### P0-04 · Apply the mobile build configuration from the S5 verdict
 

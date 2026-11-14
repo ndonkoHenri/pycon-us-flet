@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Upload a PR's screenshots to the orphan branch pr-assets and print the Markdown that embeds them (D-162, D-168).
-# Look at every image first: no tokens, personal data, notifications or real badges. It all stays in history and
-# becomes public with the repo. Each upload is its own commit, and pr-assets is never force-pushed.
+# Look at every image first: no tokens, personal data, notifications or real badges. It all stays in history, and the repo is
+# public. Each upload is its own commit, and pr-assets is never force-pushed.
 #
 # Usage: tools/pr_shots.sh <pr> <image.png>...  (file names of letters, digits and -, for their URLs)
 # Stops at the first failure. Run it again after one: a file that is already there is replaced, not duplicated.

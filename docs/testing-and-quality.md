@@ -1,7 +1,7 @@
 # Testing and quality (v2)
 
 **Status:** plan of record, 2026-10-11. Replaces the v1 testing document (kept in git history, not binding).
-**Binding inputs:** [`PLAN.md`](../PLAN.md) §7 (exit criteria) and §9 (quality bar); [`decisions.md`](decisions.md) D-76..D-80 (testing), D-252 (Maestro), D-33 (accessibility), D-41..D-43 (feed, time), D-50..D-57 (mock, outbox), D-84 (CI), D-273 (local checks while the repo is private), D-93 (done), §M (names), §N (Flet facts).
+**Binding inputs:** [`PLAN.md`](../PLAN.md) §7 (exit criteria) and §9 (quality bar); [`decisions.md`](decisions.md) D-76..D-80 (testing), D-252 (Maestro), D-33 (accessibility), D-41..D-43 (feed, time), D-50..D-57 (mock, outbox), D-84 (CI), D-273 (the local checks, kept beside CI: D-505), D-93 (done), §M (names), §N (Flet facts).
 **Flet ground truth:** the local monorepo at `9fbe52a61` (unreleased 1.1.0): `flet/testing/` (`FletTestApp`, `Tester`, `Finder`, `remote_tester.RemoteTester`), `flet/pytest_plugin.py` (fixture `flet_app`), `flet_cli/commands/test.py` (`flet test`), `packages/flet/integration_tests/README.md` and the integration-testing guide. Gaps Flet has today, with interims, are in §13.
 
 > Per D-96 this file is the test strategy (D-76..D-80). [`development.md`](development.md) is the developer guide (toolchain, dev loop, builds, CI) and links here.

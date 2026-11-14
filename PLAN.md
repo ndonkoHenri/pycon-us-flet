@@ -322,7 +322,7 @@ Each spike is an issue titled `Spike: …` (label `test`, D-91), time-boxed to h
 
 The workflow is written down in [`AGENTS.md`](AGENTS.md), the operating manual for humans and agents, which is maintained separately. The work itself is broken down in [`docs/roadmap.md`](docs/roadmap.md); GitHub issues are the live task list. In brief (D-88..D-96):
 
-- **Issues first.** One public GitHub repo (private until P4). Every change starts from an issue, except trivial chores; an issue describes a journey or a mechanism, with feature ids, D-ids, acceptance criteria and the device evidence needed.
+- **Issues first.** One public GitHub repo (public since 2026-11-14, in P4: D-505). Every change starts from an issue, except trivial chores; an issue describes a journey or a mechanism, with feature ids, D-ids, acceptance criteria and the device evidence needed.
 - **One issue, one PR.** A `<type>/<issue>-<slug>` branch and an early draft PR of about 400 changed lines or fewer, with screenshots for UI. The checks pass in CI and locally, with the merge gate before every merge (D-273, D-505). Agents squash-merge their own PRs under the merge conditions of D-100; the maintainers watch and can step in, but are never blockers.
 - **Milestones are the phases**, with the labels in D-90, a "PyCon US Flet" Project board and a weekly status issue per phase.
 - **Decisions change only through a `needs-decision` issue** and a PR that edits [`docs/decisions.md`](docs/decisions.md). Reversible choices are decided by agents and recorded; only hard-to-reverse or outward-facing ones wait for the maintainers (D-101). Docs change in the same PR as the behaviour.

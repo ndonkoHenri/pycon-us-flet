@@ -116,5 +116,5 @@ jobs:
         with:
           name: maestro-debug
           path: build/maestro
-          retention-days: 7         # artifact storage is small on a private Free repo (§7.1)
+          retention-days: 7         # short retention keeps artifact storage small (§7.1)
           if-no-files-found: ignore
